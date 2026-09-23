@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type Route = 'tokens' | 'buttons' | 'inputs' | 'values' | 'overlays' | 'states' | 'pagination'
+export type Route = 'tokens' | 'buttons' | 'inputs' | 'values' | 'overlays' | 'states' | 'pagination' | 'tabs'
 export const routes: { id: Route; title: string }[] = [
   { id: 'tokens', title: 'Токены' },
   { id: 'buttons', title: 'Кнопки' },
@@ -9,6 +9,7 @@ export const routes: { id: Route; title: string }[] = [
   { id: 'overlays', title: 'Меню и поповеры' },
   { id: 'states', title: 'Состояния' },
   { id: 'pagination', title: 'Пагинация' },
+  { id: 'tabs', title: 'Табы' },
 ]
 const parse = (): Route => {
   const h = location.hash.replace(/^#\/?/, '') as Route

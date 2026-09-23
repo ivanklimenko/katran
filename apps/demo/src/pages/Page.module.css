@@ -53,3 +53,8 @@
   display: grid;
   gap: var(--k-sp-1);
 }
+
+.content {
+  padding: var(--k-sp-4);
+  flex: 1;
+}

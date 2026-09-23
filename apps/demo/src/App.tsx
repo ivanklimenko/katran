@@ -8,8 +8,9 @@ import { ValuesPage } from './pages/ValuesPage'
 import { OverlaysPage } from './pages/OverlaysPage'
 import { StatesPage } from './pages/StatesPage'
 import { PaginationPage } from './pages/PaginationPage'
+import { TabsPage } from './pages/TabsPage'
 
-const pages = { tokens: TokensPage, buttons: ButtonsPage, inputs: InputsPage, values: ValuesPage, overlays: OverlaysPage, states: StatesPage, pagination: PaginationPage }
+const pages = { tokens: TokensPage, buttons: ButtonsPage, inputs: InputsPage, values: ValuesPage, overlays: OverlaysPage, states: StatesPage, pagination: PaginationPage, tabs: TabsPage }
 
 export function App() {
   const route = useRoute()
