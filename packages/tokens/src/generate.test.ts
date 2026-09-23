@@ -15,9 +15,11 @@ describe('renderCss', () => {
     expect(css).toMatch(/@media \(prefers-color-scheme: dark\)\s*{\s*:root:not\(\[data-theme="light"\]\)\s*{[^}]*--k-val:\s*#8FB8E0/)
   })
 
-  it('размеры умножены на плотность', () => {
-    expect(css).toContain('--k-fs-1: calc(12.5px * var(--k-density))')
-    expect(css).toContain('--k-h-ctl-m: calc(28px * var(--k-density))')
+  it('размеры умножены на плотность и объявлены на корне провайдера, а не в :root', () => {
+    expect(css).toMatch(/:root,\s*\[data-k-root\]\s*{[^}]*--k-fs-1: calc\(12\.5px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/:root,\s*\[data-k-root\]\s*{[^}]*--k-h-ctl-m: calc\(28px \* var\(--k-density\)\)/)
+    const rootBlock = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')))
+    expect(rootBlock).not.toContain('--k-fs-1')
   })
 
   it('плотность по умолчанию 1, шрифты, слои, длительности, тень', () => {

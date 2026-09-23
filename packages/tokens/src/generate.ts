@@ -17,10 +17,14 @@ export function renderCss(src: TokenSource): string {
   --k-density: 1;
 ${colorLines(colorsLight, '  ')}
   --k-shadow: ${shadows.light};
-${sizeLines}
 ${fontLines}
 ${zLines}
 ${tLines}
+}
+/* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
+   резолвится в :root и плотность провайдера не действует */
+:root, [data-k-root] {
+${sizeLines}
 }
 [data-theme="dark"] {
 ${dark.replace(/^ {4}/gm, '  ')}

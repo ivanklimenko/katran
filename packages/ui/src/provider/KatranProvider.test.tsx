@@ -26,6 +26,7 @@ describe('KatranProvider', () => {
     const root = container.firstElementChild as HTMLElement
     expect(root.style.getPropertyValue('--k-density')).toBe('1')
     expect(root).not.toHaveAttribute('data-theme')
+    expect(root).toHaveAttribute('data-k-root')
   })
 
   it('setTheme / setDensity меняют атрибуты и сохраняются по storageKey', () => {

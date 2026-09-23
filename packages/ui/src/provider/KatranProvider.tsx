@@ -74,6 +74,7 @@ export function KatranProvider(p: KatranProviderProps) {
         ref={(el) => { rootRef.current = el; setPortalRoot(el) }}
         className={s.root}
         data-theme={theme === 'system' ? undefined : theme}
+        data-k-root=""
         style={{ '--k-density': String(density) } as React.CSSProperties}
       >
         {p.children}
