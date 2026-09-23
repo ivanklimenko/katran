@@ -154,6 +154,11 @@
   overflow: hidden;
 }
 
+/* скелетон текстовой ячейки резервирует ту же высоту, что и текст записи, а не высоту плашки */
+.clampSkeleton {
+  min-height: calc(var(--k-lh-1) * var(--k-lines, 1));
+}
+
 .cell[data-align='right'] {
   text-align: right;
 }
@@ -164,6 +169,11 @@
   gap: var(--k-sp-1);
   width: var(--k-grid-lead);
   min-width: var(--k-grid-lead);
+}
+
+/* скелетон служебной ячейки резервирует высоту реальных контролов (чекбокс + кнопка "s") */
+.leadSkeleton {
+  min-height: var(--k-h-ctl-s);
 }
 
 .ord {

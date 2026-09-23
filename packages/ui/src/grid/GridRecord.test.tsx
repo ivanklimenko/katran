@@ -65,4 +65,16 @@ describe('GridSkeleton', () => {
     expect(screen.getAllByRole('row')).toHaveLength(6)
     expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0)
   })
+  it('резервирует геометрию записи: --k-lines и классы min-height у служебной ячейки и текстовых ячеек', () => {
+    const { container } = renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} rowIndexStart={1} /></Table>)
+    const lead = container.querySelector('td > div')
+    expect(lead?.className).toMatch(/leadSkeleton/)
+    const clamped = screen.getAllByRole('gridcell').map((c) => c.firstElementChild).filter((el): el is Element => el !== null)
+    const numColClamp = clamped[2]! // lead(0), st(1), ячейка колонки "num" (lines: 2)
+    expect(numColClamp.className).toMatch(/clampSkeleton/)
+    expect(numColClamp).toHaveStyle({ '--k-lines': '2' })
+    const purposeClamp = clamped[clamped.length - 1]! // сегмент "purpose" в строке спанов
+    expect(purposeClamp.className).toMatch(/clampSkeleton/)
+    expect(purposeClamp).toHaveStyle({ '--k-lines': '1' })
+  })
 })

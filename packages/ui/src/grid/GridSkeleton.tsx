@@ -19,10 +19,10 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
       {Array.from({ length: rows }, (_, i) => (
         <tbody key={i} className={s.record}>
           <tr role="row" aria-rowindex={rowIndexStart + i * perRecord}>
-            <td role="gridcell" className={s.cell}><div className={s.lead}><Skeleton.Line width={48} /></div></td>
+            <td role="gridcell" className={s.cell}><div className={[s.lead, s.leadSkeleton].join(' ')}><Skeleton.Line width={48} /></div></td>
             {visible.map((c) => (
               <td key={c.id} role="gridcell" className={s.cell}>
-                <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
+                <div className={[s.clamp, s.clampSkeleton].join(' ')} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
               </td>
             ))}
           </tr>
@@ -32,7 +32,7 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
               {fillSegments(segs, visible.length).map((seg, k) =>
                 'filler' in seg
                   ? <td key={`f${k}`} className={s.filler} colSpan={seg.colSpan} aria-hidden="true" />
-                  : <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan}><div className={s.clamp}><Skeleton.Line lines={(seg.def.lines ?? 1) as 1 | 2} width="58%" /></div></td>,
+                  : <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan}><div className={[s.clamp, s.clampSkeleton].join(' ')} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={(seg.def.lines ?? 1) as 1 | 2} width="58%" /></div></td>,
               )}
             </tr>
           ))}
