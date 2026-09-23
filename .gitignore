@@ -6,3 +6,4 @@ coverage
 .vite
 # локальный инструментарий — не часть репозитория
 .claude/
+.worktrees/
