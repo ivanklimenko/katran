@@ -34,7 +34,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/effector/src/**/*.ts', 'apps/demo/src/**/*.{ts,tsx}'],
+    files: ['packages/effector/src/**/*.{ts,tsx}', 'apps/demo/src/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': 'off' },
   },
 )
