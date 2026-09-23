@@ -196,3 +196,33 @@ th[tabindex]:focus-visible {
 .foot {
   flex: none;
 }
+
+/* --- меню состава колонок --- */
+.colsMenu {
+  display: grid;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-2);
+  min-width: var(--k-side);
+}
+
+.colsList {
+  max-height: var(--k-menu-max-h);
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.colsItem {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  height: var(--k-h-ctl-m);
+}
+
+.colsName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

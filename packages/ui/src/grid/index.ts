@@ -5,3 +5,4 @@ export { EMPTY_SELECTION, isSelected, selectedCount, pageState } from './selecti
 export { GridRecord, fillSegments, type GridRecordProps, type SpanCell, type CellProps } from './GridRecord'
 export { GridSkeleton, type GridSkeletonProps } from './GridSkeleton'
 export { ColumnHeader, type ColumnHeaderProps } from './ColumnHeader'
+export { ColumnsMenu, type ColumnsMenuProps } from './ColumnsMenu'
