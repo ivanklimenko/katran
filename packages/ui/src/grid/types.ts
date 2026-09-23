@@ -29,6 +29,7 @@ export type ColumnDef<Row> = {
   align?: 'left' | 'right' | undefined
   /** Пусто → колонка не сортируется. */
   sort?: SortKey[] | undefined
+  /** Интерактивные элементы внутри ячейки — с `tabIndex={-1}`; до них доходят через Enter на ячейке. */
   render: (row: Row) => ReactNode
 }
 

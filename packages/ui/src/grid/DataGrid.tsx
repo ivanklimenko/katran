@@ -9,6 +9,7 @@ import { GridRecord, type CellProps, type SpanCell } from './GridRecord'
 import { GridSkeleton } from './GridSkeleton'
 import { resolveSpans, visibleColumns } from './resolveSpans'
 import { isSelected, pageState } from './selection'
+import { useGridKeyboard } from './useGridKeyboard'
 import s from './Grid.module.css'
 import type { ColumnsState, GridViewState, RecordLayout, Selection, SpanDef, Sort } from './types'
 
@@ -41,8 +42,6 @@ export type DataGridProps<Row> = {
   /** Второй клик по кнопке (e.detail ≥ 2) — secondary: второй drawer рядом. */
   onOpen?: ((row: Row, opts: { secondary: boolean }) => void) | undefined
   skeletonRows?: number | undefined
-  /** Клавиатурный слой (Task 11). */
-  cellProps?: ((rowIndex: number, r: number, c: number) => React.HTMLAttributes<HTMLTableCellElement>) | undefined
 }
 
 const DEFAULT_WIDTH = 120
@@ -76,7 +75,11 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
   const showSkeleton = useLoadingGate(state === 'loading')
   const dim = state === 'refreshing'
   const empty = state === 'ready' && rows.length === 0
-  const cp = (rowIndex: number): CellProps | undefined => (p.cellProps ? (r, c) => p.cellProps!(rowIndex, r, c) : undefined)
+  const kb = useGridKeyboard({
+    resetToken: `${page}:${rows.length}:${visibleIds.join(',')}`,
+    fallback: rows.length > 0 && state !== 'loading' && state !== 'error' ? '2:0' : '1:0',
+  })
+  const cp = (rowIndex: number): CellProps => (r, c) => kb.cellProps(rowIndex, r, c)
 
   return (
     <div className={s.root}>
@@ -93,7 +96,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         >
           <thead>
             <tr role="row" aria-rowindex={1}>
-              <th role="columnheader" scope="col" className={s.th} style={{ width: `calc(${LEAD_WIDTH}px * var(--k-density))` } as CSSProperties} {...cp(1)?.(0, 0)}>
+              <th role="columnheader" scope="col" className={s.th} style={{ width: `calc(${LEAD_WIDTH}px * var(--k-density))` } as CSSProperties} {...cp(1)(0, 0)}>
                 <div className={s.leadHead}>
                   {selection && p.onSelectPage && (
                     <Checkbox tabIndex={-1} aria-label="Выбрать все на странице" checked={pageSel === 'all'} indeterminate={pageSel === 'some'} disabled={ids.length === 0}
@@ -105,7 +108,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
               </th>
               {visible.map((c, i) => (
                 <ColumnHeader key={c.id} column={c} sort={p.sort} onSort={p.onSort} width={widthOf(c.id, c.width)}
-                  onResize={(c.resizable ?? true) ? (w) => p.onResize({ id: c.id, width: w }) : undefined} cellProps={cp(1)?.(0, i + 1)} />
+                  onResize={(c.resizable ?? true) ? (w) => p.onResize({ id: c.id, width: w }) : undefined} cellProps={cp(1)(0, i + 1)} />
               ))}
             </tr>
           </thead>
