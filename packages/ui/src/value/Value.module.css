@@ -36,7 +36,8 @@
 }
 
 .flash,
-.flash:hover {
+.flash:hover,
+.flash:hover:not(:disabled) {
   background: var(--k-ok-soft);
   color: var(--k-ok);
 }

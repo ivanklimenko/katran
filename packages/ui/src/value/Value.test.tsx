@@ -56,6 +56,13 @@ describe('AccountValue', () => {
     await userEvent.click(b)
     expect(writeText).toHaveBeenCalledWith('40702840500000012345')
   })
+  it('full — счёт целиком, код валюты выделен, без сокращения', () => {
+    renderK(<AccountValue value="40702840500000012345" full />)
+    const b = screen.getByRole('button')
+    expect(b).toHaveTextContent('40702840500000012345')
+    expect(b.querySelector('b')).toHaveTextContent('840')
+    expect(b).toHaveAttribute('data-k-tip-if', 'truncated')
+  })
 })
 
 describe('StatusDot / FieldTag / Counter', () => {
