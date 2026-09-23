@@ -28,7 +28,7 @@ const applyFilter = <Row extends Record<string, unknown>>(rows: Row[], f: Filter
 
 export type FakeBackendOptions = { delay?: number | undefined }
 
-/** Бэкенд в памяти: та же форма запроса, что у POST /grids/{id}/search; задержка — как у прода (0.3–1 с). */
+/** Бэкенд в памяти: та же форма запроса, что у POST /grids/{id}/search; задержка 0,25–0,65 с (?slow=N — ровно N мс). */
 export function createFakeBackend<Row extends Record<string, unknown>>(all: Row[], layout: RecordLayout<Row>, opts: FakeBackendOptions = {}) {
   const get = (row: Row, key: string) => row[key]
   return createEffect<GridQuery, GridPage<Row>>(async (q) => {
