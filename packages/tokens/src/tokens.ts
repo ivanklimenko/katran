@@ -100,6 +100,9 @@ export const sizes = {
   'counter': 18,
   'menu-min': 180,
   'progress': 3,
+  'side': 200,
+  'note-max': 640,
+  'swatch': 150,
 } as const
 
 export const fonts = {

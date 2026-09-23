@@ -63,6 +63,9 @@
   --k-counter: calc(18px * var(--k-density));
   --k-menu-min: calc(180px * var(--k-density));
   --k-progress: calc(3px * var(--k-density));
+  --k-side: calc(200px * var(--k-density));
+  --k-note-max: calc(640px * var(--k-density));
+  --k-swatch: calc(150px * var(--k-density));
   --k-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --k-z-sticky: 10;

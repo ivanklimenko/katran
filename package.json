@@ -5,6 +5,7 @@
   "description": "Дизайн-система katran: React + effector",
   "type": "module",
   "scripts": {
+    "dev": "pnpm --filter demo dev",
     "gen": "pnpm -r --if-present gen",
     "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts",
     "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" --allow-empty-input",

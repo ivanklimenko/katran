@@ -1,0 +1,55 @@
+.h1 {
+  font: 700 var(--k-fs-h1) / 1.2 var(--k-sans);
+  margin: 0 0 var(--k-sp-2);
+}
+
+.note {
+  color: var(--k-muted);
+  margin: 0 0 var(--k-sp-5);
+  max-width: var(--k-note-max);
+}
+
+.h2 {
+  font: 600 var(--k-fs-1) / 1.2 var(--k-sans);
+  margin: var(--k-sp-5) 0 var(--k-sp-2);
+  color: var(--k-ink2);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-3);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--k-swatch), 1fr));
+  gap: var(--k-sp-2);
+}
+
+.swatch {
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  overflow: hidden;
+  background: var(--k-paper);
+}
+
+.swatchColor {
+  height: var(--k-sp-8);
+}
+
+.swatchMeta {
+  padding: var(--k-sp-1) var(--k-sp-2);
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.type {
+  display: grid;
+  gap: var(--k-sp-1);
+}

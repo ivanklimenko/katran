@@ -55,6 +55,7 @@ export const sizes: Record<string, number> = {
   'icon-s': 14, 'icon-m': 16,
   'tip-max': 360,
   'dot-s': 7, 'dot-m': 14, 'counter': 18, 'menu-min': 180, 'progress': 3,
+  'side': 200, 'note-max': 640, 'swatch': 150,
 }
 
 export const fonts = {
