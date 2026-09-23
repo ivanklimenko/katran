@@ -16,7 +16,7 @@ export function OverlaysPage() {
       <div className={s.row}>
         <Button ref={m} onClick={() => setMenu(true)}>Сортировать «Статус» по…</Button>
         <Menu open={menu} anchor={m} onClose={() => setMenu(false)} title="Сортировать «Статус» по"
-          items={keys.map((k) => ({ id: k.id, label: k.label, checked: sort === k.id, onSelect: () => setSort(k.id), ...(sort === k.id ? { hint: '↑' } : {}) }))} />
+          items={keys.map((k) => ({ id: k.id, label: k.label, checked: sort === k.id, onSelect: () => setSort(k.id), hint: sort === k.id ? '↑' : undefined }))} />
         <Button ref={p} onClick={() => setPop(true)}>Фильтр по сумме</Button>
         <Popover open={pop} anchor={p} onClose={() => setPop(false)} label="Фильтр по сумме">
           <div style={{ display: 'grid', gap: 'var(--k-sp-2)', padding: 'var(--k-sp-2)' }}>

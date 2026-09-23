@@ -8,14 +8,14 @@ export type PopoverProps = {
   open: boolean
   anchor: RefObject<HTMLElement | null>
   onClose: () => void
-  placement?: Placement
+  placement?: Placement | undefined
   /** Доступное имя панели. */
   label?: string | undefined
-  role?: 'dialog' | 'menu'
+  role?: 'dialog' | 'menu' | undefined
   children: ReactNode
-  className?: string
+  className?: string | undefined
   /** Не переносить фокус внутрь автоматически (меню делает это само). */
-  manualFocus?: boolean
+  manualFocus?: boolean | undefined
 }
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'

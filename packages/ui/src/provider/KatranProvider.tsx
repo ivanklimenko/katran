@@ -8,12 +8,12 @@ import s from './Provider.module.css'
 export type KatranProviderProps = {
   children: ReactNode
   /** Управляемые значения. Если заданы — внутреннее состояние не используется. */
-  theme?: Theme
-  density?: Density
-  defaultTheme?: Theme
-  defaultDensity?: Density
+  theme?: Theme | undefined
+  density?: Density | undefined
+  defaultTheme?: Theme | undefined
+  defaultDensity?: Density | undefined
   /** Ключ localStorage; без него ничего не сохраняется. */
-  storageKey?: string
+  storageKey?: string | undefined
 }
 
 const isDensity = (v: unknown): v is Density => densityOptions.includes(v as Density)

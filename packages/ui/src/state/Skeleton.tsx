@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import s from './State.module.css'
 
-type LineProps = { width?: string | number; lines?: 1 | 2 | 3; height?: 's' | 'm' }
+type LineProps = { width?: string | number | undefined; lines?: 1 | 2 | 3 | undefined; height?: 's' | 'm' | undefined }
 const w = (v: string | number | undefined): string | undefined =>
   v === undefined ? undefined : typeof v === 'number' ? `calc(${v}px * var(--k-density))` : v
 

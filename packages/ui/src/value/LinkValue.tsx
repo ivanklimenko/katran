@@ -4,7 +4,7 @@ import { useKatran } from '../provider/useKatran'
 import { FLASH_MS } from './CopyValue'
 import s from './Value.module.css'
 
-export type LinkValueProps = { name: string; value?: string; tabIndex?: number }
+export type LinkValueProps = { name: string; value?: string | undefined; tabIndex?: number | undefined }
 
 /** Длинная непонятная строка (uuid, референс) показывается именем; клик копирует значение. */
 export function LinkValue({ name, value, tabIndex }: LinkValueProps) {

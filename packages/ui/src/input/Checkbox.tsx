@@ -2,9 +2,9 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, type InputHTMLAttri
 import s from './Input.module.css'
 
 export type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
-  label?: string
+  label?: string | undefined
   /** Третье состояние (часть записей выбрана). Только визуальное; checked остаётся как есть. */
-  indeterminate?: boolean
+  indeterminate?: boolean | undefined
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(

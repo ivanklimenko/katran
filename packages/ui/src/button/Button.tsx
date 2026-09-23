@@ -2,10 +2,10 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import s from './Button.module.css'
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost'
-  size?: 's' | 'm' | 'l'
+  variant?: 'primary' | 'ghost' | undefined
+  size?: 's' | 'm' | 'l' | undefined
   /** Переключатель: aria-pressed. */
-  pressed?: boolean
+  pressed?: boolean | undefined
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

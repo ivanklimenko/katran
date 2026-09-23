@@ -1,6 +1,10 @@
 import { Button } from '../button'
 import s from './State.module.css'
-export type EmptyStateProps = { title: string; text?: string; action?: { label: string; onClick: () => void } }
+export type EmptyStateProps = {
+  title: string
+  text?: string | undefined
+  action?: { label: string; onClick: () => void } | undefined
+}
 export function EmptyState({ title, text, action }: EmptyStateProps) {
   return (
     <div className={s.empty}>

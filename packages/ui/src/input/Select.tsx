@@ -1,11 +1,11 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react'
 import s from './Input.module.css'
 
-export type SelectOption = { value: string; label: string; disabled?: boolean }
+export type SelectOption = { value: string; label: string; disabled?: boolean | undefined }
 export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
   options: SelectOption[]
-  size?: 's' | 'm' | 'l'
-  placeholder?: string
+  size?: 's' | 'm' | 'l' | undefined
+  placeholder?: string | undefined
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(

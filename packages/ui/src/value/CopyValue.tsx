@@ -5,14 +5,14 @@ import s from './Value.module.css'
 
 export type CopyValueProps = {
   value: string
-  display?: ReactNode
+  display?: ReactNode | undefined
   /** Показано сокращённо → тултип с полным значением всегда. */
-  short?: boolean
-  tone?: 'val' | 'ink' | 'ink2' | 'mono'
+  short?: boolean | undefined
+  tone?: 'val' | 'ink' | 'ink2' | 'mono' | undefined
   /** Максимальная ширина в px при плотности 1. */
-  maxWidth?: number
-  tabIndex?: number
-  className?: string
+  maxWidth?: number | undefined
+  tabIndex?: number | undefined
+  className?: string | undefined
 }
 
 export const FLASH_MS = 600

@@ -2,7 +2,7 @@ import { useRef, type KeyboardEvent } from 'react'
 import { Counter } from '../value'
 import s from './Tabs.module.css'
 
-export type TabItem = { id: string; label: string; count?: number; disabled?: boolean }
+export type TabItem = { id: string; label: string; count?: number | undefined; disabled?: boolean | undefined }
 export type TabsProps = {
   /** Префикс идентификаторов: таб `${id}-tab-${item}`, панель `${id}-panel-${item}`. */
   id: string

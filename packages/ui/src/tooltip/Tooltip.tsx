@@ -3,7 +3,7 @@ import { cloneElement, isValidElement, type ReactElement } from 'react'
 export type TooltipProps = {
   content: string
   /** truncated — показывать только если текст ребёнка обрезан. */
-  when?: 'always' | 'truncated'
+  when?: 'always' | 'truncated' | undefined
   children: ReactElement<Record<string, unknown>>
 }
 

@@ -7,8 +7,8 @@ export type PaginationProps = {
   pageSize: number
   total: number
   onPage: (page: number) => void
-  pageSizes?: number[]
-  onPageSize?: (n: number) => void
+  pageSizes?: number[] | undefined
+  onPageSize?: ((n: number) => void) | undefined
 }
 
 /** Окно номеров: первая, последняя, текущая ±1; пропуски только если скрыто ≥ 2 страниц. */

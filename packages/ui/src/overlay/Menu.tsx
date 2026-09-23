@@ -6,17 +6,17 @@ export type MenuItem = {
   id: string
   label: string
   onSelect: () => void
-  checked?: boolean
-  disabled?: boolean
+  checked?: boolean | undefined
+  disabled?: boolean | undefined
   /** Подсказка справа (например, стрелка направления сортировки). */
-  hint?: string
+  hint?: string | undefined
 }
 export type MenuProps = {
   open: boolean
   anchor: RefObject<HTMLElement | null>
   onClose: () => void
   items: MenuItem[]
-  title?: string
+  title?: string | undefined
 }
 
 export function Menu({ open, anchor, onClose, items, title }: MenuProps) {
