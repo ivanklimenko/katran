@@ -1,7 +1,22 @@
+import { useRef } from 'react'
 import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Popover } from '../overlay'
 import { renderK } from '../test/renderK'
 import { Tooltip } from './Tooltip'
+
+/** Поповер держится открытым: проверяем именно слушателя тултипа, а не закрытие панели. */
+function TipInPopover() {
+  const a = useRef<HTMLButtonElement>(null)
+  return (
+    <>
+      <button ref={a}>Якорь</button>
+      <Popover open anchor={a} onClose={() => {}} label="Панель">
+        <Tooltip content="Подсказка"><button>Внутри</button></Tooltip>
+      </Popover>
+    </>
+  )
+}
 
 const setWidths = (el: HTMLElement, scroll: number, client: number) => {
   Object.defineProperty(el, 'scrollWidth', { value: scroll, configurable: true })
@@ -34,6 +49,28 @@ describe('Tooltip', () => {
     act(() => { vi.advanceTimersByTime(250) })
     expect(screen.getByRole('tooltip')).toBeInTheDocument()
     await user.keyboard('{Escape}')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('Escape при открытом Popover прячет тултип', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderK(<TipInPopover />)
+    const b = screen.getByRole('button', { name: 'Внутри' })
+    await user.hover(b)
+    act(() => { vi.advanceTimersByTime(250) })
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('цель удалена из DOM → тултип исчезает', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const { rerender } = renderK(<Tooltip content="Подсказка"><button>Цель</button></Tooltip>)
+    await user.hover(screen.getByRole('button', { name: 'Цель' }))
+    act(() => { vi.advanceTimersByTime(250) })
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    rerender(<span>без цели</span>)
+    await act(async () => {})
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 

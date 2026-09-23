@@ -36,13 +36,15 @@
 /* Порядок правил ниже — по возрастанию специфичности (stylelint
    no-descending-specificity): focus-visible и aria-checked и disabled имеют
    одинаковую специфичность (класс + один селектор состояния), hover:not()
-   выше на единицу за счёт :not(). Итог каскада не меняется: background/outline
-   задают только focus-visible и hover — конфликтов с остальными свойствами нет;
+   выше на единицу за счёт :not(). Итог каскада не меняется: background задают
+   только focus-visible и hover, обводку — только focus-visible (иначе более
+   специфичный hover погасил бы её у наведённого пункта с фокусом);
    disabled идёт после aria-checked, поэтому цвет disabled побеждает и для
    отмеченного-и-недоступного пункта — как и в исходном порядке правил. */
 .item:focus-visible {
   background: var(--k-hover);
-  outline: 0;
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
 }
 
 .item[aria-checked="true"] {
@@ -57,7 +59,6 @@
 
 .item:hover:not(:disabled) {
   background: var(--k-hover);
-  outline: 0;
 }
 
 .hint {

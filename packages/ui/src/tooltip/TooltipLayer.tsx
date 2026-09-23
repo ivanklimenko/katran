@@ -49,18 +49,29 @@ export function TooltipLayer({ root }: Props) {
     }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') hide() }
 
+    // Цель могла исчезнуть вместе со своим поддеревом (закрылся поповер, ушла строка) —
+    // события ухода указателя при этом не приходит, тултип повис бы у пустого места.
+    const watch = new MutationObserver(() => {
+      if (current.current && !current.current.isConnected) hide()
+    })
+    watch.observe(host, { childList: true, subtree: true })
+
     host.addEventListener('pointerover', onOver)
     host.addEventListener('pointerout', onOut)
     host.addEventListener('focusin', onOver)
     host.addEventListener('focusout', onOut)
-    host.addEventListener('keydown', onKey)
+    // Escape — на документе в фазе погружения: поповер глушит всплытие своего
+    // keydown (stopPropagation), а слой монтируется раньше любого поповера,
+    // поэтому в capture его слушатель вызывается первым.
+    document.addEventListener('keydown', onKey, true)
     return () => {
       hide()
+      watch.disconnect()
       host.removeEventListener('pointerover', onOver)
       host.removeEventListener('pointerout', onOut)
       host.removeEventListener('focusin', onOver)
       host.removeEventListener('focusout', onOut)
-      host.removeEventListener('keydown', onKey)
+      document.removeEventListener('keydown', onKey, true)
     }
   }, [root, id])
 
