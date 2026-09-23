@@ -52,7 +52,7 @@ describe('ColumnHeader', () => {
   it('ресайз: перетаскивание и клавиатура с минимумом', async () => {
     const onResize = vi.fn()
     renderK(<Table><ColumnHeader column={plain} sort={null} onSort={() => {}} width={80} onResize={onResize} /></Table>)
-    const h = screen.getByRole('separator', { name: 'Ширина колонки Тип' })
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
     expect(h).toHaveAttribute('aria-valuenow', '80')
     fireEvent.pointerDown(h, { clientX: 100, pointerId: 1 })
     fireEvent.pointerMove(h, { clientX: 130, pointerId: 1 })

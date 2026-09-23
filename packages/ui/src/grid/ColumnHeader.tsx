@@ -93,8 +93,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
         <button
           type="button"
           tabIndex={-1}
-          // eslint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- перетаскиваемый разделитель шире по семантике, чем button: role="separator" + aria-valuenow — паттерн WAI-ARIA для focusable separator (ручка ресайза колонки)
-          role="separator"
+          role="slider"
           aria-orientation="vertical"
           aria-label={`Ширина колонки ${name}`}
           aria-valuenow={width}
