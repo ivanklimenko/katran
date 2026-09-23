@@ -57,6 +57,7 @@
   --k-r-m: calc(6px * var(--k-density));
   --k-icon-s: calc(14px * var(--k-density));
   --k-icon-m: calc(16px * var(--k-density));
+  --k-tip-max: calc(360px * var(--k-density));
   --k-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --k-z-sticky: 10;

@@ -94,6 +94,7 @@ export const sizes = {
   'r-m': 6,
   'icon-s': 14,
   'icon-m': 16,
+  'tip-max': 360,
 } as const
 
 export const fonts = {

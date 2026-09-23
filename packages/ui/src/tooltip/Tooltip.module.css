@@ -1,0 +1,14 @@
+.tip {
+  position: fixed;
+  z-index: var(--k-z-tooltip);
+  max-width: var(--k-tip-max);
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border-radius: var(--k-r-s);
+  background: var(--k-ink);
+  color: var(--k-paper);
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  box-shadow: var(--k-shadow);
+  pointer-events: none;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

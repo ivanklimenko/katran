@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { densityOptions, type Density } from '@katran/tokens'
 import { KatranContext, type Theme } from './useKatran'
 import { LiveRegion, type LiveRegionHandle } from './LiveRegion'
+import { TooltipLayer } from '../tooltip/TooltipLayer'
 import s from './Provider.module.css'
 
 export type KatranProviderProps = {
@@ -41,6 +42,7 @@ export function KatranProvider(p: KatranProviderProps) {
   const [themeS, setThemeS] = useState<Theme>(() => read(p.storageKey, 'theme', isTheme) ?? p.defaultTheme ?? 'system')
   const [densityS, setDensityS] = useState<Density>(() => read(p.storageKey, 'density', isDensity) ?? p.defaultDensity ?? autoDensity())
   const live = useRef<LiveRegionHandle>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const setTheme = useCallback((t: Theme) => { setThemeS(t); write(p.storageKey, 'theme', t) }, [p.storageKey])
   const setDensity = useCallback((d: Density) => { setDensityS(d); write(p.storageKey, 'density', d) }, [p.storageKey])
@@ -65,12 +67,14 @@ export function KatranProvider(p: KatranProviderProps) {
   return (
     <KatranContext.Provider value={value}>
       <div
+        ref={rootRef}
         className={s.root}
         data-theme={theme === 'system' ? undefined : theme}
         style={{ '--k-density': String(density) } as React.CSSProperties}
       >
         {p.children}
         <LiveRegion ref={live} />
+        <TooltipLayer root={rootRef} />
       </div>
     </KatranContext.Provider>
   )

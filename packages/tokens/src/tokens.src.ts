@@ -53,6 +53,7 @@ export const sizes: Record<string, number> = {
   'h-field': 23,
   'r-s': 4, 'r-m': 6,
   'icon-s': 14, 'icon-m': 16,
+  'tip-max': 360,
 }
 
 export const fonts = {
