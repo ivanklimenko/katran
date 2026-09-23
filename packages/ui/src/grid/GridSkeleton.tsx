@@ -22,7 +22,7 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
             <td role="gridcell" className={s.cell}><div className={s.lead}><Skeleton.Line width={48} /></div></td>
             {visible.map((c) => (
               <td key={c.id} role="gridcell" className={s.cell}>
-                <div className={s.clamp} style={{ '--lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
+                <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
               </td>
             ))}
           </tr>

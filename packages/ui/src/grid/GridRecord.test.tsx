@@ -36,7 +36,7 @@ describe('GridRecord', () => {
   it('кламп по lines и выравнивание вправо', () => {
     renderK(<Table><GridRecord row={row} rowKey="r1" visible={columns} spanRows={[]} lead={null} rowIndex={1} /></Table>)
     const cells = screen.getAllByRole('gridcell')
-    expect(cells[2]!.firstElementChild).toHaveStyle({ '--lines': '2' })
+    expect(cells[2]!.firstElementChild).toHaveStyle({ '--k-lines': '2' })
     expect(cells[4]).toHaveAttribute('data-align', 'right')
   })
   it('выделение помечает обе строки', () => {
@@ -49,6 +49,11 @@ describe('GridRecord', () => {
   })
   it('без нарушений axe', async () => {
     const { container } = renderK(<Table><thead><tr><th scope="col">Служебная</th>{columns.map((c) => <th key={c.id} scope="col">{c.title || c.id}</th>)}</tr></thead><GridRecord row={row} rowKey="r1" visible={columns} spanRows={spanRows} lead={<button>Открыть</button>} rowIndex={2} /></Table>)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+  it('без нарушений axe на строке сегментов с заглушками по краям', async () => {
+    const fillerSpanRows = [[{ def: purpose, colStart: 2, colSpan: 1 }]]
+    const { container } = renderK(<Table><thead><tr><th scope="col">Служебная</th>{columns.map((c) => <th key={c.id} scope="col">{c.title || c.id}</th>)}</tr></thead><GridRecord row={row} rowKey="r1" visible={columns} spanRows={fillerSpanRows} lead={<button>Открыть</button>} rowIndex={2} /></Table>)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

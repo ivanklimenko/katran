@@ -43,7 +43,7 @@ export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected
         <td role="gridcell" className={s.cell} {...cp(0, 0)}><div className={s.lead}>{lead}</div></td>
         {visible.map((c, i) => (
           <td key={c.id} role="gridcell" className={s.cell} data-align={c.align} {...cp(0, i + 1)}>
-            <div className={s.clamp} style={{ '--lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
+            <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
           </td>
         ))}
       </tr>
@@ -55,7 +55,7 @@ export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected
             const content = seg.def.render(row)
             return (
               <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan} data-empty={content == null ? 'true' : undefined} {...cp(si + 1, seg.colStart + 1)}>
-                <div className={content == null ? s.spanEmpty : s.clamp} style={{ '--lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
+                <div className={content == null ? s.spanEmpty : s.clamp} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
               </td>
             )
           })}

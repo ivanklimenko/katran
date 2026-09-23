@@ -143,8 +143,7 @@
 }
 
 .clamp {
-  /* stylelint-disable-next-line custom-property-pattern -- --lines задаётся инлайн из JS (кламп по числу строк), это не токен дизайн-системы */
-  max-height: calc(var(--k-lh-1) * var(--lines, 1));
+  max-height: calc(var(--k-lh-1) * var(--k-lines, 1));
   overflow: hidden;
 }
 
