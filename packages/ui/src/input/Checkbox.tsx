@@ -1,0 +1,19 @@
+import { forwardRef, useEffect, useImperativeHandle, useRef, type InputHTMLAttributes } from 'react'
+import s from './Input.module.css'
+
+export type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
+  label?: string
+  /** Третье состояние (часть записей выбрана). Только визуальное; checked остаётся как есть. */
+  indeterminate?: boolean
+}
+
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
+  { label, indeterminate = false, className, ...rest }, ref,
+) {
+  const inner = useRef<HTMLInputElement>(null)
+  useImperativeHandle(ref, () => inner.current as HTMLInputElement)
+  useEffect(() => { if (inner.current) inner.current.indeterminate = indeterminate }, [indeterminate])
+  const input = <input ref={inner} type="checkbox" className={s.checkbox} {...rest} />
+  if (!label) return input
+  return <label className={[s.check, className].filter(Boolean).join(' ')}>{input}<span>{label}</span></label>
+})
