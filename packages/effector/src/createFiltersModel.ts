@@ -39,11 +39,12 @@ export function createFiltersModel({ meta, initial = [] }: FiltersModelConfig = 
   const $draft = createStore<Filter>(initial)
 
   // reset должен очищать стор в [], а не откатывать к initial из конфига — .reset() тут не подходит.
-  $draft.on(edit, upsert).on(discard, without).on(reset, () => [])
+  // remove снимает условие и из применённых, и из черновика (чтобы панель не показывала снятое),
+  // не трогая неприменённые правки других полей в черновике.
+  $draft.on(edit, upsert).on(discard, without).on(remove, without).on(reset, () => [])
   $conditions.on(remove, without).on(reset, () => [])
-  // apply: черновик → применённые; remove: применённые → черновик (чтобы панель не показывала снятое)
+  // apply: черновик → применённые
   sample({ clock: apply, source: $draft, target: $conditions })
-  sample({ clock: remove, source: $conditions, target: $draft })
 
   const $dirty = combine($conditions, $draft, (c, d) => !same(c, d))
 

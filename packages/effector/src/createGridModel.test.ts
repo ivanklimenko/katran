@@ -17,6 +17,9 @@ const mk = (over: Partial<Parameters<typeof createGridModel<Row>>[0]> = {}) => {
   return { model, calls, fetchFx, $filter }
 }
 
+/** Дать эффектам и их done/fail пройти через очередь микрозадач. */
+const flush = () => new Promise<void>((r) => setTimeout(r, 0))
+
 describe('createGridModel', () => {
   it('стартовое состояние: страница 1, размер 20, порядок из колонок, запроса ещё нет', () => {
     const { model } = mk()
@@ -137,6 +140,77 @@ describe('createGridModel', () => {
     await allSettled(model.retry, { scope })
     expect(scope.getState(model.$state)).toBe('ready')
     expect(scope.getState(model.$error)).toBeNull()
+  })
+
+  it('устаревший ответ игнорируется: быстрые «стр. 2 → стр. 3», старый ответ приходит последним; отказ старого тоже', async () => {
+    type Call = { q: GridQuery; ok: (p: GridPage<Row>) => void; fail: (e: Error) => void }
+    const calls: Call[] = []
+    const fetchFx = createEffect<GridQuery, GridPage<Row>>((q) => new Promise((ok, fail) => { calls.push({ q, ok, fail }) }))
+    const { model } = mk({ fetchFx })
+    const scope = fork()
+    // allSettled ждёт все эффекты scope, поэтому промисы собираются и ожидаются только после ручных release
+    const run = Promise.all([allSettled(model.setPage, { scope, params: 2 }), allSettled(model.setPage, { scope, params: 3 })])
+    await flush()
+    expect(calls.map((c) => c.q.page)).toEqual([1, 2])
+    calls[1]!.ok({ rows: [{ id: 'p3', n: 3 }], total: 60 })             // актуальный (стр. 3) — первым
+    await flush()
+    expect(scope.getState(model.$rows)).toEqual([{ id: 'p3', n: 3 }])
+    calls[0]!.ok({ rows: [{ id: 'p2', n: 2 }], total: 40 })             // старый (стр. 2) — позже
+    await run
+    expect(scope.getState(model.$rows)).toEqual([{ id: 'p3', n: 3 }])
+    expect(scope.getState(model.$total)).toBe(60)
+    expect(scope.getState(model.$state)).toBe('ready')
+
+    const run2 = Promise.all([allSettled(model.setPage, { scope, params: 4 }), allSettled(model.setPage, { scope, params: 5 })])
+    await flush()
+    calls[2]!.fail(new Error('стр. 4 упала'))                           // старый запрос падает — это не ошибка текущего вида
+    await flush()
+    expect(scope.getState(model.$error)).toBeNull()
+    expect(scope.getState(model.$state)).toBe('refreshing')
+    calls[3]!.ok({ rows: [{ id: 'p5', n: 5 }], total: 100 })
+    await run2
+    expect(scope.getState(model.$error)).toBeNull()
+    expect(scope.getState(model.$rows)).toEqual([{ id: 'p5', n: 5 }])
+    expect(scope.getState(model.$state)).toBe('ready')
+  })
+
+  it('поздний ответ на старый фильтр не перезаписывает ответ на новый', async () => {
+    const calls: Array<{ q: GridQuery; ok: (p: GridPage<Row>) => void }> = []
+    const fetchFx = createEffect<GridQuery, GridPage<Row>>((q) => new Promise((ok) => { calls.push({ q, ok }) }))
+    const { model, $filter } = mk({ fetchFx })
+    const scope = fork()
+    const f: Filter = [{ field: 'status', op: 'EQ', value: 'ERROR' }]
+    const run = Promise.all([allSettled(model.refresh, { scope }), allSettled($filter, { scope, params: f })])
+    await flush()
+    expect(calls.map((c) => c.q.filter)).toEqual([[], f])
+    calls[1]!.ok({ rows: [{ id: 'new', n: 1 }], total: 1 })
+    await flush()
+    calls[0]!.ok({ rows: [{ id: 'old', n: 0 }], total: 999 })
+    await run
+    expect(scope.getState(model.$rows)).toEqual([{ id: 'new', n: 1 }])
+    expect(scope.getState(model.$total)).toBe(1)
+  })
+
+  it('две модели на одном fetchFx не получают ответы и pending друг друга', async () => {
+    const releases: Array<() => void> = []
+    const fetchFx = createEffect<GridQuery, GridPage<Row>>((q) => new Promise((ok) => {
+      releases.push(() => ok({ rows: [{ id: q.filter.length ? 'B' : 'A', n: 0 }], total: q.filter.length ? 2 : 1 }))
+    }))
+    const a = mk({ fetchFx })
+    const b = mk({ fetchFx, $filter: createStore<Filter>([{ field: 'x', op: 'EQ', value: 1 }]) })
+    const scope = fork()
+    const la = allSettled(a.model.refresh, { scope }); await flush(); releases.shift()!(); await la
+    const lb = allSettled(b.model.refresh, { scope }); await flush(); releases.shift()!(); await lb
+    expect(scope.getState(a.model.$rows)).toEqual([{ id: 'A', n: 0 }])
+    expect(scope.getState(b.model.$rows)).toEqual([{ id: 'B', n: 0 }])
+    const ra = allSettled(a.model.refresh, { scope })
+    await flush()
+    expect(scope.getState(a.model.$state)).toBe('refreshing')
+    expect(scope.getState(b.model.$state)).toBe('ready')              // pending не общий
+    releases.shift()!(); await ra
+    expect(scope.getState(b.model.$rows)).toEqual([{ id: 'B', n: 0 }]) // ответ модели A не попал в B
+    expect(scope.getState(b.model.$total)).toBe(2)
+    expect(scope.getState(a.model.$total)).toBe(1)
   })
 
   it('refreshing: пока идёт повторный запрос при наличии данных', async () => {

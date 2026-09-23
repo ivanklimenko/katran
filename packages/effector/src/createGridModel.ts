@@ -1,4 +1,4 @@
-import { combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
+import { attach, combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
 import type { ColumnsState, Filter, GridPage, GridQuery, GridViewState, PersistAdapter, Selection, Sort } from './types'
 
 export type GridPersisted = { widths: Record<string, number>; order: string[]; hidden: string[]; pageSize: number }
@@ -45,6 +45,8 @@ export type GridModel<Row> = {
 }
 
 const EMPTY_SELECTION: Selection = { mode: 'ids', ids: [] }
+/** Запросы сравниваются по значению: GridQuery — простые данные (фильтр, сортировка, номер и размер страницы). */
+const sameQuery = (a: GridQuery, b: GridQuery) => JSON.stringify(a) === JSON.stringify(b)
 
 /** Сохранённый порядок сверяется с реальными колонками: чужие id выбрасываются, новые дописываются в конец. */
 function reconcileOrder(saved: string[] | undefined, ids: string[]): string[] {
@@ -127,6 +129,10 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
 
   const $query = combine(cfg.$filter, $sort, $page, $pageSize, (filter, sort, page, size): GridQuery => ({ filter, sort, page: page - 1, size }))
 
+  // Свой экземпляр эффекта на модель: fetchFx приложения может быть общим для нескольких гридов,
+  // а done/fail/pending у attach-копии — только от вызовов этой модели.
+  const requestFx = attach({ effect: cfg.fetchFx })
+
   // запрос: изменение фильтра, сортировки, страницы, размера страницы, refresh, retry.
   // Для $filter — отдельный сэмпл: $page сбрасывается в том же тике, но $query (combine) может ещё не пересчитаться к моменту чтения source в общем сэмпле,
   // поэтому страница берётся явной константой 0, а не через $query.
@@ -134,19 +140,33 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
     clock: cfg.$filter,
     source: { sort: $sort, size: $pageSize },
     fn: ({ sort, size }, filter): GridQuery => ({ filter, sort, page: 0, size }),
-    target: cfg.fetchFx,
+    target: requestFx,
   })
-  sample({ clock: [sortBy, setPage, setPageSize, refresh, retry], source: $query, target: cfg.fetchFx })
+  sample({ clock: [sortBy, setPage, setPageSize, refresh, retry], source: $query, target: requestFx })
 
-  $rows.on(cfg.fetchFx.doneData, (_, p) => p.rows)
-  $total.on(cfg.fetchFx.doneData, (_, p) => p.total)
-  $hasData.on(cfg.fetchFx.doneData, () => true)
+  // Принимается только ответ на текущий запрос: поздний ответ на старую страницу/фильтр не перезапишет актуальный.
+  const doneData = sample({
+    clock: requestFx.done,
+    source: $query,
+    filter: (q, { params }) => sameQuery(q, params),
+    fn: (_, { result }) => result,
+  })
+  const failData = sample({
+    clock: requestFx.fail,
+    source: $query,
+    filter: (q, { params }) => sameQuery(q, params),
+    fn: (_, { error }) => error,
+  })
+
+  $rows.on(doneData, (_, p) => p.rows)
+  $total.on(doneData, (_, p) => p.total)
+  $hasData.on(doneData, () => true)
   $error
-    .on(cfg.fetchFx.failData, (_, e) => (e instanceof Error ? e.message : String(e)))
-    .reset(cfg.fetchFx.done, retry)
+    .on(failData, (_, e) => (e instanceof Error ? e.message : String(e)))
+    .reset(doneData, retry)
 
   const $state = combine(
-    cfg.fetchFx.pending,
+    requestFx.pending,
     $hasData,
     $error,
     (pending, has, err): GridViewState => (pending ? (has ? 'refreshing' : 'loading') : err ? 'error' : has ? 'ready' : 'loading'),
