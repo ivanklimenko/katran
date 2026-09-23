@@ -1,0 +1,37 @@
+import tseslint from 'typescript-eslint'
+import importX from 'eslint-plugin-import-x'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
+import reactHooks from 'eslint-plugin-react-hooks'
+import globals from 'globals'
+
+export default tseslint.config(
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts'] },
+  ...tseslint.configs.recommended,
+  importX.flatConfigs.recommended,
+  importX.flatConfigs.typescript,
+  { settings: { 'import-x/resolver': { typescript: true, node: true } } },
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    plugins: { 'jsx-a11y': jsxA11y, 'react-hooks': reactHooks },
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      // Граница слоёв (спека 3.2): ui не знает об effector, effector — о DOM/ui
+      'import-x/no-restricted-paths': ['error', {
+        zones: [
+          { target: './packages/ui/src', from: './packages/effector', message: 'ui не импортирует effector' },
+          { target: './packages/effector/src', from: './packages/ui/src', except: ['./index.ts'], message: 'effector импортирует из ui только типы через пакет' },
+        ],
+      }],
+      'no-restricted-imports': ['error', { paths: [
+        { name: 'effector', message: 'effector разрешён только в packages/effector' },
+        { name: 'effector-react', message: 'effector-react разрешён только в packages/effector' },
+      ] }],
+    },
+  },
+  {
+    files: ['packages/effector/src/**/*.ts', 'apps/demo/src/**/*.{ts,tsx}'],
+    rules: { 'no-restricted-imports': 'off' },
+  },
+)
