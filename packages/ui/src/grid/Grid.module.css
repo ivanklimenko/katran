@@ -1,3 +1,10 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
 .wrap {
   position: relative;
   flex: 1 1 auto;
@@ -225,4 +232,10 @@ th[tabindex]:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.leadHead {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
 }

@@ -78,7 +78,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
       {...cellProps}
     >
       {keys.length > 0 ? (
-        <button ref={btn} type="button" tabIndex={-1} className={s.thBtn} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined}>
+        <button ref={btn} type="button" tabIndex={-1} className={s.thBtn} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
           {title}<span className={s.arrow} aria-hidden="true">{arrow}</span>
           <span className={s.thSub}>{sub}</span>
         </button>
