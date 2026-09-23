@@ -103,6 +103,9 @@ export const sizes = {
   'side': 200,
   'note-max': 640,
   'swatch': 150,
+  'grid-lead': 84,
+  'grid-rz': 7,
+  'menu-max-h': 320,
 } as const
 
 export const fonts = {

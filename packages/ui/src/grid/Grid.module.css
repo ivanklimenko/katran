@@ -1,0 +1,199 @@
+.wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.table {
+  width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: var(--k-fs-1);
+  line-height: var(--k-lh-1);
+  color: var(--k-ink);
+}
+
+/* --- шапка --- */
+.th {
+  position: sticky;
+  top: 0;
+  z-index: var(--k-z-sticky);
+  padding: var(--k-sp-2) var(--k-sp-2) var(--k-sp-2);
+  overflow: hidden;
+  text-align: left;
+  font: 600 var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink);
+  background: var(--k-paper);
+  border-bottom: 1px solid var(--k-line);
+  white-space: nowrap;
+}
+
+.thBtn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--k-r-s);
+}
+
+.thBtn:hover {
+  background: var(--k-hover);
+}
+
+.thBtn:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 0;
+}
+
+.sorted {
+  color: var(--k-val);
+}
+
+.thSub {
+  display: block;
+  min-height: var(--k-lh-2);
+  overflow: hidden;
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-muted);
+  text-overflow: ellipsis;
+}
+
+.arrow {
+  margin-left: var(--k-sp-1);
+  font-size: var(--k-fs-2);
+  color: var(--k-faint);
+}
+
+/* ручка ресайза — настоящая кнопка: с клавиатуры стрелками */
+.rz {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--k-grid-rz);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: col-resize;
+  z-index: var(--k-z-sticky);
+}
+
+.rz::after {
+  content: '';
+  position: absolute;
+  top: var(--k-sp-2);
+  bottom: var(--k-sp-2);
+  left: 50%;
+  border-left: 1px solid var(--k-line);
+}
+
+.rz:focus-visible {
+  outline: 0;
+}
+
+.rz:hover::after,
+.rz:focus-visible::after,
+.rz[data-active='true']::after {
+  border-left: 2px solid var(--k-val);
+}
+
+.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.stateRow > td {
+  padding: 0;
+}
+
+/* --- запись --- */
+.record > tr > td {
+  padding: var(--k-sp-1) var(--k-sp-2) 0;
+  vertical-align: top;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.selected > tr > td {
+  background: var(--k-val-soft);
+}
+
+.record > tr:first-child > td {
+  padding-top: var(--k-sp-2);
+}
+
+.record > tr:last-child > td {
+  padding-bottom: var(--k-sp-2);
+  border-bottom: 1px solid var(--k-line);
+}
+
+.record > tr:hover > td {
+  background: var(--k-hover);
+}
+
+.selected > tr:hover > td {
+  background: var(--k-val-soft);
+}
+
+.clamp {
+  /* stylelint-disable-next-line custom-property-pattern -- --lines задаётся инлайн из JS (кламп по числу строк), это не токен дизайн-системы */
+  max-height: calc(var(--k-lh-1) * var(--lines, 1));
+  overflow: hidden;
+}
+
+.cell[data-align='right'] {
+  text-align: right;
+}
+
+.lead {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  width: var(--k-grid-lead);
+  min-width: var(--k-grid-lead);
+}
+
+.ord {
+  min-width: var(--k-sp-5);
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  color: var(--k-faint);
+  text-align: right;
+}
+
+.spanEmpty {
+  min-height: var(--k-lh-2);
+}
+
+.filler {
+  padding: 0;
+}
+
+td[tabindex]:focus-visible,
+th[tabindex]:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+/* --- состояния --- */
+.dim {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--k-t-base);
+}
+
+.progress {
+  position: sticky;
+  top: 0;
+  z-index: var(--k-z-sticky);
+}
+
+.foot {
+  flex: none;
+}
