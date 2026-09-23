@@ -1,5 +1,7 @@
 # Katran — срез 1, план 2 из 3: DataGrid и модели effector
 
+> **Статус:** исполнен 2026-09-24 (ветка `feat/slice1-grid`, последний коммит `1ca7663`); отклонения внесены в спеку. Текст плана поправлен только там, где решение исполнения заменило указание плана: роль ручки ресайза (`slider`, Task 8, 10), переменная клампа (`--k-lines`, Task 7).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Реализовать `DataGrid` по контракту спеки (многострочная запись со сквозными сегментами, сортировка, ресайз, состав колонок, выделение, состояния, клавиатура) и пакет `@katran/effector` с `createGridModel`, `createFiltersModel` и хуками; показать грид в демо на правдоподобных данных и закрепить геометрию замером.
@@ -10,7 +12,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-23-katran-design.md` — разделы 6 (DataGrid), 7.1 (модель фильтра), 8 (модели), 9 (Playwright-замеры). План 1 (примитивы, на которые опираемся): `docs/superpowers/plans/2026-09-23-katran-slice1-foundation.md`.
 
-**Отклонения от спеки, принятые этим планом** (внести в спеку после исполнения):
+**Отклонения от спеки, принятые этим планом** (внесены в спеку 2026-09-24: 6.1, 6.2, 6.3, 8.2):
 - `Selection`: `ids`/`except` — массивы строк, не `Set` (сериализуемость сторов effector, `persist`, сравнение props в React).
 - Первая колонка грида (`__lead`: чекбокс, кнопка открытия, порядковый номер) — служебная, не входит в `layout.columns` и не участвует в `spans`/сортировке/составе.
 - `GridQuery.page` — с нуля (как у бека, контракт фильтров §2), `$page` модели — с единицы.
@@ -1133,7 +1135,7 @@ type CellProps = (r: number, c: number) => HTMLAttributes<HTMLTableCellElement> 
 <GridSkeleton visible spanRows rows rowIndexStart />                              // <tbody> × rows той же геометрии
 fillSegments(segs: SpanCell[], colCount): Array<SpanCell | { filler: true; colSpan: number }>  // заполняет пропуски между сегментами
 ```
-- Геометрия (спека 6.1): граница `--k-line` по нижнему краю записи (`tbody > tr:last-child > td`), внутри линий нет; ритм 8/3/8 px через токены `sp-2`/`sp-1`; контент ячейки клампится по `--lines` (1–3) × `--k-lh-1`; выделенная запись — фон `val-soft` на всех строках.
+- Геометрия (спека 6.1): граница `--k-line` по нижнему краю записи (`tbody > tr:last-child > td`), внутри линий нет; ритм 8/3/8 px через токены `sp-2`/`sp-1`; контент ячейки клампится по `--k-lines` (1–3) × `--k-lh-1`; выделенная запись — фон `val-soft` на всех строках.
 
 - [ ] **Step 1: Токены**
 
@@ -1181,7 +1183,7 @@ describe('GridRecord', () => {
   it('кламп по lines и выравнивание вправо', () => {
     renderK(<Table><GridRecord row={row} rowKey="r1" visible={columns} spanRows={[]} lead={null} rowIndex={1} /></Table>)
     const cells = screen.getAllByRole('gridcell')
-    expect(cells[2]!.firstElementChild).toHaveStyle({ '--lines': '2' })
+    expect(cells[2]!.firstElementChild).toHaveStyle({ '--k-lines': '2' })
     expect(cells[4]).toHaveAttribute('data-align', 'right')
   })
   it('выделение помечает обе строки', () => {
@@ -1324,7 +1326,7 @@ Run: `pnpm --filter @katran/ui test GridRecord` → FAIL.
 .selected > tr:hover > td { background: var(--k-val-soft); }
 
 .clamp {
-  max-height: calc(var(--k-lh-1) * var(--lines, 1));
+  max-height: calc(var(--k-lh-1) * var(--k-lines, 1));
   overflow: hidden;
 }
 
@@ -1408,7 +1410,7 @@ export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected
         <td role="gridcell" className={s.cell} {...cp(0, 0)}><div className={s.lead}>{lead}</div></td>
         {visible.map((c, i) => (
           <td key={c.id} role="gridcell" className={s.cell} data-align={c.align} {...cp(0, i + 1)}>
-            <div className={s.clamp} style={{ '--lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
+            <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
           </td>
         ))}
       </tr>
@@ -1420,7 +1422,7 @@ export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected
             const content = seg.def.render(row)
             return (
               <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan} data-empty={content == null ? 'true' : undefined} {...cp(si + 1, seg.colStart + 1)}>
-                <div className={content == null ? s.spanEmpty : s.clamp} style={{ '--lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
+                <div className={content == null ? s.spanEmpty : s.clamp} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
               </td>
             )
           })}
@@ -1458,7 +1460,7 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
             <td role="gridcell" className={s.cell}><div className={s.lead}><Skeleton.Line width={48} /></div></td>
             {visible.map((c) => (
               <td key={c.id} role="gridcell" className={s.cell}>
-                <div className={s.clamp} style={{ '--lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
+                <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={c.lines ?? 1} width="70%" /></div>
               </td>
             ))}
           </tr>
@@ -1482,7 +1484,7 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
 
 - [ ] **Step 5: Тесты проходят, линт**
 
-Run: `pnpm --filter @katran/ui test GridRecord && pnpm lint` → PASS (6). Возможные замечания: `jsx-a11y` может потребовать `scope` у `<th>` в тестовой таблице — добавить `scope="col"` в тест; `toHaveStyle({'--lines': '2'})` в jsdom работает через inline style — если нет, проверять `cells[2]!.firstElementChild?.getAttribute('style')` на `--lines: 2`.
+Run: `pnpm --filter @katran/ui test GridRecord && pnpm lint` → PASS (6). Возможные замечания: `jsx-a11y` может потребовать `scope` у `<th>` в тестовой таблице — добавить `scope="col"` в тест; `toHaveStyle({'--k-lines': '2'})` в jsdom работает через inline style — если нет, проверять `cells[2]!.firstElementChild?.getAttribute('style')` на `--k-lines: 2`.
 
 - [ ] **Step 6: Commit**
 
@@ -1504,7 +1506,7 @@ git add -A && git commit -m "Грид: стили, запись из строк�
 ```tsx
 <ColumnHeader column sort onSort width onResize? cellProps? />
 ```
-  `width` — px при плотности 1, применяется как `calc(Wpx * var(--k-density))`. Простая колонка (один ключ): клик → тот же ключ переключает направление, другой ключ — `defaultDir`. Составная: клик открывает `Menu` с ключами (`checked` у активного, `hint` — стрелка), пункт «Сбросить сортировку» при активном ключе этой колонки; выбранный ключ подписывается вместо `subtitle`. Ручка ресайза — `<button role="separator" aria-orientation="vertical" aria-valuenow={width}>`: pointer-drag (`setPointerCapture`), с клавиатуры `←/→` шаг 8, `Shift` — 32; `minWidth` (по умолчанию 36) соблюдается. Заголовок без `sort` — обычный текст.
+  `width` — px при плотности 1, применяется как `calc(Wpx * var(--k-density))`. Простая колонка (один ключ): клик → тот же ключ переключает направление, другой ключ — `defaultDir`. Составная: клик открывает `Menu` с ключами (`checked` у активного, `hint` — стрелка), пункт «Сбросить сортировку» при активном ключе этой колонки; выбранный ключ подписывается вместо `subtitle`. Ручка ресайза — `<button role="slider" aria-orientation="horizontal" aria-valuenow={width}>`: pointer-drag (`setPointerCapture`), с клавиатуры `←/→` шаг 8, `Shift` — 32; `minWidth` (по умолчанию 36) соблюдается. Заголовок без `sort` — обычный текст.
 
 - [ ] **Step 1: Тест (падает)**
 
@@ -1564,7 +1566,7 @@ describe('ColumnHeader', () => {
   it('ресайз: перетаскивание и клавиатура с минимумом', async () => {
     const onResize = vi.fn()
     renderK(<Table><ColumnHeader column={plain} sort={null} onSort={() => {}} width={80} onResize={onResize} /></Table>)
-    const h = screen.getByRole('separator', { name: 'Ширина колонки Тип' })
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
     expect(h).toHaveAttribute('aria-valuenow', '80')
     fireEvent.pointerDown(h, { clientX: 100, pointerId: 1 })
     fireEvent.pointerMove(h, { clientX: 130, pointerId: 1 })
@@ -1685,8 +1687,8 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
       {(column.resizable ?? true) && onResize && (
         <button
           type="button"
-          role="separator"
-          aria-orientation="vertical"
+          role="slider"
+          aria-orientation="horizontal"
           aria-label={`Ширина колонки ${name}`}
           aria-valuenow={width}
           aria-valuemin={min}
@@ -1703,7 +1705,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
   )
 }
 ```
-`role="separator"` на `<button>` — допустимый паттерн для перемещаемого разделителя (WAI-ARIA: focusable separator с `aria-valuenow`); если `jsx-a11y` ругается на `role` у `button`, оставить и указать правило в отчёте. `hint: undefined` при `exactOptionalPropertyTypes` допустим — `MenuItem.hint?: string | undefined`.
+`role="slider"` на `<button>`: у ручки есть значение (`aria-valuenow`), и оно меняется стрелками; `separator` не годится — `jsx-a11y` не моделирует фокусируемый separator и потребовал бы отключения правила. Ориентация `horizontal` — значение меняется стрелками влево/вправо (спека 6.3). `hint: undefined` при `exactOptionalPropertyTypes` допустим — `MenuItem.hint?: string | undefined`.
 
 В `index.ts` добавить `export { ColumnHeader, type ColumnHeaderProps } from './ColumnHeader'`.
 
@@ -1979,7 +1981,7 @@ describe('DataGrid', () => {
     renderK(<DataGrid {...p} />)
     await userEvent.click(screen.getByRole('button', { name: /Номер/ }))
     expect(p.onSort).toHaveBeenCalledWith({ key: 'num', dir: 'desc' })
-    const h = screen.getByRole('separator', { name: 'Ширина колонки Номер' })
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Номер' })
     h.focus()
     await userEvent.keyboard('{ArrowRight}')
     expect(p.onResize).toHaveBeenCalledWith({ id: 'num', width: 98 })
@@ -2888,7 +2890,7 @@ test('плотность 125 % масштабирует запись', async ({ 
   expect(Math.abs(big - base * 1.25)).toBeLessThanOrEqual(2)
 })
 ```
-Если запись первой страницы содержит документ без причины и без назначения — вторая строка всё равно есть (пустые сегменты держат `min-height`), высота стабильна. Если фактическая высота выходит за коридор — это сигнал о ритме записи (спека 6.1: ≈ 65 px): сначала проверить паддинги `sp-2`/`sp-1` и `--lines`, а не двигать коридор; зафиксировать реальные числа в отчёте.
+Если запись первой страницы содержит документ без причины и без назначения — вторая строка всё равно есть (пустые сегменты держат `min-height`), высота стабильна. Если фактическая высота выходит за коридор — это сигнал о ритме записи (спека 6.1: ≈ 65 px): сначала проверить паддинги `sp-2`/`sp-1` и `--k-lines`, а не двигать коридор; зафиксировать реальные числа в отчёте.
 
 - [ ] **Step 3: Прогон, README**
 
