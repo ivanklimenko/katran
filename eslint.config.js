@@ -37,4 +37,19 @@ export default tseslint.config(
     files: ['packages/effector/src/**/*.{ts,tsx}', 'apps/demo/src/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': 'off' },
   },
+  // Граница слоёв для effector (спека 3.2): из @katran/ui — только типы, без DOM.
+  // localStorage не запрещён: persist-адаптер в localStorage санкционирован спекой 8.2.
+  {
+    files: ['packages/effector/src/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        paths: [{ name: '@katran/ui', allowTypeImports: true, message: 'effector берёт из @katran/ui только типы: import type { … }' }],
+        patterns: [{ group: ['@katran/ui/*'], message: 'effector не импортирует ресурсы @katran/ui (стили, подпути)' }],
+      }],
+      'no-restricted-globals': ['error',
+        { name: 'document', message: 'effector не работает с DOM' },
+        { name: 'window', message: 'effector не работает с DOM' },
+      ],
+    },
+  },
 )
