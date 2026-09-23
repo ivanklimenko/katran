@@ -8,4 +8,20 @@
     pnpm check        # генерация токенов, линт, тесты, сборка
     pnpm --filter demo dev
 
-`--allow-empty-input` у stylelint — пока нет пакетов ui/demo.
+## Подключение
+
+В монорепозитории пакеты подключаются исходниками через workspace — сборка не нужна:
+
+    "@katran/ui": "workspace:*"
+
+Вне монорепозитория пакет собирается и подключается сборкой:
+
+    pnpm --filter @katran/ui build
+
+```ts
+import '@katran/tokens/fonts.css'
+import '@katran/ui/styles.css'
+import { KatranProvider, Button } from '@katran/ui'
+```
+
+Peer-зависимости: `react` ≥ 18, `react-dom` ≥ 18.

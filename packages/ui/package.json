@@ -8,6 +8,12 @@
     ".": "./src/index.ts",
     "./styles.css": "./dist/ui.css"
   },
+  "publishConfig": {
+    "exports": {
+      ".": { "types": "./dist/index.d.ts", "import": "./dist/ui.js" },
+      "./styles.css": "./dist/ui.css"
+    }
+  },
   "files": [
     "src",
     "dist"

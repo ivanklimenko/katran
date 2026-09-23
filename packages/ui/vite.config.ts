@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-  plugins: [react(), dts({ include: ['src'], exclude: ['**/*.test.*'] })],
+  plugins: [react(), dts({ include: ['src'], exclude: ['**/*.test.*', 'src/test/**'] })],
   // Детерминированные имена классов: k-Component__part (спека 3.3). Хеша нет намеренно.
   // Строковый шаблон 'k-[name]__[local]' здесь не подходит: Vite/generic-names вырезает
   // из имени файла только последнее расширение (.css), поэтому для Provider.module.css
@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'ui' },
     cssFileName: 'ui',
-    rollupOptions: { external: ['react', 'react-dom', 'react/jsx-runtime', '@katran/tokens'] },
+    rollupOptions: { external: ['react', 'react-dom', 'react/jsx-runtime', '@katran/tokens', '@floating-ui/dom'] },
     sourcemap: true,
   },
 })
