@@ -99,6 +99,7 @@ export const sizes = {
   'dot-m': 14,
   'counter': 18,
   'menu-min': 180,
+  'progress': 3,
 } as const
 
 export const fonts = {
