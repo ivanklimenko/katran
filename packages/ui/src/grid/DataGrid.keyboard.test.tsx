@@ -1,3 +1,4 @@
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderK } from '../test/renderK'
 import { CopyValue } from '../value'
@@ -83,6 +84,23 @@ describe('DataGrid: клавиатура', () => {
     await userEvent.keyboard('{Escape}')
     expect(cellOf(document.activeElement)).toBe('1:1')
     expect(document.activeElement?.hasAttribute('data-cell')).toBe(true)
+  })
+
+  it('Tab внутри поповера «Состав колонок» не уводит фокус в ячейку шапки: событие из портала не наше', async () => {
+    renderK(<DataGrid {...props({ selection: { mode: 'ids', ids: [] }, onSelect: vi.fn(), onSelectPage: vi.fn() })} />)
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowUp}')
+    expect(cellOf(document.activeElement)).toBe('1:0')
+    await userEvent.keyboard('{Enter}')                              // два интерактива → фокус на первый (чекбокс страницы)
+    expect(document.activeElement).toHaveAccessibleName('Выбрать все на странице')
+    await userEvent.tab()
+    expect(document.activeElement).toHaveAccessibleName('Состав колонок')
+    await userEvent.keyboard('{Enter}')
+    const dialog = screen.getByRole('dialog', { name: 'Состав колонок' })
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)   // фокус на поиске
+    await userEvent.tab()
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    expect(document.activeElement).toBe(within(dialog).getByRole('checkbox', { name: 'Номер' }))
   })
 
   it('смена страницы возвращает активную ячейку в начало', async () => {

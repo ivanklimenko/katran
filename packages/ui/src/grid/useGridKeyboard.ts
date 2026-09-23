@@ -47,6 +47,9 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
 
   const onKeyDown = (e: KeyboardEvent<HTMLTableCellElement>) => {
     const cell = e.currentTarget
+    // Поповер/меню рендерятся порталом, но в React-дереве остаются потомками ячейки: их keydown
+    // всплывает сюда синтетически. Такие события — не наши, иначе Tab в поповере уводит фокус в ячейку.
+    if (!cell.contains(e.target as Node)) return
     const inside = e.target !== cell
     if (inside) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cell.focus() }
