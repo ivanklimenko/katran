@@ -5,5 +5,29 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "peerDependencies": { "effector": ">=23", "effector-react": ">=23", "react": ">=18" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@katran/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "effector": ">=23",
+    "effector-react": ">=23",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "effector": "^23",
+    "effector-react": "^23",
+    "jsdom": "^30.1.1",
+    "react": "^19",
+    "react-dom": "^19.3.0",
+    "vitest": "^5.0.1"
+  }
 }
