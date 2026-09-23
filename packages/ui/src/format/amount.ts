@@ -1,4 +1,4 @@
-const NNBSP = ' '
+const NNBSP = '\u202F'
 /** Сумма: группы разделены узким неразрывным пробелом, десятичная запятая. */
 export function formatAmount(n: number, fraction = 2): string {
   const sign = n < 0 ? '-' : ''
