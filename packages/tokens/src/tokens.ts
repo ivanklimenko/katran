@@ -98,6 +98,7 @@ export const sizes = {
   'dot-s': 7,
   'dot-m': 14,
   'counter': 18,
+  'menu-min': 180,
 } as const
 
 export const fonts = {

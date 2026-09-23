@@ -43,6 +43,7 @@ export function KatranProvider(p: KatranProviderProps) {
   const [densityS, setDensityS] = useState<Density>(() => read(p.storageKey, 'density', isDensity) ?? p.defaultDensity ?? autoDensity())
   const live = useRef<LiveRegionHandle>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
 
   const setTheme = useCallback((t: Theme) => { setThemeS(t); write(p.storageKey, 'theme', t) }, [p.storageKey])
   const setDensity = useCallback((d: Density) => { setDensityS(d); write(p.storageKey, 'density', d) }, [p.storageKey])
@@ -62,12 +63,15 @@ export function KatranProvider(p: KatranProviderProps) {
   const theme = p.theme ?? themeS
   const density = p.density ?? densityS
 
-  const value = useMemo(() => ({ theme, density, setTheme, setDensity, announce }), [theme, density, setTheme, setDensity, announce])
+  const value = useMemo(
+    () => ({ theme, density, setTheme, setDensity, announce, portalRoot }),
+    [theme, density, setTheme, setDensity, announce, portalRoot],
+  )
 
   return (
     <KatranContext.Provider value={value}>
       <div
-        ref={rootRef}
+        ref={(el) => { rootRef.current = el; setPortalRoot(el) }}
         className={s.root}
         data-theme={theme === 'system' ? undefined : theme}
         style={{ '--k-density': String(density) } as React.CSSProperties}

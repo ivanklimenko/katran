@@ -9,6 +9,8 @@ export type KatranContextValue = {
   setDensity: (d: Density) => void
   /** Сообщение для скринридера (role=status). */
   announce: (text: string) => void
+  /** Корневой узел провайдера — цель портала для Popover/Menu. */
+  portalRoot: HTMLElement | null
 }
 
 export const KatranContext = createContext<KatranContextValue | null>(null)

@@ -1,0 +1,66 @@
+.pop {
+  position: fixed;
+  z-index: var(--k-z-menu);
+  min-width: var(--k-menu-min);
+  padding: var(--k-sp-1);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+  color: var(--k-ink);
+  box-shadow: var(--k-shadow);
+}
+
+.menuTitle {
+  padding: var(--k-sp-1) var(--k-sp-2);
+  font: 500 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--k-sp-3);
+  width: 100%;
+  height: var(--k-h-ctl-m);
+  padding: 0 var(--k-sp-2);
+  border: 0;
+  border-radius: var(--k-r-s);
+  background: none;
+  font: 400 var(--k-fs-1) / 1 var(--k-sans);
+  color: var(--k-ink);
+  text-align: left;
+  cursor: pointer;
+  align-items: center;
+}
+
+/* Порядок правил ниже — по возрастанию специфичности (stylelint
+   no-descending-specificity): focus-visible и aria-checked и disabled имеют
+   одинаковую специфичность (класс + один селектор состояния), hover:not()
+   выше на единицу за счёт :not(). Итог каскада не меняется: background/outline
+   задают только focus-visible и hover — конфликтов с остальными свойствами нет;
+   disabled идёт после aria-checked, поэтому цвет disabled побеждает и для
+   отмеченного-и-недоступного пункта — как и в исходном порядке правил. */
+.item:focus-visible {
+  background: var(--k-hover);
+  outline: 0;
+}
+
+.item[aria-checked="true"] {
+  color: var(--k-val);
+  font-weight: 500;
+}
+
+.item:disabled {
+  color: var(--k-faint);
+  cursor: default;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--k-hover);
+  outline: 0;
+}
+
+.hint {
+  color: var(--k-faint);
+  font-size: var(--k-fs-2);
+}
