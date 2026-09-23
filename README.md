@@ -7,3 +7,5 @@
     corepack enable && pnpm install
     pnpm check        # генерация токенов, линт, тесты, сборка
     pnpm --filter demo dev
+
+`--allow-empty-input` у stylelint — пока нет пакетов ui/demo.

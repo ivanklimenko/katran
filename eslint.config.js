@@ -9,7 +9,10 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
+  // Резолвер вне files: ['**/*.{ts,tsx}'] — должен применяться и к самому eslint.config.js (.js-файл)
   { settings: { 'import-x/resolver': { typescript: true, node: true } } },
+  // Дефолтные экспорты tseslint/importX совпадают с их именованными — здесь это ожидаемо, не ошибка
+  { files: ['eslint.config.js'], rules: { 'import-x/no-named-as-default': 'off', 'import-x/no-named-as-default-member': 'off' } },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
