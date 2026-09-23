@@ -1,0 +1,79 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  padding: 0 var(--k-sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--k-r-m);
+  font: 500 var(--k-fs-1) / 1 var(--k-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--k-t-fast), border-color var(--k-t-fast), color var(--k-t-fast);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.sizeS {
+  height: var(--k-h-ctl-s);
+  font-size: var(--k-fs-2);
+  padding: 0 var(--k-sp-2);
+}
+
+.sizeM {
+  height: var(--k-h-ctl-m);
+}
+
+.sizeL {
+  height: var(--k-h-ctl-l);
+}
+
+.primary {
+  background: var(--k-val);
+  border-color: var(--k-val);
+  color: var(--k-paper);
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.ghost {
+  background: var(--k-paper);
+  border-color: var(--k-line);
+  color: var(--k-ink2);
+}
+
+.ghost:hover:not(:disabled) {
+  border-color: var(--k-val);
+  color: var(--k-val);
+}
+
+.ghost[aria-pressed="true"] {
+  background: var(--k-val-soft);
+  border-color: var(--k-val);
+  color: var(--k-val);
+}
+
+.icon {
+  padding: 0;
+  aspect-ratio: 1;
+  justify-content: center;
+}
+
+.glyph {
+  display: inline-grid;
+  place-items: center;
+}
+
+.glyph > svg {
+  width: var(--k-icon-s);
+  height: var(--k-icon-s);
+}
