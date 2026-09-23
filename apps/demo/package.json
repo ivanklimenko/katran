@@ -3,7 +3,24 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": { "dev": "vite --port 5181 --strictPort", "build": "tsc -p tsconfig.json --noEmit && vite build", "preview": "vite preview --port 5181" },
-  "dependencies": { "@katran/tokens": "workspace:*", "@katran/ui": "workspace:*", "react": "^19", "react-dom": "^19" },
-  "devDependencies": { "@types/react": "^19", "@types/react-dom": "^19", "@vitejs/plugin-react": "^6", "vite": "^8" }
+  "scripts": {
+    "dev": "vite --port 5181 --strictPort",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview --port 5181"
+  },
+  "dependencies": {
+    "@katran/effector": "workspace:*",
+    "@katran/tokens": "workspace:*",
+    "@katran/ui": "workspace:*",
+    "effector": "^23.4.4",
+    "effector-react": "^23.3.0",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6",
+    "vite": "^8"
+  }
 }

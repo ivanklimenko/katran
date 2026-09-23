@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 
-export type Route = 'tokens' | 'buttons' | 'inputs' | 'values' | 'overlays' | 'states' | 'pagination' | 'tabs'
+export type Route = 'tokens' | 'grid' | 'buttons' | 'inputs' | 'values' | 'overlays' | 'states' | 'pagination' | 'tabs'
 export const routes: { id: Route; title: string }[] = [
   { id: 'tokens', title: 'Токены' },
+  { id: 'grid', title: 'Реестр' },
   { id: 'buttons', title: 'Кнопки' },
   { id: 'inputs', title: 'Поля ввода' },
   { id: 'values', title: 'Значения' },

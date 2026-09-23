@@ -58,3 +58,21 @@
   padding: var(--k-sp-4);
   flex: 1;
 }
+
+.gridPage {
+  display: flex;
+  flex-direction: column;
+
+  /* Остаток вьюпорта под Shell.head (паддинг 2×k-sp-2 + кнопка size=s) и паддинг Shell.content (2×k-sp-5); граница head 1px в токенах не выражается — округление на 1px некритично. */
+  height: calc(100vh - var(--k-h-ctl-s) - var(--k-sp-2) * 2 - var(--k-sp-5) * 2);
+  min-height: 0;
+}
+
+.gridHead {
+  flex: none;
+}
+
+.srTag {
+  color: var(--k-faint);
+  font: 500 var(--k-fs-3) / 1 var(--k-mono);
+}
