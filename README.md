@@ -25,3 +25,15 @@ import { KatranProvider, Button } from '@katran/ui'
 ```
 
 Peer-зависимости: `react` ≥ 18, `react-dom` ≥ 18.
+
+## Замер геометрии
+
+Playwright-спека `apps/demo/e2e/geometry.spec.ts` замеряет реальную высоту записи, шапки и скелетона грида против production-сборки демо (`vite build` + `vite preview`). В `pnpm check` не входит — гоняется отдельно.
+
+Установка браузера (один раз):
+
+    pnpm --filter demo exec playwright install chromium
+
+Запуск:
+
+    pnpm --filter demo e2e

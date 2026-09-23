@@ -19,7 +19,8 @@
     "dist"
   ],
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "./src/index.ts"
   ],
   "scripts": {
     "test": "vitest run",
