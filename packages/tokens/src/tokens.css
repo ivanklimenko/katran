@@ -1,6 +1,20 @@
 /* Сгенерировано из tokens.src.ts — не править руками. pnpm gen */
 :root {
   --k-density: 1;
+  --k-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --k-z-sticky: 10;
+  --k-z-drawer: 100;
+  --k-z-menu: 200;
+  --k-z-tooltip: 300;
+  --k-t-fast: 120ms;
+  --k-t-base: 200ms;
+  --k-t-sk-show: 200ms;
+  --k-t-sk-min: 400ms;
+}
+/* Светлые цвета — и на :root, и по явному атрибуту: при системной тёмной теме
+   поддерево с [data-theme="light"] иначе осталось бы без светлой палитры */
+:root, [data-theme="light"] {
   --k-ground: #EEF1F6;
   --k-paper: #FFFFFF;
   --k-sunk: #F5F7FB;
@@ -34,16 +48,6 @@
   --k-st-okl: #4E9E77;
   --k-st-grey: #8A93A6;
   --k-shadow: 0 1px 2px rgba(20,26,41,.06), 0 8px 28px rgba(20,26,41,.08);
-  --k-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-  --k-z-sticky: 10;
-  --k-z-drawer: 100;
-  --k-z-menu: 200;
-  --k-z-tooltip: 300;
-  --k-t-fast: 120ms;
-  --k-t-base: 200ms;
-  --k-t-sk-show: 200ms;
-  --k-t-sk-min: 400ms;
 }
 /* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
    резолвится в :root и плотность провайдера не действует */

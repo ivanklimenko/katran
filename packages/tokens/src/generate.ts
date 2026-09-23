@@ -15,11 +15,15 @@ export function renderCss(src: TokenSource): string {
   return `/* Сгенерировано из tokens.src.ts — не править руками. pnpm gen */
 :root {
   --k-density: 1;
-${colorLines(colorsLight, '  ')}
-  --k-shadow: ${shadows.light};
 ${fontLines}
 ${zLines}
 ${tLines}
+}
+/* Светлые цвета — и на :root, и по явному атрибуту: при системной тёмной теме
+   поддерево с [data-theme="light"] иначе осталось бы без светлой палитры */
+:root, [data-theme="light"] {
+${colorLines(colorsLight, '  ')}
+  --k-shadow: ${shadows.light};
 }
 /* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
    резолвится в :root и плотность провайдера не действует */

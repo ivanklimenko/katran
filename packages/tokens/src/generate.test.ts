@@ -5,9 +5,9 @@ import { source } from './tokens.src'
 describe('renderCss', () => {
   const css = renderCss(source)
 
-  it('светлая тема в :root, цвета с префиксом --k-', () => {
-    expect(css).toMatch(/:root\s*{[^}]*--k-val:\s*#3A6EA5/)
-    expect(css).toMatch(/:root\s*{[^}]*--k-st-flow:\s*#3A6EA5/)
+  it('светлые цвета — на :root и по атрибуту data-theme="light"', () => {
+    expect(css).toMatch(/:root,\s*\[data-theme="light"\]\s*{[^}]*--k-val:\s*#3A6EA5/)
+    expect(css).toMatch(/:root,\s*\[data-theme="light"\]\s*{[^}]*--k-st-flow:\s*#3A6EA5/)
   })
 
   it('тёмная тема — по атрибуту и по системной настройке без явной светлой', () => {
@@ -27,7 +27,16 @@ describe('renderCss', () => {
     expect(css).toContain('--k-sans: "IBM Plex Sans"')
     expect(css).toContain('--k-z-menu: 200')
     expect(css).toContain('--k-t-fast: 120ms')
-    expect(css).toMatch(/:root\s*{[^}]*--k-shadow: 0 1px 2px rgba\(20,26,41,\.06\)/)
+    expect(css).toMatch(/:root,\s*\[data-theme="light"\]\s*{[^}]*--k-shadow: 0 1px 2px rgba\(20,26,41,\.06\)/)
+  })
+
+  it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
+    for (const key of Object.keys(source.sizes)) {
+      expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)
+    }
+    for (const key of Object.keys(source.colorsLight)) {
+      expect.soft(css.split(`--k-${key}:`).length - 1, `--k-${key}`).toBeGreaterThanOrEqual(3)
+    }
   })
 })
 
