@@ -94,9 +94,11 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
           type="button"
           tabIndex={-1}
           role="slider"
-          aria-orientation="vertical"
+          // значение меняется стрелками влево/вправо — ориентация горизонтальная, хоть ручка и вертикальная черта
+          aria-orientation="horizontal"
           aria-label={`Ширина колонки ${name}`}
           aria-valuenow={width}
+          aria-valuetext={`${width} px`}
           aria-valuemin={min}
           aria-valuemax={9999}
           className={s.rz}

@@ -54,6 +54,8 @@ describe('ColumnHeader', () => {
     renderK(<Table><ColumnHeader column={plain} sort={null} onSort={() => {}} width={80} onResize={onResize} /></Table>)
     const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
     expect(h).toHaveAttribute('aria-valuenow', '80')
+    expect(h).toHaveAttribute('aria-valuetext', '80 px')
+    expect(h).toHaveAttribute('aria-orientation', 'horizontal')   // значение меняют ←/→
     fireEvent.pointerDown(h, { clientX: 100, pointerId: 1 })
     fireEvent.pointerMove(h, { clientX: 130, pointerId: 1 })
     expect(onResize).toHaveBeenLastCalledWith(110)
