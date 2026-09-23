@@ -146,7 +146,7 @@ strict-peer-dependencies=false
 }
 ```
 
-`.gitignore`:
+`.gitignore` (уже есть в репо — проверить, что содержимое такое):
 ```
 node_modules
 dist
@@ -154,6 +154,8 @@ coverage
 .DS_Store
 *.log
 .vite
+# локальный инструментарий — не часть репозитория
+.claude/
 ```
 
 `.editorconfig`:
