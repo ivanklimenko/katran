@@ -10,6 +10,9 @@ export type UseGridKeyboardOptions = {
 // role="slider" — ручка ресайза колонки: отдельный от контента виджет (drag/стрелки на себе),
 // в набор интерактивных элементов ячейки для Enter не входит.
 const INTERACTIVE = 'button:not([disabled]):not([role="slider"]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])'
+// Для Tab/Shift+Tab внутри ячейки — полный набор, включая ручку ресайза: она недостижима
+// снаружи (tabIndex={-1} на самой ручке), доступна только так.
+const INTERACTIVE_ALL = 'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[role="slider"]:not([disabled])'
 
 const key = (rowIndex: number, c: number) => `${rowIndex}:${c}`
 const parse = (k: string) => k.split(':').map(Number) as [number, number]
@@ -32,6 +35,7 @@ function pickCell(row: Element, c: number): HTMLElement | undefined {
 /**
  * WAI-ARIA grid: один таб-стоп, стрелки по ячейкам (спека 6.3). Навигация считается по DOM
  * (строки — все <tr> таблицы, ячейки — элементы с data-cell), поэтому сквозные строки участвуют естественно.
+ * Внутри ячейки Tab/Shift+Tab ходят по её интерактивным элементам (APG), Escape — назад в ячейку.
  */
 export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions) {
   const [active, setActive] = useState(fallback)
@@ -46,6 +50,13 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
     const inside = e.target !== cell
     if (inside) {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cell.focus() }
+      else if (e.key === 'Tab') {
+        const items = Array.from(cell.querySelectorAll<HTMLElement>(INTERACTIVE_ALL))
+        if (items.length < 2) return              // один элемент — пусть Tab уводит из грида как обычно
+        const i = items.indexOf(e.target as HTMLElement)
+        const next = items[(i + (e.shiftKey ? -1 : 1) + items.length) % items.length]
+        if (next) { e.preventDefault(); e.stopPropagation(); next.focus() }
+      }
       return
     }
     const table = cell.closest('table')

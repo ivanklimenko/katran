@@ -71,6 +71,20 @@ describe('DataGrid: клавиатура', () => {
     expect(p.onSort).toHaveBeenCalledWith({ key: 'num', dir: 'asc' })
   })
 
+  it('Tab внутри ячейки заголовка доходит до ползунка ресайза; стрелка меняет ширину; Escape — в ячейку', async () => {
+    const p = props()
+    renderK(<DataGrid {...p} />)
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowUp}{ArrowRight}{Enter}')      // фокус на кнопке сортировки «Номер», сортировка вызвана
+    await userEvent.tab()
+    expect(document.activeElement).toHaveAttribute('role', 'slider')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(p.onResize).toHaveBeenCalledWith({ id: 'num', width: 128 })   // 120 по умолчанию + 8
+    await userEvent.keyboard('{Escape}')
+    expect(cellOf(document.activeElement)).toBe('1:1')
+    expect(document.activeElement?.hasAttribute('data-cell')).toBe(true)
+  })
+
   it('смена страницы возвращает активную ячейку в начало', async () => {
     const p = props()
     const { rerender } = renderK(<DataGrid {...p} />)
