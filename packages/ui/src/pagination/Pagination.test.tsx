@@ -33,6 +33,10 @@ describe('Pagination', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'На странице' }), '50')
     expect(onPageSize).toHaveBeenCalledWith(50)
   })
+  it('пустой список размеров — селектора нет', () => {
+    renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} pageSizes={[]} onPageSize={() => {}} />)
+    expect(screen.queryByRole('combobox')).toBeNull()
+  })
   it('без нарушений axe', async () => {
     const { container } = renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} />)
     expect(await axe(container)).toHaveNoViolations()

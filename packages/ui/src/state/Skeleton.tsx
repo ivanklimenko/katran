@@ -9,7 +9,7 @@ function Line({ width = '70%', lines = 1, height = 'm' }: LineProps) {
   return (
     <span aria-hidden="true" className={s.lines}>
       {Array.from({ length: lines }, (_, i) => (
-        <span key={i} className={[s.line, s[`h${height.toUpperCase()}`]].join(' ')} style={{ width: w(i === lines - 1 ? width : '100%') } as CSSProperties} />
+        <span key={i} className={[s.line, s[`h${height.toUpperCase()}`]].filter(Boolean).join(' ')} style={{ width: w(i === lines - 1 ? width : '100%') } as CSSProperties} />
       ))}
     </span>
   )

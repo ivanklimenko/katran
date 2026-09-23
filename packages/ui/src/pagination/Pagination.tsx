@@ -36,7 +36,7 @@ export function Pagination({ page, pageSize, total, onPage, pageSizes, onPageSiz
   return (
     <nav aria-label="Страницы" className={s.nav}>
       <span className={s.range}>{range}</span>
-      {pageSizes && onPageSize && (
+      {!!pageSizes?.length && onPageSize && (
         <Select size="s" aria-label="На странице" value={String(pageSize)} onChange={(e) => onPageSize(Number(e.target.value))}
           options={pageSizes.map((n) => ({ value: String(n), label: String(n) }))} />
       )}

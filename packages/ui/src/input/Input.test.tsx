@@ -23,6 +23,12 @@ describe('Checkbox', () => {
     const c = screen.getByRole('checkbox', { name: 'Выбрать все' }) as HTMLInputElement
     expect(c.indeterminate).toBe(true)
   })
+  it('без подписи className достаётся самому полю', () => {
+    const { container } = renderK(<Checkbox className="own" aria-label="Одна запись" />)
+    const c = container.querySelector('input')!
+    expect(c).toHaveClass('own')
+    expect(c).toHaveClass('checkbox')
+  })
   it('переключается', async () => {
     const onChange = vi.fn()
     renderK(<Checkbox label="Один" onChange={onChange} />)

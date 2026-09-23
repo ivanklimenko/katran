@@ -1,13 +1,6 @@
-import { colors, sizes } from '@katran/tokens'
+import { colors, contrastRatio, sizes } from '@katran/tokens'
 import { Button, Input } from '@katran/ui'
 import s from './Page.module.css'
-
-// Контраст к paper считается прямо здесь, чтобы страница не зависела от внутренностей пакета токенов
-const lum = (hex: string) => {
-  const [r, g, b] = hex.replace('#', '').match(/.{2}/g)!.map((x) => parseInt(x, 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as [number, number, number]
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-const ratio = (a: string, b: string) => { const x = lum(a), y = lum(b); return ((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2) }
 
 export function TokensPage() {
   return (
@@ -22,7 +15,7 @@ export function TokensPage() {
             {Object.entries(colors[theme]).map(([name, hex]) => (
               <div key={name} className={s.swatch}>
                 <div className={s.swatchColor} style={{ background: hex }} />
-                <div className={s.swatchMeta}>--k-{name}<br />{hex} · {ratio(hex, colors[theme].paper)}</div>
+                <div className={s.swatchMeta}>--k-{name}<br />{hex} · {contrastRatio(hex, colors[theme].paper).toFixed(2)}</div>
               </div>
             ))}
           </div>

@@ -13,5 +13,5 @@ export type StatusDotProps = {
 
 export function StatusDot({ tone, size = 'm', letter, label }: StatusDotProps) {
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true as const }
-  return <span className={[s.dot, s[`dot${size.toUpperCase()}`]].join(' ')} data-tone={tone} {...a11y}>{letter}</span>
+  return <span className={[s.dot, s[`dot${size.toUpperCase()}`]].filter(Boolean).join(' ')} data-tone={tone} {...a11y}>{letter}</span>
 }

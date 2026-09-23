@@ -36,7 +36,7 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
   }
 
   return (
-    <div role="tablist" aria-label={label} aria-orientation={orientation} className={[s.list, s[orientation]].join(' ')}>
+    <div role="tablist" aria-label={label} aria-orientation={orientation} className={[s.list, s[orientation]].filter(Boolean).join(' ')}>
       {items.map((it) => {
         const selected = it.id === value
         return (
