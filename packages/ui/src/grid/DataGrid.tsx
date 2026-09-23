@@ -72,14 +72,22 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
 
   const ids = rows.map(layout.rowKey)
   const pageSel = selection ? pageState(selection, ids) : 'none'
+  // Скелетон — по воротам, а не по state: ворота держат его минимум sk-min после ответа (спека 6.3),
+  // и всё это время данные/пустое/ошибка не показываются, чтобы не было мелькания.
   const showSkeleton = useLoadingGate(state === 'loading')
+  const showRows = !showSkeleton && state !== 'loading' && state !== 'error'
   const dim = state === 'refreshing'
-  const empty = state === 'ready' && rows.length === 0
+  const empty = !showSkeleton && state === 'ready' && rows.length === 0
+  const failed = !showSkeleton && state === 'error'
   const kb = useGridKeyboard({
-    resetToken: `${page}:${rows.length}:${visibleIds.join(',')}`,
-    fallback: rows.length > 0 && state !== 'loading' && state !== 'error' ? '2:0' : '1:0',
+    resetToken: `${page}:${rows.length}:${visibleIds.join(',')}:${showRows}`,
+    fallback: showRows && rows.length > 0 ? '2:0' : '1:0',
   })
-  const cp = (rowIndex: number): CellProps => (r, c) => kb.cellProps(rowIndex, r, c)
+  // Ключи клавиатурного слоя — свой индекс внутри страницы (шапка 1, записи с 2), не aria-rowindex:
+  // тот абсолютный и зависит от номера страницы.
+  const cp = (localIndex: number): CellProps => (r, c) => kb.cellProps(localIndex, r, c)
+  // aria-rowcount — по всей выборке; строка empty/error занимает индекс 2 и тоже должна в него входить.
+  const rowCount = Math.max(1 + p.total * perRecord, empty || failed ? 2 : 1)
 
   return (
     <div className={s.root}>
@@ -88,8 +96,10 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         <table
           role="grid"
           aria-label={p.label}
-          aria-rowcount={1 + p.total * perRecord}
+          aria-rowcount={rowCount}
           aria-colcount={1 + visible.length}
+          aria-busy={state === 'loading' || state === 'refreshing' || showSkeleton || undefined}
+          aria-multiselectable={selection ? true : undefined}
           data-dim={dim || undefined}
           className={[s.table, dim ? s.dim : ''].filter(Boolean).join(' ')}
           style={{ width: `calc(${tableWidth}px * var(--k-density))` } as CSSProperties}
@@ -113,12 +123,13 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             </tr>
           </thead>
 
-          {state === 'loading' && showSkeleton && <GridSkeleton visible={visible} spanRows={spanRows} rows={p.skeletonRows ?? 8} rowIndexStart={2} />}
+          {showSkeleton && <GridSkeleton visible={visible} spanRows={spanRows} rows={p.skeletonRows ?? 8} />}
 
-          {state !== 'loading' && state !== 'error' && rows.map((row, i) => {
+          {showRows && rows.map((row, i) => {
             const id = layout.rowKey(row)
             const ord = (page - 1) * pageSize + i + 1
-            const rowIndex = 2 + i * perRecord
+            const localIndex = 2 + i * perRecord
+            const rowIndex = 2 + (ord - 1) * perRecord   // абсолютный: 2 + ((page − 1) × pageSize + i) × perRecord
             const lead = (
               <>
                 {selection && p.onSelect && (
@@ -132,17 +143,17 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             )
             return (
               <GridRecord key={id} row={row} rowKey={id} visible={visible} spanRows={spanRows} lead={lead}
-                selected={selection ? isSelected(selection, id) : undefined} rowIndex={rowIndex} cellProps={cp(rowIndex)} />
+                selected={selection ? isSelected(selection, id) : undefined} rowIndex={rowIndex} cellProps={cp(localIndex)} />
             )
           })}
 
           {empty && (
-            <tbody><tr role="row" className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
+            <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
               <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} action={p.emptyAction} />
             </td></tr></tbody>
           )}
-          {state === 'error' && (
-            <tbody><tr role="row" className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
+          {failed && (
+            <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
               <ErrorState title="Не удалось загрузить данные" text={p.error ?? undefined} retry={p.onRetry} />
             </td></tr></tbody>
           )}

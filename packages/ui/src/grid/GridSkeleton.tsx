@@ -8,17 +8,19 @@ export type GridSkeletonProps<Row> = {
   visible: ColumnDef<Row>[]
   spanRows: SpanCell<Row>[][]
   rows: number
-  rowIndexStart: number
 }
 
-/** Скелетон повторяет геометрию записи по построению: те же строки, те же lines. */
-export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: GridSkeletonProps<Row>) {
-  const perRecord = 1 + spanRows.length
+/**
+ * Скелетон повторяет геометрию записи по построению: те же строки, те же lines.
+ * Для AT он скрыт (aria-hidden, без aria-rowindex): пустые gridcell ничего не сообщают,
+ * о загрузке говорит aria-busy на таблице.
+ */
+export function GridSkeleton<Row>({ visible, spanRows, rows }: GridSkeletonProps<Row>) {
   return (
     <>
       {Array.from({ length: rows }, (_, i) => (
-        <tbody key={i} className={s.record}>
-          <tr role="row" aria-rowindex={rowIndexStart + i * perRecord}>
+        <tbody key={i} className={s.record} aria-hidden="true">
+          <tr role="row">
             <td role="gridcell" className={s.cell}><div className={[s.lead, s.leadSkeleton].join(' ')}><Skeleton.Line width={48} /></div></td>
             {visible.map((c) => (
               <td key={c.id} role="gridcell" className={s.cell}>
@@ -27,7 +29,7 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, rowIndexStart }: Gr
             ))}
           </tr>
           {spanRows.map((segs, si) => (
-            <tr key={si} role="row" aria-rowindex={rowIndexStart + i * perRecord + 1 + si}>
+            <tr key={si} role="row">
               <td role="gridcell" className={s.cell} />
               {fillSegments(segs, visible.length).map((seg, k) =>
                 'filler' in seg

@@ -59,17 +59,22 @@ describe('GridRecord', () => {
 })
 
 describe('GridSkeleton', () => {
-  it('столько же tbody и строк, сколько у записей; плашки скрыты от скринридера', () => {
-    const { container } = renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} rowIndexStart={1} /></Table>)
-    expect(container.querySelectorAll('tbody')).toHaveLength(3)
-    expect(screen.getAllByRole('row')).toHaveLength(6)
-    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(0)
+  it('столько же tbody и строк, сколько у записей; весь скелетон скрыт от скринридера, без aria-rowindex', () => {
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} /></Table>)
+    const groups = screen.getAllByRole('rowgroup', { hidden: true })
+    expect(groups).toHaveLength(3)
+    groups.forEach((g) => expect(g).toHaveAttribute('aria-hidden', 'true'))
+    const rows = screen.getAllByRole('row', { hidden: true })
+    expect(rows).toHaveLength(6)
+    rows.forEach((r) => expect(r).not.toHaveAttribute('aria-rowindex'))
+    expect(screen.queryAllByRole('row')).toHaveLength(0)
   })
   it('резервирует геометрию записи: --k-lines и классы min-height у служебной ячейки и текстовых ячеек', () => {
-    const { container } = renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} rowIndexStart={1} /></Table>)
-    const lead = container.querySelector('td > div')
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} /></Table>)
+    const cells = screen.getAllByRole('gridcell', { hidden: true })
+    const lead = cells[0]!.firstElementChild
     expect(lead?.className).toMatch(/leadSkeleton/)
-    const clamped = screen.getAllByRole('gridcell').map((c) => c.firstElementChild).filter((el): el is Element => el !== null)
+    const clamped = cells.map((c) => c.firstElementChild).filter((el): el is Element => el !== null)
     const numColClamp = clamped[2]! // lead(0), st(1), ячейка колонки "num" (lines: 2)
     expect(numColClamp.className).toMatch(/clampSkeleton/)
     expect(numColClamp).toHaveStyle({ '--k-lines': '2' })
