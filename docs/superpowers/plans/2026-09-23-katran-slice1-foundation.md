@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-23-katran-design.md` — разделы 3 (пакеты), 4 (токены), 5.1 (инвентарь среза 1), 9 (качество), 10 (демо).
 
-**Что этот план НЕ делает** (следующие планы): `DataGrid`, `createGridModel`/`createFiltersModel`, `StatusLane`, `FilterPanel`, `BulkBar`, боевой экран реестра, Playwright-замеры. `Tabs` перенесены в план деталки — в реестре они не используются (отклонение от таблицы 5.1 спеки, спека поправлена).
+**Что этот план НЕ делает** (следующие планы): `DataGrid`, `createGridModel`/`createFiltersModel`, `StatusLane`, `FilterPanel`, `BulkBar`, боевой экран реестра, Playwright-замеры. Переполнение `Tabs` в «••• N» — в плане деталки (там много типов MT); здесь табов 3–4.
 
 ## Global Constraints
 
@@ -60,12 +60,13 @@ katran/
     src/overlay/Popover.tsx  Menu.tsx  .module.css  .test.tsx  index.ts
     src/state/Skeleton.tsx  ProgressBar.tsx  EmptyState.tsx  ErrorState.tsx  useLoadingGate.ts  .module.css  .test.tsx  index.ts
     src/pagination/Pagination.tsx  .module.css  .test.tsx  index.ts
+    src/tabs/Tabs.tsx  TabPanel.tsx  Tabs.module.css  Tabs.test.tsx  index.ts
   packages/effector/
     package.json  tsconfig.json  src/index.ts   — заготовка, содержимое в плане 2
   apps/demo/
     package.json  tsconfig.json  vite.config.ts  index.html
     src/main.tsx  App.tsx  router.ts  Shell.tsx  Shell.module.css
-    src/pages/TokensPage.tsx  ButtonsPage.tsx  InputsPage.tsx  ValuesPage.tsx  OverlaysPage.tsx  StatesPage.tsx  PaginationPage.tsx
+    src/pages/TokensPage.tsx  ButtonsPage.tsx  InputsPage.tsx  ValuesPage.tsx  OverlaysPage.tsx  StatesPage.tsx  PaginationPage.tsx  TabsPage.tsx
 ```
 
 ---
@@ -3343,13 +3344,281 @@ Run: `pnpm check` — всё зелёное, включая `pnpm --filter demo 
 ```bash
 git add -A && git commit -m "Демо: оболочка с темой и плотностью, страница токенов и страницы примитивов, публикация на Pages"
 ```
-Публикация на GitHub (создание репозитория `ivanklimenko/katran`, `git push`) — только по явной команде владельца.
+Публикация на GitHub (создание репозитория `ivanklimenko/katran`, `git push`) — только по явной команде владельца. Задача 15 добавляет страницу «Табы» — выполнять её до публикации.
+
+---
+
+### Task 15: `Tabs`, `TabPanel`
+
+**Files:**
+- Create: `packages/ui/src/tabs/Tabs.tsx`, `TabPanel.tsx`, `Tabs.module.css`, `Tabs.test.tsx`, `index.ts`
+- Create: `apps/demo/src/pages/TabsPage.tsx`
+- Modify: `packages/ui/src/index.ts`, `apps/demo/src/router.ts` (маршрут `tabs`, заголовок «Табы»), `apps/demo/src/App.tsx` (страница в `pages`)
+
+**Interfaces:**
+- `<Tabs id: string items: TabItem[] value: string onChange: (id) => void orientation?: 'horizontal'|'vertical' label: string>`; `TabItem = { id: string; label: string; count?: number; disabled?: boolean }`. Паттерн WAI-ARIA Tabs с **ручной активацией**: стрелки двигают фокус (← → для горизонтальных, ↑ ↓ для вертикальных), `Home`/`End`, `Enter`/`Space` выбирают. Ручная — потому что переключение реестра грузит данные, автоматическая активация по стрелке дёргала бы запросы.
+- `<TabPanel tabsId tabId active children>` — `role="tabpanel"`, `aria-labelledby` = id таба, `hidden` когда не активна. Идентификаторы: таб `${id}-tab-${item.id}`, панель `${id}-panel-${item.id}`; `Tabs` ставит `aria-controls`.
+- Вид: горизонтальные — сегментный контрол (дорожка `sunk`, активный сегмент `paper` с рамкой `line`, текст `ink`; как в проде «Документы / Архив документов / Исследование»); вертикальные — список, активный пункт с полосой `val` слева и фоном `val-soft` (как «Управление приоритетами»). `count` — `Counter` справа от подписи.
+- Переполнение в «••• N» — не здесь (план деталки).
+
+- [ ] **Step 1: Тест (падает)**
+
+`packages/ui/src/tabs/Tabs.test.tsx`:
+```tsx
+import { useState } from 'react'
+import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
+import { renderK } from '../test/renderK'
+import { TabPanel } from './TabPanel'
+import { Tabs, type TabItem } from './Tabs'
+
+const items: TabItem[] = [
+  { id: 'docs', label: 'Документы', count: 84 },
+  { id: 'archive', label: 'Архив документов' },
+  { id: 'research', label: 'Исследование', disabled: true },
+  { id: 'prio', label: 'Приоритеты' },
+]
+
+function Host({ orientation }: { orientation?: 'horizontal' | 'vertical' }) {
+  const [v, setV] = useState('docs')
+  return (
+    <>
+      <Tabs id="reg" label="Разделы реестра" items={items} value={v} onChange={setV} orientation={orientation} />
+      {items.map((it) => <TabPanel key={it.id} tabsId="reg" tabId={it.id} active={v === it.id}>Панель {it.label}</TabPanel>)}
+    </>
+  )
+}
+
+describe('Tabs', () => {
+  it('роли, выбранный таб, связь с панелью, счётчик', () => {
+    renderK(<Host />)
+    const list = screen.getByRole('tablist', { name: 'Разделы реестра' })
+    expect(list).toHaveAttribute('aria-orientation', 'horizontal')
+    const docs = screen.getByRole('tab', { name: /Документы/ })
+    expect(docs).toHaveAttribute('aria-selected', 'true')
+    expect(docs).toHaveTextContent('84')
+    const panel = screen.getByRole('tabpanel', { name: /Документы/ })
+    expect(docs).toHaveAttribute('aria-controls', panel.id)
+    expect(screen.queryByText('Панель Архив документов')).toBeNull()
+  })
+
+  it('стрелка двигает фокус, пропуская недоступный; выбор — по Enter (ручная активация)', async () => {
+    renderK(<Host />)
+    screen.getByRole('tab', { name: /Документы/ }).focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'Архив документов' })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: /Документы/ })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'Приоритеты' })).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('tab', { name: 'Приоритеты' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Панель Приоритеты')).toBeVisible()
+  })
+
+  it('вертикальные: ↑↓ и aria-orientation', async () => {
+    renderK(<Host orientation="vertical" />)
+    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical')
+    screen.getByRole('tab', { name: /Документы/ }).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('tab', { name: 'Архив документов' })).toHaveFocus()
+    await userEvent.keyboard('{End}')
+    expect(screen.getByRole('tab', { name: 'Приоритеты' })).toHaveFocus()
+  })
+
+  it('клик выбирает; недоступный не выбирается', async () => {
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Архив документов' }))
+    expect(screen.getByRole('tab', { name: 'Архив документов' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('tab', { name: 'Исследование' }))
+    expect(screen.getByRole('tab', { name: 'Архив документов' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('без нарушений axe', async () => {
+    const { container } = renderK(<Host />)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+```
+Run: `pnpm --filter @katran/ui test tabs`
+Expected: FAIL.
+
+- [ ] **Step 2: Реализация**
+
+`packages/ui/src/tabs/Tabs.tsx`:
+```tsx
+import { useRef, type KeyboardEvent } from 'react'
+import { Counter } from '../value'
+import s from './Tabs.module.css'
+
+export type TabItem = { id: string; label: string; count?: number; disabled?: boolean }
+export type TabsProps = {
+  /** Префикс идентификаторов: таб `${id}-tab-${item}`, панель `${id}-panel-${item}`. */
+  id: string
+  items: TabItem[]
+  value: string
+  onChange: (id: string) => void
+  orientation?: 'horizontal' | 'vertical'
+  /** Доступное имя списка табов. */
+  label: string
+}
+
+export const tabId = (tabs: string, item: string) => `${tabs}-tab-${item}`
+export const panelId = (tabs: string, item: string) => `${tabs}-panel-${item}`
+
+/** WAI-ARIA Tabs с ручной активацией: стрелки двигают фокус, Enter/Space выбирает. */
+export function Tabs({ id, items, value, onChange, orientation = 'horizontal', label }: TabsProps) {
+  const refs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const enabled = items.filter((it) => !it.disabled)
+  const focusAt = (i: number) => { const it = enabled[(i + enabled.length) % enabled.length]; if (it) refs.current[it.id]?.focus() }
+
+  const onKey = (e: KeyboardEvent<HTMLButtonElement>, it: TabItem) => {
+    const pos = enabled.findIndex((x) => x.id === it.id)
+    const next = orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight'
+    const prev = orientation === 'vertical' ? 'ArrowUp' : 'ArrowLeft'
+    if (e.key === next) { e.preventDefault(); focusAt(pos + 1) }
+    else if (e.key === prev) { e.preventDefault(); focusAt(pos - 1) }
+    else if (e.key === 'Home') { e.preventDefault(); focusAt(0) }
+    else if (e.key === 'End') { e.preventDefault(); focusAt(enabled.length - 1) }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChange(it.id) }
+  }
+
+  return (
+    <div role="tablist" aria-label={label} aria-orientation={orientation} className={[s.list, s[orientation]].join(' ')}>
+      {items.map((it) => {
+        const selected = it.id === value
+        return (
+          <button
+            key={it.id}
+            ref={(el) => { refs.current[it.id] = el }}
+            type="button"
+            role="tab"
+            id={tabId(id, it.id)}
+            aria-selected={selected}
+            aria-controls={panelId(id, it.id)}
+            aria-disabled={it.disabled || undefined}
+            disabled={it.disabled}
+            tabIndex={selected ? 0 : -1}
+            className={s.tab}
+            onClick={() => !it.disabled && onChange(it.id)}
+            onKeyDown={(e) => onKey(e, it)}
+          >
+            <span>{it.label}</span>
+            {it.count !== undefined && <Counter value={it.count} active={selected} />}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+```
+
+`packages/ui/src/tabs/TabPanel.tsx`:
+```tsx
+import type { ReactNode } from 'react'
+import { panelId, tabId } from './Tabs'
+
+export type TabPanelProps = { tabsId: string; tabId: string; active: boolean; children: ReactNode; className?: string }
+
+export function TabPanel({ tabsId, tabId: item, active, children, className }: TabPanelProps) {
+  return (
+    <div role="tabpanel" id={panelId(tabsId, item)} aria-labelledby={tabId(tabsId, item)} hidden={!active} tabIndex={0} className={className}>
+      {active && children}
+    </div>
+  )
+}
+```
+
+`packages/ui/src/tabs/Tabs.module.css`:
+```css
+.list { display: flex; }
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  border: 1px solid transparent;
+  background: none;
+  font: 500 var(--k-fs-1) / 1 var(--k-sans);
+  color: var(--k-ink2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--k-t-fast), color var(--k-t-fast);
+}
+.tab:disabled { color: var(--k-faint); cursor: default; }
+.tab:focus-visible { outline: 2px solid var(--k-val); outline-offset: -2px; }
+
+/* горизонтальные — сегментный контрол */
+.horizontal { gap: var(--k-sp-1); padding: var(--k-sp-1); border-radius: var(--k-r-m); background: var(--k-sunk); width: max-content; }
+.horizontal .tab { height: var(--k-h-ctl-m); padding: 0 var(--k-sp-3); border-radius: var(--k-r-s); }
+.horizontal .tab:hover:not(:disabled) { color: var(--k-ink); }
+.horizontal .tab[aria-selected="true"] { background: var(--k-paper); border-color: var(--k-line); color: var(--k-ink); }
+
+/* вертикальные — список с маркером слева */
+.vertical { flex-direction: column; gap: 0; border-right: 1px solid var(--k-line); min-width: var(--k-side); }
+.vertical .tab { height: var(--k-h-ctl-l); padding: 0 var(--k-sp-4); border-left: 3px solid transparent; justify-content: space-between; text-align: left; }
+.vertical .tab:hover:not(:disabled) { background: var(--k-hover); }
+.vertical .tab[aria-selected="true"] { border-left-color: var(--k-val); background: var(--k-val-soft); color: var(--k-val); }
+```
+
+`packages/ui/src/tabs/index.ts`:
+```ts
+export { Tabs, tabId, panelId, type TabsProps, type TabItem } from './Tabs'
+export { TabPanel, type TabPanelProps } from './TabPanel'
+```
+В `packages/ui/src/index.ts` добавить `export * from './tabs'`.
+
+- [ ] **Step 3: Тесты проходят**
+
+Run: `pnpm --filter @katran/ui test tabs && pnpm lint`
+Expected: PASS, 5 тестов. Если `toBeVisible` спотыкается о `hidden` у соседних панелей — проверять `screen.getByRole('tabpanel', { name: 'Приоритеты' })` вместо текста.
+
+- [ ] **Step 4: Страница демо**
+
+В `apps/demo/src/router.ts` добавить `'tabs'` в тип `Route` и `{ id: 'tabs', title: 'Табы' }` в `routes`; в `App.tsx` — `tabs: TabsPage`.
+
+`apps/demo/src/pages/TabsPage.tsx`:
+```tsx
+import { useState } from 'react'
+import { TabPanel, Tabs } from '@katran/ui'
+import s from './Page.module.css'
+
+const reg = [{ id: 'docs', label: 'Документы', count: 84 }, { id: 'archive', label: 'Архив документов' }, { id: 'research', label: 'Исследование' }]
+const prio = [{ id: 'system', label: 'По системе-инициатору' }, { id: 'urgency', label: 'По срочности' }, { id: 'amount', label: 'По сумме' }, { id: 'threshold', label: 'Управление порогом' }]
+
+export function TabsPage() {
+  const [r, setR] = useState('docs')
+  const [p, setP] = useState('urgency')
+  return (
+    <>
+      <h1 className={s.h1}>Табы</h1>
+      <p className={s.note}>Ручная активация: стрелки двигают фокус, Enter выбирает — переключение реестра грузит данные, и автоматика дёргала бы запросы. Горизонтальные — переключение реестров в одном блоке, вертикальные — группа близких справочников в одном федеративном блоке.</p>
+      <h2 className={s.h2}>Горизонтальные</h2>
+      <div className={s.row} style={{ display: 'block' }}>
+        <Tabs id="reg" label="Разделы реестра" items={reg} value={r} onChange={setR} />
+        {reg.map((it) => <TabPanel key={it.id} tabsId="reg" tabId={it.id} active={r === it.id}><p>Здесь будет реестр «{it.label}».</p></TabPanel>)}
+      </div>
+      <h2 className={s.h2}>Вертикальные</h2>
+      <div className={s.row} style={{ display: 'flex', alignItems: 'stretch', padding: 0, gap: 0 }}>
+        <Tabs id="prio" label="Управление приоритетами" items={prio} value={p} onChange={setP} orientation="vertical" />
+        {prio.map((it) => <TabPanel key={it.id} tabsId="prio" tabId={it.id} active={p === it.id} className={s.content}><p>Справочник «{it.label}»: таблица порогов и весов.</p></TabPanel>)}
+      </div>
+    </>
+  )
+}
+```
+В `Page.module.css` добавить `.content { padding: var(--k-sp-4); flex: 1; }`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A && git commit -m "Tabs и TabPanel: горизонтальные сегментные и вертикальные списком, ручная активация"
+```
 
 ---
 
 ## Самопроверка плана (выполнена при написании)
 
-**Покрытие спеки.** 3.1–3.4 → задачи 1, 5; 4.1–4.4 → 2, 3, 4 (+ размеры, добавленные по ходу: `tip-max, dot-s, dot-m, counter, menu-min, progress, side, note-max, swatch`); 5.1 «Ввод и действия» → 6, 7; «Значения» → 10; «Наложения» → 9, 11; «Состояния» → 12; «Навигация» → 13 (`Tabs` — план деталки); «Оболочка» → 5 и 14 (переключатели живут в демо); «Утилиты» → 8; 9 (качество: тесты, axe, контраст, генерация) → 1, 3, 5 и каждая задача; 10 (демо, Pages) → 14. Не покрыто намеренно: `DataGrid`, `StatusLane`, `FilterPanel`, `BulkBar`, модели, Playwright — планы 2 и 3.
+**Покрытие спеки.** 3.1–3.4 → задачи 1, 5; 4.1–4.4 → 2, 3, 4 (+ размеры, добавленные по ходу: `tip-max, dot-s, dot-m, counter, menu-min, progress, side, note-max, swatch`); 5.1 «Ввод и действия» → 6, 7; «Значения» → 10; «Наложения» → 9, 11; «Состояния» → 12; «Навигация» → 13, 15 (переполнение `Tabs` — план деталки); «Оболочка» → 5 и 14 (переключатели живут в демо); «Утилиты» → 8; 9 (качество: тесты, axe, контраст, генерация) → 1, 3, 5 и каждая задача; 10 (демо, Pages) → 14. Не покрыто намеренно: `DataGrid`, `StatusLane`, `FilterPanel`, `BulkBar`, модели, Playwright — планы 2 и 3.
 
 **Согласованность имён.** `useKatran()` возвращает `{ theme, density, setTheme, setDensity, announce, portalRoot }` — `portalRoot` добавляется в задаче 11, тест провайдера в задаче 5 на него не опирается. `FLASH_MS` экспортируется из `CopyValue` и используется в `LinkValue`. `dimClass` экспортируется из `Skeleton.tsx` через `state/index.ts`. `densityOptions` — реэкспорт `densities` из `@katran/tokens` (задача 2, `index.ts`). `durations['sk-show']`/`['sk-min']` — ключи из `tokens.src.ts`.
 
