@@ -1,0 +1,25 @@
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-3);
+  padding: var(--k-sp-2) var(--k-sp-5);
+  border-top: 1px solid var(--k-line);
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.range {
+  white-space: nowrap;
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  margin-left: auto;
+}
+
+.gap {
+  padding: 0 var(--k-sp-1);
+  color: var(--k-faint);
+}
