@@ -21,6 +21,7 @@ export const panelId = (tabs: string, item: string) => `${tabs}-panel-${item}`
 export function Tabs({ id, items, value, onChange, orientation = 'horizontal', label }: TabsProps) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const enabled = items.filter((it) => !it.disabled)
+  const stopId = enabled.some((it) => it.id === value) ? value : enabled[0]?.id
   const focusAt = (i: number) => { const it = enabled[(i + enabled.length) % enabled.length]; if (it) refs.current[it.id]?.focus() }
 
   const onKey = (e: KeyboardEvent<HTMLButtonElement>, it: TabItem) => {
@@ -49,7 +50,7 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
             aria-controls={panelId(id, it.id)}
             aria-disabled={it.disabled || undefined}
             disabled={it.disabled}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={it.id === stopId ? 0 : -1}
             className={s.tab}
             onClick={() => !it.disabled && onChange(it.id)}
             onKeyDown={(e) => onKey(e, it)}

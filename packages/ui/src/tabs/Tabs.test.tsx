@@ -71,4 +71,10 @@ describe('Tabs', () => {
     const { container } = renderK(<Host />)
     expect(await axe(container)).toHaveNoViolations()
   })
+
+  it('выбранный таб недоступен → таб-стоп на первом доступном', () => {
+    renderK(<Tabs id="x" label="Т" items={[{ id: 'a', label: 'A', disabled: true }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }]} value="a" onChange={() => {}} />)
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('tabindex', '0')
+  })
 })
