@@ -7,3 +7,5 @@ coverage
 # локальный инструментарий — не часть репозитория
 .claude/
 .worktrees/
+apps/demo/test-results/
+apps/demo/playwright-report/
