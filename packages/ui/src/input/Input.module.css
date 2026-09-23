@@ -1,0 +1,95 @@
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  padding: 0 var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+  color: var(--k-ink);
+  transition: border-color var(--k-t-fast);
+}
+
+.field:focus-within {
+  border-color: var(--k-val);
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.invalid {
+  border-color: var(--k-bad);
+}
+
+.invalid:focus-within {
+  border-color: var(--k-bad);
+  outline-color: var(--k-bad);
+}
+
+.sizeS {
+  height: var(--k-h-ctl-s);
+  font-size: var(--k-fs-2);
+}
+
+.sizeM {
+  height: var(--k-h-ctl-m);
+  font-size: var(--k-fs-1);
+}
+
+.sizeL {
+  height: var(--k-h-ctl-l);
+  font-size: var(--k-fs-1);
+}
+
+.prefix {
+  display: inline-grid;
+  place-items: center;
+  color: var(--k-muted);
+}
+
+.prefix > svg {
+  width: var(--k-icon-s);
+  height: var(--k-icon-s);
+}
+
+.input,
+.select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  height: 100%;
+}
+
+.input::placeholder {
+  color: var(--k-faint);
+}
+
+.select {
+  cursor: pointer;
+  padding-right: var(--k-sp-1);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  cursor: pointer;
+  font-size: var(--k-fs-1);
+  color: var(--k-ink);
+}
+
+.checkbox {
+  width: var(--k-icon-m);
+  height: var(--k-icon-m);
+  margin: 0;
+  accent-color: var(--k-val);
+  cursor: pointer;
+}
+
+.checkbox:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}

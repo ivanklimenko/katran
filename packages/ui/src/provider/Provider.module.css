@@ -1,0 +1,17 @@
+.root {
+  font-family: var(--k-sans);
+  font-size: var(--k-fs-1);
+  line-height: var(--k-lh-1);
+  color: var(--k-ink);
+  background: var(--k-paper);
+  min-height: 100%;
+}
+
+.live {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

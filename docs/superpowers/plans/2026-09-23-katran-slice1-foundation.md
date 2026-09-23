@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-23-katran-design.md` — разделы 3 (пакеты), 4 (токены), 5.1 (инвентарь среза 1), 9 (качество), 10 (демо).
 
-**Что этот план НЕ делает** (следующие планы): `DataGrid`, `createGridModel`/`createFiltersModel`, `StatusLane`, `FilterPanel`, `BulkBar`, боевой экран реестра, Playwright-замеры. Переполнение `Tabs` в «••• N» — в плане деталки (там много типов MT); здесь табов 3–4.
+**Что этот план НЕ делает** (следующие планы): `DataGrid`, `createGridModel`/`createFiltersModel`, `StatusLane`, `FilterPanel`, `BulkBar`, боевой экран реестра, Playwright-замеры. Переполнение `Tabs` в «••• N» — в плане деталки (там много типов MT); здесь табов 3–4. `ThemeSwitch`/`DensitySwitch` — план 2 (ruling 22: в срезе 1 единственный потребитель — демо).
 
 ## Global Constraints
 

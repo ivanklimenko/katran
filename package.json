@@ -1,0 +1,36 @@
+{
+  "name": "katran",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Дизайн-система katran: React + effector",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter demo dev",
+    "gen": "pnpm -r --if-present gen",
+    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts",
+    "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" --allow-empty-input",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm gen:check && pnpm lint && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "stylelint": "^17.15.0",
+    "stylelint-config-standard": "^40.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"]
+  }
+}

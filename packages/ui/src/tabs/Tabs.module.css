@@ -1,0 +1,77 @@
+.list {
+  display: flex;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  border: 1px solid transparent;
+  background: none;
+  font: 500 var(--k-fs-1) / 1 var(--k-sans);
+  color: var(--k-ink2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--k-t-fast), color var(--k-t-fast);
+}
+
+.tab:disabled {
+  color: var(--k-faint);
+  cursor: default;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+/* горизонтальные — сегментный контрол */
+.horizontal {
+  gap: var(--k-sp-1);
+  padding: var(--k-sp-1);
+  border-radius: var(--k-r-m);
+  background: var(--k-sunk);
+  width: max-content;
+}
+
+/* вертикальные — список с маркером слева */
+.vertical {
+  flex-direction: column;
+  gap: 0;
+  border-right: 1px solid var(--k-line);
+  min-width: var(--k-side);
+}
+
+.horizontal .tab {
+  height: var(--k-h-ctl-m);
+  padding: 0 var(--k-sp-3);
+  border-radius: var(--k-r-s);
+}
+
+.vertical .tab {
+  height: var(--k-h-ctl-l);
+  padding: 0 var(--k-sp-4);
+  border-left: 3px solid transparent;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.horizontal .tab:hover:not(:disabled) {
+  color: var(--k-ink);
+}
+
+.vertical .tab:hover:not(:disabled) {
+  background: var(--k-hover);
+}
+
+.horizontal .tab[aria-selected="true"] {
+  background: var(--k-paper);
+  border-color: var(--k-line);
+  color: var(--k-ink);
+}
+
+.vertical .tab[aria-selected="true"] {
+  border-left-color: var(--k-val);
+  background: var(--k-val-soft);
+  color: var(--k-val);
+}

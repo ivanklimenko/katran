@@ -1,0 +1,159 @@
+/* Сгенерировано из tokens.src.ts — не править руками. pnpm gen */
+:root {
+  --k-density: 1;
+  --k-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --k-z-sticky: 10;
+  --k-z-drawer: 100;
+  --k-z-menu: 200;
+  --k-z-tooltip: 300;
+  --k-t-fast: 120ms;
+  --k-t-base: 200ms;
+  --k-t-sk-show: 200ms;
+  --k-t-sk-min: 400ms;
+}
+/* Светлые цвета — и на :root, и по явному атрибуту: при системной тёмной теме
+   поддерево с [data-theme="light"] иначе осталось бы без светлой палитры */
+:root, [data-theme="light"] {
+  --k-ground: #EEF1F6;
+  --k-paper: #FFFFFF;
+  --k-sunk: #F5F7FB;
+  --k-hover: #F2F6FA;
+  --k-chip: #EEF0F4;
+  --k-ink: #141A29;
+  --k-ink2: #3A4357;
+  --k-muted: #6B7488;
+  --k-faint: #7C8496;
+  --k-line: #DCE1EA;
+  --k-line2: #EAEEF4;
+  --k-val: #3A6EA5;
+  --k-val-soft: #E9EFF7;
+  --k-ok: #17844B;
+  --k-ok-soft: #E3F5EA;
+  --k-bad: #C2372E;
+  --k-bad-soft: #FCE6E4;
+  --k-warn: #A8620B;
+  --k-warn-soft: #FDF1DD;
+  --k-warn-row: #FFF9EE;
+  --k-opt: #B0247A;
+  --k-opt-soft: #FBE8F3;
+  --k-fold: #D0342C;
+  --k-st-flow: #3A6EA5;
+  --k-st-flowl: #6B98C6;
+  --k-st-flowd: #2B5384;
+  --k-st-bad: #C2372E;
+  --k-st-badd: #8C2B23;
+  --k-st-warn: #A8620B;
+  --k-st-ok: #17844B;
+  --k-st-okl: #4E9E77;
+  --k-st-grey: #8A93A6;
+  --k-shadow: 0 1px 2px rgba(20,26,41,.06), 0 8px 28px rgba(20,26,41,.08);
+}
+/* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
+   резолвится в :root и плотность провайдера не действует */
+:root, [data-k-root] {
+  --k-fs-1: calc(12.5px * var(--k-density));
+  --k-fs-2: calc(11px * var(--k-density));
+  --k-fs-3: calc(10.5px * var(--k-density));
+  --k-fs-h1: calc(20px * var(--k-density));
+  --k-lh-1: calc(17px * var(--k-density));
+  --k-lh-2: calc(14px * var(--k-density));
+  --k-lh-3: calc(13px * var(--k-density));
+  --k-sp-1: calc(4px * var(--k-density));
+  --k-sp-2: calc(8px * var(--k-density));
+  --k-sp-3: calc(12px * var(--k-density));
+  --k-sp-4: calc(16px * var(--k-density));
+  --k-sp-5: calc(20px * var(--k-density));
+  --k-sp-6: calc(24px * var(--k-density));
+  --k-sp-7: calc(32px * var(--k-density));
+  --k-sp-8: calc(40px * var(--k-density));
+  --k-h-ctl-s: calc(24px * var(--k-density));
+  --k-h-ctl-m: calc(28px * var(--k-density));
+  --k-h-ctl-l: calc(32px * var(--k-density));
+  --k-h-field: calc(23px * var(--k-density));
+  --k-r-s: calc(4px * var(--k-density));
+  --k-r-m: calc(6px * var(--k-density));
+  --k-icon-s: calc(14px * var(--k-density));
+  --k-icon-m: calc(16px * var(--k-density));
+  --k-tip-max: calc(360px * var(--k-density));
+  --k-dot-s: calc(7px * var(--k-density));
+  --k-dot-m: calc(14px * var(--k-density));
+  --k-counter: calc(18px * var(--k-density));
+  --k-menu-min: calc(180px * var(--k-density));
+  --k-progress: calc(3px * var(--k-density));
+  --k-side: calc(200px * var(--k-density));
+  --k-note-max: calc(640px * var(--k-density));
+  --k-swatch: calc(150px * var(--k-density));
+}
+[data-theme="dark"] {
+  --k-ground: #0E121A;
+  --k-paper: #161B26;
+  --k-sunk: #1B2130;
+  --k-hover: #1B2331;
+  --k-chip: #232A39;
+  --k-ink: #E6E9F1;
+  --k-ink2: #C3C9D6;
+  --k-muted: #949DB0;
+  --k-faint: #8A93A6;
+  --k-line: #2A3243;
+  --k-line2: #222938;
+  --k-val: #8FB8E0;
+  --k-val-soft: #1E2B3E;
+  --k-ok: #52CC8A;
+  --k-ok-soft: #173526;
+  --k-bad: #FF7A70;
+  --k-bad-soft: #3D1B19;
+  --k-warn: #F0B44E;
+  --k-warn-soft: #3A2B12;
+  --k-warn-row: #2A2216;
+  --k-opt: #F07CC0;
+  --k-opt-soft: #3A1830;
+  --k-fold: #FF6B61;
+  --k-st-flow: #7FA9D8;
+  --k-st-flowl: #A9C4E4;
+  --k-st-flowd: #5B8CC4;
+  --k-st-bad: #FF7A70;
+  --k-st-badd: #E0655C;
+  --k-st-warn: #F0B44E;
+  --k-st-ok: #52CC8A;
+  --k-st-okl: #8ADCB0;
+  --k-st-grey: #A7B0C2;
+  --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --k-ground: #0E121A;
+    --k-paper: #161B26;
+    --k-sunk: #1B2130;
+    --k-hover: #1B2331;
+    --k-chip: #232A39;
+    --k-ink: #E6E9F1;
+    --k-ink2: #C3C9D6;
+    --k-muted: #949DB0;
+    --k-faint: #8A93A6;
+    --k-line: #2A3243;
+    --k-line2: #222938;
+    --k-val: #8FB8E0;
+    --k-val-soft: #1E2B3E;
+    --k-ok: #52CC8A;
+    --k-ok-soft: #173526;
+    --k-bad: #FF7A70;
+    --k-bad-soft: #3D1B19;
+    --k-warn: #F0B44E;
+    --k-warn-soft: #3A2B12;
+    --k-warn-row: #2A2216;
+    --k-opt: #F07CC0;
+    --k-opt-soft: #3A1830;
+    --k-fold: #FF6B61;
+    --k-st-flow: #7FA9D8;
+    --k-st-flowl: #A9C4E4;
+    --k-st-flowd: #5B8CC4;
+    --k-st-bad: #FF7A70;
+    --k-st-badd: #E0655C;
+    --k-st-warn: #F0B44E;
+    --k-st-ok: #52CC8A;
+    --k-st-okl: #8ADCB0;
+    --k-st-grey: #A7B0C2;
+    --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+  }
+}

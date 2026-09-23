@@ -1,0 +1,98 @@
+.lines {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+  width: 100%;
+  vertical-align: middle;
+}
+
+.line,
+.block {
+  display: block;
+  border-radius: var(--k-r-s);
+  background: var(--k-chip);
+  animation: k-pulse 1.2s ease-in-out infinite;
+}
+
+.hS {
+  height: var(--k-fs-3);
+}
+
+.hM {
+  height: var(--k-fs-1);
+}
+
+.block {
+  width: 100%;
+}
+
+@keyframes k-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line,
+  .block {
+    animation: none;
+  }
+}
+
+.dim {
+  opacity: 0.55;
+  transition: opacity var(--k-t-base);
+  pointer-events: none;
+}
+
+.progress {
+  position: relative;
+  height: var(--k-progress);
+  overflow: hidden;
+  background: var(--k-val-soft);
+}
+
+.progressBar {
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 40%;
+  background: var(--k-val);
+  animation: k-slide 1.1s linear infinite;
+}
+
+@keyframes k-slide {
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressBar {
+    animation: none;
+    width: 100%;
+    left: 0;
+    opacity: 0.4;
+  }
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-8) var(--k-sp-4);
+  text-align: center;
+  color: var(--k-muted);
+}
+
+.emptyTitle {
+  font: 500 var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.emptyText {
+  font-size: var(--k-fs-2);
+}
+
+.error .emptyTitle {
+  color: var(--k-bad);
+}
