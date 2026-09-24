@@ -4,8 +4,8 @@
   overflow-x: auto;
   white-space: nowrap;
 
-  /* Симметричный вертикальный паддинг — иначе overflow-x: auto режет и по Y, и фокус-кольцо кнопок (outline 2px + offset 1px) обрезается сверху при Tab. */
-  padding: var(--k-sp-1) 0;
+  /* Паддинг со всех сторон: overflow-x: auto обрезает и по Y, и по краям — без него фокус-кольцо кнопок (outline 2px + offset 1px) срезается сверху и у крайних кнопок слева/справа. */
+  padding: var(--k-sp-1);
 }
 
 .item {

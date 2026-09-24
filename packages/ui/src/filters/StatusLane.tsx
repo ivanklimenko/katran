@@ -18,7 +18,7 @@ export type StatusLaneProps = {
 export function StatusLane({ label, items, value, onChange, allLabel = 'Все' }: StatusLaneProps) {
   const hasCounts = items.some((it) => it.count !== undefined)
   const total = items.reduce((n, it) => n + (it.count ?? 0), 0)
-  const isOn = (it: LaneItem) => value !== null && String(it.value) === String(value)
+  const isOn = (it: LaneItem) => value !== null && it.value === value
   return (
     <div role="group" aria-label={label} className={s.lane}>
       {/* variant="ghost" — явно, хоть и совпадает с дефолтом Button: стиль активного состояния (aria-pressed) живёт в Button.module.css именно для ghost. */}

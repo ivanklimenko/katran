@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Button } from '../button'
 import type { Selection } from '../grid/types'
 import { useKatran } from '../provider'
@@ -21,7 +21,14 @@ export function BulkBar({ label = 'Массовые действия', selection
   const n = all ? Math.max(0, total - selection.except.length) : selection.ids.length
   const text = all ? `Все ${n} по фильтру` : `Выбрано ${n}`
   const { announce } = useKatran()
-  useEffect(() => { if (n > 0) announce(text) }, [n, text, announce])
+  // Полоса исчезает вместе с кнопкой «Снять выделение», фокус вернуть некуда — снятие хотя бы объявляем.
+  // hadAny отличает переход к нулю от первого рендера с пустым выделением: тогда объявлять нечего.
+  const hadAny = useRef(false)
+  useEffect(() => {
+    if (n > 0) announce(text)
+    else if (hadAny.current) announce('Выделение снято')
+    hadAny.current = n > 0
+  }, [n, text, announce])
   if (n === 0) return null
   return (
     <div role="region" aria-label={label} className={s.bar}>
