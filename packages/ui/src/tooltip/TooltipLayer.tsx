@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { computePosition, flip, offset, shift } from '@floating-ui/dom'
 import { durations } from '@katran/tokens'
+import { useStableId } from '../compat/useStableId'
 import s from './Tooltip.module.css'
 
 type Props = { root: RefObject<HTMLElement | null> }
@@ -13,7 +14,7 @@ const wants = (el: HTMLElement) =>
 
 /** Единственный тултип на провайдер. Управляется делегированием событий с корня. */
 export function TooltipLayer({ root }: Props) {
-  const id = useId()
+  const id = useStableId()
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<{ el: HTMLElement; text: string } | null>(null)
   const timer = useRef<number | undefined>(undefined)

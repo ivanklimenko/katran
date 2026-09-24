@@ -52,4 +52,26 @@ export default tseslint.config(
       ],
     },
   },
+  // Кит работает на React 17 (хост метаприложения): API React 18+ в пакетах запрещены (спека совместимости 2.1).
+  // Замены — в packages/ui/src/compat/.
+  {
+    files: ['packages/ui/src/**/*.{ts,tsx}', 'packages/effector/src/**/*.{ts,tsx}'],
+    ignores: ['packages/ui/src/compat/**'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: "ImportDeclaration[source.value='react'] > ImportSpecifier[imported.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+        },
+        {
+          selector: "MemberExpression[object.name='React'][property.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+        },
+        {
+          selector: "ImportDeclaration[source.value=/^react-dom\\/(client|server)$/]",
+          message: 'react-dom/client — React 18+; кит монтирует хост',
+        },
+      ],
+    },
+  },
 )
