@@ -39,4 +39,17 @@ describe('useFilters', () => {
     expect(result.current.conditions).toEqual([{ field: 'status', op: 'EQ', value: 'DONE' }])
     expect(result.current.dirty).toBe(false)
   })
+
+  it('lane/setLane/revert/meta через хук', () => {
+    const meta = { fields: [{ id: 'status', label: 'Статус', type: 'ENUM' as const, ops: [] }] }
+    const model = createFiltersModel({ meta, laneField: 'status' })
+    const { result } = renderHook(() => useFilters(model))
+    expect(result.current.meta).toBe(meta)
+    act(() => { result.current.setLane('DONE') })
+    expect(result.current.lane).toBe('DONE')
+    expect(result.current.conditions).toEqual([{ field: 'status', op: 'EQ', value: 'DONE' }])
+    act(() => { result.current.edit({ field: 'amount', op: 'GT', value: 1 }) })
+    act(() => { result.current.revert() })
+    expect(result.current.dirty).toBe(false)
+  })
 })
