@@ -34,7 +34,7 @@ Peer-зависимости: `react` ≥ 18, `react-dom` ≥ 18.
 import { useState } from 'react'
 import { DataGrid, type ColumnsState, type RecordLayout, type Sort } from '@katran/ui'
 
-type Doc = { id: string; num: number; amount: string; purpose: string | null }
+type Doc = { id: string; num: number; amount: string; purpose: string | null; status: string }
 
 export const layout: RecordLayout<Doc> = {
   rowKey: (d) => d.id,
@@ -115,7 +115,7 @@ import { BulkBar, Button, DataGrid, FilterPanel, StatusLane, type LaneItem } fro
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Status } from './data/docs'
 import { createFakeBackend } from './data/fakeBackend'
 
-// Doc и layout — запись и раскладка, как в разделе «DataGrid» выше (у Doc здесь есть поле status).
+// Doc и layout — запись и раскладка, как в разделе «DataGrid» выше (поле `status` у `Doc` — поле лейна).
 // Эффекты приложения: в демо — фейковый бэкенд, в бою — POST /grids/{id}/search и /grids/{id}/facets.
 const { searchFx, facetsFx } = createFakeBackend(makeDocs(), layout)
 
