@@ -28,7 +28,9 @@ export function BulkBar({ label = 'Массовые действия', selection
       <span className={s.count}>{text}</span>
       {!all && onSelectAll && n < total && <Button size="s" onClick={onSelectAll}>Выбрать все {total} по фильтру</Button>}
       <Button size="s" onClick={onClear}>Снять выделение</Button>
-      {children && <span className={s.actions}>{children}</span>}
+      {/* children && ... «съедал» бы валидные, но falsy значения (0, '') — слот нужен, когда children не «пусто»:
+          не null/undefined/false; сами 0/'' в него попадут и отрендерятся как есть */}
+      {children != null && children !== false && <span className={s.actions}>{children}</span>}
     </div>
   )
 }

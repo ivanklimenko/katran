@@ -2,6 +2,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
+import { BulkBar } from '../filters/BulkBar'
 import { DataGrid, type DataGridProps } from './DataGrid'
 import type { RecordLayout } from './types'
 
@@ -206,5 +207,15 @@ describe('DataGrid', () => {
     const tb = screen.getByTestId('tb')
     const nav = screen.getByRole('navigation', { name: /Страницы/ })
     expect(tb.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('пустой toolbar (BulkBar без выделения вернул null) не занимает места', () => {
+    const { container } = renderK(
+      <DataGrid {...base({ toolbar: <BulkBar selection={{ mode: 'ids', ids: [] }} total={87} onClear={() => {}} /> })} />,
+    )
+    const wrapper = container.querySelector('[class*="toolbar"]')
+    expect(wrapper).not.toBeNull()
+    expect(wrapper).toBeEmptyDOMElement()
+    expect(screen.queryByRole('region', { name: 'Массовые действия' })).toBeNull()
   })
 })
