@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { createEvent, createStore } from 'effector'
-import { createGridModel, localStoragePersist, useGrid, type Filter } from '@katran/effector'
-import { AccountValue, Checkbox, CopyValue, DataGrid, LinkValue, StatusDot, Tag, formatAmount, formatDateTimeShort, useKatran, type RecordLayout } from '@katran/ui'
-import { makeDocs, STATUS_LABEL, STATUS_TONE, type Doc } from '../data/docs'
+import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
+import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDateTimeShort, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
+import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
 
@@ -47,29 +46,40 @@ const SPANS_SNIPPET = `spans: [[
 ]],`
 
 const docs = makeDocs()
-const fetchFx = createFakeBackend(docs, docsLayout)
-export const resetFilter = createEvent()
-export const $filter = createStore<Filter>([]).reset(resetFilter)
+const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout)
+/** Один стор условий: лейн, панель и грид читают и пишут $conditions (лейн — EQ по status). */
+const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({
   id: 'demo-docs',
   columns: docsLayout.columns.map((c) => ({ id: c.id, width: c.width })),
   pageSize: 20,
-  $filter,
-  fetchFx,
+  $filter: filters.$conditions,
+  fetchFx: searchFx,
+  facets: { field: 'status', fetchFx: facetsFx },
   persist: localStoragePersist('katran-demo'),
   rowKey: docsLayout.rowKey,
 })
+/** Порядок и подписи лейна — из словаря приложения; счётчики — из фасетов, отсутствующий статус — 0. */
+const STATUSES = Object.keys(STATUS_LABEL) as Status[]
 
 export function GridPage() {
   const g = useGrid(grid)
+  const f = useFilters(filters)
   const { announce } = useKatran()
   const [opened, setOpened] = useState<string | null>(null)
   const [hlSpans, setHlSpans] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   useEffect(() => { grid.refresh() }, [])
+  const lane: LaneItem[] = STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st], count: g.facets.find((x) => String(x.value) === st)?.count ?? 0 }))
+  // действия полосы — демонстрационные: только объявляют, сколько выбрано
+  const bulk = (what: string) => {
+    const n = g.selection.mode === 'all' ? g.total - g.selection.except.length : g.selection.ids.length
+    announce(`${what}: выбрано ${n}`)
+  }
   return (
     <div className={[s.gridPage, hlSpans ? s.hlSpans : ''].filter(Boolean).join(' ')}>
       <div className={s.gridHead}>
-        <h1 className={s.h1}>Реестр</h1>
+        <h1 className={s.h1}>Валютные документы<span className={s.h1Counter}><Counter value={g.total} /></span></h1>
         <p className={s.note}>87 валютных документов на фейковом бэкенде с задержкой 0,25–0,65 с. Запись не кликабельна — деталку открывает кнопка; двойной клик — второй документ рядом. Tab попадает в сетку один раз, дальше — стрелки; Enter на ячейке — копировать/открыть.</p>
         <details className={s.explain}>
           <summary className={s.explainSummary}>Сквозные строки записи: как это управляется</summary>
@@ -85,14 +95,25 @@ export function GridPage() {
           </div>
         </details>
         {opened && <p className={s.note} role="status">{opened}</p>}
+        <div className={s.lane}><StatusLane label="Статусы" items={lane} value={f.lane} onChange={f.setLane} /></div>
+        <div className={s.filters}>
+          <FilterPanel meta={docsFilterMeta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
+            onEdit={f.edit} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove} />
+        </div>
       </div>
       <DataGrid
         {...g}
         label="Валютные документы"
         layout={docsLayout}
         pageSizes={[20, 50]}
-        emptyAction={{ label: 'Сбросить фильтр', onClick: () => resetFilter() }}
+        emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
         onOpen={(d, { secondary }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}`; setOpened(msg); announce(msg) }}
+        toolbar={
+          <BulkBar selection={g.selection} total={g.total} onClear={g.onClearSelection} onSelectAll={g.onSelectAll}>
+            <Button size="s" onClick={() => bulk('Экспорт')}>Экспортировать</Button>
+            <Button size="s" onClick={() => bulk('Отложить')}>Отложить</Button>
+          </BulkBar>
+        }
       />
     </div>
   )

@@ -1,3 +1,5 @@
+import type { FilterMeta } from '@katran/ui'
+
 export type Status = 'IN_PROGRESS' | 'TO_EXPORT' | 'PROCESSING' | 'ERROR' | 'DEFERRED' | 'EXPORTED' | 'INVALID' | 'REJECTED' | 'DONE'
 export type Direction = 'IN' | 'OUT' | 'TRANSIT' | 'OTHER'
 export type Doc = {
@@ -21,6 +23,20 @@ export const STATUS_TONE: Record<Status, 'flow' | 'flowl' | 'flowd' | 'bad' | 'b
   IN_PROGRESS: 'flow', TO_EXPORT: 'flowl', PROCESSING: 'flowd', ERROR: 'bad', INVALID: 'badd', DEFERRED: 'warn',
   DONE: 'ok', EXPORTED: 'okl', REJECTED: 'grey',
 }
+export const DIRECTION_LABEL: Record<Direction, string> = { IN: 'Входящий', OUT: 'Исходящий', TRANSIT: 'Транзит', OTHER: 'Прочее' }
+const enumValues = <K extends string>(labels: Record<K, string>) => (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }))
+/** Каталог полей панели фильтров — то, что бек отдаст в GET /grids/documents/filter-meta. */
+export const docsFilterMeta: FilterMeta = { fields: [
+  { id: 'docNumber', label: 'Номер документа', type: 'NUMBER', ops: [] },
+  { id: 'status', label: 'Статус', type: 'ENUM', ops: [], values: enumValues(STATUS_LABEL) },
+  { id: 'type', label: 'Тип сообщения', type: 'ENUM', ops: [], values: ['MT103', 'MT202', 'MT202COV', 'MT199'].map((v) => ({ value: v, label: v })) },
+  { id: 'direction', label: 'Направление', type: 'ENUM', ops: [], values: enumValues(DIRECTION_LABEL) },
+  { id: 'currency', label: 'Валюта', type: 'ENUM', ops: [], values: ['USD', 'EUR', 'CNY', 'RUB'].map((v) => ({ value: v, label: v })) },
+  { id: 'amount', label: 'Сумма', type: 'NUMBER', ops: [] },
+  { id: 'created', label: 'Дата документа', type: 'DATE', ops: [] },
+  { id: 'f50name', label: 'Приказодатель', type: 'STRING', ops: [] },
+  { id: 'f59name', label: 'Бенефициар', type: 'STRING', ops: [] },
+] }
 const REASONS = ['Не найден счёт получателя', 'Превышен лимит', 'Санкционный стоп-лист', 'Ошибка формата 59', 'Нет покрытия', 'Дубликат 20', 'Отказ комплаенса', 'Просрочена дата валютирования', 'Неизвестный BIC']
 const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '643' } as const
 const NAMES = ['ООО «Северный ветер»', 'АО «Прибой»', 'ЗАО «Василёк»', 'ООО «Ромашка»', 'ПАО «Титан»', 'ООО «Меридиан»', 'АО «Глобус»', 'ООО «Кедр»', 'ИП Иванов А. А.', 'ООО «Лотос»']
