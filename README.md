@@ -112,8 +112,12 @@ Peer-зависимости `@katran/effector`: `effector` ≥ 23, `effector-rea
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, useFilters, useGrid } from '@katran/effector'
 import { BulkBar, Button, DataGrid, FilterPanel, StatusLane, type LaneItem } from '@katran/ui'
-import { docsFilterMeta, STATUS_LABEL, STATUS_TONE, type Status } from './data/docs'
-import { searchFx, facetsFx } from './data/fakeBackend' // или POST /grids/{id}/search и /facets
+import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Status } from './data/docs'
+import { createFakeBackend } from './data/fakeBackend'
+
+// Doc и layout — запись и раскладка, как в разделе «DataGrid» выше (у Doc здесь есть поле status).
+// Эффекты приложения: в демо — фейковый бэкенд, в бою — POST /grids/{id}/search и /grids/{id}/facets.
+const { searchFx, facetsFx } = createFakeBackend(makeDocs(), layout)
 
 const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({
@@ -131,10 +135,13 @@ export function DocsPage() {
   const g = useGrid(grid)
   const f = useFilters(filters)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // до первого ответа фасетов лейн без чисел, а не с нулями
+  const [counted, setCounted] = useState(false)
+  if (!counted && g.facets.length > 0) setCounted(true)
   useEffect(() => { grid.refresh() }, [])
   const lane: LaneItem[] = STATUSES.map((st) => ({
     value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st],
-    count: g.facets.find((x) => String(x.value) === st)?.count ?? 0,
+    count: counted ? (g.facets.find((x) => String(x.value) === st)?.count ?? 0) : undefined,
   }))
   return (
     <>
