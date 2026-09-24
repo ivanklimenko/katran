@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**'] },
   ...tseslint.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,

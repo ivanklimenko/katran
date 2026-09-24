@@ -10,15 +10,26 @@
     "./fonts.css": "./src/fonts.css"
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ],
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+      "./tokens.css": "./src/tokens.css",
+      "./fonts.css": "./src/fonts.css"
+    }
+  },
   "scripts": {
     "gen": "tsx scripts/gen.ts",
     "test": "vitest run",
-    "build": "tsc -p tsconfig.json --noEmit"
+    "build": "vite build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.build.json"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
+    "vite": "^8.3.0",
     "vitest": "^5.0.1"
   },
   "dependencies": {

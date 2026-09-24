@@ -9,6 +9,8 @@
     "./styles.css": "./dist/ui.css"
   },
   "publishConfig": {
+    "main": "./dist/ui.js",
+    "types": "./dist/index.d.ts",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
