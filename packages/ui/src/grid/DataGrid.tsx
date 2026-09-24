@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { IconButton } from '../button'
 import { Checkbox } from '../input'
 import { Pagination } from '../pagination'
@@ -42,6 +42,8 @@ export type DataGridProps<Row> = {
   /** Второй клик по кнопке (e.detail ≥ 2) — secondary: второй drawer рядом. */
   onOpen?: ((row: Row, opts: { secondary: boolean }) => void) | undefined
   skeletonRows?: number | undefined
+  /** Слот над пагинацией в футере — полоса массовых действий экрана. */
+  toolbar?: ReactNode | undefined
 }
 
 const DEFAULT_WIDTH = 120
@@ -160,6 +162,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         </table>
       </div>
       <div className={s.foot}>
+        {p.toolbar && <div className={s.toolbar}>{p.toolbar}</div>}
         <Pagination page={page} pageSize={pageSize} total={p.total} onPage={p.onPage} pageSizes={p.pageSizes} onPageSize={p.onPageSize} />
       </div>
     </div>

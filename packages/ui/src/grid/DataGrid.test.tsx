@@ -200,4 +200,11 @@ describe('DataGrid', () => {
     const { container } = renderK(<DataGrid {...base({ selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage: () => {}, onOpen: () => {} })} />)
     expect(await axe(container)).toHaveNoViolations()
   })
+
+  it('слот toolbar рендерится в футере над пагинацией', () => {
+    renderK(<DataGrid {...base({ toolbar: <div data-testid="tb">полоса</div> })} />)
+    const tb = screen.getByTestId('tb')
+    const nav = screen.getByRole('navigation', { name: /Страницы/ })
+    expect(tb.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

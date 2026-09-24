@@ -1,0 +1,20 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  min-height: var(--k-h-ctl-m);
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border-radius: var(--k-r-m);
+  background: var(--k-val-soft);
+  color: var(--k-ink);
+}
+
+.count {
+  font-weight: 600;
+}
+
+.actions {
+  display: inline-flex;
+  gap: var(--k-sp-2);
+  margin-left: auto;
+}

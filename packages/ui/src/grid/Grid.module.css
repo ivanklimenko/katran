@@ -219,6 +219,10 @@ th[tabindex]:focus-visible {
   flex: none;
 }
 
+.toolbar {
+  padding: var(--k-sp-2) 0 0;
+}
+
 /* --- меню состава колонок --- */
 .colsMenu {
   display: grid;
