@@ -10,8 +10,8 @@ test('запись и шапка при 100 %', async ({ page }) => {
   await page.locator('tbody[data-key]').first().waitFor()
   const record = await h(page, 'tbody[data-key]')
   const head = await h(page, 'table[role=grid] thead')
-  expect(record).toBeGreaterThanOrEqual(60)
-  expect(record).toBeLessThanOrEqual(74)
+  expect(record).toBeGreaterThanOrEqual(64)
+  expect(record).toBeLessThanOrEqual(72)
   expect(head).toBeGreaterThanOrEqual(40)
   expect(head).toBeLessThanOrEqual(56)
   test.info().annotations.push({ type: 'geometry', description: `record=${record} head=${head}` })
@@ -25,6 +25,7 @@ test('скелетон повторяет высоту записи', async ({ p
   await page.locator('tbody[data-key]').first().waitFor({ timeout: 10_000 })
   const record = await h(page, 'tbody[data-key]')
   expect(Math.abs(skeleton - record)).toBeLessThanOrEqual(2)
+  test.info().annotations.push({ type: 'geometry', description: `skeleton=${skeleton} record=${record}` })
 })
 
 test('плотность 125 % масштабирует запись', async ({ page }) => {
@@ -35,4 +36,5 @@ test('плотность 125 % масштабирует запись', async ({ 
   await page.getByRole('button', { name: '125 %' }).click()
   const big = await h(page, 'tbody[data-key]')
   expect(Math.abs(big - base * 1.25)).toBeLessThanOrEqual(2)
+  test.info().annotations.push({ type: 'geometry', description: `base=${base} density125=${big}` })
 })

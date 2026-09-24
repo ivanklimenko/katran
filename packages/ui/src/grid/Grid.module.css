@@ -3,6 +3,9 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
+
+  /* грид сам белый, где бы ни лежал: без фона сквозь него просвечивала бы подложка страницы */
+  background: var(--k-paper);
 }
 
 .wrap {
@@ -133,19 +136,21 @@
 }
 
 .record > tr:first-child > td {
-  padding-top: var(--k-sp-2);
+  padding-top: var(--k-grid-pad);
 }
 
 .record > tr:last-child > td {
-  padding-bottom: var(--k-sp-2);
+  padding-bottom: var(--k-grid-pad);
   border-bottom: 1px solid var(--k-line);
 }
 
-.record > tr:hover > td {
+/* наведение подсвечивает всю запись (tbody), а не одну её строку */
+.record:hover > tr > td {
   background: var(--k-hover);
 }
 
-.selected > tr:hover > td {
+/* после правила выше: специфичность равна, выделенная запись при наведении остаётся val-soft */
+.selected:hover > tr > td {
   background: var(--k-val-soft);
 }
 

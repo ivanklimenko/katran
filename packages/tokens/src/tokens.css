@@ -87,6 +87,7 @@
   --k-grid-lead: calc(84px * var(--k-density));
   --k-grid-rz: calc(7px * var(--k-density));
   --k-menu-max-h: calc(320px * var(--k-density));
+  --k-grid-pad: calc(6px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

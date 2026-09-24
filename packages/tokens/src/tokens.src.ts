@@ -57,6 +57,8 @@ export const sizes: Record<string, number> = {
   'dot-s': 7, 'dot-m': 14, 'counter': 18, 'menu-min': 180, 'progress': 3,
   'side': 200, 'note-max': 640, 'swatch': 150,
   'grid-lead': 84, 'grid-rz': 7, 'menu-max-h': 320,
+  // вертикальный отступ записи грида: 6 + 2×17 + 4 + 17 + 6 + 1 = 68, как на стенде
+  'grid-pad': 6,
 }
 
 export const fonts = {
