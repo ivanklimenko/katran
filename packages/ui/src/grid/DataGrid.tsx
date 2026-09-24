@@ -162,7 +162,8 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         </table>
       </div>
       <div className={s.foot}>
-        {p.toolbar && <div className={s.toolbar}>{p.toolbar}</div>}
+        {/* как слот действий BulkBar: пустым считаются только null/undefined/false, валидные falsy (0, '') рендерятся */}
+        {p.toolbar != null && p.toolbar !== false && <div className={s.toolbar}>{p.toolbar}</div>}
         <Pagination page={page} pageSize={pageSize} total={p.total} onPage={p.onPage} pageSizes={p.pageSizes} onPageSize={p.onPageSize} />
       </div>
     </div>
