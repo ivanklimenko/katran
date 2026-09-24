@@ -25,6 +25,19 @@
   color: var(--k-ink);
 }
 
+/* Ячейки без рамок по умолчанию: хост может задавать глобальное `td, th { border }` —
+   без сброса рамки протекают в запись (+3 px к 68). Специфичность (0,1,0) перебивает селектор элемента,
+   а правила ниже с той же или большей специфичностью (.th, .record > tr > td) рисуют свои линии. */
+.table :where(td, th) {
+  border: 0;
+}
+
+/* Ширина колонки — полная ширина ячейки с паддингом (ползунок ресайза показывает её же):
+   border-box. [data-k-root] поднимает специфичность до (0,2,0) — выше content-box корня провайдера. */
+[data-k-root] .table :where(td, th) {
+  box-sizing: border-box;
+}
+
 /* --- шапка --- */
 .th {
   position: sticky;
@@ -196,8 +209,9 @@
   padding: 0;
 }
 
-td[tabindex]:focus-visible,
-th[tabindex]:focus-visible {
+/* Только ячейки грида: глобальный td[tabindex] красил бы фокус в таблицах хоста. */
+.table td[tabindex]:focus-visible,
+.table th[tabindex]:focus-visible {
   outline: 2px solid var(--k-val);
   outline-offset: -2px;
 }

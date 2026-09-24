@@ -7,6 +7,26 @@
   min-height: 100%;
 }
 
+/* Модель коробки под корнем провайдера — content-box: типичный сброс хоста
+   `*, *::before, *::after { box-sizing: border-box }` сужал колонки грида и поля ввода.
+   Корень провайдера — граница изоляции: геометрия под ним не зависит от хоста.
+   Специфичность (0,1,0) перебивает `*` хоста. Псевдоэлементы — отдельными селекторами:
+   внутри :where() они недопустимы. Ячейки грида — исключение (border-box, Grid.module.css). */
+.root,
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: content-box;
+}
+
+/* Типографика контролов под корнем провайдера: хост может глобально задавать
+   `button { text-transform; letter-spacing }` — кнопки кита унаследовали бы их. Специфичность (0,1,0)
+   перебивает селектор элемента хоста; правила компонентов кита идут в ui.css позже и перебивают сброс. */
+.root :where(button, input, select, textarea) {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .live {
   position: absolute;
   inline-size: 0;
