@@ -4,8 +4,8 @@ export type StatusDotProps = {
   tone: StatusTone
   size?: 's' | 'm' | undefined
   /**
-   * Буква читаема только на тонах flow/flowd/bad/badd/warn/ok (контраст ≥ 4.5 к paper);
-   * на flowl/okl/grey — 3.0–3.2, не использовать.
+   * Буква в точке; допустима на всех тонах. На flow/flowd/bad/badd/warn/ok — цвет `paper`,
+   * на flowl/okl/grey — `st-letter-soft` (контраст ≥ 4.5 в обеих темах).
    */
   letter?: string | undefined
   label?: string | undefined

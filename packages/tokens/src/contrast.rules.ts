@@ -24,4 +24,5 @@ export const rules: ContrastRule[] = [
   { fg: 'faint', bg: surfaces, min: 3.0, note: 'служебный токен, не для читаемого текста' },
   { fg: 'paper', bg: ['val'], min: 4.5, note: 'текст на primary-кнопке' },
   { fg: 'paper', bg: ['st-flow', 'st-flowd', 'st-bad', 'st-badd', 'st-warn', 'st-ok'], min: 4.5, note: 'буква в статусной точке' },
+  { fg: 'st-letter-soft', bg: ['st-flowl', 'st-okl', 'st-grey'], min: 4.5, note: 'буква в статусной точке на светлых тонах' },
 ]

@@ -131,6 +131,13 @@
   background: var(--k-st-grey);
 }
 
+/* на светлых тонах буква тёмная: paper на них в светлой теме даёт 3.0–3.2 (правило контраста st-letter-soft ≥ 4.5) */
+.dot[data-tone="flowl"],
+.dot[data-tone="okl"],
+.dot[data-tone="grey"] {
+  color: var(--k-st-letter-soft);
+}
+
 .tag {
   display: inline-block;
   padding: 0 var(--k-sp-1);

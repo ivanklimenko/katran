@@ -33,6 +33,7 @@ export const colors = {
     'st-ok': '#17844B',
     'st-okl': '#4E9E77',
     'st-grey': '#8A93A6',
+    'st-letter-soft': '#141A29',
   },
   dark: {
     'ground': '#0E121A',
@@ -67,6 +68,7 @@ export const colors = {
     'st-ok': '#52CC8A',
     'st-okl': '#8ADCB0',
     'st-grey': '#A7B0C2',
+    'st-letter-soft': '#161B26',
   },
 } as const
 

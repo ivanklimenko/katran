@@ -21,6 +21,9 @@ export const colorsLight: ColorSet = {
   'st-flow': '#3A6EA5', 'st-flowl': '#6B98C6', 'st-flowd': '#2B5384',
   'st-bad': '#C2372E', 'st-badd': '#8C2B23', 'st-warn': '#A8620B',
   'st-ok': '#17844B', 'st-okl': '#4E9E77', 'st-grey': '#8A93A6',
+  // буква в статусной точке на светлых тонах flowl/okl/grey: на них paper (белый) даёт 3.0–3.2,
+  // поэтому буква тёмная — ink
+  'st-letter-soft': '#141A29',
 }
 
 export const colorsDark: ColorSet = {
@@ -36,6 +39,8 @@ export const colorsDark: ColorSet = {
   'st-flow': '#7FA9D8', 'st-flowl': '#A9C4E4', 'st-flowd': '#5B8CC4',
   'st-bad': '#FF7A70', 'st-badd': '#E0655C', 'st-warn': '#F0B44E',
   'st-ok': '#52CC8A', 'st-okl': '#8ADCB0', 'st-grey': '#A7B0C2',
+  // буква в статусной точке на flowl/okl/grey: тоны тёмной темы светлые, буква тёмная — paper, как на остальных тонах
+  'st-letter-soft': '#161B26',
 }
 
 /** Тени задаются целиком: в них есть rgba, генератор их не трогает. */

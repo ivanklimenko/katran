@@ -47,6 +47,7 @@
   --k-st-ok: #17844B;
   --k-st-okl: #4E9E77;
   --k-st-grey: #8A93A6;
+  --k-st-letter-soft: #141A29;
   --k-shadow: 0 1px 2px rgba(20,26,41,.06), 0 8px 28px rgba(20,26,41,.08);
 }
 /* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
@@ -122,6 +123,7 @@
   --k-st-ok: #52CC8A;
   --k-st-okl: #8ADCB0;
   --k-st-grey: #A7B0C2;
+  --k-st-letter-soft: #161B26;
   --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
 }
 @media (prefers-color-scheme: dark) {
@@ -158,6 +160,7 @@
     --k-st-ok: #52CC8A;
     --k-st-okl: #8ADCB0;
     --k-st-grey: #A7B0C2;
+    --k-st-letter-soft: #161B26;
     --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
   }
 }

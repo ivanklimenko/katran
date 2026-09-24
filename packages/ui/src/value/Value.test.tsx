@@ -7,7 +7,7 @@ import { CopyValue } from './CopyValue'
 import { Counter } from './Counter'
 import { FieldTag } from './FieldTag'
 import { LinkValue } from './LinkValue'
-import { StatusDot } from './StatusDot'
+import { StatusDot, type StatusTone } from './StatusDot'
 
 const clip = () => { const writeText = vi.fn().mockResolvedValue(undefined); Object.assign(navigator, { clipboard: { writeText } }); return writeText }
 
@@ -70,6 +70,16 @@ describe('StatusDot / FieldTag / Counter', () => {
     const { container } = renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
     expect(screen.getByRole('img', { name: 'Обработан' })).toBeInTheDocument()
     expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1)
+  })
+  it('буква выводится и на светлом тоне', () => {
+    renderK(<StatusDot tone="okl" letter="З" />)
+    expect(screen.getByText('З')).toHaveAttribute('data-tone', 'okl')
+  })
+  it('точки с буквами на всех девяти тонах — без нарушений axe', async () => {
+    const letters: Record<StatusTone, string> = { flow: 'О', flowl: 'К', flowd: 'П', bad: 'О', badd: 'Н', warn: 'В', ok: 'И', okl: 'Э', grey: 'О' }
+    const { container } = renderK(<>{(Object.keys(letters) as StatusTone[]).map((t) => <StatusDot key={t} tone={t} letter={letters[t]} label={t} />)}</>)
+    expect(screen.getAllByRole('img')).toHaveLength(9)
+    expect(await axe(container)).toHaveNoViolations()
   })
   it('тег поля несёт подсказку', () => {
     renderK(<FieldTag tag="70" title="70 · Детали платежа" />)

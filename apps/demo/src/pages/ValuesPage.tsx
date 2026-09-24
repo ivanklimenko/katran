@@ -1,7 +1,11 @@
 import { AccountValue, CopyValue, Counter, FieldTag, LinkValue, StatusDot, Tag, type StatusTone } from '@katran/ui'
+import { STATUS_LABEL, STATUS_TONE, type Status } from '../data/docs'
 import s from './Page.module.css'
 
 const tones: StatusTone[] = ['flow', 'flowl', 'flowd', 'bad', 'badd', 'warn', 'ok', 'okl', 'grey']
+
+/** Статус демо на каждый тон (у каждого тона ровно один статус) — буква и имя точки берутся из его названия. */
+const statusOf = Object.fromEntries((Object.keys(STATUS_TONE) as Status[]).map((st) => [STATUS_TONE[st], STATUS_LABEL[st]])) as Record<StatusTone, string>
 
 export function ValuesPage() {
   return (
@@ -27,6 +31,11 @@ export function ValuesPage() {
       <div className={s.row}>
         {tones.map((t) => <StatusDot key={t} tone={t} label={t} />)}
         <StatusDot tone="bad" letter="!" label="Ошибка" /><StatusDot tone="ok" size="s" />
+      </div>
+      <h2 className={s.h2}>StatusDot с буквой — буква читаема на всех тонах</h2>
+      <p className={s.note}>На насыщенных тонах буква цвета бумаги, на светлых (к экспорту, экспортирован, отказ) — тёмная: контраст не ниже 4.5 в обеих темах.</p>
+      <div className={s.row}>
+        {tones.map((t) => <StatusDot key={t} tone={t} letter={statusOf[t][0]} label={statusOf[t]} />)}
       </div>
     </>
   )
