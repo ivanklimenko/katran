@@ -1,0 +1,89 @@
+.panel {
+  display: grid;
+  gap: var(--k-sp-2);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--k-sp-2);
+  min-height: var(--k-h-ctl-s);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+}
+
+.none {
+  color: var(--k-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--k-sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  height: var(--k-h-ctl-s);
+  padding: 0 var(--k-sp-1) 0 var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-sunk);
+  color: var(--k-ink2);
+  white-space: nowrap;
+}
+
+.chipX {
+  color: var(--k-muted);
+}
+
+.body {
+  display: grid;
+  gap: var(--k-sp-3);
+  padding: var(--k-sp-3);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--k-filter-field), 1fr));
+  gap: var(--k-sp-2) var(--k-sp-3);
+}
+
+.fieldBox {
+  display: grid;
+  gap: var(--k-sp-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldLabel {
+  padding: 0;
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--k-sp-1);
+}
+
+.actions {
+  display: flex;
+  gap: var(--k-sp-2);
+}
