@@ -7,23 +7,25 @@ import s from './Filters.module.css'
 export type FilterFieldProps = {
   field: Field
   draft: Filter
+  /** Счётчик внешних смен черновика (FilterPanel): сменился — набранное в поле больше не действует. */
+  epoch: number
   onEdit: (c: Condition) => void
   onDiscard: (field: string) => void
 }
 
 /** Один контрол панели simple: оператор фиксирован типом поля; пустое значение снимает условие из черновика. */
-export function FilterField({ field, draft, onEdit, onDiscard }: FilterFieldProps) {
+export function FilterField({ field, draft, epoch, onEdit, onDiscard }: FilterFieldProps) {
   const id = useId()
-  // Черновик хранит нормализованное условие («Иван » → «Иван», «1,» → 1, «-» → без условия), и значение
-  // из него съело бы набираемый символ. Поэтому поле показывает набранный текст, пока условие поля в черновике
-  // совпадает со снимком, сделанным при наборе; сменился черновик извне (Отменить, Сбросить, ✕ у чипа) —
-  // поле берёт значение из черновика.
-  const [typed, setTyped] = useState<{ text: string; snap: string } | null>(null)
+  // Черновик хранит нормализованное условие («Иван » → «Иван», «1,» → 1, «-» → без условия, DATETIME с одной
+  // границей → BETWEEN за этот день), и значение из него съело бы набираемое. Поэтому поле показывает набранное
+  // (строку или пару дат), пока действует снимок: черновик не менялся мимо полей панели (epoch тот же) и условие
+  // поля в черновике совпадает со снятым при наборе. Иначе (Отменить, Сбросить, ✕ у чипа, лейн) — значение из черновика.
+  const [typed, setTyped] = useState<{ raw: RawValue; snap: string; epoch: number } | null>(null)
   const current = JSON.stringify(draft.find((x) => x.field === field.id) ?? null)
-  const raw: RawValue = typed !== null && typed.snap === current ? typed.text : draftOf(draft, field)
+  const raw: RawValue = typed !== null && typed.epoch === epoch && typed.snap === current ? typed.raw : draftOf(draft, field)
   const set = (next: RawValue) => {
     const c = conditionFrom(field, next)
-    if (typeof next === 'string') setTyped({ text: next, snap: JSON.stringify(c) })
+    setTyped({ raw: next, snap: JSON.stringify(c), epoch })
     if (c) onEdit(c); else onDiscard(field.id)
   }
   if (fieldOp(field) === null) return null

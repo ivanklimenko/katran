@@ -11,15 +11,20 @@ const meta: FilterMeta = { fields: [
   { id: 'amount', label: 'Сумма', type: 'NUMBER', ops: [] },
   { id: 'f50name', label: 'Приказодатель', type: 'STRING', ops: [] },
   { id: 'created', label: 'Дата', type: 'DATE', ops: [] },
+  { id: 'valueDate', label: 'Валютирование', type: 'DATETIME', ops: [] },
 ] }
 
 type Over = Partial<FilterPanelProps>
-function Host({ initial = [], ...over }: { initial?: Filter } & Over) {
+/** Смена условий мимо панели — как setLane модели: одна и та же правка применённых и черновика. */
+type Outside = Record<string, (f: Filter) => Filter>
+function Host({ initial = [], outside = {}, ...over }: { initial?: Filter; outside?: Outside } & Over) {
   const [conditions, setConditions] = useState<Filter>(initial)
   const [draft, setDraft] = useState<Filter>(initial)
   const [open, setOpen] = useState(true)
   const same = JSON.stringify(conditions) === JSON.stringify(draft)
   return (
+    <>
+    {Object.entries(outside).map(([name, fn]) => <button key={name} type="button" onClick={() => { setConditions(fn); setDraft(fn) }}>{name}</button>)}
     <FilterPanel
       meta={meta} conditions={conditions} draft={draft} dirty={!same} open={open} onOpenChange={setOpen}
       onEdit={(c) => setDraft((d) => [...d.filter((x) => x.field !== c.field), c])}
@@ -30,8 +35,11 @@ function Host({ initial = [], ...over }: { initial?: Filter } & Over) {
       onRemove={(f) => { setConditions((c) => c.filter((x) => x.field !== f)); setDraft((d) => d.filter((x) => x.field !== f)) }}
       {...over}
     />
+    </>
   )
 }
+/** Лейн извне: EQ по status или снятие. */
+const lane = (v: string | null) => (f: Filter): Filter => [...f.filter((x) => x.field !== 'status'), ...(v === null ? [] : [{ field: 'status', op: 'EQ' as const, value: v }])]
 
 describe('FilterPanel', () => {
   it('строка состояния: кнопка с aria-expanded и счётчиком, чипы, «Сбросить»; без условий — «условия не заданы»', async () => {
@@ -113,5 +121,66 @@ describe('FilterPanel', () => {
     await u.type(date, '2026-09-01')
     await u.click(screen.getByRole('button', { name: 'Применить' }))
     expect(screen.getByRole('list', { name: 'Применённые условия' })).toHaveTextContent('Дата = 01.09.2026')
+  })
+  it('DATETIME: поле показывает набранную границу; пустые обе → условия нет (спека 6.2, Ruling 5)', async () => {
+    const u = userEvent.setup()
+    renderK(<Host />)
+    const from = screen.getByLabelText('Валютирование, с')
+    const to = screen.getByLabelText('Валютирование, по')
+    await u.type(from, '2026-09-01')
+    expect(to).toHaveValue('')
+    await u.click(screen.getByRole('button', { name: 'Применить' }))
+    expect(screen.getByRole('list', { name: 'Применённые условия' })).toHaveTextContent('Валютирование от 01.09.2026 00:00 до 01.09.2026 23:59')
+    expect(from).toHaveValue('2026-09-01')
+    expect(to).toHaveValue('')
+    await u.clear(from)
+    expect(from).toHaveValue('')
+    expect(to).toHaveValue('')
+    await u.click(screen.getByRole('button', { name: 'Применить' }))
+    expect(screen.queryByRole('list', { name: 'Применённые условия' })).toBeNull()
+  })
+  it('фокус после ✕: на ✕ следующего чипа, иначе предыдущего, иначе на «Фильтры»; после «Сбросить» — на «Фильтры»', async () => {
+    const u = userEvent.setup()
+    const { unmount } = renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }, { field: 'amount', op: 'GT', value: 10 }, { field: 'f50name', op: 'CONTAINS', value: 'Иван' }]} />)
+    const toggle = screen.getByRole('button', { name: /Фильтры/ })
+    const x = (name: string) => screen.getByRole('button', { name: `Убрать условие: ${name}` })
+    await u.tab(); expect(toggle).toHaveFocus()
+    await u.tab(); expect(x('Статус = Обработан')).toHaveFocus()
+    await u.keyboard('{Enter}')
+    expect(x('Сумма > 10')).toHaveFocus()
+    await u.tab(); expect(x('Приказодатель содержит „Иван“')).toHaveFocus()
+    await u.keyboard('{Enter}')
+    expect(x('Сумма > 10')).toHaveFocus()
+    await u.keyboard('{Enter}')
+    expect(screen.queryByRole('list', { name: 'Применённые условия' })).toBeNull()
+    expect(toggle).toHaveFocus()
+    unmount()
+    renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }, { field: 'amount', op: 'GT', value: 10 }]} />)
+    await u.click(screen.getByRole('button', { name: 'Сбросить' }))
+    expect(screen.getByRole('button', { name: /Фильтры/ })).toHaveFocus()
+  })
+  it('смена черновика извне (лейн) перекрывает выбранное в Select; снятие извне → «—»', async () => {
+    const u = userEvent.setup()
+    renderK(<Host outside={{ 'лейн: Ошибка': lane('ERROR'), 'лейн: Все': lane(null) }} />)
+    const status = screen.getByRole('combobox', { name: 'Статус' })
+    await u.selectOptions(status, 'DONE')
+    expect(status).toHaveValue('DONE')
+    await u.click(screen.getByRole('button', { name: 'лейн: Ошибка' }))
+    expect(status).toHaveValue('ERROR')
+    expect(status).toHaveDisplayValue('Ошибка')
+    await u.click(screen.getByRole('button', { name: 'лейн: Все' }))
+    expect(status).toHaveValue('')
+    expect(status).toHaveDisplayValue('—')
+  })
+  it('«-» без условия: ввод в другом поле его не стирает, «Сбросить» — стирает', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }]} />)
+    const sum = screen.getByRole('textbox', { name: 'Сумма' })
+    await u.type(sum, '-')
+    await u.type(screen.getByRole('textbox', { name: 'Приказодатель' }), 'Ив')
+    expect(sum).toHaveValue('-')
+    await u.click(screen.getByRole('button', { name: 'Сбросить' }))
+    expect(sum).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Приказодатель' })).toHaveValue('')
   })
 })
