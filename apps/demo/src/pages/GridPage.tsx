@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createEvent, createStore } from 'effector'
 import { createGridModel, localStoragePersist, useGrid, type Filter } from '@katran/effector'
-import { AccountValue, CopyValue, DataGrid, LinkValue, StatusDot, Tag, formatAmount, formatDateTimeShort, useKatran, type RecordLayout } from '@katran/ui'
+import { AccountValue, Checkbox, CopyValue, DataGrid, LinkValue, StatusDot, Tag, formatAmount, formatDateTimeShort, useKatran, type RecordLayout } from '@katran/ui'
 import { makeDocs, STATUS_LABEL, STATUS_TONE, type Doc } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
@@ -40,6 +40,12 @@ export const docsLayout: RecordLayout<Doc> = {
   ]],
 }
 
+/** Фрагмент раскладки для показа на странице — держать в синхроне с docsLayout.spans (текст блока spans: дословно, без отступа объекта). */
+const SPANS_SNIPPET = `spans: [[
+  { id: 'reason', from: 'status', to: 'created', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
+  { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><span className={s.srTag}>70</span> <CopyValue value={d.purpose} tone="ink2" tabIndex={T} /></> : null) },
+]],`
+
 const docs = makeDocs()
 const fetchFx = createFakeBackend(docs, docsLayout)
 export const resetFilter = createEvent()
@@ -58,12 +64,26 @@ export function GridPage() {
   const g = useGrid(grid)
   const { announce } = useKatran()
   const [opened, setOpened] = useState<string | null>(null)
+  const [hlSpans, setHlSpans] = useState(false)
   useEffect(() => { grid.refresh() }, [])
   return (
-    <div className={s.gridPage}>
+    <div className={[s.gridPage, hlSpans ? s.hlSpans : ''].filter(Boolean).join(' ')}>
       <div className={s.gridHead}>
         <h1 className={s.h1}>Реестр</h1>
         <p className={s.note}>87 валютных документов на фейковом бэкенде с задержкой 0,25–0,65 с. Запись не кликабельна — деталку открывает кнопка; двойной клик — второй документ рядом. Tab попадает в сетку один раз, дальше — стрелки; Enter на ячейке — копировать/открыть.</p>
+        <details className={s.explain}>
+          <summary className={s.explainSummary}>Сквозные строки записи: как это управляется</summary>
+          <div className={s.explainBody}>
+            <p className={s.explainText}>
+              Запись — это <code>tbody</code>: первая строка — ячейки колонок, следующие — сквозные строки из сегментов.
+              Сегмент задаётся диапазоном <code>from</code>/<code>to</code> по <code>id</code> колонок и функцией <code>render</code> — числа <code>colspan</code> в раскладке нет.
+              Скрытые колонки сжимают сегмент: <code>resolveSpans</code> пересчитывает <code>colSpan</code> по видимому составу и порядку — скройте колонку 52 в меню состава, и назначение сузится.
+              Если <code>render</code> вернул <code>null</code>, сегмент — бледная подложка без содержимого; <code>lines</code> задаёт кламп сегмента. Правила — спека, разделы 6.1–6.3.
+            </p>
+            <Checkbox label="Подсветить сквозные сегменты" checked={hlSpans} onChange={(e) => setHlSpans(e.target.checked)} />
+            <pre className={s.code}>{SPANS_SNIPPET}</pre>
+          </div>
+        </details>
         {opened && <p className={s.note} role="status">{opened}</p>}
       </div>
       <DataGrid

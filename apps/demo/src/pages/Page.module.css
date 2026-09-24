@@ -72,6 +72,56 @@
   flex: none;
 }
 
+/* пояснение к сквозным строкам на «Реестре»; раскрытое — отнимает высоту у грида, грид прокручивается внутри */
+.explain {
+  margin: 0 0 var(--k-sp-4);
+}
+
+.explainSummary {
+  width: max-content;
+  color: var(--k-val);
+  cursor: pointer;
+}
+
+.explainBody {
+  display: grid;
+  gap: var(--k-sp-2);
+  margin-top: var(--k-sp-2);
+}
+
+.explainText {
+  margin: 0;
+  max-width: var(--k-note-max);
+  color: var(--k-ink2);
+}
+
+.explainText code {
+  font: var(--k-fs-2) / var(--k-lh-1) var(--k-mono);
+  color: var(--k-ink);
+}
+
+.code {
+  margin: 0;
+  padding: var(--k-sp-2);
+  max-height: var(--k-menu-max-h);
+  overflow: auto;
+  border-radius: var(--k-r-s);
+  background: var(--k-sunk);
+  color: var(--k-ink);
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+}
+
+/* подсветка сегментов сквозных строк: ячейки грида адресуются ролями и data-атрибутами, не классами k-Grid__*;
+   tbody[data-key] — только записи, без скелетона и строки empty/error (у неё тоже есть colspan) */
+.hlSpans tbody[data-key] [role="gridcell"][colspan] > div {
+  outline: 1px dashed var(--k-val);
+  outline-offset: -1px;
+}
+
+.hlSpans tbody[data-key] [role="gridcell"][colspan][data-empty="true"] > div {
+  outline-style: dotted;
+}
+
 .srTag {
   color: var(--k-faint);
   font: 500 var(--k-fs-3) / 1 var(--k-mono);
