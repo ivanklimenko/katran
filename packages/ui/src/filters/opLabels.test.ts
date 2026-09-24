@@ -8,6 +8,7 @@ const meta: FilterMeta = { fields: [
   { id: 'f50name', label: 'Приказодатель', type: 'STRING', ops: [] },
   { id: 'urgent', label: 'Срочный', type: 'BOOLEAN', ops: [] },
   { id: 'ts', label: 'Время', type: 'DATETIME', ops: [] },
+  { id: 'kind', label: 'Вид', type: 'ENUM', ops: [] },
 ] }
 
 describe('describeCondition', () => {
@@ -29,5 +30,15 @@ describe('describeCondition', () => {
   })
   it('без меты — id поля и значение как есть', () => {
     expect(describeCondition({ field: 'x', op: 'NE', value: 5 })).toBe('x ≠ 5')
+  })
+  it('ENUM без values — значение как есть', () => {
+    expect(describeCondition({ field: 'kind', op: 'EQ', value: 'CASH' }, meta)).toBe('Вид = CASH')
+  })
+  it('поле отсутствует в непустой мете — id поля как имя', () => {
+    expect(describeCondition({ field: 'unknown', op: 'EQ', value: 1 }, meta)).toBe('unknown = 1')
+  })
+  it('невалидная дата/время — как есть, без падения', () => {
+    expect(describeCondition({ field: 'created', op: 'EQ', value: 'nope' }, meta)).toBe('Дата = nope')
+    expect(describeCondition({ field: 'ts', op: 'EQ', value: 'nope' }, meta)).toBe('Время = nope')
   })
 })

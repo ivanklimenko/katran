@@ -1,4 +1,3 @@
-import { formatDate } from '../format'
 import type { Condition, FilterField, FilterMeta, Scalar } from './types'
 
 /** Подписи операторов для чипов панели (спека 1e, 6.2). */
@@ -8,15 +7,20 @@ export const OP_LABEL: Record<Condition['op'], string> = {
   IS_EMPTY: 'пусто', IS_NOT_EMPTY: 'не пусто',
 }
 
-const p2 = (n: number) => String(n).padStart(2, '0')
-const dateTime = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? iso : `${formatDate(iso)} ${p2(d.getHours())}:${p2(d.getMinutes())}` }
+// Чип показывает «настенное» время документа, как прислал бек — парсим саму строку,
+// без new Date(), иначе результат зависит от часового пояса машины (спека 1e, ruling 3).
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/
+const DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+
+const dateFromStr = (s: string): string => { const m = DATE_RE.exec(s); return m ? `${m[3]}.${m[2]}.${m[1]}` : s }
+const dateTimeFromStr = (s: string): string => { const m = DATETIME_RE.exec(s); return m ? `${m[3]}.${m[2]}.${m[1]} ${m[4]}:${m[5]}` : s }
 
 /** Значение для чипа: ENUM — подпись справочника, DATE/DATETIME — по-русски, BOOLEAN — да/нет, STRING — в кавычках. */
 function showValue(v: Scalar, field: FilterField | undefined): string {
   switch (field?.type) {
     case 'ENUM': return field.values?.find((x) => String(x.value) === String(v))?.label ?? String(v)
-    case 'DATE': return formatDate(String(v)) || String(v)
-    case 'DATETIME': return dateTime(String(v))
+    case 'DATE': return dateFromStr(String(v))
+    case 'DATETIME': return dateTimeFromStr(String(v))
     case 'BOOLEAN': return v === true || v === 'true' ? 'да' : 'нет'
     case 'STRING': return `„${String(v)}“`
     default: return String(v)
