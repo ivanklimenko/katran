@@ -60,16 +60,16 @@ apps/demo/src         router.ts (хеш) · Shell.tsx (тема/плотност
 apps/demo/e2e         geometry.spec.ts + playwright.config.ts — замер высот против production-сборки (`pnpm --filter demo e2e`)
 eslint.config.js      правила границы слоёв (§3)
 docs/superpowers      specs/ (спека) · plans/ (план 1 и план 2 исполнены)
-.github/workflows     ci.yml (pnpm check) · pages.yml (падает: Pages недоступен на приватном репо)
+.github/workflows     ci.yml (pnpm check) · pages.yml (демо → https://ivanklimenko.github.io/katran/)
 ```
 
 ## 6. Состояние
 
-- **Репо:** github.com/ivanklimenko/katran, приватный; ревьюер `abugaets` приглашён (на 23.09 приглашение не принято). CI (`ci.yml`) зелёный на `main`.
+- **Репо:** github.com/ivanklimenko/katran, публичный с 24.09.2026 (решение владельца: демо на GitHub Pages, как у стенда `pi-constructor`; до этого был приватным и Pages падал); ревьюер `abugaets` приглашён (на 23.09 приглашение не принято). CI (`ci.yml`) зелёный на `main`.
 - **`main` = план 1 + план 2.** План 1 (фундамент + примитивы, 15 задач, 81 тест) слит 2026-09-23; план 2 слит 2026-09-24 fast-forward из ветки `feat/slice1-grid` (все коммиты ветки на базе `7696740`; ветка на origin оставлена).
 - **План 2 исполнен целиком** (`docs/superpowers/plans/2026-09-23-katran-slice1-grid.md`, 14 задач, последний коммит `1ca7663`). Состав: `DataGrid` с семейством (типы, `resolveSpans`, `sortRows`, выделение, `ColumnHeader`, `ColumnsMenu`, клавиатура, скелетон), пакет `@katran/effector` (`createFiltersModel`, `createGridModel`, хуки, persist), демо «Реестр», Playwright-замер. Финальное ревью ветки (Opus) → фикс-волна из 6 коммитов → повторное ревью фикс-волны: замечаний нет. Документы (спека, план, CHANGELOG, README, этот файл) приведены к коду отдельным коммитом.
 - **Проверки на `1ca7663`:** 160 тестов (tokens 12, ui 125, effector 23), `pnpm check` зелёный. **e2e после плана 2.1** (запись как на стенде, коридор 64–72): 3/3 — запись 68 px, шапка 49, скелетон 68, плотность 125 % → 84.75; стенд `pi-constructor` по замеру 24.09 — запись 68, шапка 48.
-- **Открытые решения владельца** (спека 12): Pages на приватном репо (сделать публичным / ручной запуск / оставить красным).
+- **Открытые решения владельца:** нет — три вопроса от 24.09 (высота записи, Pages, буква StatusDot) решены и исполнены планом 2.1 (`docs/superpowers/plans/2026-09-24-katran-owner-decisions.md`).
 
 ## 7. Техдолг (в план 3 или позже)
 
@@ -114,7 +114,7 @@ docs/superpowers      specs/ (спека) · plans/ (план 1 и план 2 и
 - **`/Users/shaman/_CODE/VTB/.claude/launch.json` откатывается из `.bak`** — записи `katran-demo` (порт 5181, `--dir katran`) и `katran-grid` (5183, worktree) продублированы в `.bak`. Порт 5180 занят `vtb-filters-dev`.
 - **500 в консоли демо при HMR** — Vite не находит импортированный, но ещё не созданный файл; после перезагрузки `failedResources` пуст.
 - **jsx-a11y не моделирует фокусируемый separator** — ручка ресайза `role="slider"`.
-- **`pages.yml` падает на старте** — окружение `github-pages` недоступно на приватном репо бесплатного плана; `ci.yml` при этом зелёный.
+- **`pages.yml` требует источник Pages «GitHub Actions»** (`build_type: workflow`, включено через API 24.09.2026) и публичный репозиторий на бесплатном плане; пока репо был приватным, деплой падал на старте.
 
 ## 9. Следующий шаг
 
