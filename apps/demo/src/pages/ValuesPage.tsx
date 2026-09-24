@@ -14,7 +14,7 @@ export function ValuesPage() {
       <p className={s.note}>Каждое значение — отдельный элемент: клик копирует, тултип с полным значением только если обрезано или показано сокращённо. Наведите на длинное значение справа.</p>
       <h2 className={s.h2}>CopyValue</h2>
       <div className={s.row}>
-        <CopyValue value="DEUTDEFFXXX" /><CopyValue value="Общество с ограниченной ответственностью «Северный ветер»" maxWidth={180} />
+        <CopyValue value="HSTBDEHHXXX" /><CopyValue value="Общество с ограниченной ответственностью «Северный ветер»" maxWidth={180} />
         <CopyValue value="12,5" tone="ink" /><CopyValue value="2026-09-22T07:33:22" display="22.09 07:33:22" short />
       </div>
       <h2 className={s.h2}>LinkValue и AccountValue</h2>

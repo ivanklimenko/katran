@@ -2620,7 +2620,7 @@ export const STATUS_TONE: Record<Status, 'flow' | 'flowl' | 'flowd' | 'bad' | 'b
 const REASONS = ['Не найден счёт получателя', 'Превышен лимит', 'Санкционный стоп-лист', 'Ошибка формата 59', 'Нет покрытия', 'Дубликат 20', 'Отказ комплаенса', 'Просрочена дата валютирования', 'Неизвестный BIC']
 const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '643' } as const
 const NAMES = ['ООО «Северный ветер»', 'АО «Прибой»', 'ЗАО «Василёк»', 'ООО «Ромашка»', 'ПАО «Титан»', 'ООО «Меридиан»', 'АО «Глобус»', 'ООО «Кедр»', 'ИП Иванов А. А.', 'ООО «Лотос»']
-const BICS = ['DEUTDEFFXXX', 'CHASUS33XXX', 'BKCHCNBJ300', 'SABRRUMMXXX', 'VTBRRUMMXXX', 'CITIUS33XXX', 'HSBCHKHHXXX', 'BNPAFRPPXXX']
+const BICS = ['VKRBRU8KXXX', 'NRDIRUMMXXX', 'MRDNGB2LXXX', 'HSTBDEHHXXX', 'BCLHLV22XXX', 'CESEDEFFXXX', 'QWRTUS3NXXX', 'PLKZHKHHXXX']
 const PROV = ['ЕРС', 'LORO', 'NOSTRO', 'SUBOUL', 'VTO']
 
 /** Детерминированный ГПСЧ (mulberry32): одни и те же данные при каждом запуске. */

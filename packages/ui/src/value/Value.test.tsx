@@ -14,12 +14,12 @@ const clip = () => { const writeText = vi.fn().mockResolvedValue(undefined); Obj
 describe('CopyValue', () => {
   it('кнопка, копирует значение, объявляет, тултип только при обрезке', async () => {
     const writeText = clip()
-    renderK(<CopyValue value="DEUTDEFFXXX" />)
-    const b = screen.getByRole('button', { name: 'DEUTDEFFXXX' })
-    expect(b).toHaveAttribute('data-k-tip', 'DEUTDEFFXXX')
+    renderK(<CopyValue value="HSTBDEHHXXX" />)
+    const b = screen.getByRole('button', { name: 'HSTBDEHHXXX' })
+    expect(b).toHaveAttribute('data-k-tip', 'HSTBDEHHXXX')
     expect(b).toHaveAttribute('data-k-tip-if', 'truncated')
     await userEvent.click(b)
-    expect(writeText).toHaveBeenCalledWith('DEUTDEFFXXX')
+    expect(writeText).toHaveBeenCalledWith('HSTBDEHHXXX')
     await act(async () => { await new Promise((r) => requestAnimationFrame(r)) })
     expect(screen.getByRole('status')).toHaveTextContent('Скопировано')
   })
