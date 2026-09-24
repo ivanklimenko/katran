@@ -11,3 +11,16 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+
+  react19:
+    runs-on: ubuntu-latest
+    env: { COREPACK_ENABLE_DOWNLOAD_PROMPT: 0 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: corepack enable
+      - run: node scripts/use-react.mjs 19
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @katran/tokens --filter @katran/ui --filter @katran/effector run test
+      - run: pnpm --filter @katran/tokens --filter @katran/ui --filter @katran/effector run build
