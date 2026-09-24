@@ -21,12 +21,13 @@ export function StatusLane({ label, items, value, onChange, allLabel = 'Все' 
   const isOn = (it: LaneItem) => value !== null && String(it.value) === String(value)
   return (
     <div role="group" aria-label={label} className={s.lane}>
-      <Button size="s" pressed={value === null} className={s.item} onClick={() => onChange(null)}>
+      {/* variant="ghost" — явно, хоть и совпадает с дефолтом Button: стиль активного состояния (aria-pressed) живёт в Button.module.css именно для ghost. */}
+      <Button variant="ghost" size="s" pressed={value === null} className={s.item} onClick={() => onChange(null)}>
         <span>{allLabel}</span>
         {hasCounts && <Counter value={total} active={value === null} />}
       </Button>
       {items.map((it) => (
-        <Button key={String(it.value)} size="s" pressed={isOn(it)} className={s.item} onClick={() => onChange(isOn(it) ? null : it.value)}>
+        <Button key={String(it.value)} variant="ghost" size="s" pressed={isOn(it)} className={s.item} onClick={() => onChange(isOn(it) ? null : it.value)}>
           <StatusDot tone={it.tone} size="s" />
           <span>{it.label}</span>
           {it.count !== undefined && <Counter value={it.count} active={isOn(it)} />}

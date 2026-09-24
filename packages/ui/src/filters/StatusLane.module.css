@@ -3,7 +3,9 @@
   gap: var(--k-sp-1);
   overflow-x: auto;
   white-space: nowrap;
-  padding-bottom: var(--k-sp-1);
+
+  /* Симметричный вертикальный паддинг — иначе overflow-x: auto режет и по Y, и фокус-кольцо кнопок (outline 2px + offset 1px) обрезается сверху при Tab. */
+  padding: var(--k-sp-1) 0;
 }
 
 .item {
