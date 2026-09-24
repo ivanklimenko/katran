@@ -108,6 +108,7 @@ export const sizes = {
   'grid-lead': 84,
   'grid-rz': 7,
   'menu-max-h': 320,
+  'filter-field': 220,
   'grid-pad': 6,
 } as const
 
