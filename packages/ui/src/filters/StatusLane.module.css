@@ -1,0 +1,14 @@
+.lane {
+  display: flex;
+  gap: var(--k-sp-1);
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: var(--k-sp-1);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  flex: none;
+}
