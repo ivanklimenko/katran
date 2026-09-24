@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { copyText } from '../format/clipboard'
 import { useKatran } from '../provider/useKatran'
+import { useUnmountGuard } from './useUnmountGuard'
 import s from './Value.module.css'
 
 export type CopyValueProps = {
@@ -21,8 +22,9 @@ export function CopyValue({ value, display, short, tone = 'val', maxWidth, tabIn
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
+  const alive = useUnmountGuard(timer)
   const onClick = async () => {
-    if (await copyText(value)) {
+    if (await copyText(value) && alive.current) {
       announce('Скопировано')
       setFlash(true)
       window.clearTimeout(timer.current)

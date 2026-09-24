@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { copyText } from '../format/clipboard'
 import { useKatran } from '../provider/useKatran'
 import { FLASH_MS } from './CopyValue'
+import { useUnmountGuard } from './useUnmountGuard'
 import s from './Value.module.css'
 
 export type LinkValueProps = { name: string; value?: string | undefined; tabIndex?: number | undefined }
@@ -11,8 +12,9 @@ export function LinkValue({ name, value, tabIndex }: LinkValueProps) {
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
+  const alive = useUnmountGuard(timer)
   const onClick = async () => {
-    if (value && (await copyText(value))) {
+    if (value && (await copyText(value)) && alive.current) {
       announce('Скопировано')
       setFlash(true)
       window.clearTimeout(timer.current)
