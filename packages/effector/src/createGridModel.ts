@@ -1,5 +1,5 @@
 import { attach, combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
-import type { ColumnsState, Filter, GridPage, GridQuery, GridViewState, PersistAdapter, Selection, Sort } from './types'
+import type { ColumnsState, Facet, FacetsQuery, Filter, GridPage, GridQuery, GridViewState, PersistAdapter, Selection, Sort } from './types'
 
 export type GridPersisted = { widths: Record<string, number>; order: string[]; hidden: string[]; pageSize: number }
 
@@ -11,6 +11,8 @@ export type GridModelConfig<Row> = {
   fetchFx: Effect<GridQuery, GridPage<Row>>
   persist?: PersistAdapter<Partial<GridPersisted>> | undefined
   rowKey: (row: Row) => string
+  /** Фасеты для лейна статусов: счётчики значений поля field по текущему фильтру без условий по этому полю (спека 1e, §4). */
+  facets?: { field: string; fetchFx: Effect<FacetsQuery, Facet[]> } | undefined
 }
 
 export type GridModel<Row> = {
@@ -26,6 +28,8 @@ export type GridModel<Row> = {
   $state: Store<GridViewState>
   $error: Store<string | null>
   $query: Store<GridQuery>
+  /** Счётчики лейна; пуст, если фасеты не сконфигурированы или ответа ещё нет. */
+  $facets: Store<Facet[]>
   // EventCallable, а не Event: снаружи события нужно вызывать (model.sortBy(...) и т.д.), просто Event этого не позволяет.
   sortBy: EventCallable<Sort>
   resize: EventCallable<{ id: string; width: number }>
@@ -172,6 +176,25 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
     (pending, has, err): GridViewState => (pending ? (has ? 'refreshing' : 'loading') : err ? 'error' : has ? 'ready' : 'loading'),
   )
 
+  // --- фасеты лейна (спека 1e, §4): по фильтру без условий по полю лейна, своя attach-копия, устаревшие ответы отбрасываются ---
+  const $facets = createStore<Facet[]>([])
+  if (cfg.facets) {
+    const { field } = cfg.facets
+    const facetsFx = attach({ effect: cfg.facets.fetchFx })
+    const toQuery = (filter: Filter): FacetsQuery => ({ filter: filter.filter((c) => c.field !== field), field })
+    const $facetsQuery = cfg.$filter.map(toQuery)
+    // смена фильтра — запрос из значения clock, не из производного стора (тот же нюанс, что у $query выше)
+    sample({ clock: cfg.$filter, fn: toQuery, target: facetsFx })
+    sample({ clock: [refresh, retry], source: $facetsQuery, target: facetsFx })
+    const facetsDone = sample({
+      clock: facetsFx.done,
+      source: $facetsQuery,
+      filter: (q, { params }) => JSON.stringify(q) === JSON.stringify(params),
+      fn: (_, { result }) => result,
+    })
+    $facets.on(facetsDone, (_, r) => r)
+  }
+
   // --- persist: изменения вида без запроса ---
   if (cfg.persist) {
     const persist = cfg.persist
@@ -184,7 +207,7 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   }
 
   return {
-    $rows, $total, $page, $pageSize, $sort, $widths, $order, $hidden, $selection, $state, $error, $query,
+    $rows, $total, $page, $pageSize, $sort, $widths, $order, $hidden, $selection, $state, $error, $query, $facets,
     sortBy, resize, setColumns, toggleColumn, moveColumn, setPage, setPageSize,
     select, selectPage, selectAll, clearSelection, retry, refresh,
     fetchFx: cfg.fetchFx, rowKey: cfg.rowKey,

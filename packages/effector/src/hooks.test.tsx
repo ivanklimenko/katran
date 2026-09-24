@@ -26,6 +26,11 @@ describe('useGrid', () => {
     expect(result.current.selection).toEqual({ mode: 'ids', ids: ['a'] })
     act(() => { result.current.onColumns({ order: ['c1'], hidden: ['c1'] }) })
     expect(result.current.hidden).toEqual(['c1'])
+    expect(result.current.facets).toEqual([])
+    act(() => { result.current.onSelectAll() })
+    expect(result.current.selection).toEqual({ mode: 'all', except: [] })
+    act(() => { result.current.onClearSelection() })
+    expect(result.current.selection).toEqual({ mode: 'ids', ids: [] })
   })
 })
 

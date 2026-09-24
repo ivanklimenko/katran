@@ -1,6 +1,7 @@
 import { useUnit } from 'effector-react'
 import type { ColumnsState, DataGridProps, GridViewState, Selection, Sort } from '@katran/ui'
 import type { GridModel } from './createGridModel'
+import type { Facet } from './types'
 
 export type GridBinding<Row> = {
   rows: Row[]
@@ -14,6 +15,8 @@ export type GridBinding<Row> = {
   selection: Selection
   state: GridViewState
   error: string | null
+  /** Счётчики лейна статусов — для <StatusLane counts>; пуст без конфигурации фасетов. */
+  facets: Facet[]
   onPage: (n: number) => void
   onPageSize: (n: number) => void
   onSort: (s: Sort) => void
@@ -22,17 +25,23 @@ export type GridBinding<Row> = {
   onSelect: (p: { id: string; on: boolean }) => void
   onSelectPage: (p: { ids: string[]; on: boolean }) => void
   onRetry: () => void
+  /** «Выбрать все по фильтру» — для BulkBar. */
+  onSelectAll: () => void
+  onClearSelection: () => void
 }
 
 /** Единственное место, где модель встречается с компонентом: <DataGrid {...useGrid(model)} label=… layout=… />. */
 export function useGrid<Row>(m: GridModel<Row>): GridBinding<Row> {
-  const [rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error] = useUnit([
-    m.$rows, m.$total, m.$page, m.$pageSize, m.$sort, m.$widths, m.$order, m.$hidden, m.$selection, m.$state, m.$error,
+  const [rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error, facets] = useUnit([
+    m.$rows, m.$total, m.$page, m.$pageSize, m.$sort, m.$widths, m.$order, m.$hidden, m.$selection, m.$state, m.$error, m.$facets,
   ])
-  const [onPage, onPageSize, onSort, onResize, onColumns, onSelect, onSelectPage, onRetry] = useUnit([
-    m.setPage, m.setPageSize, m.sortBy, m.resize, m.setColumns, m.select, m.selectPage, m.retry,
+  const [onPage, onPageSize, onSort, onResize, onColumns, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection] = useUnit([
+    m.setPage, m.setPageSize, m.sortBy, m.resize, m.setColumns, m.select, m.selectPage, m.retry, m.selectAll, m.clearSelection,
   ])
-  return { rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error, onPage, onPageSize, onSort, onResize, onColumns, onSelect, onSelectPage, onRetry }
+  return {
+    rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error, facets,
+    onPage, onPageSize, onSort, onResize, onColumns, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection,
+  }
 }
 
 // Проверка типов на этапе компиляции: GridBinding<Row> должен подходить как пропы DataGrid (Task 10).

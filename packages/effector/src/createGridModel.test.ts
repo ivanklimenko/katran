@@ -1,7 +1,7 @@
 import { allSettled, createEffect, createStore, fork } from 'effector'
 import { createGridModel } from './createGridModel'
 import { memoryPersist } from './persist'
-import type { Filter, GridPage, GridQuery } from './types'
+import type { Facet, FacetsQuery, Filter, GridPage, GridQuery } from './types'
 
 type Row = { id: string; n: number }
 const mk = (over: Partial<Parameters<typeof createGridModel<Row>>[0]> = {}) => {
@@ -225,5 +225,63 @@ describe('createGridModel', () => {
     expect(scope.getState(model.$state)).toBe('refreshing')
     release(); await second
     expect(scope.getState(model.$state)).toBe('ready')
+  })
+})
+
+describe('фасеты', () => {
+  const mkFacets = (results: Array<{ value: string; count: number }[]> = [[{ value: 'A', count: 2 }]]) => {
+    const calls: FacetsQuery[] = []
+    let release: Array<() => void> = []
+    const facetsFetchFx = createEffect<FacetsQuery, Facet[]>((q) => {
+      calls.push(q)
+      const r = results[Math.min(calls.length - 1, results.length - 1)]!
+      return new Promise<Facet[]>((res) => { release.push(() => res(r)) })
+    })
+    /** Отпустить все висящие запросы; newestFirst — в обратном порядке, чтобы устаревший ответ пришёл последним. */
+    const releaseAll = async (newestFirst = false) => {
+      const r = newestFirst ? release.reverse() : release
+      release = []
+      r.forEach((f) => f())
+      await flush()
+    }
+    return { facetsFetchFx, calls, releaseAll }
+  }
+
+  it('без конфигурации фасетов: $facets пуст, запросов нет', async () => {
+    const { model } = mk()
+    const scope = fork()
+    await allSettled(model.refresh, { scope })
+    expect(scope.getState(model.$facets)).toEqual([])
+  })
+  it('смена фильтра и refresh → запрос фасетов по фильтру без условия поля лейна; страница — нет', async () => {
+    const f = mkFacets()
+    const { model, $filter } = mk({ facets: { field: 'status', fetchFx: f.facetsFetchFx } })
+    const scope = fork()
+    const p = allSettled($filter, { scope, params: [{ field: 'status', op: 'EQ', value: 'A' }, { field: 'amount', op: 'GT', value: 1 }] })
+    await f.releaseAll(); await p
+    expect(f.calls).toEqual([{ filter: [{ field: 'amount', op: 'GT', value: 1 }], field: 'status' }])
+    expect(scope.getState(model.$facets)).toEqual([{ value: 'A', count: 2 }])
+    const p2 = allSettled(model.setPage, { scope, params: 2 })
+    await f.releaseAll(); await p2
+    expect(f.calls).toHaveLength(1)
+    const p3 = allSettled(model.refresh, { scope })
+    await f.releaseAll(); await p3
+    expect(f.calls).toHaveLength(2)
+  })
+  it('устаревший ответ фасетов отбрасывается; отказ не трогает $facets и $state', async () => {
+    const f = mkFacets([[{ value: 'A', count: 1 }], [{ value: 'A', count: 5 }]])
+    const { model, $filter } = mk({ facets: { field: 'status', fetchFx: f.facetsFetchFx } })
+    const scope = fork()
+    const p1 = allSettled($filter, { scope, params: [{ field: 'amount', op: 'GT', value: 1 }] })
+    const p2 = allSettled($filter, { scope, params: [{ field: 'amount', op: 'GT', value: 2 }] })
+    // второй запрос отпускаем первым, потом первый (устаревший)
+    await f.releaseAll(true); await Promise.all([p1, p2])
+    expect(scope.getState(model.$facets)).toEqual([{ value: 'A', count: 5 }])
+    const failing = createEffect<FacetsQuery, Facet[]>(async () => { throw new Error('нет') })
+    const { model: m2, $filter: $f2 } = mk({ facets: { field: 'status', fetchFx: failing } })
+    const scope2 = fork()
+    await allSettled($f2, { scope: scope2, params: [{ field: 'amount', op: 'GT', value: 1 }] })
+    expect(scope2.getState(m2.$facets)).toEqual([])
+    expect(scope2.getState(m2.$state)).toBe('ready')
   })
 })
