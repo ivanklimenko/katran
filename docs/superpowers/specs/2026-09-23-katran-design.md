@@ -72,6 +72,8 @@ katran/
 | `effector` | `effector`, `effector-react`, типы из `ui` (только `import type`) | DOM API, компоненты `ui` |
 | `demo` | всё | — |
 
+Типы контракта, нужные обоим слоям (`Sort`, `Selection`, `ColumnsState`, `GridViewState`; с среза 1e — `Condition`, `Filter`, `FilterMeta`, `Scalar`), объявлены в `ui` (`grid/types.ts`, `filters/types.ts`), `effector` их реэкспортирует: `ui` без них не соберёт компоненты, а `effector` может импортировать типы, но не наоборот.
+
 Нарушение ловит линт, и `pnpm check` падает. Без этого граница между слоями исчезнет на третьей «срочной» правке. Правила (`eslint.config.js`):
 
 - `import-x/no-restricted-paths` — `ui` не импортирует из `packages/effector`; `effector` не обращается к `packages/ui/src` в обход входа пакета;
@@ -285,10 +287,11 @@ type DataGridProps<Row> = {
   emptyAction?: { label: string; onClick: () => void }
   onOpen?: (row: Row, opts: { secondary: boolean }) => void   // нет — нет кнопки открытия
   skeletonRows?: number                      // по умолчанию 8
+  toolbar?: ReactNode                        // слот над пагинацией в футере: BulkBar экрана (срез 1e)
 }
 ```
 
-Чистый компонент: все данные — из props, все изменения — наружу. Выделение — два колбэка намерения, а не `onSelection(next)`: грид не вычисляет следующее `Selection` (в режиме `all` это работа модели с `except`), а сообщает, что отмечено — запись или страница. В приложении с effector: `<DataGrid {...useGrid(model)} label=… layout=… />` — хук отдаёт данные и колбэки модели (8.4), экранные пропы (`label`, `layout`, `pageSizes`, `emptyTitle`, `emptyAction`, `onOpen`, `skeletonRows`) задаёт экран.
+Чистый компонент: все данные — из props, все изменения — наружу. Выделение — два колбэка намерения, а не `onSelection(next)`: грид не вычисляет следующее `Selection` (в режиме `all` это работа модели с `except`), а сообщает, что отмечено — запись или страница. В приложении с effector: `<DataGrid {...useGrid(model)} label=… layout=… />` — хук отдаёт данные и колбэки модели (8.4), экранные пропы (`label`, `layout`, `pageSizes`, `emptyTitle`, `emptyAction`, `onOpen`, `skeletonRows`, `toolbar`) задаёт экран.
 
 ---
 
@@ -298,7 +301,7 @@ type DataGridProps<Row> = {
 
 ### 7.1. Решено сейчас
 
-**Одна модель, два режима.** `simple` (справочник на 5–10 реквизитов: поля прямо на панели, оператор по умолчанию от типа — текст `CONTAINS`, число и дата `EQ`) и `advanced` (сущность на 200+ реквизитов) — режимы одной `createFiltersModel`, а не два компонента. Состояние одно:
+**Одна модель, два режима.** `simple` (справочник на 5–10 реквизитов: поля прямо на панели, оператор фиксирован типом — STRING `CONTAINS`, NUMBER/DATE/ENUM/BOOLEAN `EQ`, DATETIME `BETWEEN` за день; модификатора оператора нет — спека среза 1e, 6.2) и `advanced` (сущность на 200+ реквизитов) — режимы одной `createFiltersModel`, а не два компонента. Состояние одно:
 
 ```ts
 type Condition =
@@ -313,7 +316,7 @@ type Filter = Condition[]   // v1: только AND
 
 **Каталог полей — от бека.** `GET /grids/{gridId}/filter-meta` отдаёт поля, группы, допустимые операторы и встроенные справочники. Кит не знает полей прикладной сущности и не должен.
 
-**Один `$filter` на экран.** На стенде лейн статусов фильтрует отдельно от панели — два механизма пишут в разные места, и пользователь не видит целиком, что применено. В ките лейн и панель — два интерфейса к одному стору условий: лейн ставит условие по полю статуса, панель показывает его чипом наравне с остальными.
+**Один `$filter` на экран.** На стенде лейн статусов фильтрует отдельно от панели — два механизма пишут в разные места, и пользователь не видит целиком, что применено. В ките лейн и панель — два интерфейса к одному стору условий: лейн через `setLane` ставит условие `EQ` по полю `laneField` сразу в применённые (без «Применить»), панель показывает его чипом наравне с остальными и даёт снять; `$lane` — производный от `$conditions` (8.3). Счётчики лейна — фасеты грида по фильтру без условия по полю лейна (8.2). Подробно — `2026-09-24-katran-slice1e-registry-design.md`.
 
 **Применённые условия — чипы** с полем, оператором и значением, снимаются по одному, «Сбросить» снимает все.
 
@@ -349,12 +352,13 @@ const grid = createGridModel<Doc>({
   $filter,                                  // общий стор условий (панель + лейн)
   fetchFx,                                  // Effect<GridQuery, GridPage<Doc>> — даёт приложение
   persist: localStoragePersist(),           // не задан — вид не сохраняется
+  facets: { field: 'status', fetchFx: facetsFx },   // счётчики лейна; не задан — $facets всегда []
 })
 ```
 
 Модели нужны только id и начальные ширины колонок и `rowKey`, а не `RecordLayout`: раскладка с `render` — это JSX экрана, модель без DOM её не знает; `layout` экран передаёт в `DataGrid` сам.
 
-Сторы: `$rows $total $page $pageSize $sort $widths $order $hidden $selection $state $error $query`.
+Сторы: `$rows $total $page $pageSize $sort $widths $order $hidden $selection $state $error $query $facets`.
 События: `sortBy resize setColumns toggleColumn moveColumn setPage setPageSize select selectPage selectAll clearSelection retry refresh`. Публичные события обеих моделей (и фильтров, 8.3) типизированы `EventCallable<T>`: в effector 23 `Event<T>` снаружи не вызывается. Модель отдаёт и `fetchFx` приложения, и `rowKey`.
 
 Правила связывания внутри модели: смена `$filter` → страница 1, выделение сброшено, запрос; смена сортировки или размера страницы → страница 1, запрос; смена страницы → запрос; `refresh`/`retry` → запрос с текущим `$query`; ресайз и состав колонок → без запроса, только `persist`. `GridQuery.page` — с нуля, как у бека (контракт фильтров §2), `$page` — с единицы, как в интерфейсе; перевод делает `$query`.
@@ -363,15 +367,17 @@ const grid = createGridModel<Doc>({
 
 **Приём ответа.** Модель вызывает не `fetchFx`, а свою копию `requestFx = attach({ effect: fetchFx })`: `fetchFx` приложения может обслуживать несколько гридов, а `pending`/`done`/`fail` копии относятся только к вызовам этой модели. Ответ принимается, только если его `params` совпадает с текущим `$query` (сравнение по значению): поздний ответ на прежнюю страницу или фильтр не перезапишет актуальный, отказ устаревшего запроса не выставит ошибку. `$state` считается из `requestFx.pending` и наличия данных: первая загрузка — `loading`, повторная — `refreshing`, отказ текущего запроса — `error`. Отмены запросов нет: пока устаревший запрос в полёте, `$state` остаётся `refreshing`, данные при этом верные.
 
+**Фасеты** (срез 1e). `facets.fetchFx: Effect<{ filter, field }, { value, count }[]>` вызывается через свою `attach`-копию на каждую смену `$filter` и на `refresh`/`retry` с фильтром **без условий по `facets.field`** — счётчики показывают, что даст выбор значения. Смена страницы, сортировки и размера страницы фасеты не запрашивает. Устаревший ответ отбрасывается по тому же правилу, что у `requestFx`; отказ не меняет `$state` и не показывается — `$facets` хранит последний удачный ответ. Контракту `vtb-filters` предлагается `POST /grids/{gridId}/facets`.
+
 **persist** — адаптер `PersistAdapter<T>`; `load` синхронный — настройки нужны при создании сторов. Кит даёт `localStoragePersist(prefix = 'katran')` (ключ `prefix:id`, приватный режим — молча) и `memoryPersist()` (тесты, SSR). Серверный адаптер (персональные настройки пользователя) пишет приложение и загружает настройки до создания модели. Сохраняется `GridPersisted = { widths, order, hidden, pageSize }` — при `resize`, `setColumns`, `toggleColumn`, `moveColumn`, `setPageSize`. Сохранённое сверяется с колонками: чужие id выбрасываются, новые дописываются в конец порядка. Выбора полей (`keep`) нет и пока не нужно: все четыре поля — настройки вида, а сортировка, страница и фильтр — часть запроса и не сохраняются. Понадобится экран, которому что-то из четырёх хранить нельзя, — `keep` добавляется без поломки API.
 
 ### 8.3. Фильтры
 
-`createFiltersModel({ meta, initial })` → `$conditions` (применённые), `$draft` (черновик панели до «Применить»), `$dirty` (черновик отличается от применённых). События: `edit(condition)` — условие поля в черновик; `discard(field)` — убрать условие поля из черновика; `apply` — черновик → применённые; `remove(field)` — снять чип: условие уходит из применённых и из черновика, неприменённые правки других полей остаются; `reset` — очистить всё в `[]`, а не откатить к `initial`. Эффекты наборов подставляет приложение (не в срезе 1). `$conditions` и есть `$filter` для грида.
+`createFiltersModel({ meta, initial, laneField })` → `$conditions` (применённые), `$draft` (черновик панели до «Применить»), `$dirty` (черновик отличается от применённых), `$lane` (значение условия `EQ` по `laneField` в применённых, иначе `null`). События: `edit(condition)` — условие поля в черновик; `discard(field)` — убрать условие поля из черновика; `apply` — черновик → применённые; `remove(field)` — снять чип: условие уходит из применённых и из черновика, неприменённые правки других полей остаются; `reset` — очистить всё в `[]`, а не откатить к `initial`; `revert` — черновик ← применённые («Отменить» панели); `setLane(value | null)` — поставить или снять условие `EQ` по `laneField` сразу в применённых и черновике, не трогая правки других полей. Эффекты наборов подставляет приложение (не в срезе 1). `$conditions` и есть `$filter` для грида.
 
 ### 8.4. Хуки
 
-`useGrid(model)`, `useFilters(model)` в `@katran/effector` — через `useUnit`, возвращают props для соответствующих компонентов. Единственное место, где модель и компонент встречаются. `useGrid` → `GridBinding<Row>`: данные `rows total page pageSize sort widths order hidden selection state error` и колбэки `onPage onPageSize onSort onResize onColumns onSelect onSelectPage onRetry`; то, что это подмножество `DataGridProps`, проверяется при компиляции.
+`useGrid(model)`, `useFilters(model)` в `@katran/effector` — через `useUnit`, возвращают props для соответствующих компонентов. Единственное место, где модель и компонент встречаются. `useGrid` → `GridBinding<Row>`: данные `rows total page pageSize sort widths order hidden selection state error` и колбэки `onPage onPageSize onSort onResize onColumns onSelect onSelectPage onRetry`; то, что это подмножество `DataGridProps`, проверяется при компиляции. С среза 1e `useGrid` отдаёт ещё `facets onSelectAll onClearSelection`, `useFilters` → `FiltersBinding`: `conditions draft dirty lane meta` и `edit discard apply revert reset remove setLane`.
 
 ---
 
@@ -401,7 +407,7 @@ const grid = createGridModel<Doc>({
 | 1b. Примитивы реестра | Button, IconButton, Input, Checkbox, Select, значения, Tooltip, Menu, Popover, состояния, Tabs, Pagination | страницы демо, axe |
 | 1c. DataGrid | контракт 6.2, правила 6.3, скелетон, выделение, клавиатура | тесты `resolveSpans`/сортировки, замер высоты записи = эталон |
 | 1d. Модели | `createGridModel`, `createFiltersModel`, хуки | тесты правил 8.2 без DOM |
-| 1e. Реестр | `StatusLane`, `FilterPanel` simple, `BulkBar`, боевой экран в демо | сверка с эталоном, показ |
+| 1e. Реестр | `StatusLane`, `FilterPanel` simple, `BulkBar`, боевой экран в демо — дизайн `2026-09-24-katran-slice1e-registry-design.md` | сверка с эталоном, показ |
 | 1f. Advanced-фильтры | отдельный дизайн-заход → реализация | согласование вариантов до кода |
 | 2. Деталка | Drawer, Prompt, FieldRow, ConfigForm, InlineEdit, DateInput, модели форм | замеры drawer, два документа рядом |
 | 3. Дашборд | Chart, StatTile, PanelLayout | график по статусам на демо-данных |
