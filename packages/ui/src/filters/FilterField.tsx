@@ -14,18 +14,16 @@ export type FilterFieldProps = {
 /** Один контрол панели simple: оператор фиксирован типом поля; пустое значение снимает условие из черновика. */
 export function FilterField({ field, draft, onEdit, onDiscard }: FilterFieldProps) {
   const id = useId()
-  // Черновик хранит нормализованное условие («Иван » → «Иван», «1,» → 1), и значение из него съело бы
-  // набираемый символ. Поэтому набранный текст показывается, пока даёт то же условие, что лежит в черновике;
-  // стоит черновику смениться извне (Отменить, Сбросить, ✕ у чипа) — поле берёт значение из черновика.
-  const [typed, setTyped] = useState<string | null>(null)
-  const current = draft.find((x) => x.field === field.id)
-  const typedCond = typed === null ? null : conditionFrom(field, typed)
-  const raw: RawValue = typed !== null && typedCond !== null && current !== undefined && JSON.stringify(typedCond) === JSON.stringify(current)
-    ? typed
-    : draftOf(draft, field)
+  // Черновик хранит нормализованное условие («Иван » → «Иван», «1,» → 1, «-» → без условия), и значение
+  // из него съело бы набираемый символ. Поэтому поле показывает набранный текст, пока условие поля в черновике
+  // совпадает со снимком, сделанным при наборе; сменился черновик извне (Отменить, Сбросить, ✕ у чипа) —
+  // поле берёт значение из черновика.
+  const [typed, setTyped] = useState<{ text: string; snap: string } | null>(null)
+  const current = JSON.stringify(draft.find((x) => x.field === field.id) ?? null)
+  const raw: RawValue = typed !== null && typed.snap === current ? typed.text : draftOf(draft, field)
   const set = (next: RawValue) => {
-    if (typeof next === 'string') setTyped(next)
     const c = conditionFrom(field, next)
+    if (typeof next === 'string') setTyped({ text: next, snap: JSON.stringify(c) })
     if (c) onEdit(c); else onDiscard(field.id)
   }
   if (fieldOp(field) === null) return null
