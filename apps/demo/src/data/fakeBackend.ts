@@ -2,18 +2,20 @@ import { createEffect } from 'effector'
 import type { Condition, Facet, FacetsQuery, Filter, GridPage, GridQuery } from '@katran/effector'
 import { sortRows, type RecordLayout } from '@katran/ui'
 
-const str = (v: unknown) => (v == null ? '' : String(v)).toLowerCase()
+const raw = (v: unknown) => (v == null ? '' : String(v))
+const str = (v: unknown) => raw(v).toLowerCase()
 const isDay = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
 /** Дата в условии — день YYYY-MM-DD: сравниваем с первыми 10 знаками ISO-значения записи. */
 const dayOf = (v: unknown) => str(v).slice(0, 10)
 const num = (v: unknown) => Number(String(v).replace(/\s/g, '').replace(',', '.'))
 const cmp = (v: unknown, c: unknown) => (typeof c === 'number' ? num(v) - c : str(v) < str(c) ? -1 : str(v) > str(c) ? 1 : 0)
 
-/** Подмножество семантики контракта, достаточное для демо: строки регистронезависимо, числа как числа, даты по дню/ISO-строкой. */
+/** Подмножество семантики контракта (filter-contract 4.2), достаточное для демо: EQ/NE для строк — точно, с учётом регистра;
+ * CONTAINS/STARTS_WITH/ENDS_WITH — без учёта регистра; числа как числа, даты по дню/ISO-строкой. */
 function matches(row: Record<string, unknown>, c: Condition): boolean {
   const v = row[c.field]
   switch (c.op) {
-    case 'EQ': return isDay(c.value) ? dayOf(v) === c.value : typeof c.value === 'number' ? num(v) === c.value : str(v) === str(c.value)
+    case 'EQ': return isDay(c.value) ? dayOf(v) === c.value : typeof c.value === 'number' ? num(v) === c.value : raw(v) === raw(c.value)
     case 'NE': return !matches(row, { ...c, op: 'EQ' })
     case 'CONTAINS': return str(v).includes(str(c.value))
     case 'STARTS_WITH': return str(v).startsWith(str(c.value))

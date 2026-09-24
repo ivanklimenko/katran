@@ -59,7 +59,7 @@ const grid = createGridModel<Doc>({
   persist: localStoragePersist('katran-demo'),
   rowKey: docsLayout.rowKey,
 })
-/** Порядок и подписи лейна — из словаря приложения; счётчики — из фасетов, отсутствующий статус — 0. */
+/** Порядок и подписи лейна — из словаря приложения; счётчики — из фасетов: до первого ответа чисел нет, потом отсутствующий статус — 0. */
 const STATUSES = Object.keys(STATUS_LABEL) as Status[]
 
 export function GridPage() {
@@ -69,8 +69,11 @@ export function GridPage() {
   const [opened, setOpened] = useState<string | null>(null)
   const [hlSpans, setHlSpans] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Фасеты ещё не приходили — лейн без чисел, а не с нулями; флаг не сбрасывается, дальше пустой ответ — это нули.
+  const [counted, setCounted] = useState(false)
+  if (!counted && g.facets.length > 0) setCounted(true)
   useEffect(() => { grid.refresh() }, [])
-  const lane: LaneItem[] = STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st], count: g.facets.find((x) => String(x.value) === st)?.count ?? 0 }))
+  const lane: LaneItem[] = STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st], count: counted ? (g.facets.find((x) => String(x.value) === st)?.count ?? 0) : undefined }))
   // действия полосы — демонстрационные: только объявляют, сколько выбрано
   const bulk = (what: string) => {
     const n = g.selection.mode === 'all' ? g.total - g.selection.except.length : g.selection.ids.length
