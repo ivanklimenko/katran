@@ -79,7 +79,7 @@ export function GridPage() {
   return (
     <div className={[s.gridPage, hlSpans ? s.hlSpans : ''].filter(Boolean).join(' ')}>
       <div className={s.gridHead}>
-        <h1 className={s.h1}>Валютные документы<span className={s.h1Counter}><Counter value={g.total} /></span></h1>
+        <h1 className={s.h1}>Валютные документы{' '}<span className={s.h1Counter}><Counter value={g.total} /></span></h1>
         <p className={s.note}>87 валютных документов на фейковом бэкенде с задержкой 0,25–0,65 с. Запись не кликабельна — деталку открывает кнопка; двойной клик — второй документ рядом. Tab попадает в сетку один раз, дальше — стрелки; Enter на ячейке — копировать/открыть.</p>
         <details className={s.explain}>
           <summary className={s.explainSummary}>Сквозные строки записи: как это управляется</summary>

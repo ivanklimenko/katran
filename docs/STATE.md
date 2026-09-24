@@ -18,6 +18,9 @@ Katran — самостоятельная дизайн-система (React + e
 
 ## 3. Архитектурные решения
 
+- **Лейн и панель фильтров — один стор условий, не два механизма.** `createFiltersModel({ laneField })`: клик по лейну — условие `EQ` по полю лейна ставится сразу в применённые и в черновик панели (без «Применить»); `$lane` — не отдельное состояние, а производная `$conditions` (условие с другим оператором по тому же полю даёт `$lane = null`, чип в панели показывает его как есть). На стенде лейн и панель фильтровали раздельно — пользователь не видел целиком, что применено (спека 1e, §2–3).
+- **Счётчики лейна — фасеты грида по фильтру без условия самого поля лейна.** `createGridModel({ facets: { field, fetchFx } })`: своя `attach`-копия эффекта на каждую смену `$filter` и на `refresh`/`retry`, устаревший ответ отбрасывается по тому же правилу, что у основного запроса; отказ запроса фасетов не трогает `$state` грида — счётчики вспомогательные, реестр без них работает (спека 1e, §4).
+- **Типы фильтра живут в `@katran/ui`, не в `@katran/effector`.** `Scalar`, `Condition`, `Filter`, `FilterFieldType`, `FilterField`, `FilterMeta` — в `packages/ui/src/filters/types.ts`: панели фильтров эти типы нужны на месте, а `ui` не имеет права импортировать `effector` (§3.2 выше); `@katran/effector` реэкспортирует их — так же, как `Sort` и `Selection` (спека 1e, §2). Единственная точка breaking в API плана 3: импорт типов фильтра из `@katran/effector` продолжает работать через реэкспорт.
 - **UI чистый, состояние в моделях, транспорт в приложении.** `@katran/ui` не знает об effector; `@katran/effector` — фабрики моделей без DOM и HTTP: приложение даёт `fetchFx: Effect<GridQuery, GridPage>` (спека 2, 8.2). Хуки `useGrid`/`useFilters` — единственное место встречи (спека 8.4).
 - **Граница слоёв проверяется линтом** (`eslint.config.js`, спека 3.2): `import-x/no-restricted-paths` — ui не импортирует effector; `no-restricted-imports` — `effector`/`effector-react` только в `packages/effector` и демо; в `packages/effector/src` — `@typescript-eslint/no-restricted-imports` (из `@katran/ui` только `import type`, подпути запрещены) и `no-restricted-globals` (`document`, `window`). `localStorage` разрешён — им пользуется persist-адаптер.
 - **Токены темы и плотности объявляются под `:root, [data-theme="light"]` и `:root, [data-k-root]`**, не только в `:root`: `var()` внутри custom property резолвится в месте объявления, иначе переопределение на корне провайдера не действует (спека 4.2–4.3; оба дефекта найдены только в браузере).
@@ -52,14 +55,20 @@ packages/tokens/src   tokens.src.ts (источник) · generate.ts · tokens.
 packages/ui/src       provider/ (KatranProvider, useKatran, LiveRegion) · tooltip/ · button/ · input/ · value/ (CopyValue, LinkValue,
                       AccountValue, FieldTag, StatusDot, Tag, Counter) · overlay/ (Popover, Menu) · state/ (Skeleton, ProgressBar,
                       EmptyState, ErrorState, useLoadingGate) · pagination/ · tabs/ · grid/ (types, resolveSpans, sortRows, selection,
-                      GridRecord, GridSkeleton, ColumnHeader, ColumnsMenu, useGridKeyboard, DataGrid) · format/ · test/ (renderK, шимы)
-packages/effector/src types.ts (Filter, GridQuery, GridPage, PersistAdapter) · persist.ts · createFiltersModel.ts · createGridModel.ts
-                      · useGrid.ts · useFilters.ts
-apps/demo/src         router.ts (хеш) · Shell.tsx (тема/плотность) · pages/* (Tokens, Grid «Реестр», Buttons, Inputs, Values, Overlays, States, Pagination, Tabs)
-                      data/docs.ts (87 детерминированных документов) · data/fakeBackend.ts (фильтр/сортировка/страница, задержка 0,25–0,65 с, ?slow=N)
+                      GridRecord, GridSkeleton, ColumnHeader, ColumnsMenu, useGridKeyboard, DataGrid с слотом toolbar) ·
+                      filters/ (types — Condition/Filter/FilterMeta и др., opLabels — OP_LABEL/describeCondition, fieldOps —
+                      fieldOp/draftOf/conditionFrom/isoDay*, StatusLane, FilterField, FilterPanel, BulkBar) · format/ · test/ (renderK, шимы)
+packages/effector/src types.ts (Filter, GridQuery, GridPage, PersistAdapter, Facet, FacetsQuery — типы фильтра реэкспортированы из
+                      `@katran/ui`) · persist.ts · createFiltersModel.ts (setLane, $lane, revert) · createGridModel.ts (facets, $facets)
+                      · useGrid.ts (facets, onSelectAll, onClearSelection) · useFilters.ts (lane, setLane, revert, meta)
+apps/demo/src         router.ts (хеш) · Shell.tsx (тема/плотность) · pages/* (Tokens, Grid «Валютные документы» (меню: «Реестр»), Buttons,
+                      Inputs, Values, Overlays, States, Pagination, Tabs)
+                      data/docs.ts (87 детерминированных документов, словари STATUS_LABEL/STATUS_TONE/DIRECTION_LABEL, docsFilterMeta —
+                      каталог полей панели) · data/fakeBackend.ts (createFakeBackend → { searchFx, facetsFx }, задержка 0,25–0,65 с, ?slow=N)
 apps/demo/e2e         geometry.spec.ts + playwright.config.ts — замер высот против production-сборки (`pnpm --filter demo e2e`)
 eslint.config.js      правила границы слоёв (§3)
-docs/superpowers      specs/ (спека) · plans/ (план 1 и план 2 исполнены)
+docs/superpowers      specs/ (основная спека · спека-дополнение среза 1e) · plans/ (план 1, план 2, план 2.1 «решения владельца»,
+                      план 3 (срез 1e) исполнены)
 .github/workflows     ci.yml (pnpm check) · pages.yml (демо → https://ivanklimenko.github.io/katran/)
 ```
 
@@ -70,8 +79,20 @@ docs/superpowers      specs/ (спека) · plans/ (план 1 и план 2 и
 - **План 2 исполнен целиком** (`docs/superpowers/plans/2026-09-23-katran-slice1-grid.md`, 14 задач, последний коммит `1ca7663`). Состав: `DataGrid` с семейством (типы, `resolveSpans`, `sortRows`, выделение, `ColumnHeader`, `ColumnsMenu`, клавиатура, скелетон), пакет `@katran/effector` (`createFiltersModel`, `createGridModel`, хуки, persist), демо «Реестр», Playwright-замер. Финальное ревью ветки (Opus) → фикс-волна из 6 коммитов → повторное ревью фикс-волны: замечаний нет. Документы (спека, план, CHANGELOG, README, этот файл) приведены к коду отдельным коммитом.
 - **Проверки на `1ca7663`:** 160 тестов (tokens 12, ui 125, effector 23), `pnpm check` зелёный. **e2e после плана 2.1** (запись как на стенде, коридор 64–72): 3/3 — запись 68 px, шапка 49, скелетон 68, плотность 125 % → 84.75; стенд `pi-constructor` по замеру 24.09 — запись 68, шапка 48.
 - **Открытые решения владельца:** нет — три вопроса от 24.09 (высота записи, Pages, буква StatusDot) решены и исполнены планом 2.1 (`docs/superpowers/plans/2026-09-24-katran-owner-decisions.md`).
+- **План 3 исполнен целиком** (`.superpowers/sdd/2026-09-24-katran-slice1e-registry/`, срез 1e — 8 задач, последний коммит кода `bf50d42`, ветка `feat/slice1e-registry`, ещё не слита в `main`). Состав: типы фильтра переехали в `@katran/ui`; `createFiltersModel` — `setLane`/`$lane`/`revert`; `createGridModel` — фасеты (`facets`/`$facets`); компоненты `StatusLane`, `FilterPanel` (simple), `BulkBar`; слот `toolbar` в `DataGrid`; боевой экран «Валютные документы» в демо на фейковом бэкенде с фасетами. Ревью — после каждой задачи (subagent-driven-development), фикс-раунды по замечаниям на задачах 1, 4, 5, 6; задачи 2, 3, 7 без замечаний. **Проверки на `bf50d42`:** 198 тестов (tokens 12, ui 154, effector 32), `pnpm check` зелёный. **e2e не менялся** (геометрия записи вне плана 3): 3/3 — запись 68, шапка 49, скелетон 68, 125 % → 84.75. Документы (спека-дополнение, CHANGELOG, README, этот файл) приведены к коду отдельным коммитом. **Итоговое ревью всей ветки, слияние в `main` и деплой демо на Pages — ещё впереди**, их делает контроллер после этого коммита.
 
-## 7. Техдолг (в план 3 или позже)
+## 7. Техдолг (в план 4 или позже)
+
+Из ревью плана 3:
+
+- **`sameByValue<T>` вместо двух отдельных сравнений через `JSON.stringify`** — `sameQuery()` в `createGridModel.ts` и `same()` в `createFiltersModel.ts` делают одно и то же сравнение по значению; общий помощник заодно снял бы чувствительность к порядку ключей объекта.
+- **Сравнение условий (`same()` в `createFiltersModel.ts`, `$dirty`) через `JSON.stringify`** — зависит от порядка ключей объекта-условия; на практике условия строятся одним и тем же путём (`conditionFrom`), но порядок не гарантирован типом.
+- **`retry` в `createGridModel` перезапрашивает и фасеты**, даже если отказал только основной запрос (`sample({ clock: [refresh, retry], source: $facetsQuery, target: facetsFx })` не различает, что именно отказало) — лишний запрос, не баг: `$facets` от него не портится.
+- **`StatusLane.isOn` сравнивает значения через `String(it.value) === String(value)`** — `Scalar` включает `number`/`boolean`, `String(1) === String('1')`; для лейна статусов (строки) не мешает, для лейна с числовым/булевым полем даст ложное совпадение.
+- **«-» остаётся в числовом поле панели после «Сбросить», если условие не сложилось** — `FilterField` показывает набранный текст, пока снимок черновика совпадает с текущим; «Сбросить» переводит черновик в `[]`, а условия для этого поля и раньше не было, снимок не меняется, поле не откатывается к пустой строке.
+- **`Counter` в заголовке экрана (`h1`) визуально бледный на `paper`** — не проходил контрастный скрипт токенов, слабее, чем `Counter` в кнопках лейна/панели (см. также спека 1e, §9).
+- **`formatDate` (`packages/ui/src/format/date.ts`) парсит через `new Date(iso)`** — зависит от часового пояса машины для строк без смещения; `describeCondition` (`opLabels.ts`) для чипов эту ловушку уже обходит регэкспом по строке, `formatDate` — нет.
+- **Нет теста «`setLane` извне → `Select` показывает новое значение»** — `FilterField` для ENUM/BOOLEAN получает значение из `draft` только через `draftOf`, путь снаружи (лейн меняет `$conditions`/`$draft`, не через ввод) отдельно не закреплён тестом компонента (модельные тесты `$lane`/`$conditions` есть).
 
 Из финального ревью плана 2:
 
@@ -118,5 +139,5 @@ docs/superpowers      specs/ (спека) · plans/ (план 1 и план 2 и
 
 ## 9. Следующий шаг
 
-1. Ветка `feat/slice1-grid` слита в `main` и запушена 2026-09-24; worktree удалён. Копия леджера плана 2 (`progress.md` с 13 решениями контроллера, брифы и отчёты задач, находки финального ревью) лежит в `katran/.superpowers/sdd/2026-09-23-katran-slice1-grid/` (git-ignored); в спеку и этот файл перенесено всё, что нужно дальше.
-2. План 3 — `StatusLane`, `FilterPanel` (режим simple), `BulkBar`, боевой экран реестра с фильтрами (срез 1e). Перед advanced-фильтрами — отдельный дизайн-заход с вариантами (спека 7.2).
+1. **Ветка `feat/slice1e-registry` (план 3) не слита в `main`.** Итоговое ревью всей ветки, слияние и деплой демо на Pages — делает контроллер после коммита этого документа. Копия леджера плана 3 (решения контроллера, брифы и отчёты задач, диффы ревью по каждой задаче) лежит в `.superpowers/sdd/2026-09-24-katran-slice1e-registry/` (git-ignored, в worktree).
+2. **После слияния — план 4, выбор за владельцем**: advanced-режим фильтров отдельным дизайн-заходом (спека 7.2 основной спеки: каталог полей с группами и поиском, модификатор оператора, наборы фильтров, OR) либо срез 2 (деталка, спека §5.2). Оба не блокируют друг друга — модель фильтров одна на оба режима (§7.1 основной спеки).
