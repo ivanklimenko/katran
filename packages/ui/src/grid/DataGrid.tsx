@@ -38,8 +38,10 @@ export type DataGridProps<Row> = {
   error?: string | null | undefined
   onRetry?: (() => void) | undefined
   emptyTitle?: string | undefined
+  /** Пояснение под заголовком пустого состояния. */
+  emptyText?: string | undefined
   emptyAction?: { label: string; onClick: () => void } | undefined
-  /** Второй клик по кнопке (e.detail ≥ 2) — secondary: второй drawer рядом. */
+  /** Второй клик по кнопке (e.detail ≥ 2) или Shift+клик — secondary: второй drawer рядом. */
   onOpen?: ((row: Row, opts: { secondary: boolean }) => void) | undefined
   skeletonRows?: number | undefined
   /** Слот над пагинацией в футере — полоса массовых действий экрана. */
@@ -138,7 +140,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                   <Checkbox tabIndex={-1} aria-label={`Выбрать запись ${ord}`} checked={isSelected(selection, id)} onChange={(e) => p.onSelect!({ id, on: e.target.checked })} />
                 )}
                 {p.onOpen && (
-                  <IconButton tabIndex={-1} size="s" label={`Открыть запись ${ord}`} onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 })}><Open /></IconButton>
+                  <IconButton tabIndex={-1} size="s" label={`Открыть запись ${ord}`} onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 || e.shiftKey })}><Open /></IconButton>
                 )}
                 <span className={s.ord}>{ord}</span>
               </>
@@ -151,7 +153,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
 
           {empty && (
             <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
-              <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} action={p.emptyAction} />
+              <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} text={p.emptyText} action={p.emptyAction} />
             </td></tr></tbody>
           )}
           {failed && (

@@ -82,6 +82,11 @@ describe('StatusDot / FieldTag / Counter', () => {
     expect(screen.getByRole('img', { name: 'Обработан' })).toBeInTheDocument()
     expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1)
   })
+  it('точка с подписью показывает её тултипом; без подписи — нет', () => {
+    renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
+    expect(screen.getByRole('img', { name: 'Обработан' })).toHaveAttribute('data-k-tip', 'Обработан')
+    expect(document.querySelector('[data-tone="bad"]')).not.toHaveAttribute('data-k-tip')
+  })
   it('буква выводится и на светлом тоне', () => {
     renderK(<StatusDot tone="okl" letter="З" />)
     expect(screen.getByText('З')).toHaveAttribute('data-tone', 'okl')

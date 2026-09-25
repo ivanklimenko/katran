@@ -88,6 +88,11 @@
   text-overflow: ellipsis;
 }
 
+/* Подзаголовок отсортированной колонки (выбранный ключ) — цвета значения, как заголовок. */
+.sorted .thSub {
+  color: var(--k-val);
+}
+
 .arrow {
   margin-left: var(--k-sp-1);
   font-size: var(--k-fs-2);
