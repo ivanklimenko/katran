@@ -1,0 +1,29 @@
+{
+  "name": "katran-spike-host",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Макет канального метаприложения: webpack 5 + классический ModuleFederationPlugin, React 17 и effector — shared singleton хоста",
+  "scripts": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "build:old-effector": "HOST_EFFECTOR=old webpack --mode production"
+  },
+  "dependencies": {
+    "effector": "23.4.4",
+    "effector-old": "npm:effector@23.2.3",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
+}
