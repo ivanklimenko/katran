@@ -1,9 +1,9 @@
 // Проверка встраивания remote в хост в настоящем Chromium (Playwright).
-// Запуск: node e2e/check.mjs [URL хоста] — по умолчанию http://localhost:5200/.
+// Запуск: node e2e/check.mjs [URL хоста] — по умолчанию http://localhost:5210/.
 // Печатает JSON с результатами и завершается с кодом 1, если хоть одна проверка не прошла.
 import { chromium } from 'playwright'
 
-const HOST = process.argv[2] ?? 'http://localhost:5200/'
+const HOST = process.argv[2] ?? 'http://localhost:5210/'
 const results = []
 const ok = (name, pass, details) => results.push({ name, pass: !!pass, ...(details === undefined ? {} : { details }) })
 

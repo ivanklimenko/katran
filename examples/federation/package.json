@@ -1,8 +1,8 @@
 {
-  "name": "katran-spike-federation",
+  "name": "katran-example-federation",
   "private": true,
   "version": "0.0.0",
-  "description": "Спайк встраивания кита в метаприложение через webpack 5 Module Federation. Вне pnpm workspace: host и remote ставятся npm, кит — тарболами pnpm pack.",
+  "description": "Макет встраивания кита в метаприложение через webpack 5 Module Federation. Вне pnpm workspace: host и remote ставятся npm, кит — тарболами pnpm pack.",
   "type": "module",
   "scripts": {
     "pack-kit": "sh scripts/pack-kit.sh",

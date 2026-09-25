@@ -1,13 +1,13 @@
 #!/bin/sh
 # Матрица вариантов shared на production-сборках. Нужны запущенные статические серверы:
-#   node scripts/serve.mjs host/dist 5202 --spa   и   node scripts/serve.mjs remote/dist 5203 --cors
+#   node scripts/serve.mjs host/dist 5212 --spa   и   node scripts/serve.mjs remote/dist 5213 --cors
 # Для каждого варианта пересобирает remote (и хост, если меняется он), гоняет e2e/check.mjs
 # и печатает итоговую строку. Подробный JSON — в test-results/<вариант>.json.
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p test-results
-HOST_URL=http://localhost:5202/
-export REMOTE_URL=http://localhost:5203/remoteEntry.js
+HOST_URL=http://localhost:5212/
+export REMOTE_URL=http://localhost:5213/remoteEntry.js
 
 build_host() { (cd host && env "$@" npx webpack --mode production >/dev/null 2>&1); }
 build_remote() { (cd remote && env "$@" npx webpack --mode production >/dev/null 2>&1) || { echo "  сборка remote упала"; return 1; }; }

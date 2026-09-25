@@ -3,14 +3,14 @@
 // - React 17.0.2 / react-dom 17.0.2 и effector — shared singleton хоста;
 // - babel-loader только для своего кода, таргет ES5; node_modules не транспилируются.
 // Переключатели (переменные окружения):
-//   REMOTE_URL      — адрес remoteEntry.js (по умолчанию dev-сервер remote на 5201);
+//   REMOTE_URL      — адрес remoteEntry.js (по умолчанию dev-сервер remote на 5211);
 //   HOST_EFFECTOR=old — хост шарит effector 23.2.3 вместо 23.4.4 (проверка strictVersion у remote);
 //   HOST_SHARE_JSX=1  — хост собран с automatic JSX runtime и шарит react/jsx-runtime.
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const { ModuleFederationPlugin } = require('webpack').container
 
-const REMOTE_URL = process.env.REMOTE_URL || 'http://localhost:5201/remoteEntry.js'
+const REMOTE_URL = process.env.REMOTE_URL || 'http://localhost:5211/remoteEntry.js'
 const oldEffector = process.env.HOST_EFFECTOR === 'old'
 
 const shared = {
@@ -70,6 +70,6 @@ module.exports = (_env, argv) => ({
   ],
   // Оверлей и лог предупреждений сборки в консоли браузера выключены: предупреждение «async/await в
   // ES5-рантайме» относится к самому хосту (target es5 + remotes), а автопроверка считает предупреждения консоли.
-  devServer: { port: 5200, hot: false, liveReload: false, historyApiFallback: true, client: { overlay: false, logging: 'error' } },
+  devServer: { port: 5210, hot: false, liveReload: false, historyApiFallback: true, client: { overlay: false, logging: 'error' } },
   performance: { hints: false },
 })

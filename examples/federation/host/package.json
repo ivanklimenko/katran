@@ -1,5 +1,5 @@
 {
-  "name": "katran-spike-host",
+  "name": "katran-example-federation-host",
   "private": true,
   "version": "0.0.0",
   "description": "Макет канального метаприложения: webpack 5 + классический ModuleFederationPlugin, React 17 и effector — shared singleton хоста",

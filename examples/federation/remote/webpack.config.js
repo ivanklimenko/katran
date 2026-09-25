@@ -102,7 +102,7 @@ module.exports = (_env, argv) => ({
     ...(CSS === 'extract' ? [new MiniCssExtractPlugin({ filename: '[name].[contenthash:8].css' })] : []),
   ],
   devServer: {
-    port: 5201,
+    port: 5211,
     hot: false,
     liveReload: false,
     // Шрифты — cross-origin ресурс: без CORS-заголовка браузер их не применит.

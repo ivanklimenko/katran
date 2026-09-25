@@ -1,5 +1,5 @@
 {
-  "name": "katran-spike-remote",
+  "name": "katran-example-federation-remote",
   "private": true,
   "version": "0.0.0",
   "description": "Макет remote команды: webpack 5 + классический ModuleFederationPlugin, экран «Валютные документы» на собранном ките",
