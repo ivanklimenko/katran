@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
-import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDateTimeShort, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
+import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDate, formatDateTimeFull, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
@@ -15,8 +15,8 @@ export const docsLayout: RecordLayout<Doc> = {
     { id: 'id', title: 'ID', subtitle: '№ · 20 вх / исх', width: 136, lines: 2,
       sort: [{ id: 'docNumber', label: 'Номер документа', type: 'number' }, { id: 'refIn', label: '20 вх' }, { id: 'refOut', label: '20 исх' }],
       render: (d) => <><CopyValue value={String(d.docNumber)} tabIndex={T} /><div><LinkValue name="uuid" value={d.id} tabIndex={T} /> <LinkValue name="refIn" value={d.refIn ?? undefined} tabIndex={T} /> <LinkValue name="refOut" value={d.refOut ?? undefined} tabIndex={T} /></div></> },
-    { id: 'created', title: 'Дата / Время', width: 126, lines: 2, sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'valueDate', label: 'Валютирование', type: 'date' }],
-      render: (d) => <><CopyValue value={formatDateTimeShort(d.created)} tone="ink" tabIndex={T} /><div><CopyValue value={d.valueDate} tone="ink2" tabIndex={T} /></div></> },
+    { id: 'created', title: 'Дата / Время', width: 150, lines: 2, sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'valueDate', label: 'Валютирование', type: 'date' }],
+      render: (d) => <><CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} /><div><CopyValue value={formatDate(d.valueDate)} tone="ink2" tabIndex={T} /></div></> },
     { id: 'type', title: 'Тип', width: 106, sort: [{ id: 'type', label: 'Тип сообщения' }], render: (d) => <CopyValue value={d.type} tone="mono" tabIndex={T} /> },
     { id: 'direction', title: 'Направление', width: 166, lines: 2, sort: [{ id: 'direction', label: 'Группа → название', order: ['IN', 'OUT', 'TRANSIT', 'OTHER'], then: 'dirTxt' }, { id: 'dirTxt', label: 'Название' }],
       render: (d) => <><CopyValue value={d.direction} tone="mono" tabIndex={T} /><div><CopyValue value={d.dirTxt} tone="ink2" tabIndex={T} /></div></> },
@@ -97,7 +97,9 @@ export function GridPage() {
             <pre className={s.code}>{SPANS_SNIPPET}</pre>
           </div>
         </details>
-        {opened && <p className={s.note} role="status">{opened}</p>}
+        {/* Строка всегда на месте: появляясь, она сдвигала грид, и второй клик двойного промахивался мимо кнопки.
+            Объявление — через announce (живая область провайдера), поэтому без role="status". */}
+        <p className={s.note}>{opened ?? 'Документ не открыт'}</p>
         <div className={s.lane}><StatusLane label="Статусы" items={lane} value={f.lane} onChange={f.setLane} /></div>
         <div className={s.filters}>
           <FilterPanel meta={docsFilterMeta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
@@ -109,6 +111,8 @@ export function GridPage() {
         label="Валютные документы"
         layout={docsLayout}
         pageSizes={[20, 50]}
+        emptyTitle="По заданным условиям документов нет"
+        emptyText="Измените условия отбора или сбросьте фильтр"
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
         onOpen={(d, { secondary }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}`; setOpened(msg); announce(msg) }}
         toolbar={

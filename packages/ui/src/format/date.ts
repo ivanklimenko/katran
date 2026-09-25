@@ -1,7 +1,13 @@
 const p2 = (n: number) => String(n).padStart(2, '0')
 const parse = (iso: string): Date | null => { const d = new Date(iso); return isNaN(d.getTime()) ? null : d }
 
+// Дата без времени (как у бека: дата валютирования) — строкой, без new Date(): иначе полночь UTC
+// в западных зонах показывалась бы предыдущим днём.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+
 export function formatDate(iso: string): string {
+  const m = DATE_ONLY.exec(iso)
+  if (m) return `${m[3]}.${m[2]}.${m[1]}`
   const d = parse(iso); if (!d) return ''
   return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}`
 }
