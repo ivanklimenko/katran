@@ -1,6 +1,6 @@
 # Состояние проекта katran
 
-Обновлено: 2026-09-24 (вечер). Документ для человека, который проект не видел. Решения — со ссылками на спеку; хронологии здесь нет.
+Обновлено: 2026-09-25. Документ для человека, который проект не видел. Решения — со ссылками на спеку; хронологии здесь нет.
 
 ## 1. Назначение
 
@@ -9,7 +9,7 @@ Katran — самостоятельная дизайн-система (React + e
 ## 2. Стек и почему
 
 - **Целевая среда (ответы команды 2026-09-24).** Приложение — remote в канальном метаприложении: хост на webpack 5 Module Federation, **React 17.0.2 и react-dom — shared singleton хоста**, то есть кит в рантайме исполняется на React 17. Effector хост шарит, версия хоста — 23.4, команда использует ту же 23.4. Webpack хоста `node_modules` не транспилирует; «ES5» — таргет только собственного кода команды (effector 23 в ES2015+ в проде работает), планка браузера — **Chromium 88**. Vite у команды — только локальный запуск, прод-сборка remote — webpack 5. Кит пока собран и проверен на React 19; перевод на диапазон React 17–19 и таргет `chrome88` — план «совместимость» (§9).
-- **React 19 + effector 23** — стек разработки кита. Admiral не используется и не оборачивается: кит самостоятелен (спека 1.2).
+- **Разработка и демо — на React 17.0.2** (как прод; было — React 19 на стеке разработки, до плана 4). CI дополнительно гоняет пакеты кита (`tokens`/`ui`/`effector`) на React 19 (`scripts/use-react.mjs`, задача `react19`); демо в эту задачу не входит. effector 23. Admiral не используется и не оборачивается: кит самостоятелен (спека 1.2).
 - **pnpm-монорепо**: `packages/tokens`, `packages/ui`, `packages/effector`, `apps/demo`. Границы слоёв проверяет eslint, не договорённость (спека 3.2, см. §3).
 - **CSS Modules без рантайма**, имена `k-Component__part` (функция `generateScopedName`, строковый шаблон в Vite 8 давал `k-Provider-module__root`). CSS-in-JS отвергнут: ушёл вместе с Admiral, рантайм-стили на гриде лишние.
 - **Токены из одного источника** `tokens.src.ts` → `tokens.css`/`tokens.ts`, CI проверяет `gen:check`. Плотность — умноженные размеры `calc(Npx * var(--k-density))`, а не `zoom`/`rem` на `<html>`: приложение встраивается в метаприложение через федерацию и не имеет права трогать корень документа (спека 3.4, 4.3).
@@ -58,7 +58,8 @@ packages/ui/src       provider/ (KatranProvider, useKatran, LiveRegion) · toolt
                       EmptyState, ErrorState, useLoadingGate) · pagination/ · tabs/ · grid/ (types, resolveSpans, sortRows, selection,
                       GridRecord, GridSkeleton, ColumnHeader, ColumnsMenu, useGridKeyboard, DataGrid со слотом toolbar) ·
                       filters/ (types — Condition/Filter/FilterMeta и др., opLabels — OP_LABEL/describeCondition, fieldOps —
-                      fieldOp/draftOf/conditionFrom/isoDay*, внутренние, не экспортируются; StatusLane, FilterField, FilterPanel, BulkBar) · format/ · test/ (renderK, шимы)
+                      fieldOp/draftOf/conditionFrom/isoDay*, внутренние, не экспортируются; StatusLane, FilterField, FilterPanel, BulkBar) ·
+                      format/ · compat/ (useStableId — React.useId, если есть, иначе счётчик модуля; план 4) · test/ (renderK, шимы)
 packages/effector/src types.ts (Filter, GridQuery, GridPage, PersistAdapter, Facet, FacetsQuery — типы фильтра реэкспортированы из
                       `@katran/ui`) · persist.ts · createFiltersModel.ts (setLane, $lane, revert) · createGridModel.ts (facets, $facets)
                       · useGrid.ts (facets, onSelectAll, onClearSelection) · useFilters.ts (lane, setLane, revert, meta)
@@ -66,11 +67,19 @@ apps/demo/src         router.ts (хеш) · Shell.tsx (тема/плотност
                       Inputs, Values, Overlays, States, Pagination, Tabs)
                       data/docs.ts (87 детерминированных документов, словари STATUS_LABEL/STATUS_TONE/DIRECTION_LABEL, docsFilterMeta —
                       каталог полей панели) · data/fakeBackend.ts (createFakeBackend → { searchFx, facetsFx }, задержка 0,25–0,65 с, ?slow=N)
-apps/demo/e2e         geometry.spec.ts + playwright.config.ts — замер высот против production-сборки (`pnpm --filter demo e2e`)
-eslint.config.js      правила границы слоёв (§3)
-docs/superpowers      specs/ (основная спека · спека-дополнение среза 1e) · plans/ (план 1, план 2, план 2.1 «решения владельца»,
-                      план 3 (срез 1e) исполнены)
-.github/workflows     ci.yml (pnpm check) · pages.yml (демо → https://ivanklimenko.github.io/katran/)
+apps/demo/e2e         geometry.spec.ts (высота записи/шапки/скелетона, плотность 125 %) · isolation.spec.ts (изоляция от хоста, режим
+                      `?hostile`) · registry.spec.ts (панель фильтров, подзаголовок сортировки) + playwright.config.ts — против
+                      production-сборки (`pnpm --filter demo e2e`)
+eslint.config.js      правила границы слоёв (§3) и запрет API React 18+ в `packages/ui`, `packages/effector` (план 4)
+scripts               use-react.mjs (переключение devDeps на React 17/19, CI-задача `react19`) · check-css-target.mjs (CSS-часть
+                      `check:target` — doiuse + регулярки сверх caniuse; план 4)
+examples/federation   макет встраивания кита в метаприложение через Module Federation — вне pnpm workspace, ставится npm; host/ + remote/
+                      на webpack 5, e2e/check.mjs (21/21), порты 5210–5213 (план 4, README там же)
+docs/consuming.md     контракт для remote-команды: установка, shared-конфиг MF, `KatranProvider`, CORS для шрифтов (план 4)
+docs/superpowers      specs/ (основная спека · спека-дополнение среза 1e · спека совместимости) · plans/ (план 1, план 2, план 2.1
+                      «решения владельца», план 3 (срез 1e), план 4 «совместимость» исполнены)
+.github/workflows     ci.yml (задачи `check` на React 17 и `react19` — тесты и сборка пакетов кита на React 19) · pages.yml (демо →
+                      https://ivanklimenko.github.io/katran/)
 ```
 
 ## 6. Состояние
@@ -81,8 +90,9 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **Проверки на `1ca7663`:** 160 тестов (tokens 12, ui 125, effector 23), `pnpm check` зелёный. **e2e после плана 2.1** (запись как на стенде, коридор 64–72): 3/3 — запись 68 px, шапка 49, скелетон 68, плотность 125 % → 84.75; стенд `pi-constructor` по замеру 24.09 — запись 68, шапка 48.
 - **Открытые решения владельца:** нет — три вопроса от 24.09 (высота записи, Pages, буква StatusDot) решены и исполнены планом 2.1 (`docs/superpowers/plans/2026-09-24-katran-owner-decisions.md`).
 - **План 3 исполнен целиком** (`.superpowers/sdd/2026-09-24-katran-slice1e-registry/`, срез 1e — 8 задач, последний коммит кода `bf50d42`, ветка `feat/slice1e-registry`, слита в `main` 2026-09-24). Состав: типы фильтра переехали в `@katran/ui`; `createFiltersModel` — `setLane`/`$lane`/`revert`; `createGridModel` — фасеты (`facets`/`$facets`); компоненты `StatusLane`, `FilterPanel` (simple), `BulkBar`; слот `toolbar` в `DataGrid`; боевой экран «Валютные документы» в демо на фейковом бэкенде с фасетами. Ревью — после каждой задачи (subagent-driven-development), фикс-раунды по замечаниям на задачах 1, 4, 5, 6; задачи 2, 3, 7 без замечаний. **Проверки на `bf50d42`:** 198 тестов (tokens 12, ui 154, effector 32), `pnpm check` зелёный. **e2e не менялся** (геометрия записи вне плана 3): 3/3 — запись 68, шапка 49, скелетон 68, 125 % → 84.75. Документы (спека-дополнение, CHANGELOG, README, этот файл) приведены к коду отдельным коммитом. **Итоговое ревью всей ветки проведено** (Opus: I1–I3, Minor 1–10); **фикс-волна — коммиты `0ac8401`..этот** (DATETIME очищается из полей, фокус после ✕/«Сбросить», «Выделение снято», тест лейн → `Select`, «-» стирается после «Сбросить», кольцо фокуса лейна, строгое `isOn`, экспорт помощников фильтров урезан, `toolbar` без залипания falsy, лейн без чисел до фасетов, точный `EQ` строк в демо, документы); остальное — техдолг §7. **Проверки после фикс-волны:** 203 теста (tokens 12, ui 159, effector 32), `pnpm check` зелёный, e2e 3/3 — запись 68, шапка 49, скелетон 68, 125 % → 84.75. Повторное ревью фикс-волны — чисто; слито в `main`, демо на Pages обновлено деплоем из `main`. Копия леджера плана 3 — `katran/.superpowers/sdd/2026-09-24-katran-slice1e-registry/` (git-ignored).
+- **План 4 «Совместимость» исполнен целиком** (`.superpowers/sdd/2026-09-24-katran-compat/`, спека-дельта — `docs/superpowers/specs/2026-09-24-katran-compat-design.md`, 8 задач, последний коммит кода `7ad5a1a`, ветка `feat/compat`). Состав: React 17–19 (`peerDependencies >=17`, разработка и демо на 17.0.2, CI-задача `react19`; линт запрещает API React 18+ в `packages/ui`/`packages/effector`; `useStableId` вместо `useId`; свой `renderHook`; защита от записи в стейт после размонтирования); сборка — `dist` всех трёх пакетов под Chromium 88, classic JSX у `@katran/ui` (`dist` не импортирует `react/jsx-runtime`, элементы — `createElement` из React), `pnpm check:target` (`es-check` + `scripts/check-css-target.mjs`); изоляция от стилей хоста под `[data-k-root]` (`content-box`, кроме ячеек грида — `border-box`; ширина колонки = полная ширина ячейки, демо-ширины +16 px; типографика контролов, фокус ячеек только внутри `.table`); режим демо `?hostile` и `isolation.spec.ts`; быстрые дефекты сверки — P1, T4, B3, B5, B6, F1, F2, F4, F6, F7, Z3, W2; макет встраивания `examples/federation/` (webpack 5 Module Federation, порты 5210–5213) и `docs/consuming.md`. Ревью — после каждой задачи, фикс-раунд по итогам ревью T8 (порты макета выровнены на 5210–5213 везде, наименования «спайк» → «макет» в `examples/federation/`). **Проверки на `7ad5a1a`:** 209 тестов (`tokens` 12, `ui` 165, `effector` 32), `pnpm check` зелёный (включая `check:target`); e2e демо 10/10 (`geometry` 3, `isolation` 5, `registry` 2) — запись 68 px, шапка 49, скелетон 68, 125 % → 84.75, в режиме `?hostile` запись 68 и ширина колонки равна заданной (136); CI — задачи `check` (React 17) и `react19` зелёные; макет `examples/federation/` — `node e2e/check.mjs` 21/21. Документы (обе спеки, CHANGELOG, `registry-drift.md`, этот файл) приведены к коду отдельным коммитом.
 
-## 7. Техдолг (в план 4 или позже)
+## 7. Техдолг (в план 5 или позже)
 
 Из ревью плана 3:
 
@@ -90,7 +100,7 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **Сравнение условий (`same()` в `createFiltersModel.ts`, `$dirty`) через `JSON.stringify`** — зависит от порядка ключей объекта-условия; на практике условия строятся одним и тем же путём (`conditionFrom`), но порядок не гарантирован типом.
 - **`retry` в `createGridModel` перезапрашивает и фасеты**, даже если отказал только основной запрос (`sample({ clock: [refresh, retry], source: $facetsQuery, target: facetsFx })` не различает, что именно отказало) — лишний запрос, не баг: `$facets` от него не портится.
 - **`Counter` в заголовке экрана (`h1`) визуально бледный на `paper`** — не проходил контрастный скрипт токенов, слабее, чем `Counter` в кнопках лейна/панели (см. также спека 1e, §9).
-- **`formatDate` (`packages/ui/src/format/date.ts`) парсит через `new Date(iso)`** — зависит от часового пояса машины для строк без смещения; `describeCondition` (`opLabels.ts`) для чипов эту ловушку уже обходит регэкспом по строке, `formatDate` — нет.
+- **`formatDate` для дат без времени (`YYYY-MM-DD`) больше не зависит от часового пояса машины** — план 4 (F2) разбирает такую строку регэкспом `DATE_ONLY` без `new Date()` (тест — `vi.stubEnv('TZ', 'America/New_York')`). Зависимость остаётся для строк с временем без смещения зоны (`formatDateTimeShort`/`formatDateTimeFull`, `parse()` = `new Date(iso)`, `packages/ui/src/format/date.ts`) — тот же класс проблемы, что у `isoDayStart`/`isoDayEnd` ниже.
 
 Из финального ревью ветки плана 3 (вне фикс-волны):
 
@@ -120,6 +130,15 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **`Doc` → `Record<string, unknown>`** в фейковом бэкенде держится на нюансе TS (type alias без индекс-сигнатуры).
 - **`persist.keep` не реализован** — набор сохраняемых полей фиксирован (спека 8.2).
 
+Из плана 4:
+
+- **Тултипы `data-k-tip` на нефокусируемых `span` (`StatusDot`, `FieldTag`) не показываются при навигации с клавиатуры** — скринридер читает `aria-label`; решать в клавиатурной модели грида (спека 6.3).
+- **Предупреждение `act` в тесте `useGrid`** — на React 19 наблюдалось (одно); на React 17 при прогоне `pnpm check` не видно (0 строк `Warning` в verbose-выводе) — см. следующий пункт, не значит, что предупреждения нет на React 17 в браузере.
+- **vitest не показывает предупреждения React 17 про `act`** — React 17 пишет их в консоль, только если определён глобальный `jest` (dev-режим); vitest его не определяет.
+- **`KatranProvider` не принимает `className`/`style`** — экран не растянуть на слот хоста без обёртки снаружи провайдера.
+- **`packages/tokens/dist/generate.d.ts` лишний в публикуемом пакете** — генератор токенов не часть публичного API, но типы попадают в `dist` вместе с остальными.
+- **Рантайм-маркер `window.__spike` в `examples/federation/`** — остаток от спайка (`remote/src/DocumentsScreen.tsx`, `host/src/bootstrap.js`), для макета не мешает, но название не переименовано вслед за «спайк» → «макет».
+
 Из плана 1 и раньше:
 
 - **Потребители `@katran/ui` типизируются по исходникам** — нужен `css-modules.d.ts` в `include` (см. §8).
@@ -143,14 +162,16 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **500 в консоли демо при HMR** — Vite не находит импортированный, но ещё не созданный файл; после перезагрузки `failedResources` пуст.
 - **jsx-a11y не моделирует фокусируемый separator** — ручка ресайза `role="slider"`.
 - **`pages.yml` требует источник Pages «GitHub Actions»** (`build_type: workflow`, включено через API 24.09.2026) и публичный репозиторий на бесплатном плане; пока репо был приватным, деплой падал на старте. Второй капкан: `${{ … }}` внутри flow-словаря YAML (`environment: { name: …, url: ${{ … }} }`) GitHub не разбирает — прогон падает без джобов, а в его имени вместо `name:` стоит путь к файлу. Workflow — только блочным стилем. Деплой проверен 24.09: https://ivanklimenko.github.io/katran/ (запись 68 px, консоль чистая).
+- **`react/jsx-runtime` React 19 не рендерится на React 17 (React #31)** — remote и демо собираются и запускаются на React 17.
+- **`effector-react.mjs` импортирует `effector/effector.mjs`** — без второго ключа `shareKey: 'effector'` в shared-конфиге remote получает вторую копию effector, и `$dirty` модели фильтров не обновляется.
+- **`display` у класса перебивает атрибут `hidden`** — для сворачиваемых блоков нужно явное `[hidden] { display: none }` (P1: `.body { display: grid }` перебивал `<form hidden>`).
 
 ## 9. Следующий шаг
 
-1. **План «совместимость»** — собрать в один план по итогам спайков 2026-09-24 и расхождений с эталоном:
-   - **React 17–19.** Спайк `spike/react17` (локальная ветка, 6 коммитов поверх `28bd557`, не запушена): `useStableId` вместо `useId`, свой `renderHook` для RTL 12, защита от записи в стейт после размонтирования, правка `useRef` в провайдере, `peerDependencies react >=17`; 205/205 тестов на 17 и на 19, e2e 3/3, консоль чистая. Ловушка: `react/jsx-runtime` React 19 не рендерится на React 17 — remote и демо собирать с React 17. В план: перенос правок, CI-матрица 17/19, eslint-запрет API React 18+ в `ui`/`effector`.
-   - **Встраивание.** Спайк `spike/federation` (локальная ветка от `spike/react17`, 6 коммитов, не запушена; макет — `spikes/federation/`, README там): цепочка кит → remote на webpack 5 → хост webpack 5 MF с React 17 работает, 21/21 проверка в dev и prod, консоль чистая, запись 68. Переносить в `main`: сборка `@katran/ui` под `chrome88` и classic JSX runtime (dist не импортирует `react/jsx-runtime`); dist + d.ts у `@katran/tokens` и `@katran/effector` (сейчас указывают на `.ts` — webpack не собирает); изоляция от глобальных стилей хоста (`box-sizing`, `td/th border`, типографика `button`, фокус ячеек только внутри `.table`); CI `check:target` (es-check + проверка CSS на Chromium 88); документ для потребителя. Рекомендуемый shared remote: react, react-dom, effector — `singleton`, `strictVersion`, `import: false` (брать у хоста) плюс ключ `effector/effector.mjs` с `shareKey: 'effector'` (иначе effector-react тянет вторую копию и ломает `$dirty`); `react/jsx-runtime` и effector-react не шарить, React 17 — в devDeps remote; CORS на сервере remote (шрифты). Effector хоста — 23.4 (ответ команды 2026-09-24), `requiredVersion: '^23.4.0'` совпадает; если хост опустит версию, экран не поднимется — хосту нужен ErrorBoundary. Открыто: живой Chromium 88 не прогонялся (только статически); `KatranProvider` не принимает `className`/`style`.
-   - **Расхождения реестра с эталоном** — `docs/reference/registry-drift.md` (§10): пункты классов A/B/D, решённые владельцем.
-2. **Затем план 4, выбор за владельцем**: advanced-режим фильтров отдельным дизайн-заходом (спека 7.2 основной спеки: каталог полей с группами и поиском, модификатор оператора, наборы фильтров, OR) либо срез 2 (деталка, спека §5.2). Оба не блокируют друг друга — модель фильтров одна на оба режима (§7.1 основной спеки).
+**План 4 «Совместимость» исполнен** (§6): React 17–19, сборка под Chromium 88, изоляция от стилей хоста, макет встраивания через Module Federation, быстрые дефекты сверки. Открытое из него — техдолг §7 (живой Chromium 88 не прогонялся, только статически; `KatranProvider` не принимает `className`/`style`; дедупликация shared effector и прочее).
+
+1. **План 5 «Реестр по эталону»** — оставшиеся пункты `docs/reference/registry-drift.md` классов A/B/D, решённые владельцем 2026-09-24 (§10, «Вопросы владельцу»). Спека-дельта потребуется для: ячеек на всю высоту записи (R6, объём L — меняет модель записи), многоуровневой сортировки (S1, объём L — правка контракта `GridQuery.sort` с одного `{key,dir}` на массив уровней), раскладки «вместе / раздельно» для составных колонок (R5, механизм для валюты и других кандидатов), типографики T1–T3 и цвета значений T2 (кегли, тон `ink` вместо `val` в гриде), колонок R1–R16 (58, S/R out, Маршрут, состав ячеек SWIFT-полей, Дт/Кт и т. п.), состояний записи B1 (`.is-locked`/`.is-inactive`), вида лейна и строки фильтров L1/P3 (эталон вида — стенд), пагинации W4 (вид подвала), сокращённого счёта 8…4 F3 (сейчас 8…3).
+2. **Затем план 6, выбор за владельцем**: advanced-режим фильтров отдельным дизайн-заходом (спека 7.2 основной спеки: каталог полей с группами и поиском, модификатор оператора, наборы фильтров, OR) либо срез 2 (деталка, спека §5.2). Оба не блокируют друг друга — модель фильтров одна на оба режима (§7.1 основной спеки).
 
 ## 10. Эталон и заморозка по срезам
 
