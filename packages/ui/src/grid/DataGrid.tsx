@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { sizes } from '@katran/tokens'
 import { IconButton } from '../button'
 import { Checkbox } from '../input'
 import { Pagination } from '../pagination'
@@ -49,7 +50,8 @@ export type DataGridProps<Row> = {
 }
 
 const DEFAULT_WIDTH = 120
-const LEAD_WIDTH = 84
+// ширина служебной колонки — из токена grid-lead (тот же, что --k-grid-lead в CSS): JS считает по ней ширину таблицы
+const LEAD_WIDTH = sizes['grid-lead']
 
 const Cols = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="12" height="10" rx="1" /><path d="M6 3v10M10 3v10" /></svg>
 const Open = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" /><path d="M6 8h4M8 6v4" /></svg>
@@ -110,7 +112,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         >
           <thead>
             <tr role="row" aria-rowindex={1}>
-              <th role="columnheader" scope="col" className={s.th} style={{ width: `calc(${LEAD_WIDTH}px * var(--k-density))` } as CSSProperties} {...cp(1)(0, 0)}>
+              <th role="columnheader" scope="col" className={s.th} style={{ width: 'var(--k-grid-lead)' } as CSSProperties} {...cp(1)(0, 0)}>
                 <div className={s.leadHead}>
                   {selection && p.onSelectPage && (
                     <Checkbox tabIndex={-1} aria-label="Выбрать все на странице" checked={pageSel === 'all'} indeterminate={pageSel === 'some'} disabled={ids.length === 0}

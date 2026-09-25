@@ -190,8 +190,6 @@
   display: flex;
   align-items: center;
   gap: var(--k-sp-1);
-  width: var(--k-grid-lead);
-  min-width: var(--k-grid-lead);
 }
 
 /* скелетон служебной ячейки резервирует высоту реальных контролов (чекбокс + кнопка "s") */
