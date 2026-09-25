@@ -68,8 +68,12 @@ export default tseslint.config(
           message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
         },
         {
-          selector: "ImportDeclaration[source.value=/^react-dom\\/(client|server)$/]",
-          message: 'react-dom/client — React 18+; кит монтирует хост',
+          selector: "ImportDeclaration[source.value='react-dom'] > ImportSpecifier[imported.name=/^(useFormStatus|createRoot|hydrateRoot)$/]",
+          message: 'API react-dom 18+ — кит работает на React 17: корень монтирует хост, useFormStatus нет',
+        },
+        {
+          selector: "ImportDeclaration[source.value='react-dom/client']",
+          message: 'react-dom/client — модуль React 18+; кит работает на React 17, корень монтирует хост',
         },
       ],
     },
