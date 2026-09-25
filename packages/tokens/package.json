@@ -10,8 +10,9 @@
     "./fonts.css": "./src/fonts.css"
   },
   "files": [
-    "src",
-    "dist"
+    "dist",
+    "src/tokens.css",
+    "src/fonts.css"
   ],
   "publishConfig": {
     "main": "./dist/index.js",
