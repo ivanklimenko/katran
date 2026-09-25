@@ -44,7 +44,7 @@ ok('экран смонтирован в хосте', await page.locator('[data-
 // --- один React, один effector ---
 await step('рантайм: React/effector', async () => {
   const rt = await page.evaluate(() => {
-    const s = window.__spike
+    const s = window.__katranExample
     const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__
     const el = s.remoteJsx.jsx('i', {})
     return {
@@ -188,7 +188,7 @@ await step('тултип', async () => {
 // Ловит вторую копию effector (подписки useUnit из одной копии на сторы из другой ломали $dirty).
 await step('модель фильтров', async () => {
   const dirty = await page.evaluate(() => {
-    const f = window.__spike.remoteModels.filters
+    const f = window.__katranExample.remoteModels.filters
     f.edit({ field: 'f59name', op: 'CONTAINS', value: 'Кедр' })
     const v = f.$dirty.getState()
     f.revert()

@@ -2,13 +2,13 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import * as effector from 'effector'
 
-// Отладочный маркер спайка: проверка «React/effector в рантайме один» сравнением модулей.
-window.__spike = Object.assign(window.__spike || {}, { hostReact: React, hostReactDom: ReactDOM, hostEffector: effector })
+// Отладочный маркер макета: проверка «React/effector в рантайме один» сравнением модулей.
+window.__katranExample = Object.assign(window.__katranExample || {}, { hostReact: React, hostReactDom: ReactDOM, hostEffector: effector })
 
 // Единица хоста, которую он передаёт встроенному экрану (как это делает метаприложение: пользователь, контекст канала).
 var visit = effector.createEvent()
 var $visits = effector.createStore(0).on(visit, function (n) { return n + 1 })
-window.__spike.hostUnits = { $visits: $visits, visit: visit }
+window.__katranExample.hostUnits = { $visits: $visits, visit: visit }
 
 var DocumentsScreen = React.lazy(function () { return import('katranRemote/DocumentsScreen') })
 

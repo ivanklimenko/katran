@@ -2,6 +2,7 @@
 
 Макет цепочки «кит → remote команды → хост метаприложения» на webpack 5 и классическом
 `webpack.container.ModuleFederationPlugin`. Данные вымышленные (генератор из демо).
+Данные и форматы — упрощённая копия демо на момент макета; эталон — `apps/demo`.
 
 Папка **вне pnpm workspace**: `host/`, `remote/` и сама папка ставятся `npm`, кит попадает в remote
 тарболами `pnpm pack` — так, как его получит команда из реестра (с `publishConfig`, без `workspace:*`).
@@ -50,4 +51,5 @@ sh scripts/matrix.sh                       # все варианты shared, JSO
 | remote без CORS | шрифты IBM Plex не грузятся (12 ошибок CORS), геометрия цела |
 
 Размер (рекомендуемый вариант): JS remote 41 KiB gzip (remoteEntry 3.2, экран с данными 8.2, кит и
-зависимости 29.6), шрифты 202 KiB (12 woff2). Подробности и выводы — в итоговом отчёте макета.
+зависимости 29.6), шрифты 202 KiB (12 woff2). Выводы для команды — `docs/consuming.md`; решения и
+проверки — спека совместимости `docs/superpowers/specs/2026-09-24-katran-compat-design.md` и `docs/STATE.md` (§9).

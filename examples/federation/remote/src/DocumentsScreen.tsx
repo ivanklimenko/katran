@@ -16,9 +16,9 @@ import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Sta
 import { createFakeBackend } from './data/fakeBackend'
 import s from './DocumentsScreen.module.css'
 
-// Отладочный маркер спайка: сравнение модулей React/effector remote с модулями хоста.
-const w = window as unknown as { __spike?: Record<string, unknown> }
-w.__spike = Object.assign(w.__spike ?? {}, { remoteReact: React, remoteEffector: effector, remoteJsx: jsxRuntime })
+// Отладочный маркер макета: сравнение модулей React/effector remote с модулями хоста.
+const w = window as unknown as { __katranExample?: Record<string, unknown> }
+w.__katranExample = Object.assign(w.__katranExample ?? {}, { remoteReact: React, remoteEffector: effector, remoteJsx: jsxRuntime })
 
 const T = -1
 
@@ -68,7 +68,7 @@ const grid = createGridModel<Doc>({
   rowKey: docsLayout.rowKey,
 })
 const STATUSES = Object.keys(STATUS_LABEL) as Status[]
-w.__spike!.remoteModels = { filters, grid }
+w.__katranExample!.remoteModels = { filters, grid }
 
 function Screen({ $visits, visit }: HostUnits) {
   const g = useGrid(grid)
