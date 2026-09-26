@@ -70,6 +70,7 @@ apps/demo/e2e         geometry.spec.ts + playwright.config.ts — замер в�
 eslint.config.js      правила границы слоёв (§3)
 docs/superpowers      specs/ (основная спека · спека-дополнение среза 1e) · plans/ (план 1, план 2, план 2.1 «решения владельца»,
                       план 3 (срез 1e) исполнены)
+docs/guides           effector-fsd.md — рекомендация потребителям: где держать модели katran в FSD-приложении
 .github/workflows     ci.yml (pnpm check) · pages.yml (демо → https://ivanklimenko.github.io/katran/)
 ```
 
