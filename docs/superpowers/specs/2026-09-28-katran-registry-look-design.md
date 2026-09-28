@@ -71,7 +71,7 @@ export type SwiftFieldProps = {
 
 ## 4. Статусная точка, лейн, строка фильтров, подвал, скелетон
 
-**Статусная точка (T5).** В записи — 16 px (`dot-m` 14 → 16), глиф 700 `fs-3`; `StatusDot` умеет `letter`. Словарь глифов — у приложения, один для записи и лейна:
+**Статусная точка (T5).** В записи — 16 px: новый токен `dot-l` 16 и `StatusDot size="l"` (`dot-m` 14 остаётся для лейна), глиф 700 `fs-3`; `StatusDot` умеет `letter`. Словарь глифов — у приложения, один для записи и лейна:
 
 | Статусы | Глиф |
 |---|---|
@@ -94,14 +94,14 @@ export type SwiftFieldProps = {
 ## 5. Совместимость
 
 - React 17–19, Chromium 88, `check:target`; токены — через `tokens.src.ts` + `pnpm gen`.
-- Изменения вида по умолчанию (счёт 8…4, `dot-m`, `grid-pad`, лейн, строка фильтров, подвал) — CHANGELOG «Изменено»; API — только добавления (`SwiftField`, `conditionParts`, тоны `Tag` и `CopyValue`, `CopyValue.size`, `LaneItem.glyph`, токен `grid-gap`).
+- Изменения вида по умолчанию (счёт 8…4, `grid-pad`, лейн, строка фильтров, подвал) — CHANGELOG «Изменено»; API — только добавления (`SwiftField`, `conditionParts`, тоны `Tag` и `CopyValue`, `CopyValue.size`, `StatusDot size="l"`, `LaneItem.glyph`, токены `grid-gap`, `dot-l`).
 
 ## 6. Проверки
 
 - `CopyValue` (`size="s"`, `muted`), `Tag` (тоны), `SwiftField` (опция, обрезка и тултип, подпись, «—», копирование, axe).
 - `shortAccount` / `AccountValue` — 8…4 по умолчанию.
 - Шапка — прописные и разрядка (вычисленные стили), наведение на всю ячейку.
-- `StatusDot` 16 с глифом; контраст глифа на всех тонах — тест токенов. `StatusLane` — глиф, подчёркивание активной, `aria-pressed`, клавиатура, axe.
+- `StatusDot size="l"` 16 с глифом; контраст глифа на всех тонах — тест токенов. `StatusLane` — глиф, подчёркивание активной, `aria-pressed`, клавиатура, axe.
 - `conditionParts` по всем операторам и типам (`BETWEEN`, `IN`, `IS_EMPTY`, даты); `FilterPanel` — полоса, бейдж, чип из частей, «Сбросить» чипом, axe.
 - `Pagination` — многоточие (1 … 4 5 6 … 20; до 7 страниц — без многоточия), ‹ › с именами, выбор размера, axe.
 - `GridSkeleton` — номера, плашка вправо.
@@ -121,7 +121,7 @@ export type SwiftFieldProps = {
 
 | # | Задача |
 |---|---|
-| 1 | Токены (`grid-pad` 8, `grid-gap` 3, `dot-m` 16); вертикаль записи; `CopyValue` `size`/`muted`; тоны `Tag`; шапка (T3, T6) |
+| 1 | Токены (`grid-pad` 8, `grid-gap` 3, `dot-l` 16); вертикаль записи; `CopyValue` `size`/`muted`; тоны `Tag`; шапка (T3, T6) |
 | 2 | `SwiftField`; `shortAccount` 8…4 |
 | 3 | Демо: колонки и ячейки по эталону, ширины, данные, `ink` |
 | 4 | `StatusDot` с глифом, словарь глифов демо; `StatusLane` в виде эталона |
