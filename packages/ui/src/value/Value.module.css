@@ -54,6 +54,15 @@
   color: var(--k-ink2);
 }
 
+.small {
+  font-size: var(--k-fs-2);
+  line-height: var(--k-lh-2);
+}
+
+.muted {
+  color: var(--k-muted);
+}
+
 .mono {
   color: var(--k-val);
   font-family: var(--k-mono);
@@ -143,7 +152,7 @@
   padding: 0 var(--k-sp-1);
   border: 1px solid var(--k-line);
   border-radius: var(--k-r-s);
-  font: 500 var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  font: 500 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
   color: var(--k-ink2);
   white-space: nowrap;
 }
@@ -152,6 +161,27 @@
   color: var(--k-opt);
   border-color: var(--k-opt-soft);
   background: var(--k-opt-soft);
+}
+
+.tag[data-tone="mt"] {
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-ink2);
+  border-color: var(--k-line);
+  background: var(--k-paper);
+}
+
+/* warn/ok текстом ink2 (не warn/ok): на -soft подложке warn/ok дают 4.26/4.17 — ниже порога
+   читаемого текста 4.5 (правило контраста в contrast.rules.ts); ink2 на тех же подложках — 8.87/8.73 */
+.tag[data-tone="warn"] {
+  color: var(--k-ink2);
+  border-color: var(--k-warn-soft);
+  background: var(--k-warn-soft);
+}
+
+.tag[data-tone="ok"] {
+  color: var(--k-ink2);
+  border-color: var(--k-ok-soft);
+  background: var(--k-ok-soft);
 }
 
 .counter {

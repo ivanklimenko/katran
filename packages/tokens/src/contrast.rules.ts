@@ -12,6 +12,10 @@ const others = ['sunk', 'ground', 'hover', 'chip', 'val-soft']
 export const rules: ContrastRule[] = [
   { fg: 'ink', bg: surfaces, min: 4.5, note: 'основной текст' },
   { fg: 'ink2', bg: surfaces, min: 4.5, note: 'названия полей' },
+  /* Тег роли (Провайдеры) на warn-soft/ok-soft: текст должен быть читаемым (не кратковременной
+   * подсветкой), порог 4.5. warn/warn-soft и ok/ok-soft дают только 4.26/4.17 (см. заметку выше) —
+   * поэтому текст тега тоном ink2, который проходит 4.5 на обеих подложках (замер 8.87/8.73). */
+  { fg: 'ink2', bg: ['warn-soft', 'ok-soft'], min: 4.5, note: 'тег роли на подсветке' },
   { fg: 'muted', bg: ['paper'], min: 4.5, note: 'подписи на бумаге' },
   { fg: 'muted', bg: others, min: 4.0, note: 'подписи на подложках — крупный текст' },
   { fg: 'val', bg: ['paper', 'val-soft'], min: 4.5, note: 'значения, в том числе на подсветке' },

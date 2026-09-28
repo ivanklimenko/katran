@@ -8,6 +8,7 @@ import { Counter } from './Counter'
 import { FieldTag } from './FieldTag'
 import { LinkValue } from './LinkValue'
 import { StatusDot, type StatusTone } from './StatusDot'
+import { Tag } from './Tag'
 
 const clip = () => { const writeText = vi.fn().mockResolvedValue(undefined); Object.assign(navigator, { clipboard: { writeText } }); return writeText }
 
@@ -39,6 +40,21 @@ describe('CopyValue', () => {
     await act(async () => { release() })
     expect(err).not.toHaveBeenCalled()
     err.mockRestore()
+  })
+  it('size="s" и tone="muted" — классы второго кегля и приглушённого тона', () => {
+    renderK(<CopyValue value="x" size="s" tone="muted" />)
+    const btn = screen.getByRole('button', { name: /x/ })
+    expect(btn.className).toMatch(/small/)
+    expect(btn.className).toMatch(/muted/)
+  })
+})
+
+describe('Tag', () => {
+  it('тоны mt/warn/ok — data-tone', () => {
+    renderK(<><Tag tone="mt">MT103</Tag><Tag tone="warn">ЕРС</Tag><Tag tone="ok">VTO</Tag></>)
+    expect(screen.getByText('MT103')).toHaveAttribute('data-tone', 'mt')
+    expect(screen.getByText('ЕРС')).toHaveAttribute('data-tone', 'warn')
+    expect(screen.getByText('VTO')).toHaveAttribute('data-tone', 'ok')
   })
 })
 

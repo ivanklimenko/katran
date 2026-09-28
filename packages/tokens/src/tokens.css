@@ -79,6 +79,7 @@
   --k-tip-max: calc(360px * var(--k-density));
   --k-dot-s: calc(7px * var(--k-density));
   --k-dot-m: calc(14px * var(--k-density));
+  --k-dot-l: calc(16px * var(--k-density));
   --k-counter: calc(18px * var(--k-density));
   --k-menu-min: calc(180px * var(--k-density));
   --k-progress: calc(3px * var(--k-density));
@@ -89,7 +90,8 @@
   --k-grid-rz: calc(7px * var(--k-density));
   --k-menu-max-h: calc(320px * var(--k-density));
   --k-filter-field: calc(220px * var(--k-density));
-  --k-grid-pad: calc(6px * var(--k-density));
+  --k-grid-pad: calc(8px * var(--k-density));
+  --k-grid-gap: calc(3px * var(--k-density));
   --k-hatch: calc(10px * var(--k-density));
 }
 [data-theme="dark"] {

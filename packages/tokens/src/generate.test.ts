@@ -30,6 +30,12 @@ describe('renderCss', () => {
     expect(css).toMatch(/:root,\s*\[data-theme="light"\]\s*{[^}]*--k-shadow: 0 1px 2px rgba\(20,26,41,\.06\)/)
   })
 
+  it('вертикаль записи грида и статусная точка «l»: grid-pad 8, grid-gap, dot-l', () => {
+    expect(css).toMatch(/--k-grid-pad: calc\(8px \* var\(--k-density\)\)/)
+    expect(css).toContain('--k-grid-gap:')
+    expect(css).toContain('--k-dot-l:')
+  })
+
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {
       expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)

@@ -51,6 +51,8 @@
   background: var(--k-paper);
   border-bottom: 1px solid var(--k-line);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .thBtn {
@@ -66,7 +68,10 @@
   border-radius: var(--k-r-s);
 }
 
-.thBtn:hover {
+/* наведение подсвечивает всю ячейку шапки, а не только кнопку внутри её паддинга — правило на .th
+   с сортируемой колонкой (атрибут aria-sort есть только когда у колонки есть ключи сортировки),
+   не на чужой класс кнопки */
+.th[aria-sort]:hover {
   background: var(--k-hover);
 }
 
@@ -86,6 +91,8 @@
   font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
   color: var(--k-muted);
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Подзаголовок отсортированной колонки (выбранный ключ) — цвета значения, как заголовок. */
@@ -220,8 +227,11 @@
 }
 
 /* --- запись --- */
+
+/* padding-top var(--k-grid-gap) — отступ между строкой колонок и сквозной строкой (Г2);
+   у первой строки записи он переопределён ниже на var(--k-grid-pad) */
 .record > tr > td {
-  padding: var(--k-sp-1) var(--k-sp-2) 0;
+  padding: var(--k-grid-gap) var(--k-sp-2) 0;
   vertical-align: top;
   overflow: hidden;
   white-space: nowrap;
@@ -255,9 +265,20 @@
   overflow: hidden;
 }
 
+/* сквозные строки записи — второй кегль (Г2 спеки 5b §2) */
+.record > tr:not(:first-child) .clamp {
+  font-size: var(--k-fs-2);
+  line-height: var(--k-lh-2);
+}
+
 /* скелетон текстовой ячейки резервирует ту же высоту, что и текст записи, а не высоту плашки */
 .clampSkeleton {
   min-height: calc(var(--k-lh-1) * var(--k-lines, 1));
+}
+
+/* сквозные строки скелетона — та же высота, что у сквозных строк записи (второй кегль выше) */
+.record > tr:not(:first-child) .clampSkeleton {
+  min-height: calc(var(--k-lh-2) * var(--k-lines, 1));
 }
 
 .cell[data-align='right'] {
