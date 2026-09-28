@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { sizes } from '@katran/tokens'
 import { IconButton } from '../button'
-import { formatDate } from '../format'
+import { formatDateTimeMinutes } from '../format'
 import { Checkbox } from '../input'
 import { Pagination } from '../pagination'
 import { EmptyState, ErrorState, ProgressBar, useLoadingGate } from '../state'
@@ -68,9 +68,6 @@ const Cols = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" st
 const Open = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" /><path d="M6 8h4M8 6v4" /></svg>
 const Lock = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3.5" y="7" width="9" height="6" rx="1" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
 
-/** «дд.мм.гггг чч:мм» из ISO без секунд (спека 5a §6, тултип блокировки). */
-const formatSinceShort = (iso: string) => `${formatDate(iso)} ${iso.slice(11, 16)}`
-
 export function DataGrid<Row>(p: DataGridProps<Row>) {
   const { layout, rows, page, pageSize, selection, state } = p
   const propsSplit = p.split
@@ -80,11 +77,15 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
   const visibleIds = useMemo(() => visible.map((c) => c.id), [visible])
   const tallIds = useMemo(() => new Set(visible.filter((c) => c.fullHeight).map((c) => c.id)), [visible])
   const spanRows = useMemo<SpanCell<Row>[][]>(
-    () => (layout.spans ?? []).map((line) => {
-      // типы сегментов инвариантны по строке; функции нужен только id/from/to
-      const resolved = resolveSpans(line as unknown as SpanDef<unknown>[], visibleIds, fullOrder, tallIds)
-      return resolved.map((r) => ({ def: line.find((d) => d.id === r.id)!, colStart: r.colStart, colSpan: r.colSpan }))
-    }),
+    () => (layout.spans ?? [])
+      .map((line) => {
+        // типы сегментов инвариантны по строке; функции нужен только id/from/to
+        const resolved = resolveSpans(line as unknown as SpanDef<unknown>[], visibleIds, fullOrder, tallIds)
+        return resolved.map((r) => ({ def: line.find((d) => d.id === r.id)!, colStart: r.colStart, colSpan: r.colSpan }))
+      })
+      // строка без сегментов (колонки скрыты или все под ней высокие) — одни aria-hidden заглушки:
+      // для AT это row без ячеек, для стрелок — тупик; её нет, и perRecord/aria-rowindex/скелетон считаются без неё
+      .filter((segs) => segs.length > 0),
     [layout.spans, visibleIds, fullOrder, tallIds],
   )
   const perRecord = 1 + spanRows.length
@@ -160,19 +161,21 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             const localIndex = 2 + i * perRecord
             const rowIndex = 2 + (ord - 1) * perRecord   // абсолютный: 2 + ((page − 1) × pageSize + i) × perRecord
             const st = stateOf(row)
-            const openLabel = st?.kind === 'locked' ? `Заблокирована: ${st.who}, с ${formatSinceShort(st.since)} · открыть только для просмотра` : `Открыть запись ${ord}`
+            // неактивная не показывается выбранной даже в режиме «все» или при своём id в списке (спека 5a §6)
+            const sel = selection ? isSelected(selection, id) && st?.kind !== 'inactive' : undefined
+            const openLabel = st?.kind === 'locked' ? `Заблокирована: ${st.who}, с ${formatDateTimeMinutes(st.since)} · открыть только для просмотра` : `Открыть запись ${ord}`
             const openTip = st?.kind === 'locked' ? openLabel : st?.kind === 'inactive' ? `${st.why} · открыть` : p.openHint
             const lead = (
               <>
                 {selection && p.onSelect && (
-                  <Checkbox tabIndex={-1} aria-label={`Выбрать запись ${ord}`} checked={isSelected(selection, id)}
+                  <Checkbox tabIndex={-1} aria-label={st?.kind === 'inactive' ? `Выбрать запись ${ord} — ${st.why}` : `Выбрать запись ${ord}`} checked={sel}
                     disabled={st?.kind === 'inactive'} data-k-tip={st?.kind === 'inactive' ? `${st.why} · выбрать нельзя` : undefined}
                     onChange={(e) => p.onSelect!({ id, on: e.target.checked })} />
                 )}
                 {p.onOpen && (
                   <IconButton tabIndex={-1} size="s" className={st?.kind === 'locked' ? s.openLocked : undefined} label={openLabel} data-k-tip={openTip}
                     onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 || e.shiftKey, state: st })}>
-                    {st?.kind === 'locked' ? <><Lock /><Open /></> : <Open />}
+                    {st?.kind === 'locked' ? <Lock /> : <Open />}
                   </IconButton>
                 )}
                 <span className={s.ord}>{ord}</span>
@@ -180,7 +183,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             )
             return (
               <GridRecord key={id} row={row} rowKey={id} visible={visible} spanRows={spanRows} lead={lead}
-                selected={selection ? isSelected(selection, id) : undefined} rowIndex={rowIndex} cellProps={cp(localIndex)} state={st} />
+                selected={sel} rowIndex={rowIndex} cellProps={cp(localIndex)} state={st} />
             )
           })}
 

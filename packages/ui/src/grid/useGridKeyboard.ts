@@ -32,6 +32,12 @@ function pickCell(row: Element, c: number): HTMLElement | undefined {
   return best ?? cells[0]
 }
 
+/** Первая строка от индекса from в направлении step, где есть ячейки: строки из одних заглушек (aria-hidden) пропускаются. */
+function rowWithCells(rows: HTMLTableRowElement[], from: number, step: 1 | -1): HTMLTableRowElement | undefined {
+  for (let i = from; i >= 0 && i < rows.length; i += step) if (cellsOf(rows[i]!).length > 0) return rows[i]
+  return undefined
+}
+
 /** Ячейка колонки c в строке row; если колонку занимает высокая ячейка из строки выше той же записи — она. */
 function cellAt(row: HTMLTableRowElement, c: number): HTMLElement | undefined {
   const exact = cellsOf(row).find((el) => parse(el.dataset.cell!)[1] === c)
@@ -92,11 +98,15 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
       case 'Home': target = cells[0]; break
       case 'End': target = cells[cells.length - 1]; break
       case 'ArrowDown': {
-        const next = rows[ri + Math.max(1, (cell as HTMLTableCellElement).rowSpan)]
+        const next = rowWithCells(rows, ri + Math.max(1, (cell as HTMLTableCellElement).rowSpan), 1)
         target = next ? cellAt(next, c) : undefined
         break
       }
-      case 'ArrowUp': target = rows[ri - 1] ? cellAt(rows[ri - 1]!, c) : undefined; break
+      case 'ArrowUp': {
+        const prev = rowWithCells(rows, ri - 1, -1)
+        target = prev ? cellAt(prev, c) : undefined
+        break
+      }
       case 'Enter': {
         const items = Array.from(cell.querySelectorAll<HTMLElement>(INTERACTIVE))
         if (items.length === 0) return

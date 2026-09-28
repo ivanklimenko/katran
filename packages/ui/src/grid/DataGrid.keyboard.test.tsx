@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { CopyValue } from '../value'
 import { DataGrid, type DataGridProps } from './DataGrid'
+import { useGridKeyboard } from './useGridKeyboard'
 import type { RecordLayout } from './types'
 
 type Doc = { id: string; num: string; name: string; purpose: string }
@@ -38,6 +40,44 @@ const tallProps = (over: Partial<DataGridProps<Tall>> = {}): DataGridProps<Tall>
   widths: {}, onResize: vi.fn(), order: ['a', 't'], hidden: [], onColumns: vi.fn(), state: 'ready', onOpen: vi.fn(), ...over,
 })
 const renderGrid = () => renderK(<DataGrid {...tallProps()} />)
+
+// Сквозная строка без сегментов: единственный сегмент 'a'..'a', колонка 'a' скрыта, 't' — на всю высоту.
+// Строка из одних заглушек (aria-hidden) не должна рендериться: в ней нет ячеек для стрелок и для AT.
+type Gap = { id: string; a: string; b: string; t: string }
+const gapDocs: Gap[] = [{ id: 'r1', a: 'A1', b: 'B1', t: 'T1' }, { id: 'r2', a: 'A2', b: 'B2', t: 'T2' }]
+const gapLayout: RecordLayout<Gap> = {
+  rowKey: (d) => d.id,
+  columns: [
+    { id: 'a', title: 'A', render: (d) => d.a },
+    { id: 'b', title: 'B', render: (d) => d.b },
+    { id: 't', title: 'T', fullHeight: true, render: (d) => d.t },
+  ],
+  spans: [[{ id: 's', from: 'a', to: 'a', render: () => 'S' }]],
+}
+const gapProps = (): DataGridProps<Gap> => ({
+  label: 'Тест пустой сквозной строки', layout: gapLayout, rows: gapDocs, total: 2, page: 1, pageSize: 20, onPage: vi.fn(), sort: [], onSort: vi.fn(),
+  widths: {}, onResize: vi.fn(), order: ['a', 'b', 't'], hidden: ['a'], onColumns: vi.fn(), state: 'ready', onOpen: vi.fn(),
+})
+const cellWithText = (recordId: string, text: string): HTMLElement => {
+  const body = document.querySelector(`tbody[data-key="${recordId}"]`)!
+  const found = Array.from(body.querySelectorAll<HTMLElement>('[data-cell]')).find((el) => el.textContent === text)
+  if (!found) throw new Error(`ячейка не найдена: ${recordId}/${text}`)
+  return found
+}
+
+/** Таблица с «пустой» строкой посередине (одни aria-hidden заглушки) — проверка обхода таких строк стрелками. */
+function HoleTable() {
+  const kb = useGridKeyboard({ resetToken: 'x', fallback: '1:0' })
+  return (
+    <table role="grid" aria-label="Дыра">
+      <tbody>
+        <tr role="row"><td role="gridcell" {...kb.cellProps(1, 0, 0)}>первая</td></tr>
+        <tr role="row"><td aria-hidden="true" /></tr>
+        <tr role="row"><td role="gridcell" {...kb.cellProps(3, 0, 0)}>третья</td></tr>
+      </tbody>
+    </table>
+  )
+}
 const cellOfTall = (recordId: string, col: 'a' | 't'): HTMLElement => {
   const idx = tallLayout.columns.findIndex((c) => c.id === col) + 1   // +1 — служебная колонка 0
   const body = document.querySelector(`tbody[data-key="${recordId}"]`)!
@@ -182,5 +222,32 @@ describe('DataGrid: клавиатура', () => {
     expect(cellOf(document.activeElement)).toBe('4:1')
     rerender(<DataGrid {...p} page={2} />)
     expect(document.querySelector('[data-cell][tabindex="0"]')?.getAttribute('data-cell')).toBe('2:0')
+  })
+
+  it('сквозная строка без сегментов (колонка скрыта, остальные высокие) не рендерится: ↓/↑ ходят между записями', async () => {
+    renderK(<DataGrid {...gapProps()} />)
+    expect(document.querySelector('tbody[data-key="r1"]')!.querySelectorAll('tr')).toHaveLength(1)
+    expect(screen.getByRole('grid')).toHaveAttribute('aria-rowcount', '3')
+    const b1 = cellWithText('r1', 'B1')
+    b1.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(cellWithText('r2', 'B2'))
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(b1)
+  })
+
+  it('сквозная строка без сегментов: без нарушений axe', async () => {
+    const { container } = renderK(<DataGrid {...gapProps()} />)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('↓/↑ пропускают строки без ячеек (одни заглушки)', async () => {
+    renderK(<HoleTable />)
+    const first = screen.getByText('первая')
+    first.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(screen.getByText('третья'))
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(first)
   })
 })

@@ -26,3 +26,8 @@ export function formatDateTimeFull(iso: string): string {
   const d = parse(iso); if (!d) return ''
   return `${formatDate(iso)} ${time(d)}`
 }
+/** «дд.мм.гггг чч:мм» — дата и время из одного момента в локальной зоне (тултип блокировки записи, спека 5a §6). */
+export function formatDateTimeMinutes(iso: string): string {
+  const d = parse(iso); if (!d) return ''
+  return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`
+}

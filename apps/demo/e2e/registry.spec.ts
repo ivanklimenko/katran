@@ -27,9 +27,11 @@ test('многоуровневая сортировка: Shift+клик по в�
   await page.getByRole('columnheader', { name: /Тип/ }).getByRole('button').first().click()
   await page.getByRole('columnheader', { name: /^52/ }).getByRole('button').first().click({ modifiers: ['Shift'] })
   const chips = page.getByRole('group', { name: 'Сортировка' })
-  await expect(chips).toContainText('1')
   await expect(chips).toContainText('Тип сообщения ↑')
   await expect(chips).toContainText('BIC 52 ↑')
+  // порядок уровней: «1 Тип сообщения … › 2 BIC 52 …»
+  await expect(chips).toHaveText(/1\s*Тип сообщения ↑.*›\s*2\s*BIC 52 ↑/)
+  await expect(chips.getByRole('button', { name: 'Уровень 2: BIC 52, по возрастанию — сменить направление' })).toBeVisible()
 })
 
 test('B1: заблокированная запись — кнопка открытия с подсказкой и приглушённым значением; неактивная — чекбокс отключён', async ({ page }) => {
@@ -42,16 +44,16 @@ test('B1: заблокированная запись — кнопка откр�
   await inactive.waitFor()
   await expect(inactive.getByRole('checkbox')).toBeDisabled()
   // значение внутри заблокированной записи приглушено переопределением --k-val на записи (STATE §8): проверяем computed color, а не класс
-  const { valueColor, faintColor } = await page.evaluate(() => {
+  const { valueColor, mutedColor } = await page.evaluate(() => {
     const el = document.querySelector('tbody[data-state="locked"] [class*="copy"]') as HTMLElement
     const probe = document.createElement('div')
-    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-faint')
+    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-muted')
     document.body.appendChild(probe)
-    const faintColor = getComputedStyle(probe).color
+    const mutedColor = getComputedStyle(probe).color
     document.body.removeChild(probe)
-    return { valueColor: getComputedStyle(el).color, faintColor }
+    return { valueColor: getComputedStyle(el).color, mutedColor }
   })
-  expect(valueColor).toBe(faintColor)
+  expect(valueColor).toBe(mutedColor)
 })
 
 test('сброс ширины: двойной клик по ручке ресайза возвращает исходную ширину заголовка', async ({ page }) => {

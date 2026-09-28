@@ -108,7 +108,13 @@ describe('DataGrid', () => {
     const lock = screen.getByRole('button', { name: 'Заблокирована: Иванова М. П., с 23.09.2026 09:13 · открыть только для просмотра' })
     await userEvent.click(lock)
     expect(onOpen).toHaveBeenCalledWith(rows[0], { secondary: false, state: rowState(rows[0]!) })
-    expect(screen.getByRole('checkbox', { name: 'Выбрать запись 2' })).toBeDisabled()
+    // причина неактивности — и в доступном имени (скринридер), и в тултипе
+    const inactiveBox = screen.getByRole('checkbox', { name: 'Выбрать запись 2 — Документ в архиве' })
+    expect(inactiveBox).toBeDisabled()
+    expect(inactiveBox).toHaveAttribute('data-k-tip', 'Документ в архиве · выбрать нельзя')
+    // у заблокированной — только замок, без второй иконки открытия
+    expect(lock.querySelectorAll('svg')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Открыть запись 3' }).querySelectorAll('svg')).toHaveLength(1)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Выбрать все на странице' }))
     expect(onSelectPage).toHaveBeenCalledWith({ ids: ['a', 'c'], on: true })
     expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-state', 'locked')
@@ -273,5 +279,32 @@ describe('DataGrid', () => {
     expect(names[amountIdx + 1]).toContain('Валюта')
     rerender(<DataGrid {...base({ split: [] })} />)
     expect(screen.queryByRole('columnheader', { name: /Валюта/ })).toBeNull()
+  })
+
+  it('неактивная запись не показывается выбранной: ни в режиме «все», ни в списке id', () => {
+    const rows = [{ id: 'a' }, { id: 'b' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState => (r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null)
+    const check = () => {
+      const box = screen.getByRole('checkbox', { name: 'Выбрать запись 2 — Документ в архиве' }) as HTMLInputElement
+      expect(box.checked).toBe(false)
+      expect(box).toBeDisabled()
+      const body = document.querySelector('tbody[data-key="b"]')!
+      body.querySelectorAll('tr').forEach((tr) => expect(tr).not.toHaveAttribute('aria-selected', 'true'))
+      expect(body.className).not.toMatch(/selected/)
+      // доступная запись при этом выбрана
+      expect((screen.getByRole('checkbox', { name: 'Выбрать запись 1' }) as HTMLInputElement).checked).toBe(true)
+      expect(document.querySelector('tbody[data-key="a"] tr')).toHaveAttribute('aria-selected', 'true')
+    }
+    const { rerender } = renderK(<DataGrid {...base({ rows, total: 2, selection: { mode: 'all', except: [] }, onSelect: () => {}, rowState })} />)
+    check()
+    rerender(<DataGrid {...base({ rows, total: 2, selection: { mode: 'ids', ids: ['a', 'b'] }, onSelect: () => {}, rowState })} />)
+    check()
+  })
+
+  it('скрытый хост в режиме «раздельно» — его части тоже нет', () => {
+    renderK(<DataGrid {...base({ split: ['amount'], hidden: ['amount'] })} />)
+    expect(screen.queryByRole('columnheader', { name: /32/ })).toBeNull()
+    expect(screen.queryByRole('columnheader', { name: /Валюта/ })).toBeNull()
+    expect(screen.getByRole('grid')).toHaveAttribute('aria-colcount', '3')
   })
 })
