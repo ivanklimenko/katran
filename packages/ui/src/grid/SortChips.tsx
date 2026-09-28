@@ -18,7 +18,7 @@ export function SortChips<Row>({ sort, columns, onSort }: SortChipsProps<Row>) {
             {i > 0 && <span className={s.sortSep} aria-hidden="true">›</span>}
             <span className={s.sortChip}>
               <span className={s.sortOrd} aria-hidden="true">{i + 1}</span>
-              <button type="button" className={s.sortChipBtn} aria-label={`${label}, ${dirText} — сменить направление`} onClick={() => onSort(flipSortLevel(sort, l.key))}>
+              <button type="button" className={s.sortChipBtn} aria-label={`Уровень ${i + 1}: ${label}, ${dirText} — сменить направление`} onClick={() => onSort(flipSortLevel(sort, l.key))}>
                 {label} {l.dir === 'asc' ? '↑' : '↓'}
               </button>
               <button type="button" className={s.sortChipX} aria-label={`Убрать уровень ${label}`} onClick={() => onSort(removeSortLevel(sort, l.key))}>✕</button>

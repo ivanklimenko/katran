@@ -127,7 +127,16 @@ describe('ColumnHeader', () => {
     renderK(<table><thead><tr><ColumnHeader column={col} sort={[{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }]} onSort={onSort} width={100} /></tr></thead></table>)
     await userEvent.click(screen.getByRole('button', { name: /32/ }))
     expect(screen.getByText('клик — единственный ключ · «+» или Shift+клик — добавить уровнем')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Валюта — добавить уровнем' }))
+    // видимый текст пунктов — «+» и «↕» (спека 5a §3), длинная фраза — доступное имя
+    const add = screen.getByRole('menuitem', { name: 'Валюта — добавить уровнем' })
+    expect(add).toHaveTextContent(/^\+$/)
+    expect(screen.getByRole('menuitem', { name: 'Сумма — сменить направление уровня' })).toHaveTextContent(/^↕$/)
+    // «сделать единственным» у выбранного ключа — стрелка направления и номер уровня
+    const sole = screen.getByRole('menuitemcheckbox', { name: /Сумма/ })
+    expect(sole).toHaveAttribute('aria-checked', 'true')
+    expect(within(sole).getByText('↓2')).toBeInTheDocument()
+    expect(within(screen.getByRole('menuitemcheckbox', { name: /Валюта/ })).queryByText(/[↑↓]/)).toBeNull()
+    await userEvent.click(add)
     expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }, { key: 'currency', dir: 'asc' }])
   })
   it('«Сбросить сортировку» при нескольких колонках в sort убирает только уровни этой колонки', async () => {
@@ -148,5 +157,19 @@ describe('ColumnHeader', () => {
     await user.click(within(screen.getByRole('menu')).getByRole('menuitemcheckbox', { name: '20 вх' }))
     await user.keyboard('{/Shift}')
     expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'refIn', dir: 'asc' }])
+  })
+  it('без обработчиков сброса — нет aria-keyshortcuts, Home не перехватывается', () => {
+    renderK(<Table><ColumnHeader column={plain} sort={[]} onSort={() => {}} width={80} onResize={() => {}} /></Table>)
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
+    expect(h).not.toHaveAttribute('aria-keyshortcuts')
+    expect(fireEvent.keyDown(h, { key: 'Home' })).toBe(true)                 // true — preventDefault не вызван
+    expect(fireEvent.keyDown(h, { key: 'Home', shiftKey: true })).toBe(true)
+  })
+  it('только сброс этой колонки — aria-keyshortcuts «Home», Shift+Home не перехватывается', () => {
+    renderK(<Table><ColumnHeader column={plain} sort={[]} onSort={() => {}} width={80} onResize={() => {}} onResetWidth={() => {}} /></Table>)
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
+    expect(h).toHaveAttribute('aria-keyshortcuts', 'Home')
+    expect(fireEvent.keyDown(h, { key: 'Home' })).toBe(false)
+    expect(fireEvent.keyDown(h, { key: 'Home', shiftKey: true })).toBe(true)
   })
 })

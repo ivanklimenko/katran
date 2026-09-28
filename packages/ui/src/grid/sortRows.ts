@@ -7,6 +7,7 @@ export const defaultDir = (key: SortKey): 'asc' | 'desc' => (key.type === 'numbe
 export function findSortKey<Row>(columns: ColumnDef<Row>[], keyId: string): SortKey | undefined {
   for (const c of columns) {
     for (const k of c.sort ?? []) if (k.id === keyId) return k
+    for (const k of c.split?.sort ?? []) if (k.id === keyId) return k
     for (const p of c.split?.parts ?? []) for (const k of p.sort ?? []) if (k.id === keyId) return k
   }
   return undefined

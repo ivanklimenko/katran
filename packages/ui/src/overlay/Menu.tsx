@@ -4,7 +4,10 @@ import s from './Overlay.module.css'
 
 export type MenuItem = {
   id: string
+  /** Видимый текст пункта. */
   label: string
+  /** Доступное имя, когда видимый текст — знак («+», «↕»): рендерится как aria-label. */
+  ariaLabel?: string | undefined
   /** shiftKey — из клика/нажатия клавиши, которым выбран пункт. */
   onSelect?: ((e?: { shiftKey: boolean }) => void) | undefined
   checked?: boolean | undefined
@@ -64,6 +67,7 @@ export function Menu({ open, anchor, onClose, items, title }: MenuProps) {
               type="button"
               role={it.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
               aria-checked={it.checked === undefined ? undefined : it.checked}
+              aria-label={it.ariaLabel}
               aria-disabled={it.disabled || undefined}
               disabled={it.disabled}
               tabIndex={i === active ? 0 : -1}

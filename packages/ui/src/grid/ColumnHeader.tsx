@@ -56,8 +56,8 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
           }
           const inSort = sort.some((l) => l.key === k.id)
           const extra: MenuItem = inSort
-            ? { id: `${k.id}__dir`, label: `${k.label} — сменить направление уровня`, onSelect: () => onSort(flipSortLevel(sort, k.id)) }
-            : { id: `${k.id}__add`, label: `${k.label} — добавить уровнем`, onSelect: () => onSort(addSortLevel(sort, k)) }
+            ? { id: `${k.id}__dir`, label: '↕', ariaLabel: `${k.label} — сменить направление уровня`, onSelect: () => onSort(flipSortLevel(sort, k.id)) }
+            : { id: `${k.id}__add`, label: '+', ariaLabel: `${k.label} — добавить уровнем`, onSelect: () => onSort(addSortLevel(sort, k)) }
           return [sole, extra]
         }),
         ...(active
@@ -93,9 +93,9 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
   }
   const onHandleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'Home') {
-      e.preventDefault()
-      if (e.shiftKey) onResetWidths?.()
-      else onResetWidth?.()
+      // без обработчика сброса Home не перехватывается
+      const reset = e.shiftKey ? onResetWidths : onResetWidth
+      if (reset) { e.preventDefault(); reset() }
       return
     }
     if (!onResize) return
@@ -104,6 +104,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
     else if (e.key === 'ArrowLeft') { e.preventDefault(); onResize(clamp(width - step)) }
   }
 
+  const shortcuts = [onResetWidth ? 'Home' : '', onResetWidths ? 'Shift+Home' : ''].filter(Boolean).join(' ') || undefined
   const arrow = active ? (level!.dir === 'asc' ? '↑' : '↓') : '↕'
   const n = level ? sort.indexOf(level) + 1 : 0
   const ariaSort = level && level === sort[0] ? (level.dir === 'asc' ? 'ascending' : 'descending') : keys.length ? 'none' : undefined
@@ -142,7 +143,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
           aria-valuetext={`${width} px`}
           aria-valuemin={min}
           aria-valuemax={9999}
-          aria-keyshortcuts="Home Shift+Home"
+          aria-keyshortcuts={shortcuts}
           className={s.rz}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}

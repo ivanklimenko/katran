@@ -25,6 +25,12 @@ describe('sortRows', () => {
     expect(findSortKey(columns, 'name')?.label).toBe('Название')
     expect(findSortKey(columns, 'nope')).toBeUndefined()
   })
+  it('findSortKey находит ключ из split.sort хоста', () => {
+    const withHostSort: ColumnDef<R>[] = [
+      { id: 'h', sort: [{ id: 'amount', label: 'Сумма', type: 'number' }], render: () => null, split: { label: 'Отдельно', render: () => null, sort: [{ id: 'amountOnly', label: 'Сумма без валюты', type: 'number' }], parts: [] } },
+    ]
+    expect(findSortKey(withHostSort, 'amountOnly')?.label).toBe('Сумма без валюты')
+  })
   it('findSortKey находит ключ в части split-колонки', () => {
     const withSplit: ColumnDef<R>[] = [
       ...columns,
