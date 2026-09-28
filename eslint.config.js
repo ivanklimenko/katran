@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**'] },
   ...tseslint.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
@@ -49,6 +49,32 @@ export default tseslint.config(
       'no-restricted-globals': ['error',
         { name: 'document', message: 'effector не работает с DOM' },
         { name: 'window', message: 'effector не работает с DOM' },
+      ],
+    },
+  },
+  // Кит работает на React 17 (хост метаприложения): API React 18+ в пакетах запрещены (спека совместимости 2.1).
+  // Замены — в packages/ui/src/compat/.
+  {
+    files: ['packages/ui/src/**/*.{ts,tsx}', 'packages/effector/src/**/*.{ts,tsx}'],
+    ignores: ['packages/ui/src/compat/**'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: "ImportDeclaration[source.value='react'] > ImportSpecifier[imported.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+        },
+        {
+          selector: "MemberExpression[object.name='React'][property.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+        },
+        {
+          selector: "ImportDeclaration[source.value='react-dom'] > ImportSpecifier[imported.name=/^(useFormStatus|createRoot|hydrateRoot)$/]",
+          message: 'API react-dom 18+ — кит работает на React 17: корень монтирует хост, useFormStatus нет',
+        },
+        {
+          selector: "ImportDeclaration[source.value='react-dom/client']",
+          message: 'react-dom/client — модуль React 18+; кит работает на React 17, корень монтирует хост',
+        },
       ],
     },
   },

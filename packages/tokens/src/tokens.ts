@@ -105,7 +105,7 @@ export const sizes = {
   'side': 200,
   'note-max': 640,
   'swatch': 150,
-  'grid-lead': 84,
+  'grid-lead': 100,
   'grid-rz': 7,
   'menu-max-h': 320,
   'filter-field': 220,

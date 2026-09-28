@@ -91,6 +91,15 @@ describe('DataGrid', () => {
     expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false })
     fireEvent.click(btn, { detail: 2 })
     expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+    fireEvent.click(btn, { detail: 1, shiftKey: true })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+  })
+
+  it('пустое состояние: заголовок, пояснение и действие', () => {
+    renderK(<DataGrid {...base({ rows: [], total: 0, emptyTitle: 'Документов нет', emptyText: 'Измените условия отбора', emptyAction: { label: 'Сбросить фильтр', onClick: () => {} } })} />)
+    expect(screen.getByText('Документов нет')).toBeInTheDocument()
+    expect(screen.getByText('Измените условия отбора')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Сбросить фильтр' })).toBeInTheDocument()
   })
 
   it('состояния: loading → скелетон после порога; refreshing → прогресс и приглушение; empty; error', async () => {

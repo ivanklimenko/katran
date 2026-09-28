@@ -1,4 +1,5 @@
-import { useId, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { useStableId } from '../compat/useStableId'
 import { Button, IconButton } from '../button'
 import { Counter } from '../value'
 import { FilterField } from './FilterField'
@@ -26,7 +27,7 @@ export type FilterPanelProps = {
 
 /** Панель фильтров simple (спека 1e, 6.2): строка «Фильтры N» с чипами видна всегда, тело с полями сворачивается. */
 export function FilterPanel({ label = 'Фильтры', meta, conditions, draft, dirty, open, onOpenChange, onEdit, onDiscard, onApply, onRevert, onReset, onRemove }: FilterPanelProps) {
-  const bodyId = useId()
+  const bodyId = useStableId()
   const toggleRef = useRef<HTMLButtonElement>(null)
   // Внешняя смена черновика (Сбросить, Отменить, ✕ чипа, лейн, «Сбросить фильтр» грида) должна стереть набранное
   // в полях, даже если условия поля в черновике и не было («-» в числе). Ввод в поле помечает следующую смену

@@ -1,0 +1,35 @@
+{
+  "name": "katran-example-federation-remote",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Макет remote команды: webpack 5 + классический ModuleFederationPlugin, экран «Валютные документы» на собранном ките",
+  "scripts": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "@katran/effector": "file:../.kit/katran-effector-0.1.0.tgz",
+    "@katran/tokens": "file:../.kit/katran-tokens-0.1.0.tgz",
+    "@katran/ui": "file:../.kit/katran-ui-0.1.0.tgz",
+    "effector": "23.4.4",
+    "effector-react": "23.3.0",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-typescript": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.3",
+    "mini-css-extract-plugin": "^2.9.2",
+    "react19": "npm:react@19.2.0",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.101.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
+}

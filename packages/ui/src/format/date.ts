@@ -1,7 +1,17 @@
 const p2 = (n: number) => String(n).padStart(2, '0')
 const parse = (iso: string): Date | null => { const d = new Date(iso); return isNaN(d.getTime()) ? null : d }
 
+// Дата без времени (как у бека: дата валютирования) — строкой, без new Date(): иначе полночь UTC
+// в западных зонах показывалась бы предыдущим днём.
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+
 export function formatDate(iso: string): string {
+  const m = DATE_ONLY.exec(iso)
+  if (m) {
+    // строка проверяется сама (new Date() тут не участвует): месяц 1–12, день 1–31, иначе — пусто, как у невалидной строки
+    const month = Number(m[2]), day = Number(m[3])
+    return month >= 1 && month <= 12 && day >= 1 && day <= 31 ? `${m[3]}.${m[2]}.${m[1]}` : ''
+  }
   const d = parse(iso); if (!d) return ''
   return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}`
 }

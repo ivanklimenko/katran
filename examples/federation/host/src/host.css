@@ -1,0 +1,87 @@
+/* Глобальные стили «чужого» хоста: типичный сброс метаприложения. Кит не должен от них зависеть
+   и не должен их менять. Значения намеренно резкие, чтобы протечка была видна замером. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 62.5%;
+}
+
+body {
+  margin: 0;
+  font: 16px/1.6 Georgia, serif;
+  color: #202020;
+  background: #f3efe6;
+}
+
+h1,
+h2,
+p {
+  margin: 0 0 1em;
+}
+
+h1 {
+  font-size: 3.2rem;
+}
+
+button {
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+a {
+  color: #b00020;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+td,
+th {
+  padding: 6px 10px;
+  vertical-align: middle;
+  border: 1px solid #c8bfa8;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+input {
+  font: inherit;
+}
+
+.host-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: #3b2f2f;
+  color: #fff;
+}
+
+.host-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.host-main {
+  padding: 16px 24px;
+}
+
+.host-table {
+  margin-bottom: 16px;
+}
+
+.host-slot {
+  height: 720px;
+  border: 2px dashed #b00020;
+}

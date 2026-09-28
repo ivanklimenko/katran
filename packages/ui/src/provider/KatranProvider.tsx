@@ -42,7 +42,9 @@ export function KatranProvider(p: KatranProviderProps) {
   const [themeS, setThemeS] = useState<Theme>(() => read(p.storageKey, 'theme', isTheme) ?? p.defaultTheme ?? 'system')
   const [densityS, setDensityS] = useState<Density>(() => read(p.storageKey, 'density', isDensity) ?? p.defaultDensity ?? autoDensity())
   const live = useRef<LiveRegionHandle>(null)
-  const rootRef = useRef<HTMLDivElement>(null)
+  // `| null` в параметре: в @types/react 17 useRef<T>(null) даёт RefObject с readonly current,
+  // а корень присваивается вручную в ref-колбэке ниже.
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
 
   const setTheme = useCallback((t: Theme) => { setThemeS(t); write(p.storageKey, 'theme', t) }, [p.storageKey])

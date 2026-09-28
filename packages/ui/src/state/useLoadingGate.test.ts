@@ -1,4 +1,5 @@
-import { act, renderHook } from '@testing-library/react'
+import { act } from '@testing-library/react'
+import { renderHook } from '../test/renderHook'
 import { useLoadingGate } from './useLoadingGate'
 
 describe('useLoadingGate', () => {

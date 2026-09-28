@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react'
+import { act, fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -28,6 +28,17 @@ describe('CopyValue', () => {
     const b = screen.getByRole('button', { name: 'кор…' })
     expect(b).not.toHaveAttribute('data-k-tip-if')
     expect(b).toHaveAttribute('data-k-tip', 'полное')
+  })
+  it('копирование после размонтирования не пишет в стейт и не ругается в консоль', async () => {
+    let release!: () => void
+    Object.assign(navigator, { clipboard: { writeText: () => new Promise<void>((r) => { release = r }) } })
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { unmount } = renderK(<CopyValue value="HSTBDEHHXXX" />)
+    fireEvent.click(screen.getByRole('button', { name: 'HSTBDEHHXXX' }))
+    unmount()
+    await act(async () => { release() })
+    expect(err).not.toHaveBeenCalled()
+    err.mockRestore()
   })
 })
 
@@ -70,6 +81,11 @@ describe('StatusDot / FieldTag / Counter', () => {
     const { container } = renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
     expect(screen.getByRole('img', { name: 'Обработан' })).toBeInTheDocument()
     expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(1)
+  })
+  it('точка с подписью показывает её тултипом; без подписи — нет', () => {
+    renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
+    expect(screen.getByRole('img', { name: 'Обработан' })).toHaveAttribute('data-k-tip', 'Обработан')
+    expect(document.querySelector('[data-tone="bad"]')).not.toHaveAttribute('data-k-tip')
   })
   it('буква выводится и на светлом тоне', () => {
     renderK(<StatusDot tone="okl" letter="З" />)

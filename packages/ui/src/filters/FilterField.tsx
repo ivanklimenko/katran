@@ -1,4 +1,5 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
+import { useStableId } from '../compat/useStableId'
 import { Input, Select } from '../input'
 import { conditionFrom, draftOf, fieldOp, type RawValue } from './fieldOps'
 import type { Condition, Filter, FilterField as Field } from './types'
@@ -15,7 +16,7 @@ export type FilterFieldProps = {
 
 /** Один контрол панели simple: оператор фиксирован типом поля; пустое значение снимает условие из черновика. */
 export function FilterField({ field, draft, epoch, onEdit, onDiscard }: FilterFieldProps) {
-  const id = useId()
+  const id = useStableId()
   // Черновик хранит нормализованное условие («Иван » → «Иван», «1,» → 1, «-» → без условия, DATETIME с одной
   // границей → BETWEEN за этот день), и значение из него съело бы набираемое. Поэтому поле показывает набранное
   // (строку или пару дат), пока действует снимок: черновик не менялся мимо полей панели (epoch тот же) и условие

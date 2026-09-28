@@ -1,0 +1,46 @@
+/* Глобальные стили «чужого» хоста: типичный сброс метаприложения. Демо подключает их по ?hostile —
+   проверка, что кит от них не зависит (спека совместимости 2.3). Значения намеренно резкие. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 62.5%;
+}
+
+body {
+  margin: 0;
+  font: 16px/1.6 Georgia, serif;
+  color: #202020;
+  background: #f3efe6;
+}
+
+h1,
+h2,
+p {
+  margin: 0 0 1em;
+}
+
+button {
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+td,
+th {
+  padding: 6px 10px;
+  vertical-align: middle;
+  border: 1px solid #c8bfa8;
+}
+
+input {
+  font: inherit;
+}

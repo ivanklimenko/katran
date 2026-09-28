@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { sizes } from '@katran/tokens'
 import { IconButton } from '../button'
 import { Checkbox } from '../input'
 import { Pagination } from '../pagination'
@@ -38,8 +39,10 @@ export type DataGridProps<Row> = {
   error?: string | null | undefined
   onRetry?: (() => void) | undefined
   emptyTitle?: string | undefined
+  /** Пояснение под заголовком пустого состояния. */
+  emptyText?: string | undefined
   emptyAction?: { label: string; onClick: () => void } | undefined
-  /** Второй клик по кнопке (e.detail ≥ 2) — secondary: второй drawer рядом. */
+  /** Второй клик по кнопке (e.detail ≥ 2) или Shift+клик — secondary: второй drawer рядом. */
   onOpen?: ((row: Row, opts: { secondary: boolean }) => void) | undefined
   skeletonRows?: number | undefined
   /** Слот над пагинацией в футере — полоса массовых действий экрана. */
@@ -47,7 +50,8 @@ export type DataGridProps<Row> = {
 }
 
 const DEFAULT_WIDTH = 120
-const LEAD_WIDTH = 84
+// ширина служебной колонки — из токена grid-lead (тот же, что --k-grid-lead в CSS): JS считает по ней ширину таблицы
+const LEAD_WIDTH = sizes['grid-lead']
 
 const Cols = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="12" height="10" rx="1" /><path d="M6 3v10M10 3v10" /></svg>
 const Open = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" /><path d="M6 8h4M8 6v4" /></svg>
@@ -108,7 +112,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
         >
           <thead>
             <tr role="row" aria-rowindex={1}>
-              <th role="columnheader" scope="col" className={s.th} style={{ width: `calc(${LEAD_WIDTH}px * var(--k-density))` } as CSSProperties} {...cp(1)(0, 0)}>
+              <th role="columnheader" scope="col" className={s.th} style={{ width: 'var(--k-grid-lead)' } as CSSProperties} {...cp(1)(0, 0)}>
                 <div className={s.leadHead}>
                   {selection && p.onSelectPage && (
                     <Checkbox tabIndex={-1} aria-label="Выбрать все на странице" checked={pageSel === 'all'} indeterminate={pageSel === 'some'} disabled={ids.length === 0}
@@ -138,7 +142,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                   <Checkbox tabIndex={-1} aria-label={`Выбрать запись ${ord}`} checked={isSelected(selection, id)} onChange={(e) => p.onSelect!({ id, on: e.target.checked })} />
                 )}
                 {p.onOpen && (
-                  <IconButton tabIndex={-1} size="s" label={`Открыть запись ${ord}`} onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 })}><Open /></IconButton>
+                  <IconButton tabIndex={-1} size="s" label={`Открыть запись ${ord}`} onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 || e.shiftKey })}><Open /></IconButton>
                 )}
                 <span className={s.ord}>{ord}</span>
               </>
@@ -151,7 +155,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
 
           {empty && (
             <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
-              <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} action={p.emptyAction} />
+              <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} text={p.emptyText} action={p.emptyAction} />
             </td></tr></tbody>
           )}
           {failed && (

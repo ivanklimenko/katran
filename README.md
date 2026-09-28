@@ -14,9 +14,7 @@
 
     "@katran/ui": "workspace:*"
 
-Вне монорепозитория пакет собирается и подключается сборкой:
-
-    pnpm --filter @katran/ui build
+Вне монорепозитория пакеты подключаются собранными (`dist`, `publishConfig`): `pnpm build`
 
 ```ts
 import '@katran/tokens/fonts.css'
@@ -24,7 +22,7 @@ import '@katran/ui/styles.css'
 import { KatranProvider, Button } from '@katran/ui'
 ```
 
-Peer-зависимости: `react` ≥ 18, `react-dom` ≥ 18.
+Peer-зависимости: `react` ≥ 17, `react-dom` ≥ 17 (прод — React 17.0.2 хоста). Встраивание в метаприложение (webpack 5, Module Federation, Chromium 88) — `docs/consuming.md`, макет — `examples/federation/`.
 
 ## DataGrid
 
@@ -102,7 +100,7 @@ export function DocsPage() {
 
 Модель при создании в бек не ходит: первую загрузку запускает приложение вызовом `grid.refresh()`. Дальше запросы идут сами — при смене фильтра, сортировки, страницы и размера страницы; ответ на устаревший запрос отбрасывается. Правила связывания — спека 8.2. Рабочий экран — `apps/demo/src/pages/GridPage.tsx`.
 
-Peer-зависимости `@katran/effector`: `effector` ≥ 23, `effector-react` ≥ 23, `react` ≥ 18.
+Peer-зависимости `@katran/effector`: `effector` ≥ 23, `effector-react` ≥ 23, `react` ≥ 17.
 
 ## Экран реестра: лейн, фильтры, массовые действия
 

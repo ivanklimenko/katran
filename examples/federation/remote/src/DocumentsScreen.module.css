@@ -1,0 +1,42 @@
+/* Раскладка экрана remote: грид прокручивается внутри. Высота фиксированная: корень KatranProvider
+   не принимает className/style и имеет только min-height: 100% — height: 100% от него не резолвится.
+   Под корнем провайдера content-box: 684 + 2 × 16 паддинга = 716 из 720 слота хоста. */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 684px;
+  min-height: 0;
+  padding: var(--k-sp-4);
+}
+
+.head {
+  flex: none;
+}
+
+.h1 {
+  font: 700 var(--k-fs-h1) / 1.2 var(--k-sans);
+  margin: 0 0 var(--k-sp-2);
+}
+
+.h1Counter {
+  margin-left: var(--k-sp-2);
+  vertical-align: middle;
+}
+
+.note {
+  color: var(--k-muted);
+  margin: 0 0 var(--k-sp-2);
+}
+
+.lane {
+  margin: var(--k-sp-3) 0 var(--k-sp-2);
+}
+
+.filters {
+  margin: 0 0 var(--k-sp-3);
+}
+
+.srTag {
+  color: var(--k-faint);
+  font: 500 var(--k-fs-3) / 1 var(--k-mono);
+}

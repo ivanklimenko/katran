@@ -1,0 +1,4 @@
+# тарболы кита (scripts/pack-kit.sh) и lock-файлы npm: тарболы пересобираются, их integrity в lock-файле устаревает
+.kit/
+package-lock.json
+test-results/

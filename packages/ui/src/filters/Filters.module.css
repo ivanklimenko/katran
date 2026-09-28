@@ -56,6 +56,11 @@
   background: var(--k-paper);
 }
 
+/* Свёрнутое тело: display: grid выше перебил бы атрибут hidden — поля остались бы видны и в Tab-порядке. */
+.body[hidden] {
+  display: none;
+}
+
 .fields {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--k-filter-field), 1fr));

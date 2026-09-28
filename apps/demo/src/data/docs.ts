@@ -16,21 +16,20 @@ export type Doc = {
 
 export const STATUS_LABEL: Record<Status, string> = {
   IN_PROGRESS: 'В работе', TO_EXPORT: 'К экспорту', PROCESSING: 'В обработке', ERROR: 'Ошибка', DEFERRED: 'Отложенный',
-  EXPORTED: 'Экспортирован', INVALID: 'Невалидный', REJECTED: 'Отказ', DONE: 'Обработан',
+  EXPORTED: 'Экспортирован', INVALID: 'INVALID', REJECTED: 'Отказ', DONE: 'Обработан',
 }
 /** Тон статусной точки — 4 семейства (спека 4.2). */
 export const STATUS_TONE: Record<Status, 'flow' | 'flowl' | 'flowd' | 'bad' | 'badd' | 'warn' | 'ok' | 'okl' | 'grey'> = {
   IN_PROGRESS: 'flow', TO_EXPORT: 'flowl', PROCESSING: 'flowd', ERROR: 'bad', INVALID: 'badd', DEFERRED: 'warn',
   DONE: 'ok', EXPORTED: 'okl', REJECTED: 'grey',
 }
-export const DIRECTION_LABEL: Record<Direction, string> = { IN: 'Входящий', OUT: 'Исходящий', TRANSIT: 'Транзит', OTHER: 'Прочее' }
 const enumValues = <K extends string>(labels: Record<K, string>) => (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }))
 /** Каталог полей панели фильтров — то, что бек отдаст в GET /grids/documents/filter-meta. */
 export const docsFilterMeta: FilterMeta = { fields: [
   { id: 'docNumber', label: 'Номер документа', type: 'NUMBER', ops: [] },
   { id: 'status', label: 'Статус', type: 'ENUM', ops: [], values: enumValues(STATUS_LABEL) },
   { id: 'type', label: 'Тип сообщения', type: 'ENUM', ops: [], values: ['MT103', 'MT202', 'MT202COV', 'MT199'].map((v) => ({ value: v, label: v })) },
-  { id: 'direction', label: 'Направление', type: 'ENUM', ops: [], values: enumValues(DIRECTION_LABEL) },
+  { id: 'direction', label: 'Направление', type: 'ENUM', ops: [], values: (['IN', 'OUT', 'TRANSIT', 'OTHER'] as const).map((v) => ({ value: v, label: v })) },
   { id: 'currency', label: 'Валюта', type: 'ENUM', ops: [], values: ['USD', 'EUR', 'CNY', 'RUB'].map((v) => ({ value: v, label: v })) },
   { id: 'amount', label: 'Сумма', type: 'NUMBER', ops: [] },
   { id: 'created', label: 'Дата документа', type: 'DATE', ops: [] },
@@ -38,7 +37,8 @@ export const docsFilterMeta: FilterMeta = { fields: [
   { id: 'f59name', label: 'Бенефициар', type: 'STRING', ops: [] },
 ] }
 const REASONS = ['Не найден счёт получателя', 'Превышен лимит', 'Санкционный стоп-лист', 'Ошибка формата 59', 'Нет покрытия', 'Дубликат 20', 'Отказ комплаенса', 'Просрочена дата валютирования', 'Неизвестный BIC']
-const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '643' } as const
+// Код валюты в знаках 6–8 счёта: рубль в счёте — 810 (не ISO 4217 643), правило владельца.
+const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '810' } as const
 const NAMES = ['ООО «Северный ветер»', 'АО «Прибой»', 'ЗАО «Василёк»', 'ООО «Ромашка»', 'ПАО «Титан»', 'ООО «Меридиан»', 'АО «Глобус»', 'ООО «Кедр»', 'ИП Иванов А. А.', 'ООО «Лотос»']
 const BICS = ['VKRBRU8KXXX', 'NRDIRUMMXXX', 'MRDNGB2LXXX', 'HSTBDEHHXXX', 'BCLHLV22XXX', 'CESEDEFFXXX', 'QWRTUS3NXXX', 'PLKZHKHHXXX']
 const PROV = ['ЕРС', 'LORO', 'NOSTRO', 'SUBOUL', 'VTO']
