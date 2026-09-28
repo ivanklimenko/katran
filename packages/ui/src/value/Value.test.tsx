@@ -8,6 +8,7 @@ import { Counter } from './Counter'
 import { FieldTag } from './FieldTag'
 import { LinkValue } from './LinkValue'
 import { StatusDot, type StatusTone } from './StatusDot'
+import { SwiftField } from './SwiftField'
 import { Tag } from './Tag'
 
 const clip = () => { const writeText = vi.fn().mockResolvedValue(undefined); Object.assign(navigator, { clipboard: { writeText } }); return writeText }
@@ -74,11 +75,11 @@ describe('LinkValue', () => {
 })
 
 describe('AccountValue', () => {
-  it('8…3, код валюты выделен, копируется полный', async () => {
+  it('8…4, код валюты выделен, копируется полный', async () => {
     const writeText = clip()
     renderK(<AccountValue value="40702840500000012345" />)
     const b = screen.getByRole('button')
-    expect(b).toHaveTextContent('40702840…345')
+    expect(b).toHaveTextContent('40702840…2345')
     expect(b.querySelector('b')).toHaveTextContent('840')
     await userEvent.click(b)
     expect(writeText).toHaveBeenCalledWith('40702840500000012345')
@@ -89,6 +90,21 @@ describe('AccountValue', () => {
     expect(b).toHaveTextContent('40702840500000012345')
     expect(b.querySelector('b')).toHaveTextContent('840')
     expect(b).toHaveAttribute('data-k-tip-if', 'truncated')
+  })
+})
+
+describe('SwiftField', () => {
+  it('опция, главное значение, подпись прописными; пусто — «—»', () => {
+    const { rerender } = renderK(<SwiftField opt="A" main="VKRBRU8KXXX" caption="АО «Прибой»" />)
+    expect(screen.getByText('A')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /VKRBRU8KXXX/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /АО «Прибой»/ })).toBeInTheDocument()
+    rerender(<SwiftField main="" />)
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+  it('без нарушений axe', async () => {
+    const { container } = renderK(<SwiftField opt="F" main="40702840000000000001" caption="ООО «Ромашка»" maxWidth={130} />)
+    expect(await axe(container)).toHaveNoViolations()
   })
 })
 

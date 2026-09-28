@@ -206,3 +206,27 @@
   color: var(--k-faint);
   border: 1px solid var(--k-line2);
 }
+
+.field {
+  display: block;
+  max-width: 100%;
+}
+
+.opt {
+  margin-right: var(--k-sp-1);
+  font: 700 var(--k-fs-1) / 1 var(--k-mono);
+  color: var(--k-opt);
+}
+
+.fieldMain {
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
+}
+
+.caption {
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  text-transform: uppercase;
+}
+
+.none {
+  color: var(--k-faint);
+}
