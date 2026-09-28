@@ -32,6 +32,9 @@ describe('useGrid', () => {
     expect(result.current.selection).toEqual({ mode: 'all', except: [] })
     act(() => { result.current.onClearSelection() })
     expect(result.current.selection).toEqual({ mode: 'ids', ids: [] })
+    expect(result.current.split).toEqual([])
+    act(() => { result.current.onSplit({ id: 'c1', on: true }) })
+    expect(result.current.split).toEqual(['c1'])
   })
 })
 

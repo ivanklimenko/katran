@@ -1,5 +1,5 @@
 import { allSettled, createEffect, createStore, fork } from 'effector'
-import { createGridModel } from './createGridModel'
+import { createGridModel, type GridPersisted } from './createGridModel'
 import { memoryPersist } from './persist'
 import type { Facet, FacetsQuery, Filter, GridPage, GridQuery } from './types'
 
@@ -78,7 +78,7 @@ describe('createGridModel', () => {
     expect(scope.getState(model.$widths)).toEqual({ c1: 100, c2: 150 })
     expect(scope.getState(model.$hidden)).toEqual(['c3'])
     expect(scope.getState(model.$order)).toEqual(['c2', 'c1', 'c3'])
-    expect(persist.load('g')).toEqual({ widths: { c1: 100, c2: 150 }, order: ['c2', 'c1', 'c3'], hidden: ['c3'], pageSize: 20 })
+    expect(persist.load('g')).toEqual({ widths: { c1: 100, c2: 150 }, order: ['c2', 'c1', 'c3'], hidden: ['c3'], pageSize: 20, split: [] })
   })
 
   it('persist.load восстанавливает вид при создании', () => {
@@ -99,6 +99,20 @@ describe('createGridModel', () => {
     const scope = fork()
     expect(scope.getState(model.$order)).toEqual(['c2', 'c1', 'c3'])
     expect(scope.getState(model.$hidden)).toEqual([])
+  })
+
+  it('setSplit меняет $split и сохраняется; чужие id из сохранённого отбрасываются', async () => {
+    const persist = memoryPersist<Partial<GridPersisted>>()
+    persist.save('g', { split: ['amount', 'gone'] })
+    const okFx = createEffect<GridQuery, GridPage<Row>>(async () => ({ rows: [], total: 0 }))
+    const m = createGridModel<Row>({ id: 'g', columns: [{ id: 'amount' }, { id: 'ccy' }, { id: 'created' }], $filter: createStore<Filter>([]), fetchFx: okFx, persist, rowKey: (r) => r.id })
+    const scope = fork()
+    expect(scope.getState(m.$split)).toEqual(['amount'])
+    await allSettled(m.setSplit, { scope, params: { id: 'created', on: true } })
+    expect(scope.getState(m.$split)).toEqual(['amount', 'created'])
+    await allSettled(m.setSplit, { scope, params: { id: 'amount', on: false } })
+    expect(scope.getState(m.$split)).toEqual(['created'])
+    expect(persist.load('g')?.split).toEqual(['created'])
   })
 
   it('выделение: select/selectPage/selectAll/clearSelection; сортировка и страница не сбрасывают', async () => {

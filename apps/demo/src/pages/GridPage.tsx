@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
-import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDate, formatDateTimeFull, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
+import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDate, formatDateTimeFull, gridColumns, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
@@ -15,13 +15,26 @@ export const docsLayout: RecordLayout<Doc> = {
     { id: 'id', title: 'ID', subtitle: '№ · 20 вх / исх', width: 136, lines: 2,
       sort: [{ id: 'docNumber', label: 'Номер документа', type: 'number' }, { id: 'refIn', label: '20 вх' }, { id: 'refOut', label: '20 исх' }],
       render: (d) => <><CopyValue value={String(d.docNumber)} tabIndex={T} /><div><LinkValue name="uuid" value={d.id} tabIndex={T} /> <LinkValue name="refIn" value={d.refIn ?? undefined} tabIndex={T} /> <LinkValue name="refOut" value={d.refOut ?? undefined} tabIndex={T} /></div></> },
-    { id: 'created', title: 'Дата / Время', width: 150, lines: 2, fullHeight: true, sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'valueDate', label: 'Валютирование', type: 'date' }],
-      render: (d) => <><CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} /><div><CopyValue value={formatDate(d.valueDate)} tone="ink2" tabIndex={T} /></div></> },
+    { id: 'created', title: 'Дата / Время', width: 150, lines: 3, fullHeight: true,
+      sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'vdDt', label: 'Валютирование Дт', type: 'date' }, { id: 'vdKt', label: 'Валютирование Кт', type: 'date' }],
+      render: (d) => <><CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} /><div>Дт <CopyValue value={formatDate(d.vdDt)} tone="ink2" tabIndex={T} /></div><div>Кт <CopyValue value={formatDate(d.vdKt)} tone="ink2" tabIndex={T} /></div></>,
+      split: {
+        label: 'Валютирование отдельной колонкой',
+        render: (d) => <CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} />,
+        parts: [{ id: 'valueDates', title: 'Валютирование', width: 110, lines: 2, fullHeight: true,
+          sort: [{ id: 'vdDt', label: 'Валютирование Дт', type: 'date' }, { id: 'vdKt', label: 'Валютирование Кт', type: 'date' }],
+          render: (d) => <>Дт <CopyValue value={formatDate(d.vdDt)} tone="ink2" tabIndex={T} /><div>Кт <CopyValue value={formatDate(d.vdKt)} tone="ink2" tabIndex={T} /></div></> }],
+      } },
     { id: 'type', title: 'Тип', width: 106, fullHeight: true, sort: [{ id: 'type', label: 'Тип сообщения' }], render: (d) => <CopyValue value={d.type} tone="mono" tabIndex={T} /> },
     { id: 'direction', title: 'Направление', width: 166, lines: 2, fullHeight: true, sort: [{ id: 'direction', label: 'Группа → название', order: ['IN', 'OUT', 'TRANSIT', 'OTHER'], then: 'dirTxt' }, { id: 'dirTxt', label: 'Название' }],
       render: (d) => <><CopyValue value={d.direction} tone="mono" tabIndex={T} /><div><CopyValue value={d.dirTxt} tone="ink2" tabIndex={T} /></div></> },
     { id: 'amount', title: '32', subtitle: 'сумма', width: 136, lines: 2, align: 'right', fullHeight: true, sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }],
-      render: (d) => <><CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} /><div><CopyValue value={d.currency} tone="ink2" tabIndex={T} /></div></> },
+      render: (d) => <><CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} /><div><CopyValue value={d.currency} tone="ink2" tabIndex={T} /></div></>,
+      split: {
+        label: 'Валюта отдельной колонкой',
+        render: (d) => <CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} />,
+        parts: [{ id: 'currency', title: 'Валюта', width: 76, fullHeight: true, sort: [{ id: 'currency', label: 'Валюта' }], render: (d) => <Tag>{d.currency}</Tag> }],
+      } },
     { id: 'f50', title: '50', subtitle: 'приказодатель', width: 186, lines: 2, sort: [{ id: 'f50name', label: 'Наименование' }, { id: 'f50acc', label: 'Счёт' }],
       render: (d) => <><CopyValue value={d.f50name} tabIndex={T} /><div><AccountValue value={d.f50acc} tabIndex={T} /></div></> },
     { id: 'f52', title: '52', width: 126, sort: [{ id: 'f52', label: 'BIC 52' }], render: (d) => <CopyValue value={d.f52} tone="mono" tabIndex={T} /> },
@@ -51,7 +64,7 @@ const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout, { sortLabels:
 const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({
   id: 'demo-docs',
-  columns: docsLayout.columns.map((c) => ({ id: c.id, width: c.width })),
+  columns: gridColumns(docsLayout.columns),
   pageSize: 20,
   $filter: filters.$conditions,
   fetchFx: searchFx,
