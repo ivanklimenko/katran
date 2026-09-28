@@ -113,4 +113,23 @@ describe('ColumnHeader', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Валюта — добавить уровнем' }))
     expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }, { key: 'currency', dir: 'asc' }])
   })
+  it('«Сбросить сортировку» при нескольких колонках в sort убирает только уровни этой колонки', async () => {
+    const onSort = vi.fn()
+    const sort: Sort = [{ key: 'refIn', dir: 'asc' }, { key: 'other', dir: 'asc' }]
+    renderK(<Table><ColumnHeader column={composite} sort={sort} onSort={onSort} width={160} /></Table>)
+    await userEvent.click(screen.getByRole('button', { name: /ID/ }))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Сбросить сортировку' }))
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'other', dir: 'asc' }])
+  })
+  it('Shift+клик по пункту «сделать единственным» в меню добавляет уровень, а не делает единственным', async () => {
+    const onSort = vi.fn()
+    const sort: Sort = [{ key: 'type', dir: 'asc' }]
+    renderK(<Table><ColumnHeader column={composite} sort={sort} onSort={onSort} width={160} /></Table>)
+    await userEvent.click(screen.getByRole('button', { name: /ID/ }))
+    const user = userEvent.setup()
+    await user.keyboard('{Shift>}')
+    await user.click(within(screen.getByRole('menu')).getByRole('menuitemcheckbox', { name: '20 вх' }))
+    await user.keyboard('{/Shift}')
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'refIn', dir: 'asc' }])
+  })
 })
