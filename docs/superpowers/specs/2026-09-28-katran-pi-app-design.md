@@ -79,7 +79,7 @@ export function toApiError(status: number, body: unknown): ApiError
 
 ### 5.2. Порты сущностей (`entities/fx-doc/api`, `entities/rub-doc/api`)
 
-Порт — обычный `createEffect`, в обработчике вызывающий `requestFx` и маппящий данные в обе стороны (вызов эффекта из обработчика эффекта сохраняет scope в effector 23). `gridId`: `fx-docs`, `rub-docs`.
+Порт — обычный `createEffect`, в обработчике вызывающий `requestFx` и маппящий данные в обе стороны (вызов эффекта из обработчика эффекта сохраняет scope в effector 23). Маппинг контракта грида (тело поиска, страница, фасеты, каталог) не зависит от домена и живёт в `shared/api/grid-contract.ts`; порты собирает фабрика `createGridPorts({ gridId, parseRow })` из `shared/api`. Сущность даёт только `gridId` и парсер строки. `gridId`: `fx-docs`, `rub-docs`.
 
 | Порт | Запрос | Маппинг |
 |---|---|---|
@@ -107,7 +107,7 @@ export function toApiError(status: number, body: unknown): ApiError
 
 - `FiltersModelConfig.meta?: FilterMeta | Store<FilterMeta | null> | undefined`;
 - модель отдаёт `$meta: Store<FilterMeta | null>` (значение оборачивается в стор); поле `meta` остаётся на переходный период с пометкой в JSDoc, `useFilters` отдаёт текущее значение `$meta`;
-- пока каталога нет, `FilterPanel` получает `meta = null` и кнопка «Фильтры» недоступна; лейн работает (поле лейна задано конфигом, каталог ему не нужен).
+- пока каталога нет, `DocRegistry` вместо `FilterPanel` показывает недоступную кнопку «Фильтры» (`FilterPanel` в ките не меняется); лейн работает (поле лейна задано конфигом, каталог ему не нужен).
 
 Существующие вызовы со значением работают без изменений.
 
@@ -125,7 +125,8 @@ createRegistry<Row>({
   layout: RecordLayout<Row>,
   ports: { searchFx, facetsFx, filterMetaFx },
   lifecycle: PageLifecycle,
-}) → { filters: FiltersModel, grid: GridModel<Row>, $metaReady: Store<boolean>, openRequested: EventCallable<{ id: string; secondary: boolean }> }
+}) → { filters: FiltersModel, grid: GridModel<Row>, lifecycle: PageLifecycle, $metaReady: Store<boolean>,
+      openRequested: EventCallable<{ id: string; secondary: boolean }>, refreshRequested: EventCallable<void> }
 ```
 
 Внутри:
@@ -134,7 +135,7 @@ createRegistry<Row>({
 - `createGridModel({ id, columns, $filter: filters.$conditions, fetchFx: searchFx, facets: { field: 'status', fetchFx: facetsFx }, persist: localStoragePersist('katran-pi'), rowKey })`;
 - `pageOpened` → `grid.refresh`; `filterMetaFx` — только если каталог ещё не загружен (за сессию он не меняется). Отказ каталога не трогает грид и лейн; повтор — при следующем `pageOpened`;
 - `pageClosed` → `grid.clearSelection`. Фильтры, сортировка и страница **сохраняются**: при возврате пользователь видит тот же срез реестра, обновлённый свежим запросом. Выделение снимается: массовое действие над невидимыми записями опасно;
-- каждая реакция на событие извне страницы гейтится `lifecycle.$opened` (`effector-fsd.md`, раздел 4); в этом срезе таких реакций нет, правило закрепляется тестом на закрытую страницу;
+- `refreshRequested` — шов внешних действий (например, аннулирование в деталке среза 2): перезапрос только пока экран открыт, гейт `lifecycle.$opened` (`effector-fsd.md`, раздел 4); закрыт — событие игнорируется, свежие данные придут при следующем `pageOpened`;
 - `openRequested` — шов деталки среза 2; сейчас страница только объявляет открытие через `announce`, как в демо.
 
 Фабрика вызывается на верхнем уровне модуля страницы:
@@ -147,7 +148,7 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 
 ### 7.2. `DocRegistry` (`widgets/doc-registry/ui`)
 
-Пропы: `registry`, `title`, `laneItems` (из `entities/doc-status`), `bulkActions`. Внутри `useGrid` и `useFilters`, заголовок со счётчиком, `StatusLane`, `FilterPanel`, `DataGrid` со слотом `toolbar`, `BulkBar`. Всё переносится из нынешнего `GridPage` без изменения поведения: сверка валютного реестра с эталоном и e2e-замер остаются зелёными.
+Пропы: `registry`, `layout`, `title`, `describe` (строка для объявления открытия), `note`, `bulkActions: { label, onClick(count) }[]`. Внутри `useGrid` и `useFilters`, заголовок со счётчиком, `StatusLane` (пункты — `laneItems` из `entities/doc-status`: статусы у обоих реестров общие), `FilterPanel`, `DataGrid` со слотом `toolbar`, `BulkBar`. Обучающий блок демо о сквозных строках в продуктовый экран не переносится. Всё переносится из нынешнего `GridPage` без изменения поведения: сверка валютного реестра с эталоном и e2e-замер остаются зелёными.
 
 ### 7.3. Страницы и сущности
 
@@ -159,12 +160,12 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 
 | Слайс | Экспорт |
 |---|---|
-| `entities/doc-status` | `Status`, `STATUS_LABEL`, `STATUS_TONE`, `laneItems` |
+| `entities/doc-status` | `Status`, `STATUSES`, `STATUS_LABEL`, `STATUS_TONE`, `laneItems`; для соседних сущностей — `@x/fx-doc`, `@x/rub-doc` |
 | `entities/fx-doc` | `FxDoc`, `fxDocLayout`, `fxDocPorts` |
 | `entities/rub-doc` | `RubDoc`, `rubDocLayout`, `rubDocPorts` |
-| `widgets/doc-registry` | `createRegistry`, `DocRegistry`, тип `Registry` |
+| `widgets/doc-registry` | `createRegistry`, `DocRegistry`, типы `Registry`, `RegistryConfig`, `BulkAction` |
 | `pages/fx-docs`, `pages/rub-docs` | компонент страницы, `lifecycle` |
-| `shared/api` | `requestFx`, `ApiError`, `toApiError`, типы `HttpRequest`, `Problem` |
+| `shared/api` | `requestFx`, `ApiError`, `toApiError`, `contractError`, `createGridPorts`, маппинг контракта грида, гарды формы, типы `HttpRequest`, `Problem`, `GridPorts` |
 | `shared/lib/lifecycle` | `createPageLifecycle`, тип `PageLifecycle` |
 
 ## 8. Рублёвый реестр
@@ -187,7 +188,7 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 
 ### 8.3. Данные
 
-Детерминированные вымышленные записи с соблюдением валидаций: счёт — 20 цифр, `810` в знаках 6–8; БИК — 9 цифр; ИНН — 10 или 12; КПП — 9. Системы и наименования — из обезличенного словаря стенда. С фото прода ничего не переносится.
+Детерминированные вымышленные записи с соблюдением валидаций: счёт — 20 цифр, у клиентских счетов `810` в знаках 6–8 (казначейский счёт УФК — исключение, как на эталоне); БИК — 9 цифр; ИНН — 10 или 12; КПП — 9 или пусто у ИП и физлиц. Системы и наименования — из обезличенного словаря стенда. С фото прода ничего не переносится.
 
 ## 9. Документация
 
