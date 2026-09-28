@@ -32,6 +32,21 @@ function pickCell(row: Element, c: number): HTMLElement | undefined {
   return best ?? cells[0]
 }
 
+/** Ячейка колонки c в строке row; если колонку занимает высокая ячейка из строки выше той же записи — она. */
+function cellAt(row: HTMLTableRowElement, c: number): HTMLElement | undefined {
+  const exact = cellsOf(row).find((el) => parse(el.dataset.cell!)[1] === c)
+  if (exact) return exact
+  const body = row.parentElement
+  if (body && body.tagName === 'TBODY') {
+    for (const r of Array.from(body.children) as HTMLTableRowElement[]) {
+      if (r === row) break
+      const tall = cellsOf(r).find((el) => parse(el.dataset.cell!)[1] === c && (el as HTMLTableCellElement).rowSpan > 1)
+      if (tall) return tall
+    }
+  }
+  return pickCell(row, c)
+}
+
 /**
  * WAI-ARIA grid: один таб-стоп, стрелки по ячейкам (спека 6.3). Навигация считается по DOM
  * (строки — все <tr> таблицы, ячейки — элементы с data-cell), поэтому сквозные строки участвуют естественно.
@@ -76,8 +91,12 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
       case 'ArrowLeft': target = cells[ci - 1]; break
       case 'Home': target = cells[0]; break
       case 'End': target = cells[cells.length - 1]; break
-      case 'ArrowDown': target = rows[ri + 1] ? pickCell(rows[ri + 1]!, c) : undefined; break
-      case 'ArrowUp': target = rows[ri - 1] ? pickCell(rows[ri - 1]!, c) : undefined; break
+      case 'ArrowDown': {
+        const next = rows[ri + Math.max(1, (cell as HTMLTableCellElement).rowSpan)]
+        target = next ? cellAt(next, c) : undefined
+        break
+      }
+      case 'ArrowUp': target = rows[ri - 1] ? cellAt(rows[ri - 1]!, c) : undefined; break
       case 'Enter': {
         const items = Array.from(cell.querySelectorAll<HTMLElement>(INTERACTIVE))
         if (items.length === 0) return

@@ -21,6 +21,36 @@ const props = (over: Partial<DataGridProps<Doc>> = {}): DataGridProps<Doc> => ({
 })
 const cellOf = (el: Element | null) => el?.closest('[data-cell]')?.getAttribute('data-cell')
 
+// Отдельная раскладка для проверки rowSpan: 'a' — обычная колонка, 't' — на всю высоту записи (fullHeight),
+// сквозная строка содержит один сегмент 's' от 'a' до 'a' (не заходит на 't' — он занят rowSpan).
+type Tall = { id: string; a: string; t: string }
+const tallDocs: Tall[] = [{ id: 'r1', a: 'A1', t: 'T1' }, { id: 'r2', a: 'A2', t: 'T2' }]
+const tallLayout: RecordLayout<Tall> = {
+  rowKey: (d) => d.id,
+  columns: [
+    { id: 'a', title: 'A', render: (d) => d.a },
+    { id: 't', title: 'T', fullHeight: true, render: (d) => d.t },
+  ],
+  spans: [[{ id: 's', from: 'a', to: 'a', render: () => 'S' }]],
+}
+const tallProps = (over: Partial<DataGridProps<Tall>> = {}): DataGridProps<Tall> => ({
+  label: 'Тест высоких колонок', layout: tallLayout, rows: tallDocs, total: 2, page: 1, pageSize: 20, onPage: vi.fn(), sort: [], onSort: vi.fn(),
+  widths: {}, onResize: vi.fn(), order: ['a', 't'], hidden: [], onColumns: vi.fn(), state: 'ready', onOpen: vi.fn(), ...over,
+})
+const renderGrid = () => renderK(<DataGrid {...tallProps()} />)
+const cellOfTall = (recordId: string, col: 'a' | 't'): HTMLElement => {
+  const idx = tallLayout.columns.findIndex((c) => c.id === col) + 1   // +1 — служебная колонка 0
+  const body = document.querySelector(`tbody[data-key="${recordId}"]`)!
+  const found = Array.from(body.querySelectorAll<HTMLElement>('[data-cell]')).find((el) => Number(el.dataset.cell!.split(':')[1]) === idx)
+  if (!found) throw new Error(`ячейка не найдена: ${recordId}/${col}`)
+  return found
+}
+const spanCellOf = (recordId: string): HTMLElement => {
+  const body = document.querySelector(`tbody[data-key="${recordId}"]`)!
+  const spanRow = Array.from(body.querySelectorAll('tr'))[1]!
+  return spanRow.querySelector<HTMLElement>('[data-cell]')!
+}
+
 describe('DataGrid: клавиатура', () => {
   it('один таб-стоп: Tab попадает в первую ячейку первой записи', async () => {
     renderK(<><button>до</button><DataGrid {...props()} /></>)
@@ -45,12 +75,38 @@ describe('DataGrid: клавиатура', () => {
     expect(cellOf(document.activeElement)).toBe('4:2')
     await userEvent.keyboard('{Home}')
     expect(cellOf(document.activeElement)).toBe('4:0')
-    // сквозная строка без служебной ячейки (0): подъём из c=0 не находит ячейку c<=0 и берёт первую в строке (c=1) —
-    // навигация вверх с учётом rowSpan будет уточнена в задаче 4
     await userEvent.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}')
-    expect(cellOf(document.activeElement)).toBe('1:1')
+    expect(cellOf(document.activeElement)).toBe('1:0')
     await userEvent.keyboard('{ArrowUp}')
-    expect(cellOf(document.activeElement)).toBe('1:1')   // выше шапки не уходит
+    expect(cellOf(document.activeElement)).toBe('1:0')   // выше шапки не уходит
+  })
+
+  it('стрелки по служебной колонке остаются в ней между записями (высокая ячейка — rowSpan)', async () => {
+    renderK(<DataGrid {...props()} />)
+    await userEvent.tab()
+    expect(cellOf(document.activeElement)).toBe('2:0')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(cellOf(document.activeElement)).toBe('4:0')
+    await userEvent.keyboard('{ArrowUp}')
+    expect(cellOf(document.activeElement)).toBe('2:0')
+  })
+
+  it('↓ из высокой ячейки — в ту же колонку следующей записи; ↑ из следующей записи на высокую колонку — в высокую ячейку', async () => {
+    renderGrid()
+    const t1 = cellOfTall('r1', 't')
+    t1.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(cellOfTall('r2', 't'))
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(t1)
+  })
+
+  it('↑ из сквозной строки на колонку высокой ячейки — в высокую ячейку своей записи', async () => {
+    renderGrid()
+    const seg1 = spanCellOf('r1')
+    seg1.focus()
+    await userEvent.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(cellOfTall('r1', 'a'))
   })
 
   it('Enter на ячейке с одной кнопкой — клик (открытие); с несколькими — фокус на первый; Escape возвращает в ячейку', async () => {
@@ -121,8 +177,9 @@ describe('DataGrid: клавиатура', () => {
     const p = props()
     const { rerender } = renderK(<DataGrid {...p} />)
     await userEvent.tab()
+    // служебная колонка — на всю высоту записи (rowSpan): вниз из неё сразу на следующую запись, минуя свою сквозную строку
     await userEvent.keyboard('{ArrowDown}{ArrowRight}')
-    expect(cellOf(document.activeElement)).toBe('3:1')
+    expect(cellOf(document.activeElement)).toBe('4:1')
     rerender(<DataGrid {...p} page={2} />)
     expect(document.querySelector('[data-cell][tabindex="0"]')?.getAttribute('data-cell')).toBe('2:0')
   })
