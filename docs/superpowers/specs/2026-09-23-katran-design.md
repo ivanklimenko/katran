@@ -296,13 +296,17 @@ type DataGridProps<Row> = {
   onPage: (n: number) => void
   pageSizes?: number[]
   onPageSize?: (n: number) => void
-  sort: Sort
-  onSort: (s: Sort) => void
+  sort: Sort                                 // SortLevel[], [] — без сортировки (план 5a)
+  onSort: (s: Sort) => void                  // следующее состояние целиком (soleSort/addSortLevel/…)
   widths: Record<string, number>
   onResize: (p: { id: string; width: number }) => void
+  onResetWidths?: () => void                 // двойной клик по ручке, Shift+Home на ползунке (5a, W1)
+  onResetWidth?: (id: string) => void        // Home на ползунке (5a, W1)
   order: string[]
   hidden: string[]
   onColumns: (s: ColumnsState) => void
+  split?: string[]                           // id хостов в режиме «раздельно» (5a, R5)
+  onSplit?: (p: { id: string; on: boolean }) => void
   selection?: Selection                      // нет — нет выделения
   onSelect?: (p: { id: string; on: boolean }) => void
   onSelectPage?: (p: { ids: string[]; on: boolean }) => void
@@ -310,12 +314,14 @@ type DataGridProps<Row> = {
   error?: string | null                      // текст под «Не удалось загрузить данные»
   onRetry?: () => void
   emptyTitle?: string
+  emptyText?: string                         // пояснение под заголовком пустого состояния
   emptyAction?: { label: string; onClick: () => void }
-  onOpen?: (row: Row, opts: { secondary: boolean }) => void   // нет — нет кнопки открытия
+  onOpen?: (row: Row, opts: { secondary: boolean; state: RowState }) => void   // нет — нет кнопки открытия
   skeletonRows?: number                      // по умолчанию 8
   toolbar?: ReactNode                        // слот над пагинацией в футере: BulkBar экрана (срез 1e)
-}
-```
+  rowState?: (row: Row) => RowState          // заблокирована/неактивна (5a, B1); неактивные не выделяются
+  openHint?: string                          // подсказка кнопки открытия обычной записи (5a, B7)
+}```
 
 Чистый компонент: все данные — из props, все изменения — наружу. Выделение — два колбэка намерения, а не `onSelection(next)`: грид не вычисляет следующее `Selection` (в режиме `all` это работа модели с `except`), а сообщает, что отмечено — запись или страница. В приложении с effector: `<DataGrid {...useGrid(model)} label=… layout=… />` — хук отдаёт данные и колбэки модели (8.4), экранные пропы (`label`, `layout`, `pageSizes`, `emptyTitle`, `emptyAction`, `onOpen`, `skeletonRows`, `toolbar`) задаёт экран.
 
