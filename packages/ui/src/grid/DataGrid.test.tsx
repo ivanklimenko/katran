@@ -16,7 +16,10 @@ const layout: RecordLayout<Doc> = {
   columns: [
     { id: 'status', menuTitle: 'Статус', width: 60, sort: [{ id: 'status', label: 'Статус' }, { id: 'reason', label: 'Причина' }], render: (d) => d.status },
     { id: 'num', title: 'Номер', width: 90, sort: [{ id: 'num', label: 'Номер', type: 'number' }], render: (d) => d.num },
-    { id: 'amount', title: '32', subtitle: 'сумма', align: 'right', width: 100, render: (d) => String(d.amount) },
+    {
+      id: 'amount', title: '32', subtitle: 'сумма', align: 'right', width: 100, render: (d) => String(d.amount),
+      split: { label: 'Валюта отдельной колонкой', render: (d) => String(d.amount), parts: [{ id: 'ccy', title: 'Валюта', render: () => 'RUB' }] },
+    },
   ],
   spans: [[{ id: 'purpose', from: 'num', to: 'amount', render: (d) => d.purpose }]],
 }
@@ -233,5 +236,16 @@ describe('DataGrid', () => {
     expect(screen.getByRole('group', { name: 'Сортировка' })).toBeInTheDocument()
     rerender(<DataGrid {...base({ sort: [] })} />)
     expect(screen.queryByRole('group', { name: 'Сортировка' })).toBeNull()
+  })
+
+  it('раздельно: split=[\'amount\'] — колонка «Валюта» сразу за «32»; split=[] — её нет', () => {
+    const { rerender } = renderK(<DataGrid {...base({ split: ['amount'] })} />)
+    const heads = screen.getAllByRole('columnheader')
+    const names = heads.map((h) => h.textContent ?? '')
+    const amountIdx = names.findIndex((n) => n.includes('32'))
+    expect(amountIdx).toBeGreaterThan(-1)
+    expect(names[amountIdx + 1]).toContain('Валюта')
+    rerender(<DataGrid {...base({ split: [] })} />)
+    expect(screen.queryByRole('columnheader', { name: /Валюта/ })).toBeNull()
   })
 })

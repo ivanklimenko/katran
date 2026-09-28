@@ -1,4 +1,4 @@
-import { resolveSpans, visibleColumns } from './resolveSpans'
+import { expandColumns, gridColumns, resolveSpans, visibleColumns } from './resolveSpans'
 import type { ColumnDef, SpanDef } from './types'
 
 const span = (id: string, from: string, to: string): SpanDef<unknown> => ({ id, from, to, render: () => null })
@@ -52,5 +52,24 @@ describe('visibleColumns', () => {
   it('колонки, которых нет в order, идут в конец в исходном порядке', () => {
     const cols = [col('a'), col('b'), col('c')]
     expect(visibleColumns(['b'], [], cols).map((c) => c.id)).toEqual(['b', 'a', 'c'])
+  })
+})
+
+describe('expandColumns', () => {
+  type R = { a: number; c: string }
+  const cur: ColumnDef<R> = { id: 'ccy', title: 'Валюта', sort: [{ id: 'currency', label: 'Валюта' }], render: (r) => r.c }
+  const host: ColumnDef<R> = {
+    id: 'amount', title: '32', sort: [{ id: 'amount', label: 'Сумма' }, { id: 'currency', label: 'Валюта' }], render: (r) => `${r.a} ${r.c}`,
+    split: { label: 'Валюта отдельной колонкой', render: (r) => String(r.a), parts: [cur] },
+  }
+  it('«вместе» — как есть; «раздельно» — хост без части и части сразу за ним, ключи частей уходят из хоста', () => {
+    expect(expandColumns([host], []).map((c) => c.id)).toEqual(['amount'])
+    const out = expandColumns([host, { id: 'x', render: () => null }], ['amount'])
+    expect(out.map((c) => c.id)).toEqual(['amount', 'ccy', 'x'])
+    expect(out[0]!.sort).toEqual([{ id: 'amount', label: 'Сумма' }])
+    expect(out[0]!.render({ a: 1, c: 'USD' })).toBe('1')
+  })
+  it('gridColumns включает части', () => {
+    expect(gridColumns([host])).toEqual([{ id: 'amount', width: undefined }, { id: 'ccy', width: undefined }])
   })
 })

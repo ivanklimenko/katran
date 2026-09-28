@@ -33,6 +33,17 @@ export type ColumnDef<Row> = {
   render: (row: Row) => ReactNode
   /** Ячейка на всю высоту записи (rowSpan): сквозные строки проходят только под колонками без fullHeight (спека 5a §2). */
   fullHeight?: boolean | undefined
+  /** «Вместе / раздельно» (спека 5a §4): режим переключается в меню состава, id — в GridModelConfig.columns/persist. */
+  split?: {
+    /** Подпись переключателя в меню состава: «Валюта отдельной колонкой». */
+    label: string
+    /** Вид хоста в режиме «раздельно» — без выделенной части. */
+    render: (row: Row) => ReactNode
+    /** Ключи хоста в режиме «раздельно»; по умолчанию — ключи хоста без ключей частей. */
+    sort?: SortKey[] | undefined
+    /** Части — обычные колонки со своими id, заголовком, шириной, ключами, fullHeight, render. */
+    parts: ColumnDef<Row>[]
+  } | undefined
 }
 
 export type SpanDef<Row> = {

@@ -40,3 +40,18 @@ export function visibleColumns<Row>(order: string[], hidden: string[], columns: 
   const hiddenSet = new Set(hidden)
   return out.filter((c) => !hiddenSet.has(c.id))
 }
+
+/** «Раздельно» (спека 5a §4): хост рисует split.render, части — сразу за ним; ключи частей уходят из хоста, если split.sort не задан. */
+export function expandColumns<Row>(columns: ColumnDef<Row>[], split: string[]): ColumnDef<Row>[] {
+  const on = new Set(split)
+  return columns.flatMap((c) => {
+    if (!c.split || !on.has(c.id)) return [c]
+    const partKeys = new Set(c.split.parts.flatMap((p) => (p.sort ?? []).map((k) => k.id)))
+    const host: ColumnDef<Row> = { ...c, render: c.split.render, sort: c.split.sort ?? (c.sort ?? []).filter((k) => !partKeys.has(k.id)) }
+    return [host, ...c.split.parts]
+  })
+}
+
+/** id и ширины всех колонок раскладки, включая части split — для GridModelConfig.columns. */
+export const gridColumns = <Row,>(columns: ColumnDef<Row>[]): { id: string; width?: number | undefined }[] =>
+  columns.flatMap((c) => [{ id: c.id, width: c.width }, ...(c.split?.parts ?? []).map((p) => ({ id: p.id, width: p.width }))])

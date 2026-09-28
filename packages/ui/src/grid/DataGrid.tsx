@@ -8,7 +8,7 @@ import { ColumnHeader } from './ColumnHeader'
 import { ColumnsMenu } from './ColumnsMenu'
 import { GridRecord, type CellProps, type SpanCell } from './GridRecord'
 import { GridSkeleton } from './GridSkeleton'
-import { resolveSpans, visibleColumns } from './resolveSpans'
+import { expandColumns, resolveSpans, visibleColumns } from './resolveSpans'
 import { isSelected, pageState } from './selection'
 import { SortChips } from './SortChips'
 import { useGridKeyboard } from './useGridKeyboard'
@@ -33,6 +33,9 @@ export type DataGridProps<Row> = {
   order: string[]
   hidden: string[]
   onColumns: (s: ColumnsState) => void
+  /** id хостов в режиме «раздельно» (спека 5a §4). */
+  split?: string[] | undefined
+  onSplit?: ((p: { id: string; on: boolean }) => void) | undefined
   selection?: Selection | undefined
   onSelect?: ((p: { id: string; on: boolean }) => void) | undefined
   onSelectPage?: ((p: { ids: string[]; on: boolean }) => void) | undefined
@@ -59,8 +62,10 @@ const Open = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" st
 
 export function DataGrid<Row>(p: DataGridProps<Row>) {
   const { layout, rows, page, pageSize, selection, state } = p
-  const visible = useMemo(() => visibleColumns(p.order, p.hidden, layout.columns), [p.order, p.hidden, layout.columns])
-  const fullOrder = useMemo(() => visibleColumns(p.order, [], layout.columns).map((c) => c.id), [p.order, layout.columns])
+  const propsSplit = p.split
+  const split = useMemo(() => propsSplit ?? [], [propsSplit])
+  const visible = useMemo(() => expandColumns(visibleColumns(p.order, p.hidden, layout.columns), split), [p.order, p.hidden, layout.columns, split])
+  const fullOrder = useMemo(() => expandColumns(visibleColumns(p.order, [], layout.columns), split).map((c) => c.id), [p.order, layout.columns, split])
   const visibleIds = useMemo(() => visible.map((c) => c.id), [visible])
   const tallIds = useMemo(() => new Set(visible.filter((c) => c.fullHeight).map((c) => c.id)), [visible])
   const spanRows = useMemo<SpanCell<Row>[][]>(
@@ -123,7 +128,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                   )}
                   <IconButton ref={colsBtn} tabIndex={-1} size="s" label="Состав колонок" pressed={colsOpen} onClick={() => setColsOpen(true)}><Cols /></IconButton>
                 </div>
-                <ColumnsMenu open={colsOpen} anchor={colsBtn} onClose={() => setColsOpen(false)} columns={layout.columns} order={p.order} hidden={p.hidden} onChange={p.onColumns} />
+                <ColumnsMenu open={colsOpen} anchor={colsBtn} onClose={() => setColsOpen(false)} columns={layout.columns} order={p.order} hidden={p.hidden} onChange={p.onColumns} split={p.split} onSplit={p.onSplit} />
               </th>
               {visible.map((c, i) => (
                 <ColumnHeader key={c.id} column={c} sort={p.sort} onSort={p.onSort} width={widthOf(c.id, c.width)}

@@ -61,4 +61,15 @@ describe('ColumnsMenu', () => {
     const { container } = renderK(<Host onChange={() => {}} />)
     expect(await axe(container)).toHaveNoViolations()
   })
+  it('у составной колонки — переключатель «раздельно»; части отдельными пунктами не показываются', async () => {
+    const host: ColumnDef<R> = {
+      id: 'amount', title: '32', render: () => null,
+      split: { label: 'Валюта отдельной колонкой', render: () => null, parts: [{ id: 'ccy', title: 'Валюта', render: () => null }] },
+    }
+    const onSplit = vi.fn()
+    renderK(<ColumnsMenu open anchor={{ current: document.body }} onClose={() => {}} columns={[host]} order={['amount']} hidden={[]} onChange={() => {}} split={[]} onSplit={onSplit} />)
+    expect(screen.queryByRole('checkbox', { name: 'Валюта' })).toBeNull()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Валюта отдельной колонкой' }))
+    expect(onSplit).toHaveBeenCalledWith({ id: 'amount', on: true })
+  })
 })

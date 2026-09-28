@@ -1,5 +1,5 @@
 export * from './types'
-export { resolveSpans, visibleColumns } from './resolveSpans'
+export { expandColumns, gridColumns, resolveSpans, visibleColumns } from './resolveSpans'
 export { addSortLevel, defaultDir, findSortKey, flipSortLevel, removeSortLevel, soleSort, sortRows } from './sortRows'
 export { EMPTY_SELECTION, isSelected, selectedCount, pageState } from './selection'
 export { GridRecord, fillSegments, type GridRecordProps, type SpanCell, type CellProps } from './GridRecord'

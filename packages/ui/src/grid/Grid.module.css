@@ -354,6 +354,13 @@
   white-space: nowrap;
 }
 
+.colsSplit {
+  display: flex;
+  align-items: center;
+  height: var(--k-h-ctl-m);
+  padding-left: var(--k-sp-6);
+}
+
 .leadHead {
   display: flex;
   align-items: center;

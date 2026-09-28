@@ -25,6 +25,13 @@ describe('sortRows', () => {
     expect(findSortKey(columns, 'name')?.label).toBe('Название')
     expect(findSortKey(columns, 'nope')).toBeUndefined()
   })
+  it('findSortKey находит ключ в части split-колонки', () => {
+    const withSplit: ColumnDef<R>[] = [
+      ...columns,
+      { id: 'amount32', sort: [{ id: 'amount', label: 'Сумма' }], render: () => null, split: { label: 'Валюта отдельной колонкой', render: () => null, parts: [{ id: 'ccy', sort: [{ id: 'currency', label: 'Валюта' }], render: () => null }] } },
+    ]
+    expect(findSortKey(withSplit, 'currency')?.label).toBe('Валюта')
+  })
   it('число по убыванию, null — в конец; ничьи стабильны', () => {
     expect(sortRows(rows, [{ key: 'amount', dir: 'desc' }], columns, get).map((r) => r.id)).toEqual(['1', '4', '3', '2'])
   })
