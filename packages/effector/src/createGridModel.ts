@@ -39,6 +39,8 @@ export type GridModel<Row> = {
   toggleColumn: EventCallable<string>
   moveColumn: EventCallable<{ id: string; dir: -1 | 1 }>
   setSplit: EventCallable<{ id: string; on: boolean }>
+  resetWidths: EventCallable<void>
+  resetWidth: EventCallable<string>
   setPage: EventCallable<number>
   setPageSize: EventCallable<number>
   select: EventCallable<{ id: string; on: boolean }>
@@ -66,8 +68,10 @@ function reconcileOrder(saved: string[] | undefined, ids: string[]): string[] {
 export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> {
   const ids = cfg.columns.map((c) => c.id)
   const saved = cfg.persist?.load(cfg.id) ?? {}
-  const initialWidths: Record<string, number> = {}
-  for (const c of cfg.columns) if (c.width !== undefined) initialWidths[c.id] = c.width
+  // ширины из конфига — базовые (по ним сбрасывает resetWidths/resetWidth), initialWidths поверх них накладывает сохранённые.
+  const defaultWidths: Record<string, number> = {}
+  for (const c of cfg.columns) if (c.width !== undefined) defaultWidths[c.id] = c.width
+  const initialWidths: Record<string, number> = { ...defaultWidths }
   Object.assign(initialWidths, Object.fromEntries(Object.entries(saved.widths ?? {}).filter(([id]) => ids.includes(id))))
 
   const sortBy = createEvent<Sort>()
@@ -76,6 +80,8 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   const toggleColumn = createEvent<string>()
   const moveColumn = createEvent<{ id: string; dir: -1 | 1 }>()
   const setSplit = createEvent<{ id: string; on: boolean }>()
+  const resetWidths = createEvent<void>()
+  const resetWidth = createEvent<string>()
   const setPage = createEvent<number>()
   const setPageSize = createEvent<number>()
   const select = createEvent<{ id: string; on: boolean }>()
@@ -100,6 +106,14 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
 
   // --- вид ---
   $widths.on(resize, (w, { id, width }) => ({ ...w, [id]: Math.max(36, Math.round(width)) }))
+  $widths
+    .on(resetWidths, () => ({ ...defaultWidths }))
+    .on(resetWidth, (w, id) => {
+      const next = { ...w }
+      if (defaultWidths[id] === undefined) delete next[id]
+      else next[id] = defaultWidths[id]!
+      return next
+    })
   $order.on(setColumns, (_, { order }) => reconcileOrder(order, ids))
   $hidden.on(setColumns, (_, { hidden }) => hidden.filter((id) => ids.includes(id)))
   $hidden.on(toggleColumn, (h, id) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]))
@@ -209,12 +223,12 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
     const persistFx = createEffect((v: GridPersisted) => {
       persist.save(cfg.id, v)
     })
-    sample({ clock: [resize, setColumns, toggleColumn, moveColumn, setPageSize, setSplit], source: $persisted, target: persistFx })
+    sample({ clock: [resize, setColumns, toggleColumn, moveColumn, setPageSize, setSplit, resetWidths, resetWidth], source: $persisted, target: persistFx })
   }
 
   return {
     $rows, $total, $page, $pageSize, $sort, $widths, $order, $hidden, $selection, $state, $error, $query, $facets, $split,
-    sortBy, resize, setColumns, toggleColumn, moveColumn, setSplit, setPage, setPageSize,
+    sortBy, resize, setColumns, toggleColumn, moveColumn, setSplit, resetWidths, resetWidth, setPage, setPageSize,
     select, selectPage, selectAll, clearSelection, retry, refresh,
     fetchFx: cfg.fetchFx, rowKey: cfg.rowKey,
   }

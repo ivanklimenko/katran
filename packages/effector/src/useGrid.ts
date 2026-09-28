@@ -23,6 +23,8 @@ export type GridBinding<Row> = {
   onPageSize: (n: number) => void
   onSort: (s: Sort) => void
   onResize: (p: { id: string; width: number }) => void
+  onResetWidths: () => void
+  onResetWidth: (id: string) => void
   onColumns: (s: ColumnsState) => void
   onSplit: (p: { id: string; on: boolean }) => void
   onSelect: (p: { id: string; on: boolean }) => void
@@ -38,12 +40,12 @@ export function useGrid<Row>(m: GridModel<Row>): GridBinding<Row> {
   const [rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error, facets, split] = useUnit([
     m.$rows, m.$total, m.$page, m.$pageSize, m.$sort, m.$widths, m.$order, m.$hidden, m.$selection, m.$state, m.$error, m.$facets, m.$split,
   ])
-  const [onPage, onPageSize, onSort, onResize, onColumns, onSplit, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection] = useUnit([
-    m.setPage, m.setPageSize, m.sortBy, m.resize, m.setColumns, m.setSplit, m.select, m.selectPage, m.retry, m.selectAll, m.clearSelection,
+  const [onPage, onPageSize, onSort, onResize, onResetWidths, onResetWidth, onColumns, onSplit, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection] = useUnit([
+    m.setPage, m.setPageSize, m.sortBy, m.resize, m.resetWidths, m.resetWidth, m.setColumns, m.setSplit, m.select, m.selectPage, m.retry, m.selectAll, m.clearSelection,
   ])
   return {
     rows, total, page, pageSize, sort, widths, order, hidden, selection, state, error, facets, split,
-    onPage, onPageSize, onSort, onResize, onColumns, onSplit, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection,
+    onPage, onPageSize, onSort, onResize, onResetWidths, onResetWidth, onColumns, onSplit, onSelect, onSelectPage, onRetry, onSelectAll, onClearSelection,
   }
 }
 

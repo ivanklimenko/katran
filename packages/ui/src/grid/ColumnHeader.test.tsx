@@ -78,6 +78,23 @@ describe('ColumnHeader', () => {
     expect(onResize).toHaveBeenLastCalledWith(48)
   })
 
+  it('сброс ширин: двойной клик по ручке — все; Home на ползунке — эта колонка; Shift+Home — все', async () => {
+    const onResetWidths = vi.fn()
+    const onResetWidth = vi.fn()
+    renderK(<Table><ColumnHeader column={plain} sort={[]} onSort={() => {}} width={80} onResize={() => {}} onResetWidths={onResetWidths} onResetWidth={onResetWidth} /></Table>)
+    const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
+    expect(h).toHaveAttribute('aria-keyshortcuts', 'Home Shift+Home')
+    await userEvent.dblClick(h)
+    expect(onResetWidths).toHaveBeenCalledTimes(1)
+    h.focus()
+    await userEvent.keyboard('{Home}')
+    expect(onResetWidth).toHaveBeenCalledTimes(1)
+    expect(onResetWidths).toHaveBeenCalledTimes(1)
+    await userEvent.keyboard('{Shift>}{Home}{/Shift}')
+    expect(onResetWidths).toHaveBeenCalledTimes(2)
+    expect(onResetWidth).toHaveBeenCalledTimes(1)
+  })
+
   it('без нарушений axe', async () => {
     const { container } = renderK(<Table><ColumnHeader column={simple} sort={[]} onSort={() => {}} width={120} onResize={() => {}} /><ColumnHeader column={composite} sort={[]} onSort={() => {}} width={160} /></Table>)
     expect(await axe(container)).toHaveNoViolations()

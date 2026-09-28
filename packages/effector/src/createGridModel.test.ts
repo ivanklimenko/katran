@@ -20,6 +20,9 @@ const mk = (over: Partial<Parameters<typeof createGridModel<Row>>[0]> = {}) => {
 /** Дать эффектам и их done/fail пройти через очередь микрозадач. */
 const flush = () => new Promise<void>((r) => setTimeout(r, 0))
 
+/** Свежий fetchFx с пустым успешным ответом — для тестов, которым сам запрос не важен. */
+const okFx = () => createEffect<GridQuery, GridPage<Row>>(async () => ({ rows: [], total: 0 }))
+
 describe('createGridModel', () => {
   it('стартовое состояние: страница 1, размер 20, порядок из колонок, запроса ещё нет', () => {
     const { model } = mk()
@@ -113,6 +116,19 @@ describe('createGridModel', () => {
     await allSettled(m.setSplit, { scope, params: { id: 'amount', on: false } })
     expect(scope.getState(m.$split)).toEqual(['created'])
     expect(persist.load('g')?.split).toEqual(['created'])
+  })
+
+  it('resetWidth — ширина колонки из конфига; resetWidths — все; сохраняется', async () => {
+    const persist = memoryPersist<Partial<GridPersisted>>()
+    const m = createGridModel<Row>({ id: 'g', columns: [{ id: 'a', width: 100 }, { id: 'b', width: 80 }], $filter: createStore<Filter>([]), fetchFx: okFx(), persist, rowKey: (r) => r.id })
+    const scope = fork()
+    await allSettled(m.resize, { scope, params: { id: 'a', width: 200 } })
+    await allSettled(m.resize, { scope, params: { id: 'b', width: 200 } })
+    await allSettled(m.resetWidth, { scope, params: 'a' })
+    expect(scope.getState(m.$widths)).toEqual({ a: 100, b: 200 })
+    await allSettled(m.resetWidths, { scope })
+    expect(scope.getState(m.$widths)).toEqual({ a: 100, b: 80 })
+    expect(persist.load('g')?.widths).toEqual({ a: 100, b: 80 })
   })
 
   it('выделение: select/selectPage/selectAll/clearSelection; сортировка и страница не сбрасывают', async () => {

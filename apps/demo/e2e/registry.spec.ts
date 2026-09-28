@@ -31,3 +31,20 @@ test('многоуровневая сортировка: Shift+клик по в�
   await expect(chips).toContainText('Тип сообщения ↑')
   await expect(chips).toContainText('BIC 52 ↑')
 })
+
+test('сброс ширины: двойной клик по ручке ресайза возвращает исходную ширину заголовка', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const slider = page.getByRole('slider', { name: 'Ширина колонки ID' })
+  const th = page.locator('table[role=grid] thead th').filter({ has: slider })
+  const before = (await th.boundingBox())!.width
+  await slider.hover()
+  await page.mouse.down()
+  await page.mouse.move((await slider.boundingBox())!.x + 60, (await slider.boundingBox())!.y)
+  await page.mouse.up()
+  const resized = (await th.boundingBox())!.width
+  expect(Math.abs(resized - before)).toBeGreaterThan(10)
+  await slider.dblclick()
+  const after = (await th.boundingBox())!.width
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
+})

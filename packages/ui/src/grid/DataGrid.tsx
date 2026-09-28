@@ -30,6 +30,8 @@ export type DataGridProps<Row> = {
   onSort: (s: Sort) => void
   widths: Record<string, number>
   onResize: (p: { id: string; width: number }) => void
+  onResetWidths?: (() => void) | undefined
+  onResetWidth?: ((id: string) => void) | undefined
   order: string[]
   hidden: string[]
   onColumns: (s: ColumnsState) => void
@@ -132,7 +134,9 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
               </th>
               {visible.map((c, i) => (
                 <ColumnHeader key={c.id} column={c} sort={p.sort} onSort={p.onSort} width={widthOf(c.id, c.width)}
-                  onResize={(c.resizable ?? true) ? (w) => p.onResize({ id: c.id, width: w }) : undefined} cellProps={cp(1)(0, i + 1)} />
+                  onResize={(c.resizable ?? true) ? (w) => p.onResize({ id: c.id, width: w }) : undefined}
+                  onResetWidths={p.onResetWidths} onResetWidth={p.onResetWidth ? () => p.onResetWidth!(c.id) : undefined}
+                  cellProps={cp(1)(0, i + 1)} />
               ))}
             </tr>
           </thead>

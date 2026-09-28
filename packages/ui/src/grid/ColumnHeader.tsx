@@ -11,6 +11,10 @@ export type ColumnHeaderProps<Row> = {
   /** Ширина в px при плотности 1. */
   width: number
   onResize?: ((width: number) => void) | undefined
+  /** Сброс ширины всех колонок — двойной клик по ручке ресайза, Shift+Home на ползунке. */
+  onResetWidths?: (() => void) | undefined
+  /** Сброс ширины этой колонки — Home на ползунке. */
+  onResetWidth?: (() => void) | undefined
   cellProps?: HTMLAttributes<HTMLTableCellElement> | undefined
 }
 
@@ -18,7 +22,7 @@ const MIN_DEFAULT = 36
 const STEP = 8
 const STEP_SHIFT = 32
 
-export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellProps }: ColumnHeaderProps<Row>) {
+export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onResetWidths, onResetWidth, cellProps }: ColumnHeaderProps<Row>) {
   const keys = column.sort ?? []
   const level = sort.find((l) => keys.some((k) => k.id === l.key))
   const active = level ? keys.find((k) => k.id === level.key) : undefined
@@ -88,6 +92,12 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
     delete e.currentTarget.dataset.active
   }
   const onHandleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Home') {
+      e.preventDefault()
+      if (e.shiftKey) onResetWidths?.()
+      else onResetWidth?.()
+      return
+    }
     if (!onResize) return
     const step = e.shiftKey ? STEP_SHIFT : STEP
     if (e.key === 'ArrowRight') { e.preventDefault(); onResize(clamp(width + step)) }
@@ -132,6 +142,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
           aria-valuetext={`${width} px`}
           aria-valuemin={min}
           aria-valuemax={9999}
+          aria-keyshortcuts="Home Shift+Home"
           className={s.rz}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -139,6 +150,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
           onPointerCancel={onPointerUp}
           onKeyDown={onHandleKey}
           onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => { e.stopPropagation(); onResetWidths?.() }}
         />
       )}
     </th>
