@@ -65,3 +65,9 @@
   color: var(--k-faint);
   font-size: var(--k-fs-2);
 }
+
+.menuNote {
+  padding: var(--k-sp-1) var(--k-sp-2);
+  font-size: var(--k-fs-3);
+  color: var(--k-muted);
+}

@@ -1,4 +1,4 @@
-import { formatDate, formatDateTimeFull, formatDateTimeShort } from './date'
+import { formatDate, formatDateTimeFull, formatDateTimeMinutes, formatDateTimeShort } from './date'
 
 describe('даты', () => {
   const iso = '2026-09-22T07:33:22'
@@ -20,6 +20,22 @@ describe('даты', () => {
     vi.stubEnv('TZ', 'America/New_York')
     try {
       expect(formatDate('2026-09-23')).toBe('23.09.2026')
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+  it('дата и время до минут — «дд.мм.гггг чч:мм»', () => {
+    expect(formatDateTimeMinutes('2026-09-23T09:13:00')).toBe('23.09.2026 09:13')
+    expect(formatDateTimeMinutes('нет')).toBe('')
+  })
+  it('дата и время до минут: ISO со смещением — дата и время из одного момента в локальной зоне', () => {
+    const iso = '2026-09-23T21:13:00Z'
+    vi.stubEnv('TZ', 'Asia/Vladivostok')   // UTC+10 без перехода на летнее время: день сменяется
+    try {
+      expect(formatDateTimeMinutes(iso)).toBe('24.09.2026 07:13')
+      const d = new Date(iso)
+      const p2 = (n: number) => String(n).padStart(2, '0')
+      expect(formatDateTimeMinutes(iso)).toBe(`${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`)
     } finally {
       vi.unstubAllEnvs()
     }

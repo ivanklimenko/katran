@@ -1,7 +1,7 @@
 import { attach, combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
 import type { ColumnsState, Facet, FacetsQuery, Filter, GridPage, GridQuery, GridViewState, PersistAdapter, Selection, Sort } from './types'
 
-export type GridPersisted = { widths: Record<string, number>; order: string[]; hidden: string[]; pageSize: number }
+export type GridPersisted = { widths: Record<string, number>; order: string[]; hidden: string[]; pageSize: number; split: string[] }
 
 export type GridModelConfig<Row> = {
   id: string
@@ -30,12 +30,17 @@ export type GridModel<Row> = {
   $query: Store<GridQuery>
   /** Счётчики лейна; пуст, если фасеты не сконфигурированы или ответа ещё нет. */
   $facets: Store<Facet[]>
+  /** «Вместе / раздельно» (спека 5a §4): id колонок с активным split.parts, из ColumnDef.split. */
+  $split: Store<string[]>
   // EventCallable, а не Event: снаружи события нужно вызывать (model.sortBy(...) и т.д.), просто Event этого не позволяет.
   sortBy: EventCallable<Sort>
   resize: EventCallable<{ id: string; width: number }>
   setColumns: EventCallable<ColumnsState>
   toggleColumn: EventCallable<string>
   moveColumn: EventCallable<{ id: string; dir: -1 | 1 }>
+  setSplit: EventCallable<{ id: string; on: boolean }>
+  resetWidths: EventCallable<void>
+  resetWidth: EventCallable<string>
   setPage: EventCallable<number>
   setPageSize: EventCallable<number>
   select: EventCallable<{ id: string; on: boolean }>
@@ -63,8 +68,10 @@ function reconcileOrder(saved: string[] | undefined, ids: string[]): string[] {
 export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> {
   const ids = cfg.columns.map((c) => c.id)
   const saved = cfg.persist?.load(cfg.id) ?? {}
-  const initialWidths: Record<string, number> = {}
-  for (const c of cfg.columns) if (c.width !== undefined) initialWidths[c.id] = c.width
+  // ширины из конфига — базовые (по ним сбрасывает resetWidths/resetWidth), initialWidths поверх них накладывает сохранённые.
+  const defaultWidths: Record<string, number> = {}
+  for (const c of cfg.columns) if (c.width !== undefined) defaultWidths[c.id] = c.width
+  const initialWidths: Record<string, number> = { ...defaultWidths }
   Object.assign(initialWidths, Object.fromEntries(Object.entries(saved.widths ?? {}).filter(([id]) => ids.includes(id))))
 
   const sortBy = createEvent<Sort>()
@@ -72,6 +79,9 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   const setColumns = createEvent<ColumnsState>()
   const toggleColumn = createEvent<string>()
   const moveColumn = createEvent<{ id: string; dir: -1 | 1 }>()
+  const setSplit = createEvent<{ id: string; on: boolean }>()
+  const resetWidths = createEvent<void>()
+  const resetWidth = createEvent<string>()
   const setPage = createEvent<number>()
   const setPageSize = createEvent<number>()
   const select = createEvent<{ id: string; on: boolean }>()
@@ -85,16 +95,25 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   const $total = createStore(0)
   const $page = createStore(1)
   const $pageSize = createStore(saved.pageSize ?? cfg.pageSize ?? 20)
-  const $sort = createStore<Sort>(null)
+  const $sort = createStore<Sort>([])
   const $widths = createStore<Record<string, number>>(initialWidths)
   const $order = createStore<string[]>(reconcileOrder(saved.order, ids))
   const $hidden = createStore<string[]>((saved.hidden ?? []).filter((id) => ids.includes(id)))
+  const $split = createStore<string[]>((saved.split ?? []).filter((id) => ids.includes(id)))
   const $selection = createStore<Selection>(EMPTY_SELECTION)
   const $error = createStore<string | null>(null)
   const $hasData = createStore(false)
 
   // --- вид ---
   $widths.on(resize, (w, { id, width }) => ({ ...w, [id]: Math.max(36, Math.round(width)) }))
+  $widths
+    .on(resetWidths, () => ({ ...defaultWidths }))
+    .on(resetWidth, (w, id) => {
+      const next = { ...w }
+      if (defaultWidths[id] === undefined) delete next[id]
+      else next[id] = defaultWidths[id]!
+      return next
+    })
   $order.on(setColumns, (_, { order }) => reconcileOrder(order, ids))
   $hidden.on(setColumns, (_, { hidden }) => hidden.filter((id) => ids.includes(id)))
   $hidden.on(toggleColumn, (h, id) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]))
@@ -108,6 +127,7 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
     return next
   })
   $pageSize.on(setPageSize, (_, n) => n)
+  $split.on(setSplit, (list, { id, on }) => (on ? (list.includes(id) || !ids.includes(id) ? list : [...list, id]) : list.filter((x) => x !== id)))
 
   // --- выделение ---
   $selection
@@ -198,17 +218,17 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   // --- persist: изменения вида без запроса ---
   if (cfg.persist) {
     const persist = cfg.persist
-    const $persisted = combine($widths, $order, $hidden, $pageSize, (widths, order, hidden, pageSize): GridPersisted => ({ widths, order, hidden, pageSize }))
+    const $persisted = combine($widths, $order, $hidden, $pageSize, $split, (widths, order, hidden, pageSize, split): GridPersisted => ({ widths, order, hidden, pageSize, split }))
     // .watch на sample под fork() не гарантированно срабатывает — используем эффект как target, эффекты исполняются в scope.
     const persistFx = createEffect((v: GridPersisted) => {
       persist.save(cfg.id, v)
     })
-    sample({ clock: [resize, setColumns, toggleColumn, moveColumn, setPageSize], source: $persisted, target: persistFx })
+    sample({ clock: [resize, setColumns, toggleColumn, moveColumn, setPageSize, setSplit, resetWidths, resetWidth], source: $persisted, target: persistFx })
   }
 
   return {
-    $rows, $total, $page, $pageSize, $sort, $widths, $order, $hidden, $selection, $state, $error, $query, $facets,
-    sortBy, resize, setColumns, toggleColumn, moveColumn, setPage, setPageSize,
+    $rows, $total, $page, $pageSize, $sort, $widths, $order, $hidden, $selection, $state, $error, $query, $facets, $split,
+    sortBy, resize, setColumns, toggleColumn, moveColumn, setSplit, resetWidths, resetWidth, setPage, setPageSize,
     select, selectPage, selectAll, clearSelection, retry, refresh,
     fetchFx: cfg.fetchFx, rowKey: cfg.rowKey,
   }

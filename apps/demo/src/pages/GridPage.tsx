@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
-import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDate, formatDateTimeFull, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
+import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FilterPanel, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDate, formatDateTimeFull, gridColumns, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
@@ -15,43 +15,56 @@ export const docsLayout: RecordLayout<Doc> = {
     { id: 'id', title: 'ID', subtitle: '№ · 20 вх / исх', width: 136, lines: 2,
       sort: [{ id: 'docNumber', label: 'Номер документа', type: 'number' }, { id: 'refIn', label: '20 вх' }, { id: 'refOut', label: '20 исх' }],
       render: (d) => <><CopyValue value={String(d.docNumber)} tabIndex={T} /><div><LinkValue name="uuid" value={d.id} tabIndex={T} /> <LinkValue name="refIn" value={d.refIn ?? undefined} tabIndex={T} /> <LinkValue name="refOut" value={d.refOut ?? undefined} tabIndex={T} /></div></> },
-    { id: 'created', title: 'Дата / Время', width: 150, lines: 2, sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'valueDate', label: 'Валютирование', type: 'date' }],
-      render: (d) => <><CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} /><div><CopyValue value={formatDate(d.valueDate)} tone="ink2" tabIndex={T} /></div></> },
-    { id: 'type', title: 'Тип', width: 106, sort: [{ id: 'type', label: 'Тип сообщения' }], render: (d) => <CopyValue value={d.type} tone="mono" tabIndex={T} /> },
-    { id: 'direction', title: 'Направление', width: 166, lines: 2, sort: [{ id: 'direction', label: 'Группа → название', order: ['IN', 'OUT', 'TRANSIT', 'OTHER'], then: 'dirTxt' }, { id: 'dirTxt', label: 'Название' }],
+    { id: 'created', title: 'Дата / Время', width: 150, lines: 3, fullHeight: true,
+      sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'vdDt', label: 'Валютирование Дт', type: 'date' }, { id: 'vdKt', label: 'Валютирование Кт', type: 'date' }],
+      render: (d) => <><CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} /><div>Дт <CopyValue value={formatDate(d.vdDt)} tone="ink2" tabIndex={T} /></div><div>Кт <CopyValue value={formatDate(d.vdKt)} tone="ink2" tabIndex={T} /></div></>,
+      split: {
+        label: 'Валютирование отдельной колонкой',
+        render: (d) => <CopyValue value={formatDateTimeFull(d.created)} tone="ink" tabIndex={T} />,
+        parts: [{ id: 'valueDates', title: 'Валютирование', width: 110, lines: 2, fullHeight: true,
+          sort: [{ id: 'vdDt', label: 'Валютирование Дт', type: 'date' }, { id: 'vdKt', label: 'Валютирование Кт', type: 'date' }],
+          render: (d) => <>Дт <CopyValue value={formatDate(d.vdDt)} tone="ink2" tabIndex={T} /><div>Кт <CopyValue value={formatDate(d.vdKt)} tone="ink2" tabIndex={T} /></div></> }],
+      } },
+    { id: 'type', title: 'Тип', width: 106, fullHeight: true, sort: [{ id: 'type', label: 'Тип сообщения' }], render: (d) => <CopyValue value={d.type} tone="mono" tabIndex={T} /> },
+    { id: 'direction', title: 'Направление', width: 166, lines: 2, fullHeight: true, sort: [{ id: 'direction', label: 'Группа → название', order: ['IN', 'OUT', 'TRANSIT', 'OTHER'], then: 'dirTxt' }, { id: 'dirTxt', label: 'Название' }],
       render: (d) => <><CopyValue value={d.direction} tone="mono" tabIndex={T} /><div><CopyValue value={d.dirTxt} tone="ink2" tabIndex={T} /></div></> },
-    { id: 'amount', title: '32', subtitle: 'сумма', width: 136, lines: 2, align: 'right', sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }],
-      render: (d) => <><CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} /><div><CopyValue value={d.currency} tone="ink2" tabIndex={T} /></div></> },
+    { id: 'amount', title: '32', subtitle: 'сумма', width: 136, lines: 2, align: 'right', fullHeight: true, sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }],
+      render: (d) => <><CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} /><div><CopyValue value={d.currency} tone="ink2" tabIndex={T} /></div></>,
+      split: {
+        label: 'Валюта отдельной колонкой',
+        render: (d) => <CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} />,
+        parts: [{ id: 'currency', title: 'Валюта', width: 76, fullHeight: true, sort: [{ id: 'currency', label: 'Валюта' }], render: (d) => <Tag>{d.currency}</Tag> }],
+      } },
     { id: 'f50', title: '50', subtitle: 'приказодатель', width: 186, lines: 2, sort: [{ id: 'f50name', label: 'Наименование' }, { id: 'f50acc', label: 'Счёт' }],
       render: (d) => <><CopyValue value={d.f50name} tabIndex={T} /><div><AccountValue value={d.f50acc} tabIndex={T} /></div></> },
     { id: 'f52', title: '52', width: 126, sort: [{ id: 'f52', label: 'BIC 52' }], render: (d) => <CopyValue value={d.f52} tone="mono" tabIndex={T} /> },
     { id: 'f57', title: '57', width: 126, sort: [{ id: 'f57', label: 'BIC 57' }], render: (d) => <CopyValue value={d.f57} tone="mono" tabIndex={T} /> },
     { id: 'f59', title: '59', subtitle: 'бенефициар', width: 186, lines: 2, sort: [{ id: 'f59name', label: 'Наименование' }, { id: 'f59acc', label: 'Счёт' }],
       render: (d) => <><CopyValue value={d.f59name} tabIndex={T} /><div><AccountValue value={d.f59acc} tabIndex={T} /></div></> },
-    { id: 'sr', title: 'S / R in', width: 136, lines: 2, sort: [{ id: 'sender', label: 'S in' }, { id: 'receiver', label: 'R in' }],
+    { id: 'sr', title: 'S / R in', width: 136, lines: 2, fullHeight: true, sort: [{ id: 'sender', label: 'S in' }, { id: 'receiver', label: 'R in' }],
       render: (d) => <><span className={s.srTag}>S:</span> <CopyValue value={d.sender} tone="mono" tabIndex={T} /><div><span className={s.srTag}>R:</span> <CopyValue value={d.receiver} tone="mono" tabIndex={T} /></div></> },
-    { id: 'prov', title: 'Провайдеры', width: 126, sort: [{ id: 'provS', label: 'Провайдер отправителя' }, { id: 'provR', label: 'Провайдер получателя' }],
+    { id: 'prov', title: 'Провайдеры', width: 126, fullHeight: true, sort: [{ id: 'provS', label: 'Провайдер отправителя' }, { id: 'provR', label: 'Провайдер получателя' }],
       render: (d) => <><Tag>{d.provS}</Tag> <Tag>{d.provR}</Tag></> },
   ],
   spans: [[
-    { id: 'reason', from: 'status', to: 'created', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
+    { id: 'reason', from: 'status', to: 'id', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
     { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><span className={s.srTag}>70</span> <CopyValue value={d.purpose} tone="ink2" tabIndex={T} /></> : null) },
   ]],
 }
 
 /** Фрагмент раскладки для показа на странице — держать в синхроне с docsLayout.spans (текст блока spans: дословно, без отступа объекта). */
 const SPANS_SNIPPET = `spans: [[
-  { id: 'reason', from: 'status', to: 'created', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
+  { id: 'reason', from: 'status', to: 'id', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
   { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><span className={s.srTag}>70</span> <CopyValue value={d.purpose} tone="ink2" tabIndex={T} /></> : null) },
 ]],`
 
 const docs = makeDocs()
-const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout)
+const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout, { sortLabels: { status: STATUS_LABEL } })
 /** Один стор условий: лейн, панель и грид читают и пишут $conditions (лейн — EQ по status). */
 const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({
   id: 'demo-docs',
-  columns: docsLayout.columns.map((c) => ({ id: c.id, width: c.width })),
+  columns: gridColumns(docsLayout.columns),
   pageSize: 20,
   $filter: filters.$conditions,
   fetchFx: searchFx,
@@ -114,9 +127,11 @@ export function GridPage() {
         emptyTitle="По заданным условиям документов нет"
         emptyText="Измените условия отбора или сбросьте фильтр"
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
-        onOpen={(d, { secondary }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}`; setOpened(msg); announce(msg) }}
+        rowState={(d) => (d.lock ? { kind: 'locked', ...d.lock } : d.inactive ? { kind: 'inactive', ...d.inactive } : null)}
+        openHint="Открыть деталку · двойной клик или Shift — рядом для сравнения"
+        onOpen={(d, { secondary, state }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}${state?.kind === 'locked' ? ' (только просмотр)' : ''}`; setOpened(msg); announce(msg) }}
         toolbar={
-          <BulkBar selection={g.selection} total={g.total} onClear={g.onClearSelection} onSelectAll={g.onSelectAll}>
+          <BulkBar selection={g.selection} total={g.total} onClear={g.onClearSelection} onSelectAll={g.onSelectAll} allNote={g.rows.some((d) => d.inactive) ? 'без неактивных' : undefined}>
             <Button size="s" onClick={() => bulk('Экспорт')}>Экспортировать</Button>
             <Button size="s" onClick={() => bulk('Отложить')}>Отложить</Button>
           </BulkBar>

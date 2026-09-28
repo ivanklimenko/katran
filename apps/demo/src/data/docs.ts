@@ -4,7 +4,7 @@ export type Status = 'IN_PROGRESS' | 'TO_EXPORT' | 'PROCESSING' | 'ERROR' | 'DEF
 export type Direction = 'IN' | 'OUT' | 'TRANSIT' | 'OTHER'
 export type Doc = {
   id: string; docNumber: number; refIn: string | null; refOut: string | null; uetr: string
-  created: string; valueDate: string
+  created: string; vdDt: string; vdKt: string
   type: 'MT103' | 'MT202' | 'MT202COV' | 'MT199'
   direction: Direction; dirTxt: string
   amount: number; currency: 'USD' | 'EUR' | 'CNY' | 'RUB'
@@ -12,6 +12,10 @@ export type Doc = {
   f52: string; f57: string; f59name: string; f59acc: string
   status: Status; reason: string | null
   sender: string; receiver: string; provS: string; provR: string
+  /** Заблокирована другим пользователем (спека 5a §6, B1). */
+  lock: { who: string; since: string } | null
+  /** Неактивна — не участвует в массовом выделении (спека 5a §6, B1). */
+  inactive: { why: string } | null
 }
 
 export const STATUS_LABEL: Record<Status, string> = {
@@ -68,7 +72,7 @@ export function makeDocs(n = 87): Doc[] {
       refIn: hasIn ? `REF2026092${pad(i, 4)}` : null,
       refOut: hasOut ? `OUT${pad(Math.floor(r() * 1e7), 7)}` : null,
       uetr: `${pad(Math.floor(r() * 1e8), 8)}-1c2d-4e5f-8a9b-${pad(Math.floor(r() * 1e12), 12)}`,
-      created, valueDate: '2026-09-23',
+      created, vdDt: '2026-09-23',
       type: pick(r, ['MT103', 'MT103', 'MT202', 'MT202COV', 'MT199'] as const),
       direction, dirTxt,
       amount: Math.round(r() * 5_000_000 * 100) / 100, currency,
@@ -77,6 +81,9 @@ export function makeDocs(n = 87): Doc[] {
       f52: pick(r, BICS), f57: pick(r, BICS), f59name: pick(r, NAMES), f59acc: acc(r, currency),
       status, reason: status === 'ERROR' || status === 'DEFERRED' || status === 'REJECTED' ? pick(r, REASONS) : null,
       sender: pick(r, BICS), receiver: pick(r, BICS), provS: pick(r, PROV), provR: pick(r, PROV),
+      vdKt: r() > 0.85 ? '2026-09-24' : '2026-09-23',
+      lock: i % 11 === 2 ? { who: ['Иванова М. П.', 'Кузнецов Д. А.', 'Смирнова Е. В.'][i % 3]!, since: `2026-09-23T${pad(9 + (i % 8), 2)}:${pad((i * 13) % 60, 2)}:00` } : null,
+      inactive: i % 13 === 7 ? { why: ['Документ в архиве', 'Запись отозвана инициатором', 'Снят с обработки администратором'][i % 3]! } : null,
     }
   })
 }

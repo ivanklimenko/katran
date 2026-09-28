@@ -46,7 +46,7 @@ export const layout: RecordLayout<Doc> = {
 
 export function Docs({ rows, total }: { rows: Doc[]; total: number }) {
   const [page, setPage] = useState(1)
-  const [sort, setSort] = useState<Sort>(null)
+  const [sort, setSort] = useState<Sort>([])   // [] — без сортировки; Sort — массив уровней (SortLevel[])
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [cols, setCols] = useState<ColumnsState>({ order: [], hidden: [] })
   return (
@@ -64,6 +64,8 @@ export function Docs({ rows, total }: { rows: Doc[]; total: number }) {
 ```
 
 `label` обязателен — это доступное имя сетки. Выделение включается пропами `selection` + `onSelect`/`onSelectPage`, кнопка открытия записи — `onOpen`, состояния загрузки — `state` (`loading`, `refreshing`, `error` с `onRetry`).
+
+Дополнительно: `ColumnDef.fullHeight` — ячейка колонки на всю высоту записи; `ColumnDef.split` — переключатель «вместе / раздельно» для составных колонок (`expandColumns`, состав колонок); `onResetWidths`/`onResetWidth` — сброс ширин к раскладке; `rowState`/`openHint` — состояния записи (заблокирована/неактивна) и подсказка кнопки открытия, данные с бека. Подробности — спека, раздел 6.
 
 ## Модели effector
 

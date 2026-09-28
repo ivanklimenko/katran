@@ -32,6 +32,27 @@ function pickCell(row: Element, c: number): HTMLElement | undefined {
   return best ?? cells[0]
 }
 
+/** Первая строка от индекса from в направлении step, где есть ячейки: строки из одних заглушек (aria-hidden) пропускаются. */
+function rowWithCells(rows: HTMLTableRowElement[], from: number, step: 1 | -1): HTMLTableRowElement | undefined {
+  for (let i = from; i >= 0 && i < rows.length; i += step) if (cellsOf(rows[i]!).length > 0) return rows[i]
+  return undefined
+}
+
+/** Ячейка колонки c в строке row; если колонку занимает высокая ячейка из строки выше той же записи — она. */
+function cellAt(row: HTMLTableRowElement, c: number): HTMLElement | undefined {
+  const exact = cellsOf(row).find((el) => parse(el.dataset.cell!)[1] === c)
+  if (exact) return exact
+  const body = row.parentElement
+  if (body && body.tagName === 'TBODY') {
+    for (const r of Array.from(body.children) as HTMLTableRowElement[]) {
+      if (r === row) break
+      const tall = cellsOf(r).find((el) => parse(el.dataset.cell!)[1] === c && (el as HTMLTableCellElement).rowSpan > 1)
+      if (tall) return tall
+    }
+  }
+  return pickCell(row, c)
+}
+
 /**
  * WAI-ARIA grid: один таб-стоп, стрелки по ячейкам (спека 6.3). Навигация считается по DOM
  * (строки — все <tr> таблицы, ячейки — элементы с data-cell), поэтому сквозные строки участвуют естественно.
@@ -76,14 +97,22 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
       case 'ArrowLeft': target = cells[ci - 1]; break
       case 'Home': target = cells[0]; break
       case 'End': target = cells[cells.length - 1]; break
-      case 'ArrowDown': target = rows[ri + 1] ? pickCell(rows[ri + 1]!, c) : undefined; break
-      case 'ArrowUp': target = rows[ri - 1] ? pickCell(rows[ri - 1]!, c) : undefined; break
+      case 'ArrowDown': {
+        const next = rowWithCells(rows, ri + Math.max(1, (cell as HTMLTableCellElement).rowSpan), 1)
+        target = next ? cellAt(next, c) : undefined
+        break
+      }
+      case 'ArrowUp': {
+        const prev = rowWithCells(rows, ri - 1, -1)
+        target = prev ? cellAt(prev, c) : undefined
+        break
+      }
       case 'Enter': {
         const items = Array.from(cell.querySelectorAll<HTMLElement>(INTERACTIVE))
         if (items.length === 0) return
         e.preventDefault()
         items[0]!.focus()
-        if (items.length === 1) items[0]!.click()
+        if (items.length === 1) items[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: e.shiftKey }))
         return
       }
       default: return

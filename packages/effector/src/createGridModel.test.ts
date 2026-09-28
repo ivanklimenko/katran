@@ -1,5 +1,5 @@
 import { allSettled, createEffect, createStore, fork } from 'effector'
-import { createGridModel } from './createGridModel'
+import { createGridModel, type GridPersisted } from './createGridModel'
 import { memoryPersist } from './persist'
 import type { Facet, FacetsQuery, Filter, GridPage, GridQuery } from './types'
 
@@ -20,6 +20,9 @@ const mk = (over: Partial<Parameters<typeof createGridModel<Row>>[0]> = {}) => {
 /** Дать эффектам и их done/fail пройти через очередь микрозадач. */
 const flush = () => new Promise<void>((r) => setTimeout(r, 0))
 
+/** Свежий fetchFx с пустым успешным ответом — для тестов, которым сам запрос не важен. */
+const okFx = () => createEffect<GridQuery, GridPage<Row>>(async () => ({ rows: [], total: 0 }))
+
 describe('createGridModel', () => {
   it('стартовое состояние: страница 1, размер 20, порядок из колонок, запроса ещё нет', () => {
     const { model } = mk()
@@ -37,7 +40,7 @@ describe('createGridModel', () => {
     const { model, calls } = mk()
     const scope = fork()
     await allSettled(model.refresh, { scope })
-    expect(calls).toEqual([{ filter: [], sort: null, page: 0, size: 20 }])
+    expect(calls).toEqual([{ filter: [], sort: [], page: 0, size: 20 }])
     expect(scope.getState(model.$rows)).toHaveLength(2)
     expect(scope.getState(model.$total)).toBe(87)
     expect(scope.getState(model.$state)).toBe('ready')
@@ -54,7 +57,7 @@ describe('createGridModel', () => {
     await allSettled($filter, { scope, params: f })
     expect(scope.getState(model.$page)).toBe(1)
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: [] })
-    expect(calls.at(-1)).toEqual({ filter: f, sort: null, page: 0, size: 20 })
+    expect(calls.at(-1)).toEqual({ filter: f, sort: [], page: 0, size: 20 })
   })
 
   it('sortBy → страница 1 и запрос с sort; setPage → запрос с page-1', async () => {
@@ -62,9 +65,9 @@ describe('createGridModel', () => {
     const scope = fork()
     await allSettled(model.setPage, { scope, params: 4 })
     expect(calls.at(-1)?.page).toBe(3)
-    await allSettled(model.sortBy, { scope, params: { key: 'amount', dir: 'desc' } })
+    await allSettled(model.sortBy, { scope, params: [{ key: 'amount', dir: 'desc' }] })
     expect(scope.getState(model.$page)).toBe(1)
-    expect(calls.at(-1)).toMatchObject({ sort: { key: 'amount', dir: 'desc' }, page: 0 })
+    expect(calls.at(-1)).toMatchObject({ sort: [{ key: 'amount', dir: 'desc' }], page: 0 })
   })
 
   it('resize/toggleColumn/moveColumn — без запроса, но с persist', async () => {
@@ -78,7 +81,7 @@ describe('createGridModel', () => {
     expect(scope.getState(model.$widths)).toEqual({ c1: 100, c2: 150 })
     expect(scope.getState(model.$hidden)).toEqual(['c3'])
     expect(scope.getState(model.$order)).toEqual(['c2', 'c1', 'c3'])
-    expect(persist.load('g')).toEqual({ widths: { c1: 100, c2: 150 }, order: ['c2', 'c1', 'c3'], hidden: ['c3'], pageSize: 20 })
+    expect(persist.load('g')).toEqual({ widths: { c1: 100, c2: 150 }, order: ['c2', 'c1', 'c3'], hidden: ['c3'], pageSize: 20, split: [] })
   })
 
   it('persist.load восстанавливает вид при создании', () => {
@@ -101,6 +104,33 @@ describe('createGridModel', () => {
     expect(scope.getState(model.$hidden)).toEqual([])
   })
 
+  it('setSplit меняет $split и сохраняется; чужие id из сохранённого отбрасываются', async () => {
+    const persist = memoryPersist<Partial<GridPersisted>>()
+    persist.save('g', { split: ['amount', 'gone'] })
+    const okFx = createEffect<GridQuery, GridPage<Row>>(async () => ({ rows: [], total: 0 }))
+    const m = createGridModel<Row>({ id: 'g', columns: [{ id: 'amount' }, { id: 'ccy' }, { id: 'created' }], $filter: createStore<Filter>([]), fetchFx: okFx, persist, rowKey: (r) => r.id })
+    const scope = fork()
+    expect(scope.getState(m.$split)).toEqual(['amount'])
+    await allSettled(m.setSplit, { scope, params: { id: 'created', on: true } })
+    expect(scope.getState(m.$split)).toEqual(['amount', 'created'])
+    await allSettled(m.setSplit, { scope, params: { id: 'amount', on: false } })
+    expect(scope.getState(m.$split)).toEqual(['created'])
+    expect(persist.load('g')?.split).toEqual(['created'])
+  })
+
+  it('resetWidth — ширина колонки из конфига; resetWidths — все; сохраняется', async () => {
+    const persist = memoryPersist<Partial<GridPersisted>>()
+    const m = createGridModel<Row>({ id: 'g', columns: [{ id: 'a', width: 100 }, { id: 'b', width: 80 }], $filter: createStore<Filter>([]), fetchFx: okFx(), persist, rowKey: (r) => r.id })
+    const scope = fork()
+    await allSettled(m.resize, { scope, params: { id: 'a', width: 200 } })
+    await allSettled(m.resize, { scope, params: { id: 'b', width: 200 } })
+    await allSettled(m.resetWidth, { scope, params: 'a' })
+    expect(scope.getState(m.$widths)).toEqual({ a: 100, b: 200 })
+    await allSettled(m.resetWidths, { scope })
+    expect(scope.getState(m.$widths)).toEqual({ a: 100, b: 80 })
+    expect(persist.load('g')?.widths).toEqual({ a: 100, b: 80 })
+  })
+
   it('выделение: select/selectPage/selectAll/clearSelection; сортировка и страница не сбрасывают', async () => {
     const { model } = mk()
     const scope = fork()
@@ -110,7 +140,7 @@ describe('createGridModel', () => {
     await allSettled(model.select, { scope, params: { id: 'b', on: false } })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: ['a', 'c'] })
     await allSettled(model.setPage, { scope, params: 2 })
-    await allSettled(model.sortBy, { scope, params: { key: 'n', dir: 'asc' } })
+    await allSettled(model.sortBy, { scope, params: [{ key: 'n', dir: 'asc' }] })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: ['a', 'c'] })
     await allSettled(model.selectAll, { scope })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'all', except: [] })

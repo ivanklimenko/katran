@@ -28,10 +28,10 @@ describe('GridRecord', () => {
     expect(rows[1]).toHaveAttribute('aria-rowindex', '3')
     expect(within(rows[0]!).getAllByRole('gridcell')).toHaveLength(5) // служебная + 4
     const segCells = within(rows[1]!).getAllByRole('gridcell')
-    expect(segCells).toHaveLength(3) // служебная + 2 сегмента
-    expect(segCells[1]).toHaveAttribute('colspan', '2')
-    expect(segCells[1]).toHaveAttribute('data-empty', 'true')
-    expect(segCells[2]).toHaveTextContent('Оплата по договору')
+    expect(segCells).toHaveLength(2) // 2 сегмента, служебной ячейки в сквозной строке больше нет
+    expect(segCells[0]).toHaveAttribute('colspan', '2')
+    expect(segCells[0]).toHaveAttribute('data-empty', 'true')
+    expect(segCells[1]).toHaveTextContent('Оплата по договору')
   })
   it('кламп по lines и выравнивание вправо', () => {
     renderK(<Table><GridRecord row={row} rowKey="r1" visible={columns} spanRows={[]} lead={null} rowIndex={1} /></Table>)
@@ -46,6 +46,26 @@ describe('GridRecord', () => {
   it('fillSegments закрывает пропуски заглушками', () => {
     const segs = [{ def: purpose, colStart: 2, colSpan: 1 }]
     expect(fillSegments(segs, 4)).toEqual([{ filler: true, colSpan: 2 }, segs[0], { filler: true, colSpan: 1 }])
+  })
+  it('fillSegments: заполнители только по колонкам первой строки, не через высокие', () => {
+    const seg = { def: { id: 's', from: 'a', to: 'a', render: () => null }, colStart: 0, colSpan: 1 }
+    // колонки: a(0) T(1, высокая) b(2) c(3)
+    expect(fillSegments([seg], [false, true, false, false])).toEqual([seg, { filler: true, colSpan: 2 }])
+    expect(fillSegments([], [false, true, false])).toEqual([{ filler: true, colSpan: 1 }, { filler: true, colSpan: 1 }])
+    expect(fillSegments([seg], 3)).toEqual([seg, { filler: true, colSpan: 2 }])
+  })
+  it('высокая колонка и служебная — rowSpan на всю запись, во сквозной строке под ними ячеек нет', () => {
+    type R = { a: string; t: string }
+    const visibleTall: ColumnDef<R>[] = [{ id: 'a', render: (r) => r.a }, { id: 't', fullHeight: true, render: (r) => r.t }]
+    const spanRowsTall = [[{ def: { id: 's', from: 'a', to: 'a', render: () => 'сегмент' }, colStart: 0, colSpan: 1 }]]
+    renderK(<Table><GridRecord row={{ a: 'A', t: 'T' }} rowKey="k" visible={visibleTall} spanRows={spanRowsTall} lead="L" rowIndex={2} /></Table>)
+    const rows = screen.getAllByRole('row')
+    const [lead, a, t] = within(rows[0]!).getAllByRole('gridcell')
+    expect(lead).toHaveAttribute('rowspan', '2')
+    expect(a).not.toHaveAttribute('rowspan')
+    expect(t).toHaveAttribute('rowspan', '2')
+    expect(within(rows[1]!).getAllByRole('gridcell')).toHaveLength(1)
+    expect(within(rows[1]!).getByRole('gridcell')).toHaveTextContent('сегмент')
   })
   it('без нарушений axe', async () => {
     const { container } = renderK(<Table><thead><tr><th scope="col">Служебная</th>{columns.map((c) => <th key={c.id} scope="col">{c.title || c.id}</th>)}</tr></thead><GridRecord row={row} rowKey="r1" visible={columns} spanRows={spanRows} lead={<button>Открыть</button>} rowIndex={2} /></Table>)

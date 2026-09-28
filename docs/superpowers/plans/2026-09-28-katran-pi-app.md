@@ -64,14 +64,15 @@ docs/…  — Task 1, Task 14
 **Files:** только чтение.
 
 - [ ] **Step 1: планы 4 и 5 слиты.** `git log --oneline main | head -40` — есть коммиты планов «Совместимость» и «Реестр по эталону»; `docs/STATE.md` §6 называет их исполненными. Если нет — **остановиться** и сообщить владельцу: этот план идёт после них.
-- [ ] **Step 2: форма `Sort`.** Открыть `packages/ui/src/grid/types.ts`. План предполагает после S1:
+- [ ] **Step 2: форма `Sort`.** Открыть `packages/ui/src/grid/types.ts`. **Подтверждено планом 5a**: форма ровно та, что план предполагал —
 
 ```ts
 export type SortLevel = { key: string; dir: 'asc' | 'desc' }
 export type Sort = SortLevel[]          // [] — без сортировки
+export const MAX_SORT_LEVELS = 5
 ```
 
-Если план 5 ввёл другую форму — записать её в леджер и в Task 5 (`toSearchBody`) и Task 7 (`fromSortDto`) использовать фактические имена полей; больше форма `Sort` нигде в плане не читается.
+Использовать эти имена в Task 5 (`toSearchBody`) и Task 7 (`fromSortDto`) без дополнительной проверки; больше форма `Sort` нигде в плане не читается.
 - [ ] **Step 3: `shortAccount`.** Открыть `packages/ui/src/format/account.ts`. Если у функции уже есть параметр длины хвоста — Task 3 пропускается (отметить в леджере, в Task 12 использовать фактическое имя пропа `AccountValue`).
 - [ ] **Step 4: конфиги демо.** Прочитать `apps/demo/package.json`, `vite.config.ts`, `tsconfig.json` после плана 4 (версия React, classic JSX runtime, таргет сборки). Task 4 копирует их — все отличия от текста Task 4 переносить как в демо.
 - [ ] **Step 5: `pnpm install && pnpm check`** — зелёный. Иначе остановиться.
@@ -113,7 +114,7 @@ test('замер рублёвого реестра стенда', async ({ page 
 
 Run: `cd apps/demo && pnpm exec playwright test -c e2e-stand/playwright.config.ts --reporter=line`
 Expected: строка `STAND rub: record=… head=…`. Записать числа в `registry-drift.md` (Step 3) и в STATE §10 рядом с хешем. Удалить каталог `apps/demo/e2e-stand/`.
-- [ ] **Step 3: сверка.** Раздел «Рублёвый реестр» в `docs/reference/registry-drift.md` превратить в таблицу того же формата, что у валютного (`| № | Эталон | Кит | Класс | Решение | Где | Размер |`), по колонкам, сквозным строкам, лейну, фильтрам, сортировке, счёту, статусной точке, данным. Эталон — `rub-grid.tpl.html` на хеше Step 1; «кит» — то, что даст этот план по спеке §8.2 (кит рубля ещё не написан — сравнивается с планируемым). Классы C, известные заранее (записать с решением «Сознательно»): многоуровневая сортировка (В1); один стор условий лейна и панели; плоский каталог simple из 10 полей вместо групп; подпись статуса `INVALID` → «Невалидный» из общего словаря кита.
+- [ ] **Step 3: сверка.** Раздел «Рублёвый реестр» в `docs/reference/registry-drift.md` превратить в таблицу того же формата, что у валютного (`| № | Эталон | Кит | Класс | Решение | Где | Размер |`), по колонкам, сквозным строкам, лейну, фильтрам, сортировке, счёту, статусной точке, данным. Эталон — `rub-grid.tpl.html` на хеше Step 1; «кит» — то, что даст этот план по спеке §8.2 (кит рубля ещё не написан — сравнивается с планируемым). Классы C, известные заранее (записать с решением «Сознательно»): многоуровневая сортировка (В1); один стор условий лейна и панели; плоский каталог simple из 10 полей вместо групп.
 - [ ] **Step 4: вопросы владельцу.** Все пункты класса B собрать списком «вопросы владельцу» в конце раздела. **Остановиться и передать список контроллеру** — продолжать Task 12 можно только после решений; Task 2–11 от них не зависят.
 - [ ] **Step 5: commit.**
 
@@ -1187,7 +1188,8 @@ export type Status = (typeof STATUSES)[number]
 
 export const STATUS_LABEL: Record<Status, string> = {
   IN_PROGRESS: 'В работе', TO_EXPORT: 'К экспорту', PROCESSING: 'В обработке', ERROR: 'Ошибка', DEFERRED: 'Отложенный',
-  EXPORTED: 'Экспортирован', INVALID: 'Невалидный', REJECTED: 'Отказ', DONE: 'Обработан',
+  // INVALID — термин владельца, без перевода (план 4, F6; STATE §7 «решённые вопросы»)
+  EXPORTED: 'Экспортирован', INVALID: 'INVALID', REJECTED: 'Отказ', DONE: 'Обработан',
 }
 /** Тон статусной точки — 4 семейства (основная спека 4.2). */
 export const STATUS_TONE: Record<Status, StatusTone> = {
@@ -1308,7 +1310,7 @@ export { fxDocLayout } from './ui/layout'
 - [ ] **Step 6: данные и транспорт.** `app/fake/fx-docs.data.ts` — перенос `makeDocs` и словарей `REASONS`, `CCY`, `NAMES`, `BICS`, `PROV`, `rng`, `pick`, `pad`, `acc` из `apps/demo/src/data/docs.ts` дословно (имя — `makeFxDocs`, тип — `FxDoc`, статусы — `Status` из `../../entities/doc-status`), плюс каталог в форме DTO:
 
 ```ts
-import { DIRECTION_LABEL, CURRENCIES, FX_TYPES } from '../../entities/fx-doc'
+import { CURRENCIES, FX_TYPES } from '../../entities/fx-doc'
 import { STATUS_LABEL } from '../../entities/doc-status'
 import type { FilterMetaDto } from '../../shared/api'
 import { field, inline } from './meta'
@@ -1328,7 +1330,8 @@ export const fxDocsMeta: FilterMetaDto = {
     field('f50name', 'Приказодатель', 'STRING'),
     field('f59name', 'Бенефициар', 'STRING'),
   ],
-  dictionaries: { docStatus: inline(STATUS_LABEL), fxType: inline(labelsOf(FX_TYPES)), direction: inline(DIRECTION_LABEL), currency: inline(labelsOf(CURRENCIES)) },
+  // направление — код и в гриде, и в фильтре (план 4, F7): справочник кодами, не подписями DIRECTION_LABEL
+  dictionaries: { docStatus: inline(STATUS_LABEL), fxType: inline(labelsOf(FX_TYPES)), direction: inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' }), currency: inline(labelsOf(CURRENCIES)) },
 }
 ```
 
@@ -1507,7 +1510,7 @@ import {
   createFiltersModel, createGridModel, localStoragePersist,
   type FilterMeta, type FiltersModel, type GridModel, type GridPersisted, type PersistAdapter,
 } from '@katran/effector'
-import type { RecordLayout } from '@katran/ui'
+import { gridColumns, type RecordLayout } from '@katran/ui'
 import type { GridPorts } from '../../../shared/api'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
@@ -1540,7 +1543,8 @@ export function createRegistry<Row>(cfg: RegistryConfig<Row>): Registry<Row> {
   const filters = createFiltersModel({ meta: $meta, laneField: 'status' })
   const grid = createGridModel<Row>({
     id: cfg.id,
-    columns: cfg.layout.columns.map((c) => ({ id: c.id, width: c.width })),
+    // gridColumns разворачивает части составных колонок (ColumnDef.split, план 5a, R5) — у частей свои id и ширины
+    columns: gridColumns(cfg.layout.columns),
     pageSize: cfg.pageSize ?? 20,
     $filter: filters.$conditions,
     fetchFx: ports.searchFx,
@@ -1598,9 +1602,15 @@ type DocRegistryProps<Row> = {
   describe: (row: Row) => string
   note?: string | undefined
   bulkActions?: BulkAction[] | undefined
+  /** Заблокирована/неактивна (спека 5a §6, B1) — данные с бека, экран передаёт как есть. */
+  rowState?: ((row: Row) => RowState) | undefined
+  /** Подсказка кнопки открытия обычной записи (спека 5a §6, B7). */
+  openHint?: string | undefined
 }
 function DocRegistry<Row>(p: DocRegistryProps<Row>): ReactElement
 ```
+
+`split`/`onSplit` в `DataGrid` не отдельный проп `DocRegistry` — они приходят из `useGrid(registry.grid)` вместе с остальным биндингом (план 5a расширил `GridBinding`) и уходят в `<DataGrid {...g} …>` спредом без правки; `rowState`/`openHint` — экранные пропы, как `label`/`layout` (модель их не знает, спека 6.4).
 
 - [ ] **Step 1: тесты (падают).** `ui/DocRegistry.test.tsx`:
 
@@ -1674,7 +1684,7 @@ Run: `pnpm --filter pi test` — FAIL.
 ```tsx
 import { useState } from 'react'
 import { useFilters, useGrid } from '@katran/effector'
-import { BulkBar, Button, Counter, DataGrid, FilterPanel, StatusLane, useKatran, type RecordLayout } from '@katran/ui'
+import { BulkBar, Button, Counter, DataGrid, FilterPanel, StatusLane, useKatran, type RecordLayout, type RowState } from '@katran/ui'
 import { useUnit } from 'effector-react'
 import { laneItems } from '../../../entities/doc-status'
 import type { Registry } from '../lib/createRegistry'
@@ -1689,10 +1699,14 @@ export type DocRegistryProps<Row> = {
   describe: (row: Row) => string
   note?: string | undefined
   bulkActions?: BulkAction[] | undefined
+  /** Заблокирована/неактивна (спека 5a §6, B1) — данные с бека, модель не нужна. */
+  rowState?: ((row: Row) => RowState) | undefined
+  /** Подсказка кнопки открытия обычной записи (спека 5a §6, B7). */
+  openHint?: string | undefined
 }
 
 /** Экран реестра документов: заголовок, лейн статусов, панель фильтров, грид, полоса массовых действий. */
-export function DocRegistry<Row>({ registry, layout, title, describe, note, bulkActions = [] }: DocRegistryProps<Row>) {
+export function DocRegistry<Row>({ registry, layout, title, describe, note, bulkActions = [], rowState, openHint }: DocRegistryProps<Row>) {
   const g = useGrid(registry.grid)
   const f = useFilters(registry.filters)
   const openRequested = useUnit(registry.openRequested)
@@ -1720,6 +1734,8 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
         label={title}
         layout={layout}
         pageSizes={[20, 50]}
+        rowState={rowState}
+        openHint={openHint}
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
         onOpen={(row, { secondary }) => {
           openRequested({ id: layout.rowKey(row), secondary })

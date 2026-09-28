@@ -31,6 +31,19 @@ export type ColumnDef<Row> = {
   sort?: SortKey[] | undefined
   /** Интерактивные элементы внутри ячейки — с `tabIndex={-1}`; до них доходят через Enter на ячейке. */
   render: (row: Row) => ReactNode
+  /** Ячейка на всю высоту записи (rowSpan): сквозные строки проходят только под колонками без fullHeight (спека 5a §2). */
+  fullHeight?: boolean | undefined
+  /** «Вместе / раздельно» (спека 5a §4): режим переключается в меню состава, id — в GridModelConfig.columns/persist. */
+  split?: {
+    /** Подпись переключателя в меню состава: «Валюта отдельной колонкой». */
+    label: string
+    /** Вид хоста в режиме «раздельно» — без выделенной части. */
+    render: (row: Row) => ReactNode
+    /** Ключи хоста в режиме «раздельно»; по умолчанию — ключи хоста без ключей частей. */
+    sort?: SortKey[] | undefined
+    /** Части — обычные колонки со своими id, заголовком, шириной, ключами, fullHeight, render. */
+    parts: ColumnDef<Row>[]
+  } | undefined
 }
 
 export type SpanDef<Row> = {
@@ -51,9 +64,17 @@ export type RecordLayout<Row> = {
   rowKey: (row: Row) => string
 }
 
-export type Sort = { key: string; dir: 'asc' | 'desc' } | null
+/** Уровень сортировки: ключ из ColumnDef.sort[].id и направление. */
+export type SortLevel = { key: string; dir: 'asc' | 'desc' }
+/** Многоуровневая сортировка (решение владельца В1): порядок уровней — порядок сравнения; [] — без сортировки. */
+export type Sort = SortLevel[]
+/** Контракт vtb-filters §5.1: sort — массив до 5 элементов. */
+export const MAX_SORT_LEVELS = 5
 export type Selection = { mode: 'ids'; ids: string[] } | { mode: 'all'; except: string[] }
 export type ColumnsState = { order: string[]; hidden: string[] }
 export type GridViewState = 'ready' | 'loading' | 'refreshing' | 'error'
 
 export type ResolvedSpan = { id: string; colStart: number; colSpan: number }
+
+/** Состояние записи с бека (спека 5a §6): заблокирована другим пользователем или неактивна. */
+export type RowState = { kind: 'locked'; who: string; since: string } | { kind: 'inactive'; why: string } | null

@@ -4,7 +4,7 @@ import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { BulkBar } from '../filters/BulkBar'
 import { DataGrid, type DataGridProps } from './DataGrid'
-import type { RecordLayout } from './types'
+import type { RecordLayout, RowState } from './types'
 
 type Doc = { id: string; status: string; num: string; amount: number; purpose: string | null }
 const docs: Doc[] = [
@@ -16,13 +16,16 @@ const layout: RecordLayout<Doc> = {
   columns: [
     { id: 'status', menuTitle: 'Статус', width: 60, sort: [{ id: 'status', label: 'Статус' }, { id: 'reason', label: 'Причина' }], render: (d) => d.status },
     { id: 'num', title: 'Номер', width: 90, sort: [{ id: 'num', label: 'Номер', type: 'number' }], render: (d) => d.num },
-    { id: 'amount', title: '32', subtitle: 'сумма', align: 'right', width: 100, render: (d) => String(d.amount) },
+    {
+      id: 'amount', title: '32', subtitle: 'сумма', align: 'right', width: 100, render: (d) => String(d.amount),
+      split: { label: 'Валюта отдельной колонкой', render: (d) => String(d.amount), parts: [{ id: 'ccy', title: 'Валюта', render: () => 'RUB' }] },
+    },
   ],
   spans: [[{ id: 'purpose', from: 'num', to: 'amount', render: (d) => d.purpose }]],
 }
 const base = (over: Partial<DataGridProps<Doc>> = {}): DataGridProps<Doc> => ({
   label: 'Документы', layout, rows: docs, total: 87, page: 1, pageSize: 20, onPage: vi.fn(),
-  sort: null, onSort: vi.fn(), widths: {}, onResize: vi.fn(), order: ['status', 'num', 'amount'], hidden: [], onColumns: vi.fn(),
+  sort: [], onSort: vi.fn(), widths: {}, onResize: vi.fn(), order: ['status', 'num', 'amount'], hidden: [], onColumns: vi.fn(),
   state: 'ready', ...over,
 })
 
@@ -38,14 +41,14 @@ describe('DataGrid', () => {
     expect(rows).toHaveLength(1 + 2 * 2)
     expect(rows[1]).toHaveTextContent('1')
     expect(rows[3]).toHaveTextContent('2')
-    expect(within(rows[2]!).getAllByRole('gridcell')[1]).toHaveTextContent('Оплата')
+    expect(within(rows[2]!).getAllByRole('gridcell')[0]).toHaveTextContent('Оплата')
     expect(screen.getByRole('navigation', { name: 'Страницы' })).toHaveTextContent('1–20 из 87')
   })
 
   it('скрытая колонка не рендерится, сегмент сжимается; ширины из widths', () => {
     renderK(<DataGrid {...base({ hidden: ['amount'], widths: { num: 150 } })} />)
     expect(screen.queryByRole('columnheader', { name: /32/ })).toBeNull()
-    const seg = within(screen.getAllByRole('row')[2]!).getAllByRole('gridcell')[1]
+    const seg = within(screen.getAllByRole('row')[2]!).getAllByRole('gridcell')[0]
     expect(seg).toHaveAttribute('colspan', '1')
     expect(screen.getByRole('columnheader', { name: /Номер/ })).toHaveStyle({ width: 'calc(150px * var(--k-density))' })
   })
@@ -54,7 +57,7 @@ describe('DataGrid', () => {
     const p = base()
     renderK(<DataGrid {...p} />)
     await userEvent.click(screen.getByRole('button', { name: /Номер/ }))
-    expect(p.onSort).toHaveBeenCalledWith({ key: 'num', dir: 'desc' })
+    expect(p.onSort).toHaveBeenCalledWith([{ key: 'num', dir: 'desc' }])
     const h = screen.getByRole('slider', { name: 'Ширина колонки Номер' })
     h.focus()
     await userEvent.keyboard('{ArrowRight}')
@@ -88,11 +91,43 @@ describe('DataGrid', () => {
     expect(p.onOpen).not.toHaveBeenCalled()
     const btn = screen.getByRole('button', { name: 'Открыть запись 1' })
     fireEvent.click(btn, { detail: 1 })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false, state: null })
     fireEvent.click(btn, { detail: 2 })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
     fireEvent.click(btn, { detail: 1, shiftKey: true })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
+  })
+
+  it('B1: заблокированная — замок и подсказка, выделять можно; неактивная — чекбокс disabled, страница выделяет только доступные', async () => {
+    const onSelectPage = vi.fn()
+    const onOpen = vi.fn()
+    const rows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState =>
+      r.id === 'a' ? { kind: 'locked', who: 'Иванова М. П.', since: '2026-09-23T09:13:00' } : r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null
+    renderK(<DataGrid {...base({ rows, total: 3, selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage, onOpen, rowState, openHint: 'Открыть деталку' })} />)
+    const lock = screen.getByRole('button', { name: 'Заблокирована: Иванова М. П., с 23.09.2026 09:13 · открыть только для просмотра' })
+    await userEvent.click(lock)
+    expect(onOpen).toHaveBeenCalledWith(rows[0], { secondary: false, state: rowState(rows[0]!) })
+    // причина неактивности — и в доступном имени (скринридер), и в тултипе
+    const inactiveBox = screen.getByRole('checkbox', { name: 'Выбрать запись 2 — Документ в архиве' })
+    expect(inactiveBox).toBeDisabled()
+    expect(inactiveBox).toHaveAttribute('data-k-tip', 'Документ в архиве · выбрать нельзя')
+    // у заблокированной — только замок, без второй иконки открытия
+    expect(lock.querySelectorAll('svg')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Открыть запись 3' }).querySelectorAll('svg')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Выбрать все на странице' }))
+    expect(onSelectPage).toHaveBeenCalledWith({ ids: ['a', 'c'], on: true })
+    expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-state', 'locked')
+    expect(document.querySelector('tbody[data-key="b"]')).toHaveAttribute('data-state', 'inactive')
+    expect(screen.getByRole('button', { name: 'Открыть запись 3' })).toHaveAttribute('data-k-tip', 'Открыть деталку')
+  })
+
+  it('B1: без нарушений axe', async () => {
+    const rows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState =>
+      r.id === 'a' ? { kind: 'locked', who: 'Иванова М. П.', since: '2026-09-23T09:13:00' } : r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null
+    const { container } = renderK(<DataGrid {...base({ rows, total: 3, selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage: () => {}, onOpen: () => {}, rowState, openHint: 'Открыть деталку' })} />)
+    expect(await axe(container)).toHaveNoViolations()
   })
 
   it('пустое состояние: заголовок, пояснение и действие', () => {
@@ -226,5 +261,50 @@ describe('DataGrid', () => {
     expect(wrapper).not.toBeNull()
     expect(wrapper).toBeEmptyDOMElement()
     expect(screen.queryByRole('region', { name: 'Массовые действия' })).toBeNull()
+  })
+
+  it('чипы сортировки над таблицей: видны при заданном sort, скрыты при пустом', () => {
+    const { rerender } = renderK(<DataGrid {...base({ sort: [{ key: 'status', dir: 'asc' }, { key: 'num', dir: 'desc' }] })} />)
+    expect(screen.getByRole('group', { name: 'Сортировка' })).toBeInTheDocument()
+    rerender(<DataGrid {...base({ sort: [] })} />)
+    expect(screen.queryByRole('group', { name: 'Сортировка' })).toBeNull()
+  })
+
+  it('раздельно: split=[\'amount\'] — колонка «Валюта» сразу за «32»; split=[] — её нет', () => {
+    const { rerender } = renderK(<DataGrid {...base({ split: ['amount'] })} />)
+    const heads = screen.getAllByRole('columnheader')
+    const names = heads.map((h) => h.textContent ?? '')
+    const amountIdx = names.findIndex((n) => n.includes('32'))
+    expect(amountIdx).toBeGreaterThan(-1)
+    expect(names[amountIdx + 1]).toContain('Валюта')
+    rerender(<DataGrid {...base({ split: [] })} />)
+    expect(screen.queryByRole('columnheader', { name: /Валюта/ })).toBeNull()
+  })
+
+  it('неактивная запись не показывается выбранной: ни в режиме «все», ни в списке id', () => {
+    const rows = [{ id: 'a' }, { id: 'b' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState => (r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null)
+    const check = () => {
+      const box = screen.getByRole('checkbox', { name: 'Выбрать запись 2 — Документ в архиве' }) as HTMLInputElement
+      expect(box.checked).toBe(false)
+      expect(box).toBeDisabled()
+      const body = document.querySelector('tbody[data-key="b"]')!
+      body.querySelectorAll('tr').forEach((tr) => expect(tr).not.toHaveAttribute('aria-selected', 'true'))
+      expect(body.className).not.toMatch(/selected/)
+      // доступная запись при этом выбрана
+      expect((screen.getByRole('checkbox', { name: 'Выбрать запись 1' }) as HTMLInputElement).checked).toBe(true)
+      expect(document.querySelector('tbody[data-key="a"] tr')).toHaveAttribute('aria-selected', 'true')
+    }
+    const { rerender } = renderK(<DataGrid {...base({ rows, total: 2, selection: { mode: 'all', except: [] }, onSelect: () => {}, rowState })} />)
+    check()
+    rerender(<DataGrid {...base({ rows, total: 2, selection: { mode: 'ids', ids: ['a', 'b'] }, onSelect: () => {}, rowState })} />)
+    check()
+  })
+
+  it('скрытый хост в режиме «раздельно» — его части тоже нет', () => {
+    renderK(<DataGrid {...base({ split: ['amount'], hidden: ['amount'] })} />)
+    expect(screen.queryByRole('columnheader', { name: /32/ })).toBeNull()
+    expect(screen.queryByRole('columnheader', { name: /Валюта/ })).toBeNull()
+    expect(screen.getByRole('grid')).toHaveAttribute('aria-colcount', '3')
   })
 })
