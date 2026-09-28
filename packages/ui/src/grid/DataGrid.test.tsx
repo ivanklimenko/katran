@@ -22,7 +22,7 @@ const layout: RecordLayout<Doc> = {
 }
 const base = (over: Partial<DataGridProps<Doc>> = {}): DataGridProps<Doc> => ({
   label: 'Документы', layout, rows: docs, total: 87, page: 1, pageSize: 20, onPage: vi.fn(),
-  sort: null, onSort: vi.fn(), widths: {}, onResize: vi.fn(), order: ['status', 'num', 'amount'], hidden: [], onColumns: vi.fn(),
+  sort: [], onSort: vi.fn(), widths: {}, onResize: vi.fn(), order: ['status', 'num', 'amount'], hidden: [], onColumns: vi.fn(),
   state: 'ready', ...over,
 })
 
@@ -54,7 +54,7 @@ describe('DataGrid', () => {
     const p = base()
     renderK(<DataGrid {...p} />)
     await userEvent.click(screen.getByRole('button', { name: /Номер/ }))
-    expect(p.onSort).toHaveBeenCalledWith({ key: 'num', dir: 'desc' })
+    expect(p.onSort).toHaveBeenCalledWith([{ key: 'num', dir: 'desc' }])
     const h = screen.getByRole('slider', { name: 'Ширина колонки Номер' })
     h.focus()
     await userEvent.keyboard('{ArrowRight}')

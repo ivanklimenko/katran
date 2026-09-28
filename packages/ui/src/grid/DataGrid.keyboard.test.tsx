@@ -16,7 +16,7 @@ const layout: RecordLayout<Doc> = {
   spans: [[{ id: 'purpose', from: 'num', to: 'name', render: (d) => d.purpose }]],
 }
 const props = (over: Partial<DataGridProps<Doc>> = {}): DataGridProps<Doc> => ({
-  label: 'Тест', layout, rows: docs, total: 2, page: 1, pageSize: 20, onPage: vi.fn(), sort: null, onSort: vi.fn(),
+  label: 'Тест', layout, rows: docs, total: 2, page: 1, pageSize: 20, onPage: vi.fn(), sort: [], onSort: vi.fn(),
   widths: {}, onResize: vi.fn(), order: ['num', 'name'], hidden: [], onColumns: vi.fn(), state: 'ready', onOpen: vi.fn(), ...over,
 })
 const cellOf = (el: Element | null) => el?.closest('[data-cell]')?.getAttribute('data-cell')
@@ -69,7 +69,7 @@ describe('DataGrid: клавиатура', () => {
     renderK(<DataGrid {...p} />)
     await userEvent.tab()
     await userEvent.keyboard('{ArrowUp}{ArrowRight}{Enter}')
-    expect(p.onSort).toHaveBeenCalledWith({ key: 'num', dir: 'asc' })
+    expect(p.onSort).toHaveBeenCalledWith([{ key: 'num', dir: 'asc' }])
   })
 
   it('Tab внутри ячейки заголовка доходит до ползунка ресайза; стрелка меняет ширину; Escape — в ячейку', async () => {

@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react'
 import { Menu, type MenuItem } from '../overlay'
-import { defaultDir, findSortKey } from './sortRows'
+import { findSortKey, soleSort } from './sortRows'
 import s from './Grid.module.css'
 import type { ColumnDef, Sort } from './types'
 
@@ -20,7 +20,8 @@ const STEP_SHIFT = 32
 
 export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellProps }: ColumnHeaderProps<Row>) {
   const keys = column.sort ?? []
-  const active = sort && keys.find((k) => k.id === sort.key)
+  const level = sort.find((l) => keys.some((k) => k.id === l.key))
+  const active = level ? keys.find((k) => k.id === level.key) : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
   const drag = useRef<{ x: number; w: number } | null>(null)
@@ -30,8 +31,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
 
   const pick = (keyId: string) => {
     const key = findSortKey([column], keyId)
-    if (!key) return
-    onSort(sort && sort.key === keyId ? { key: keyId, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { key: keyId, dir: defaultDir(key) })
+    if (key) onSort(soleSort(sort, key))
   }
   const onHeadClick = () => {
     if (keys.length === 1) pick(keys[0]!.id)
@@ -39,8 +39,8 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
   }
 
   const items: MenuItem[] = [
-    ...keys.map((k) => ({ id: k.id, label: k.label, checked: active?.id === k.id, hint: active?.id === k.id ? (sort!.dir === 'asc' ? '↑' : '↓') : undefined, onSelect: () => pick(k.id) })),
-    ...(active ? [{ id: '__reset', label: 'Сбросить сортировку', onSelect: () => onSort(null) }] : []),
+    ...keys.map((k) => ({ id: k.id, label: k.label, checked: active?.id === k.id, hint: active?.id === k.id ? (level!.dir === 'asc' ? '↑' : '↓') : undefined, onSelect: () => pick(k.id) })),
+    ...(active ? [{ id: '__reset', label: 'Сбросить сортировку', onSelect: () => onSort([]) }] : []),
   ]
 
   const clamp = (w: number) => Math.max(min, Math.round(w))
@@ -64,8 +64,8 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
     else if (e.key === 'ArrowLeft') { e.preventDefault(); onResize(clamp(width - step)) }
   }
 
-  const arrow = active ? (sort!.dir === 'asc' ? '↑' : '↓') : '↕'
-  const ariaSort = active ? (sort!.dir === 'asc' ? 'ascending' : 'descending') : keys.length ? 'none' : undefined
+  const arrow = active ? (level!.dir === 'asc' ? '↑' : '↓') : '↕'
+  const ariaSort = active ? (level!.dir === 'asc' ? 'ascending' : 'descending') : keys.length ? 'none' : undefined
   const sub = active && keys.length > 1 ? active.label : column.subtitle
 
   return (

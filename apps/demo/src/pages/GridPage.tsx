@@ -46,7 +46,7 @@ const SPANS_SNIPPET = `spans: [[
 ]],`
 
 const docs = makeDocs()
-const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout)
+const { searchFx, facetsFx } = createFakeBackend(docs, docsLayout, { sortLabels: { status: STATUS_LABEL } })
 /** Один стор условий: лейн, панель и грид читают и пишут $conditions (лейн — EQ по status). */
 const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({

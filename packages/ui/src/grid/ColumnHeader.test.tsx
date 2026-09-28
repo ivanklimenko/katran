@@ -13,23 +13,24 @@ const composite: ColumnDef<R> = {
   render: () => null,
 }
 const plain: ColumnDef<R> = { id: 'x', title: 'Тип', render: () => null }
+const typeCol: ColumnDef<R> = { id: 'type', title: 'Тип', sort: [{ id: 'type', label: 'Тип' }], render: () => null }
 const Table = ({ children }: { children: React.ReactNode }) => <table role="grid"><thead><tr role="row">{children}</tr></thead></table>
 
 describe('ColumnHeader', () => {
   it('простая колонка: первый клик — направление по типу, второй — переключение', async () => {
     const onSort = vi.fn()
-    const { rerender } = renderK(<Table><ColumnHeader column={simple} sort={null} onSort={onSort} width={120} /></Table>)
+    const { rerender } = renderK(<Table><ColumnHeader column={simple} sort={[]} onSort={onSort} width={120} /></Table>)
     await userEvent.click(screen.getByRole('button', { name: /32/ }))
-    expect(onSort).toHaveBeenLastCalledWith({ key: 'amount', dir: 'desc' })
-    rerender(<Table><ColumnHeader column={simple} sort={{ key: 'amount', dir: 'desc' }} onSort={onSort} width={120} /></Table>)
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'amount', dir: 'desc' }])
+    rerender(<Table><ColumnHeader column={simple} sort={[{ key: 'amount', dir: 'desc' }]} onSort={onSort} width={120} /></Table>)
     await userEvent.click(screen.getByRole('button', { name: /32/ }))
-    expect(onSort).toHaveBeenLastCalledWith({ key: 'amount', dir: 'asc' })
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'amount', dir: 'asc' }])
     expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'descending')
   })
 
   it('составная колонка: меню ключей, выбранный подписан вместо subtitle, сброс', async () => {
     const onSort = vi.fn()
-    const sort: Sort = { key: 'refIn', dir: 'asc' }
+    const sort: Sort = [{ key: 'refIn', dir: 'asc' }]
     renderK(<Table><ColumnHeader column={composite} sort={sort} onSort={onSort} width={160} /></Table>)
     expect(screen.getByRole('columnheader')).toHaveTextContent('20 вх')
     expect(screen.getByRole('columnheader')).not.toHaveTextContent('№ · 20 вх / исх')
@@ -37,21 +38,29 @@ describe('ColumnHeader', () => {
     const menu = screen.getByRole('menu')
     expect(within(menu).getByRole('menuitemcheckbox', { name: /20 вх/ })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: /Номер документа/ }))
-    expect(onSort).toHaveBeenLastCalledWith({ key: 'docNumber', dir: 'desc' })
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'docNumber', dir: 'desc' }])
     await userEvent.click(screen.getByRole('button', { name: /ID/ }))
     await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Сбросить сортировку' }))
-    expect(onSort).toHaveBeenLastCalledWith(null)
+    expect(onSort).toHaveBeenLastCalledWith([])
+  })
+
+  it('несколько уровней: клик по колонке с одним ключом делает его единственным', async () => {
+    const onSort = vi.fn()
+    const sort: Sort = [{ key: 'amount', dir: 'desc' }, { key: 'type', dir: 'asc' }]
+    renderK(<Table><ColumnHeader column={typeCol} sort={sort} onSort={onSort} width={80} /></Table>)
+    await userEvent.click(screen.getByRole('button', { name: /Тип/ }))
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }])
   })
 
   it('без sort — не кнопка', () => {
-    renderK(<Table><ColumnHeader column={plain} sort={null} onSort={() => {}} width={80} /></Table>)
+    renderK(<Table><ColumnHeader column={plain} sort={[]} onSort={() => {}} width={80} /></Table>)
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.getByRole('columnheader')).toHaveTextContent('Тип')
   })
 
   it('ресайз: перетаскивание и клавиатура с минимумом', async () => {
     const onResize = vi.fn()
-    renderK(<Table><ColumnHeader column={plain} sort={null} onSort={() => {}} width={80} onResize={onResize} /></Table>)
+    renderK(<Table><ColumnHeader column={plain} sort={[]} onSort={() => {}} width={80} onResize={onResize} /></Table>)
     const h = screen.getByRole('slider', { name: 'Ширина колонки Тип' })
     expect(h).toHaveAttribute('aria-valuenow', '80')
     expect(h).toHaveAttribute('aria-valuetext', '80 px')
@@ -70,7 +79,7 @@ describe('ColumnHeader', () => {
   })
 
   it('без нарушений axe', async () => {
-    const { container } = renderK(<Table><ColumnHeader column={simple} sort={null} onSort={() => {}} width={120} onResize={() => {}} /><ColumnHeader column={composite} sort={null} onSort={() => {}} width={160} /></Table>)
+    const { container } = renderK(<Table><ColumnHeader column={simple} sort={[]} onSort={() => {}} width={120} onResize={() => {}} /><ColumnHeader column={composite} sort={[]} onSort={() => {}} width={160} /></Table>)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

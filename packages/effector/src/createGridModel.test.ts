@@ -37,7 +37,7 @@ describe('createGridModel', () => {
     const { model, calls } = mk()
     const scope = fork()
     await allSettled(model.refresh, { scope })
-    expect(calls).toEqual([{ filter: [], sort: null, page: 0, size: 20 }])
+    expect(calls).toEqual([{ filter: [], sort: [], page: 0, size: 20 }])
     expect(scope.getState(model.$rows)).toHaveLength(2)
     expect(scope.getState(model.$total)).toBe(87)
     expect(scope.getState(model.$state)).toBe('ready')
@@ -54,7 +54,7 @@ describe('createGridModel', () => {
     await allSettled($filter, { scope, params: f })
     expect(scope.getState(model.$page)).toBe(1)
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: [] })
-    expect(calls.at(-1)).toEqual({ filter: f, sort: null, page: 0, size: 20 })
+    expect(calls.at(-1)).toEqual({ filter: f, sort: [], page: 0, size: 20 })
   })
 
   it('sortBy → страница 1 и запрос с sort; setPage → запрос с page-1', async () => {
@@ -62,9 +62,9 @@ describe('createGridModel', () => {
     const scope = fork()
     await allSettled(model.setPage, { scope, params: 4 })
     expect(calls.at(-1)?.page).toBe(3)
-    await allSettled(model.sortBy, { scope, params: { key: 'amount', dir: 'desc' } })
+    await allSettled(model.sortBy, { scope, params: [{ key: 'amount', dir: 'desc' }] })
     expect(scope.getState(model.$page)).toBe(1)
-    expect(calls.at(-1)).toMatchObject({ sort: { key: 'amount', dir: 'desc' }, page: 0 })
+    expect(calls.at(-1)).toMatchObject({ sort: [{ key: 'amount', dir: 'desc' }], page: 0 })
   })
 
   it('resize/toggleColumn/moveColumn — без запроса, но с persist', async () => {
@@ -110,7 +110,7 @@ describe('createGridModel', () => {
     await allSettled(model.select, { scope, params: { id: 'b', on: false } })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: ['a', 'c'] })
     await allSettled(model.setPage, { scope, params: 2 })
-    await allSettled(model.sortBy, { scope, params: { key: 'n', dir: 'asc' } })
+    await allSettled(model.sortBy, { scope, params: [{ key: 'n', dir: 'asc' }] })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'ids', ids: ['a', 'c'] })
     await allSettled(model.selectAll, { scope })
     expect(scope.getState(model.$selection)).toEqual({ mode: 'all', except: [] })

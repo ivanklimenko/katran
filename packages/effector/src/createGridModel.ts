@@ -85,7 +85,7 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   const $total = createStore(0)
   const $page = createStore(1)
   const $pageSize = createStore(saved.pageSize ?? cfg.pageSize ?? 20)
-  const $sort = createStore<Sort>(null)
+  const $sort = createStore<Sort>([])
   const $widths = createStore<Record<string, number>>(initialWidths)
   const $order = createStore<string[]>(reconcileOrder(saved.order, ids))
   const $hidden = createStore<string[]>((saved.hidden ?? []).filter((id) => ids.includes(id)))

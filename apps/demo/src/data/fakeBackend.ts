@@ -33,7 +33,11 @@ function matches(row: Record<string, unknown>, c: Condition): boolean {
 }
 const applyFilter = <Row extends Record<string, unknown>>(rows: Row[], f: Filter) => rows.filter((r) => f.every((c) => matches(r, c)))
 
-export type FakeBackendOptions = { delay?: number | undefined }
+export type FakeBackendOptions = {
+  delay?: number | undefined
+  /** Сортировать эти ключи по подписи, а не по коду: { status: STATUS_LABEL } (сверка S3). */
+  sortLabels?: Record<string, Record<string, string>> | undefined
+}
 const wait = (delay: number | undefined) => {
   const slow = new URLSearchParams(location.search).get('slow')
   return new Promise((r) => setTimeout(r, delay ?? (slow ? Number(slow) : 250 + Math.random() * 400)))
@@ -41,7 +45,11 @@ const wait = (delay: number | undefined) => {
 
 /** Бэкенд в памяти: search — та же форма, что у POST /grids/{id}/search; facets — предложение POST /grids/{id}/facets. Задержка 0,25–0,65 с (?slow=N — ровно N мс). */
 export function createFakeBackend<Row extends Record<string, unknown>>(all: Row[], layout: RecordLayout<Row>, opts: FakeBackendOptions = {}) {
-  const get = (row: Row, key: string) => row[key]
+  const get = (row: Row, key: string) => {
+    const v = row[key]
+    const labels = opts.sortLabels?.[key]
+    return labels && typeof v === 'string' ? (labels[v] ?? v) : v
+  }
   const searchFx = createEffect<GridQuery, GridPage<Row>>(async (q) => {
     await wait(opts.delay)
     const sorted = sortRows(applyFilter(all, q.filter), q.sort, layout.columns, get)
