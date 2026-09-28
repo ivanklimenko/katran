@@ -38,14 +38,14 @@ describe('DataGrid', () => {
     expect(rows).toHaveLength(1 + 2 * 2)
     expect(rows[1]).toHaveTextContent('1')
     expect(rows[3]).toHaveTextContent('2')
-    expect(within(rows[2]!).getAllByRole('gridcell')[1]).toHaveTextContent('Оплата')
+    expect(within(rows[2]!).getAllByRole('gridcell')[0]).toHaveTextContent('Оплата')
     expect(screen.getByRole('navigation', { name: 'Страницы' })).toHaveTextContent('1–20 из 87')
   })
 
   it('скрытая колонка не рендерится, сегмент сжимается; ширины из widths', () => {
     renderK(<DataGrid {...base({ hidden: ['amount'], widths: { num: 150 } })} />)
     expect(screen.queryByRole('columnheader', { name: /32/ })).toBeNull()
-    const seg = within(screen.getAllByRole('row')[2]!).getAllByRole('gridcell')[1]
+    const seg = within(screen.getAllByRole('row')[2]!).getAllByRole('gridcell')[0]
     expect(seg).toHaveAttribute('colspan', '1')
     expect(screen.getByRole('columnheader', { name: /Номер/ })).toHaveStyle({ width: 'calc(150px * var(--k-density))' })
   })

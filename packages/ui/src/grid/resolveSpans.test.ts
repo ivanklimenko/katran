@@ -33,6 +33,15 @@ describe('resolveSpans', () => {
     const r = resolveSpans([span('b', 'f50', 'f59'), span('a', 'status', 'id')], order)
     expect(r.map((x) => x.id)).toEqual(['a', 'b'])
   })
+  it('сегмент не заходит на высокие колонки: обрезка до непрерывного участка от первой покрытой', () => {
+    const spans = [{ id: 'p', from: 'a', to: 'd', render: () => null }]
+    // видимый порядок: a b T c d, T — на всю высоту
+    expect(resolveSpans(spans, ['a', 'b', 'T', 'c', 'd'], ['a', 'b', 'T', 'c', 'd'], new Set(['T']))).toEqual([{ id: 'p', colStart: 0, colSpan: 2 }])
+    // первая покрытая — высокая: участок начинается со следующей колонки первой строки
+    expect(resolveSpans([{ id: 'q', from: 'T', to: 'd', render: () => null }], ['a', 'T', 'c', 'd'], ['a', 'T', 'c', 'd'], new Set(['T']))).toEqual([{ id: 'q', colStart: 2, colSpan: 2 }])
+    // без высоких — как раньше
+    expect(resolveSpans(spans, ['a', 'b', 'c', 'd'])).toEqual([{ id: 'p', colStart: 0, colSpan: 4 }])
+  })
 })
 
 describe('visibleColumns', () => {

@@ -62,13 +62,14 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
   const visible = useMemo(() => visibleColumns(p.order, p.hidden, layout.columns), [p.order, p.hidden, layout.columns])
   const fullOrder = useMemo(() => visibleColumns(p.order, [], layout.columns).map((c) => c.id), [p.order, layout.columns])
   const visibleIds = useMemo(() => visible.map((c) => c.id), [visible])
+  const tallIds = useMemo(() => new Set(visible.filter((c) => c.fullHeight).map((c) => c.id)), [visible])
   const spanRows = useMemo<SpanCell<Row>[][]>(
     () => (layout.spans ?? []).map((line) => {
       // типы сегментов инвариантны по строке; функции нужен только id/from/to
-      const resolved = resolveSpans(line as unknown as SpanDef<unknown>[], visibleIds, fullOrder)
+      const resolved = resolveSpans(line as unknown as SpanDef<unknown>[], visibleIds, fullOrder, tallIds)
       return resolved.map((r) => ({ def: line.find((d) => d.id === r.id)!, colStart: r.colStart, colSpan: r.colSpan }))
     }),
-    [layout.spans, visibleIds, fullOrder],
+    [layout.spans, visibleIds, fullOrder, tallIds],
   )
   const perRecord = 1 + spanRows.length
   const widthOf = (id: string, fallback: number | undefined) => p.widths[id] ?? fallback ?? DEFAULT_WIDTH

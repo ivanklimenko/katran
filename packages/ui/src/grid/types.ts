@@ -31,6 +31,8 @@ export type ColumnDef<Row> = {
   sort?: SortKey[] | undefined
   /** Интерактивные элементы внутри ячейки — с `tabIndex={-1}`; до них доходят через Enter на ячейке. */
   render: (row: Row) => ReactNode
+  /** Ячейка на всю высоту записи (rowSpan): сквозные строки проходят только под колонками без fullHeight (спека 5a §2). */
+  fullHeight?: boolean | undefined
 }
 
 export type SpanDef<Row> = {

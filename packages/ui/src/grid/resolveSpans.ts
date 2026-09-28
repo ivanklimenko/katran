@@ -4,8 +4,10 @@ import type { ColumnDef, ResolvedSpan, SpanDef } from './types'
  * Сквозные сегменты адресуются по id колонок, не числом colspan — состав колонок пользовательский (спека 6.3).
  * Диапазон берётся по ПОЛНОМУ порядку (между from и to включительно, границы нормализуются),
  * а индексы считаются по видимым колонкам: скрытые сжимают сегмент, полностью скрытый диапазон сегмента не даёт.
+ * Колонки на всю высоту записи (tall) рисуются rowSpan в первой строке — сквозная строка под ними не проходит:
+ * участок сегмента — это первая покрытая колонка первой строки и далее подряд, пока колонки покрыты и не высокие.
  */
-export function resolveSpans(spans: SpanDef<unknown>[], visibleOrder: string[], fullOrder: string[] = visibleOrder): ResolvedSpan[] {
+export function resolveSpans(spans: SpanDef<unknown>[], visibleOrder: string[], fullOrder: string[] = visibleOrder, tall: ReadonlySet<string> = new Set()): ResolvedSpan[] {
   const out: ResolvedSpan[] = []
   for (const s of spans) {
     const fa = fullOrder.indexOf(s.from)
@@ -13,11 +15,11 @@ export function resolveSpans(spans: SpanDef<unknown>[], visibleOrder: string[], 
     if (fa < 0 || fb < 0) continue
     const [lo, hi] = fa <= fb ? [fa, fb] : [fb, fa]
     const covered = new Set(fullOrder.slice(lo, hi + 1))
-    const idx = visibleOrder.map((id, i) => (covered.has(id) ? i : -1)).filter((i) => i >= 0)
-    if (idx.length === 0) continue
-    const start = Math.min(...idx)
-    const end = Math.max(...idx)
-    out.push({ id: s.id, colStart: start, colSpan: end - start + 1 })
+    const first = visibleOrder.findIndex((id) => covered.has(id) && !tall.has(id))
+    if (first < 0) continue
+    let end = first
+    while (end + 1 < visibleOrder.length && covered.has(visibleOrder[end + 1]!) && !tall.has(visibleOrder[end + 1]!)) end += 1
+    out.push({ id: s.id, colStart: first, colSpan: end - first + 1 })
   }
   return out.sort((x, y) => x.colStart - y.colStart)
 }
