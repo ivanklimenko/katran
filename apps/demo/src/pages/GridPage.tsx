@@ -127,9 +127,11 @@ export function GridPage() {
         emptyTitle="По заданным условиям документов нет"
         emptyText="Измените условия отбора или сбросьте фильтр"
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
-        onOpen={(d, { secondary }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}`; setOpened(msg); announce(msg) }}
+        rowState={(d) => (d.lock ? { kind: 'locked', ...d.lock } : d.inactive ? { kind: 'inactive', ...d.inactive } : null)}
+        openHint="Открыть деталку · двойной клик или Shift — рядом для сравнения"
+        onOpen={(d, { secondary, state }) => { const msg = `Открыт документ ${d.docNumber}${secondary ? ' — второй drawer рядом' : ''}${state?.kind === 'locked' ? ' (только просмотр)' : ''}`; setOpened(msg); announce(msg) }}
         toolbar={
-          <BulkBar selection={g.selection} total={g.total} onClear={g.onClearSelection} onSelectAll={g.onSelectAll}>
+          <BulkBar selection={g.selection} total={g.total} onClear={g.onClearSelection} onSelectAll={g.onSelectAll} allNote={g.rows.some((d) => d.inactive) ? 'без неактивных' : undefined}>
             <Button size="s" onClick={() => bulk('Экспорт')}>Экспортировать</Button>
             <Button size="s" onClick={() => bulk('Отложить')}>Отложить</Button>
           </BulkBar>

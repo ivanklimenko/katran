@@ -110,6 +110,7 @@ export const sizes = {
   'menu-max-h': 320,
   'filter-field': 220,
   'grid-pad': 6,
+  'hatch': 10,
 } as const
 
 export const fonts = {

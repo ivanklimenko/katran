@@ -13,13 +13,15 @@ export type BulkBarProps = {
   onSelectAll?: (() => void) | undefined
   /** Действия приложения; полоса их не знает (спека 6.3: действия получают { filter, selection } на стороне приложения). */
   children?: ReactNode | undefined
+  /** Приписка к «Все N по фильтру» — например «без неактивных» (спека 5a §6, B1). */
+  allNote?: string | undefined
 }
 
 /** Полоса массовых действий над пагинацией: «Выбрано N» или «Все N по фильтру»; при нуле не рендерится (спека 1e, 6.3). */
-export function BulkBar({ label = 'Массовые действия', selection, total, onClear, onSelectAll, children }: BulkBarProps) {
+export function BulkBar({ label = 'Массовые действия', selection, total, onClear, onSelectAll, children, allNote }: BulkBarProps) {
   const all = selection.mode === 'all'
   const n = all ? Math.max(0, total - selection.except.length) : selection.ids.length
-  const text = all ? `Все ${n} по фильтру` : `Выбрано ${n}`
+  const text = all ? `Все ${n} по фильтру${allNote ? `, ${allNote}` : ''}` : `Выбрано ${n}`
   const { announce } = useKatran()
   // Полоса исчезает вместе с кнопкой «Снять выделение», фокус вернуть некуда — снятие хотя бы объявляем.
   // hadAny отличает переход к нулю от первого рендера с пустым выделением: тогда объявлять нечего.

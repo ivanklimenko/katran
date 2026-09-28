@@ -32,6 +32,28 @@ test('многоуровневая сортировка: Shift+клик по в�
   await expect(chips).toContainText('BIC 52 ↑')
 })
 
+test('B1: заблокированная запись — кнопка открытия с подсказкой и приглушённым значением; неактивная — чекбокс отключён', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const locked = page.locator('tbody[data-state="locked"]').first()
+  await locked.waitFor()
+  await expect(locked.getByRole('button', { name: /^Заблокирована:/ })).toBeVisible()
+  const inactive = page.locator('tbody[data-state="inactive"]').first()
+  await inactive.waitFor()
+  await expect(inactive.getByRole('checkbox')).toBeDisabled()
+  // значение внутри заблокированной записи приглушено переопределением --k-val на записи (STATE §8): проверяем computed color, а не класс
+  const { valueColor, faintColor } = await page.evaluate(() => {
+    const el = document.querySelector('tbody[data-state="locked"] [class*="copy"]') as HTMLElement
+    const probe = document.createElement('div')
+    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-faint')
+    document.body.appendChild(probe)
+    const faintColor = getComputedStyle(probe).color
+    document.body.removeChild(probe)
+    return { valueColor: getComputedStyle(el).color, faintColor }
+  })
+  expect(valueColor).toBe(faintColor)
+})
+
 test('сброс ширины: двойной клик по ручке ресайза возвращает исходную ширину заголовка', async ({ page }) => {
   await page.goto('/#/grid')
   await page.locator('tbody[data-key]').first().waitFor()

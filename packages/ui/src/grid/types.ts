@@ -75,3 +75,6 @@ export type ColumnsState = { order: string[]; hidden: string[] }
 export type GridViewState = 'ready' | 'loading' | 'refreshing' | 'error'
 
 export type ResolvedSpan = { id: string; colStart: number; colSpan: number }
+
+/** Состояние записи с бека (спека 5a §6): заблокирована другим пользователем или неактивна. */
+export type RowState = { kind: 'locked'; who: string; since: string } | { kind: 'inactive'; why: string } | null

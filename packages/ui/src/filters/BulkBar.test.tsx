@@ -38,6 +38,13 @@ describe('BulkBar', () => {
     expect(screen.getByRole('region')).toHaveTextContent('Все 86 по фильтру')
     expect(screen.queryByRole('button', { name: /Выбрать все/ })).toBeNull()
   })
+  it('allNote — приписка только в режиме all', () => {
+    const { rerender } = renderK(<BulkBar selection={{ mode: 'all', except: [] }} total={5} onClear={() => {}} allNote="без неактивных" />)
+    expect(screen.getByRole('region')).toHaveTextContent('Все 5 по фильтру, без неактивных')
+    rerender(<BulkBar selection={{ mode: 'ids', ids: ['a'] }} total={5} onClear={() => {}} allNote="без неактивных" />)
+    expect(screen.getByRole('region')).toHaveTextContent('Выбрано 1')
+    expect(screen.getByRole('region')).not.toHaveTextContent('без неактивных')
+  })
   it('«Снять выделение» → полоса исчезает, снятие объявляется «Выделение снято»; первый рендер с нулём не объявляется', async () => {
     const u = userEvent.setup()
     const frame = () => act(async () => { await new Promise((r) => requestAnimationFrame(r)) })

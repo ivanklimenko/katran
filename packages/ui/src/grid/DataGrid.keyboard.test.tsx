@@ -116,7 +116,7 @@ describe('DataGrid: клавиатура', () => {
     expect(cellOf(document.activeElement)).toBe('2:0')
     await userEvent.keyboard('{Enter}')
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Открыть запись 1')   // в служебной ячейке один интерактив (номер — текст) → фокус + клик
-    expect(p.onOpen).toHaveBeenCalledWith(docs[0], { secondary: false })
+    expect(p.onOpen).toHaveBeenCalledWith(docs[0], { secondary: false, state: null })
     await userEvent.keyboard('{Escape}')
     expect(cellOf(document.activeElement)).toBe('2:0')
     expect(document.activeElement?.hasAttribute('data-cell')).toBe(true)

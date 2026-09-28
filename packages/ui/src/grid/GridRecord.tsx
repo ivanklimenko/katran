@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
 import s from './Grid.module.css'
-import type { ColumnDef, SpanDef } from './types'
+import type { ColumnDef, RowState, SpanDef } from './types'
 
 export type SpanCell<Row> = { def: SpanDef<Row>; colStart: number; colSpan: number }
 export type Filler = { filler: true; colSpan: number }
@@ -20,6 +20,8 @@ export type GridRecordProps<Row> = {
   /** aria-rowindex первой строки записи. */
   rowIndex: number
   cellProps?: CellProps | undefined
+  /** Заблокирована/неактивна (спека 5a §6, B1) — управляет data-state на tbody и приглушением значений. */
+  state?: RowState | undefined
 }
 
 /** Между сегментами и по краям — заглушки по колонкам первой строки; высокие колонки (tall[i]) заняты rowSpan, заглушка их не пересекает. */
@@ -46,13 +48,13 @@ export function fillSegments<Row>(segs: SpanCell<Row>[], tall: number | boolean[
   return out
 }
 
-export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected, rowIndex, cellProps }: GridRecordProps<Row>) {
+export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected, rowIndex, cellProps, state }: GridRecordProps<Row>) {
   const cp = cellProps ?? (() => ({}))
   const perRecord = 1 + spanRows.length
   const span = perRecord > 1 ? perRecord : undefined
   const tall = visible.map((c) => c.fullHeight === true)
   return (
-    <tbody className={[s.record, selected ? s.selected : ''].filter(Boolean).join(' ')} data-key={rowKey}>
+    <tbody className={[s.record, selected ? s.selected : ''].filter(Boolean).join(' ')} data-key={rowKey} data-state={state?.kind}>
       <tr role="row" aria-rowindex={rowIndex} aria-selected={selected}>
         <td role="gridcell" className={s.cell} rowSpan={span} {...cp(0, 0)}><div className={s.lead}>{lead}</div></td>
         {visible.map((c, i) => (

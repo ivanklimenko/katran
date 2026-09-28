@@ -4,7 +4,7 @@ import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { BulkBar } from '../filters/BulkBar'
 import { DataGrid, type DataGridProps } from './DataGrid'
-import type { RecordLayout } from './types'
+import type { RecordLayout, RowState } from './types'
 
 type Doc = { id: string; status: string; num: string; amount: number; purpose: string | null }
 const docs: Doc[] = [
@@ -91,11 +91,37 @@ describe('DataGrid', () => {
     expect(p.onOpen).not.toHaveBeenCalled()
     const btn = screen.getByRole('button', { name: 'Открыть запись 1' })
     fireEvent.click(btn, { detail: 1 })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false, state: null })
     fireEvent.click(btn, { detail: 2 })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
     fireEvent.click(btn, { detail: 1, shiftKey: true })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true })
+    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
+  })
+
+  it('B1: заблокированная — замок и подсказка, выделять можно; неактивная — чекбокс disabled, страница выделяет только доступные', async () => {
+    const onSelectPage = vi.fn()
+    const onOpen = vi.fn()
+    const rows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState =>
+      r.id === 'a' ? { kind: 'locked', who: 'Иванова М. П.', since: '2026-09-23T09:13:00' } : r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null
+    renderK(<DataGrid {...base({ rows, total: 3, selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage, onOpen, rowState, openHint: 'Открыть деталку' })} />)
+    const lock = screen.getByRole('button', { name: 'Заблокирована: Иванова М. П., с 23.09.2026 09:13 · открыть только для просмотра' })
+    await userEvent.click(lock)
+    expect(onOpen).toHaveBeenCalledWith(rows[0], { secondary: false, state: rowState(rows[0]!) })
+    expect(screen.getByRole('checkbox', { name: 'Выбрать запись 2' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Выбрать все на странице' }))
+    expect(onSelectPage).toHaveBeenCalledWith({ ids: ['a', 'c'], on: true })
+    expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-state', 'locked')
+    expect(document.querySelector('tbody[data-key="b"]')).toHaveAttribute('data-state', 'inactive')
+    expect(screen.getByRole('button', { name: 'Открыть запись 3' })).toHaveAttribute('data-k-tip', 'Открыть деталку')
+  })
+
+  it('B1: без нарушений axe', async () => {
+    const rows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }] as unknown as Doc[]
+    const rowState = (r: { id: string }): RowState =>
+      r.id === 'a' ? { kind: 'locked', who: 'Иванова М. П.', since: '2026-09-23T09:13:00' } : r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null
+    const { container } = renderK(<DataGrid {...base({ rows, total: 3, selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage: () => {}, onOpen: () => {}, rowState, openHint: 'Открыть деталку' })} />)
+    expect(await axe(container)).toHaveNoViolations()
   })
 
   it('пустое состояние: заголовок, пояснение и действие', () => {
