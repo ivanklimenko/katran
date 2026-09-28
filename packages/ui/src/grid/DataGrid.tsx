@@ -10,6 +10,7 @@ import { GridRecord, type CellProps, type SpanCell } from './GridRecord'
 import { GridSkeleton } from './GridSkeleton'
 import { resolveSpans, visibleColumns } from './resolveSpans'
 import { isSelected, pageState } from './selection'
+import { SortChips } from './SortChips'
 import { useGridKeyboard } from './useGridKeyboard'
 import s from './Grid.module.css'
 import type { ColumnsState, GridViewState, RecordLayout, Selection, SpanDef, Sort } from './types'
@@ -97,6 +98,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
 
   return (
     <div className={s.root}>
+      <SortChips sort={p.sort} columns={layout.columns} onSort={p.onSort} />
       <div className={s.wrap}>
         {dim && <div className={s.progress}><ProgressBar label="Обновление данных" /></div>}
         <table

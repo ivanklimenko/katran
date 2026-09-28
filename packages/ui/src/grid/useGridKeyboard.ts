@@ -83,7 +83,7 @@ export function useGridKeyboard({ resetToken, fallback }: UseGridKeyboardOptions
         if (items.length === 0) return
         e.preventDefault()
         items[0]!.focus()
-        if (items.length === 1) items[0]!.click()
+        if (items.length === 1) items[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: e.shiftKey }))
         return
       }
       default: return

@@ -141,6 +141,84 @@
   padding: 0;
 }
 
+/* --- уровни сортировки над таблицей --- */
+.sortChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-2);
+  background: var(--k-paper);
+  border-bottom: 1px solid var(--k-line);
+}
+
+.sortLbl {
+  font-size: var(--k-fs-3);
+  color: var(--k-muted);
+}
+
+.sortChipWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+}
+
+.sortSep {
+  color: var(--k-faint);
+}
+
+.sortChip {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+  background: var(--k-val-soft);
+}
+
+.sortOrd {
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-muted);
+}
+
+.sortChipBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 400 var(--k-fs-2) / 1 var(--k-sans);
+  color: var(--k-ink);
+  cursor: pointer;
+}
+
+.sortChipBtn:hover {
+  text-decoration: underline;
+}
+
+.sortChipBtn:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 2px;
+}
+
+.sortChipX {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--k-fs-2);
+  line-height: 1;
+  color: var(--k-faint);
+  cursor: pointer;
+}
+
+.sortChipX:hover {
+  color: var(--k-ink);
+}
+
+.sortChipX:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 2px;
+}
+
 /* --- запись --- */
 .record > tr > td {
   padding: var(--k-sp-1) var(--k-sp-2) 0;

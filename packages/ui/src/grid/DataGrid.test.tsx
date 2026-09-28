@@ -227,4 +227,11 @@ describe('DataGrid', () => {
     expect(wrapper).toBeEmptyDOMElement()
     expect(screen.queryByRole('region', { name: 'Массовые действия' })).toBeNull()
   })
+
+  it('чипы сортировки над таблицей: видны при заданном sort, скрыты при пустом', () => {
+    const { rerender } = renderK(<DataGrid {...base({ sort: [{ key: 'status', dir: 'asc' }, { key: 'num', dir: 'desc' }] })} />)
+    expect(screen.getByRole('group', { name: 'Сортировка' })).toBeInTheDocument()
+    rerender(<DataGrid {...base({ sort: [] })} />)
+    expect(screen.queryByRole('group', { name: 'Сортировка' })).toBeNull()
+  })
 })

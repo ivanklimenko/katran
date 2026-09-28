@@ -20,3 +20,14 @@ test('подзаголовок отсортированной колонки —
   const [head, sub] = await th.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.querySelector('[class*="thSub"]')!).color])
   expect(sub).toBe(head)
 })
+
+test('многоуровневая сортировка: Shift+клик по второму заголовку даёт два чипа', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  await page.getByRole('columnheader', { name: /Тип/ }).getByRole('button').first().click()
+  await page.getByRole('columnheader', { name: /^52/ }).getByRole('button').first().click({ modifiers: ['Shift'] })
+  const chips = page.getByRole('group', { name: 'Сортировка' })
+  await expect(chips).toContainText('1')
+  await expect(chips).toContainText('Тип сообщения ↑')
+  await expect(chips).toContainText('BIC 52 ↑')
+})

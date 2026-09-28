@@ -82,4 +82,35 @@ describe('ColumnHeader', () => {
     const { container } = renderK(<Table><ColumnHeader column={simple} sort={[]} onSort={() => {}} width={120} onResize={() => {}} /><ColumnHeader column={composite} sort={[]} onSort={() => {}} width={160} /></Table>)
     expect(await axe(container)).toHaveNoViolations()
   })
+
+  it('Shift+клик по колонке с одним ключом добавляет уровень; номер уровня у стрелки при двух уровнях', async () => {
+    const onSort = vi.fn()
+    const col: ColumnDef<unknown> = { id: 'a', title: 'Сумма', sort: [{ id: 'amount', label: 'Сумма', type: 'number' }], render: () => null }
+    renderK(<table><thead><tr><ColumnHeader column={col} sort={[{ key: 'type', dir: 'asc' }]} onSort={onSort} width={100} /></tr></thead></table>)
+    // holding Shift across calls требует общей сессии — статичный userEvent.X() создаёт новую на каждый вызов
+    const user = userEvent.setup()
+    await user.keyboard('{Shift>}')
+    await user.click(screen.getByRole('button', { name: /Сумма/ }))
+    await user.keyboard('{/Shift}')
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }])
+  })
+  it('номер уровня верхним индексом и aria-sort только у первого уровня', () => {
+    const col = (id: string, key: string): ColumnDef<unknown> => ({ id, title: id, sort: [{ id: key, label: key }], render: () => null })
+    const sort = [{ key: 'k1', dir: 'asc' as const }, { key: 'k2', dir: 'desc' as const }]
+    renderK(<table><thead><tr><ColumnHeader column={col('c1', 'k1')} sort={sort} onSort={() => {}} width={100} /><ColumnHeader column={col('c2', 'k2')} sort={sort} onSort={() => {}} width={100} /></tr></thead></table>)
+    const [h1, h2] = screen.getAllByRole('columnheader')
+    expect(h1).toHaveAttribute('aria-sort', 'ascending')
+    expect(h2).toHaveAttribute('aria-sort', 'none')
+    expect(h1).toHaveTextContent('↑1')
+    expect(h2).toHaveTextContent('↓2')
+  })
+  it('меню составной колонки: «+» добавляет уровень, у выбранного — «↕» меняет направление; подсказка', async () => {
+    const onSort = vi.fn()
+    const col: ColumnDef<unknown> = { id: 'c', title: '32', sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }], render: () => null }
+    renderK(<table><thead><tr><ColumnHeader column={col} sort={[{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }]} onSort={onSort} width={100} /></tr></thead></table>)
+    await userEvent.click(screen.getByRole('button', { name: /32/ }))
+    expect(screen.getByText('клик — единственный ключ · «+» или Shift+клик — добавить уровнем')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Валюта — добавить уровнем' }))
+    expect(onSort).toHaveBeenLastCalledWith([{ key: 'type', dir: 'asc' }, { key: 'amount', dir: 'desc' }, { key: 'currency', dir: 'asc' }])
+  })
 })

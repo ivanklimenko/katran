@@ -6,5 +6,6 @@ export { GridRecord, fillSegments, type GridRecordProps, type SpanCell, type Cel
 export { GridSkeleton, type GridSkeletonProps } from './GridSkeleton'
 export { ColumnHeader, type ColumnHeaderProps } from './ColumnHeader'
 export { ColumnsMenu, type ColumnsMenuProps } from './ColumnsMenu'
+export { SortChips, type SortChipsProps } from './SortChips'
 export { DataGrid, type DataGridProps } from './DataGrid'
 export { useGridKeyboard, type UseGridKeyboardOptions } from './useGridKeyboard'

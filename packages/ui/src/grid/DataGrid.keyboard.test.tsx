@@ -72,6 +72,18 @@ describe('DataGrid: клавиатура', () => {
     expect(p.onSort).toHaveBeenCalledWith([{ key: 'num', dir: 'asc' }])
   })
 
+  it('Shift+Enter на заголовке колонки с одним ключом добавляет уровень к существующей сортировке', async () => {
+    const p = props({ sort: [{ key: 'other', dir: 'asc' }] })
+    renderK(<DataGrid {...p} />)
+    // sort непустой → над таблицей рендерятся чипы SortChips: их две кнопки (сменить/убрать) идут в таб-порядке перед ячейкой грида
+    await userEvent.tab()
+    await userEvent.tab()
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowUp}{ArrowRight}')
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}')
+    expect(p.onSort).toHaveBeenCalledWith([{ key: 'other', dir: 'asc' }, { key: 'num', dir: 'asc' }])
+  })
+
   it('Tab внутри ячейки заголовка доходит до ползунка ресайза; стрелка меняет ширину; Escape — в ячейку', async () => {
     const p = props()
     renderK(<DataGrid {...p} />)

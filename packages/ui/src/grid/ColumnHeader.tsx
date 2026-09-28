@@ -1,6 +1,6 @@
-import { useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type PointerEvent } from 'react'
+import { useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { Menu, type MenuItem } from '../overlay'
-import { findSortKey, soleSort } from './sortRows'
+import { addSortLevel, findSortKey, flipSortLevel, removeSortLevel, soleSort } from './sortRows'
 import s from './Grid.module.css'
 import type { ColumnDef, Sort } from './types'
 
@@ -29,19 +29,49 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
   const title = column.title ?? ''
   const name = column.menuTitle ?? title
 
-  const pick = (keyId: string) => {
+  const pick = (keyId: string, shiftKey?: boolean) => {
     const key = findSortKey([column], keyId)
-    if (key) onSort(soleSort(sort, key))
+    if (key) onSort(shiftKey ? addSortLevel(sort, key) : soleSort(sort, key))
   }
-  const onHeadClick = () => {
-    if (keys.length === 1) pick(keys[0]!.id)
+  const onHeadClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (keys.length === 1) pick(keys[0]!.id, e.shiftKey)
     else if (keys.length > 1) setMenuOpen(true)
   }
 
-  const items: MenuItem[] = [
-    ...keys.map((k) => ({ id: k.id, label: k.label, checked: active?.id === k.id, hint: active?.id === k.id ? (level!.dir === 'asc' ? '↑' : '↓') : undefined, onSelect: () => pick(k.id) })),
-    ...(active ? [{ id: '__reset', label: 'Сбросить сортировку', onSelect: () => onSort([]) }] : []),
-  ]
+  const items: MenuItem[] = keys.length > 1
+    ? [
+        ...keys.flatMap((k): MenuItem[] => {
+          const isActive = active?.id === k.id
+          const n = isActive && level ? sort.indexOf(level) + 1 : 0
+          const sole: MenuItem = {
+            id: k.id,
+            label: k.label,
+            checked: isActive,
+            hint: isActive ? `${level!.dir === 'asc' ? '↑' : '↓'}${sort.length > 1 && n > 0 ? n : ''}` : undefined,
+            onSelect: (e) => pick(k.id, e?.shiftKey),
+          }
+          const inSort = sort.some((l) => l.key === k.id)
+          const extra: MenuItem = inSort
+            ? { id: `${k.id}__dir`, label: `${k.label} — сменить направление уровня`, onSelect: () => onSort(flipSortLevel(sort, k.id)) }
+            : { id: `${k.id}__add`, label: `${k.label} — добавить уровнем`, onSelect: () => onSort(addSortLevel(sort, k)) }
+          return [sole, extra]
+        }),
+        ...(active
+          ? [
+              {
+                id: '__reset',
+                label: 'Сбросить сортировку',
+                onSelect: () => {
+                  const colIds = keys.map((k) => k.id)
+                  const onlyThis = sort.every((l) => colIds.includes(l.key))
+                  onSort(onlyThis ? [] : colIds.reduce((acc, id) => removeSortLevel(acc, id), sort))
+                },
+              } satisfies MenuItem,
+            ]
+          : []),
+        { id: '__hint', label: 'клик — единственный ключ · «+» или Shift+клик — добавить уровнем', note: true },
+      ]
+    : []
 
   const clamp = (w: number) => Math.max(min, Math.round(w))
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
@@ -65,7 +95,8 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
   }
 
   const arrow = active ? (level!.dir === 'asc' ? '↑' : '↓') : '↕'
-  const ariaSort = active ? (level!.dir === 'asc' ? 'ascending' : 'descending') : keys.length ? 'none' : undefined
+  const n = level ? sort.indexOf(level) + 1 : 0
+  const ariaSort = level && level === sort[0] ? (level.dir === 'asc' ? 'ascending' : 'descending') : keys.length ? 'none' : undefined
   const sub = active && keys.length > 1 ? active.label : column.subtitle
 
   return (
@@ -79,7 +110,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, cellP
     >
       {keys.length > 0 ? (
         <button ref={btn} type="button" tabIndex={-1} className={s.thBtn} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
-          {title}<span className={s.arrow} aria-hidden="true">{arrow}</span>
+          {title}<span className={s.arrow} aria-hidden="true">{arrow}{sort.length > 1 && n > 0 && <sup>{n}</sup>}</span>
           <span className={s.thSub}>{sub}</span>
         </button>
       ) : (
