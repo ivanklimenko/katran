@@ -94,6 +94,24 @@ new ModuleFederationPlugin({
 и на разметку команды внутри `KatranProvider`: глобальный `* { box-sizing: border-box }` хоста до неё
 не дойдёт, поэтому свои блоки экрана задают `box-sizing` явно (или считают размеры с паддингом и рамкой).
 
+## Сортировка — массив уровней
+
+**Breaking (план 5a).** Было: `Sort = { key: string; dir: 'asc' | 'desc' } | null`, `sort: null` — без сортировки. Стало:
+
+```ts
+type SortLevel = { key: string; dir: 'asc' | 'desc' }
+type Sort = SortLevel[]   // [] — без сортировки
+```
+
+Переход у потребителя:
+
+- `GridQuery.sort` (то, что `fetchFx` получает в запросе) — теперь массив уровней, а не одно значение или `null`. Бек `vtb-filters` меняться не должен: контракт там `sort` — уже массив (§5.1), приложение просто перестаёт заворачивать единственный уровень в объект и разворачивать `null` в пустой массив.
+- Всюду, где было `sort === null`, читать `sort.length === 0`; где создавался `{ key, dir }`, создавать `[{ key, dir }]`.
+- `sortBy` (событие модели) принимает `Sort` целиком — то, что вычислили помощники уровней грида (`soleSort`/`addSortLevel`/`flipSortLevel`/`removeSortLevel`, `@katran/ui`), а не пара `{ key, dir }`.
+- Ручные моки `Sort`/`GridQuery` в тестах потребителя нужно поправить на массив.
+
+Новые необязательные пропы `DataGrid` (обратная совместимость, без breaking): `onResetWidths`, `onResetWidth` — сброс ширин колонок (двойной клик по ручке, `Home`/`Shift+Home` на ползунке); `split`, `onSplit` — «вместе / раздельно» для составных колонок; `rowState`, `openHint` — состояния записи (заблокирована/неактивна) и подсказка кнопки открытия, данные приходят с бека, модель не нужна. Соответствующие поля в `useGrid` — `split`, `onSplit`, `onResetWidths`, `onResetWidth`; `rowState`/`openHint` задаёт экран, как `label`/`layout`.
+
 ## Размер (макет, prod, gzip)
 
 remoteEntry 3.2 KiB, экран с данными 8.2 KiB, кит и зависимости 29.6 KiB — итого JS 41 KiB; шрифты 202 KiB (12 woff2).
