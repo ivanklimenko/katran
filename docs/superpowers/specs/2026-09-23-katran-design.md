@@ -321,7 +321,8 @@ type DataGridProps<Row> = {
   toolbar?: ReactNode                        // слот над пагинацией в футере: BulkBar экрана (срез 1e)
   rowState?: (row: Row) => RowState          // заблокирована/неактивна (5a, B1); неактивные не выделяются
   openHint?: string                          // подсказка кнопки открытия обычной записи (5a, B7)
-}```
+}
+```
 
 Чистый компонент: все данные — из props, все изменения — наружу. Выделение — два колбэка намерения, а не `onSelection(next)`: грид не вычисляет следующее `Selection` (в режиме `all` это работа модели с `except`), а сообщает, что отмечено — запись или страница. В приложении с effector: `<DataGrid {...useGrid(model)} label=… layout=… />` — хук отдаёт данные и колбэки модели (8.4), экранные пропы (`label`, `layout`, `pageSizes`, `emptyTitle`, `emptyAction`, `onOpen`, `skeletonRows`, `toolbar`) задаёт экран.
 
