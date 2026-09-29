@@ -1,7 +1,9 @@
 import { allSettled, fork } from 'effector'
 import { fxDocPorts } from '../../entities/fx-doc'
+import { rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx } from '../../shared/api'
 import { fakeGrids } from './grids'
+import { makeRubDocs } from './rub-docs.data'
 import { createFakeServer } from './server'
 
 /** Цепочка «порт → requestFx → сервер». Внутри тот же тест гоняется против своего бека: подставить свой обработчик в handlers. */
@@ -32,5 +34,38 @@ describe('контракт fx-docs', () => {
     const nope = createGridPorts({ gridId: 'nope', parseRow: (x) => x })
     const r = await allSettled(nope.searchFx, { scope: scope(), params: { filter: [], sort: [], page: 0, size: 20 } })
     expect((r.value as ApiError).status).toBe(404)
+  })
+})
+
+describe('контракт rub-docs', () => {
+  it('search и filter-meta (10 полей)', async () => {
+    const s = scope()
+    const r = await allSettled(rubDocPorts.searchFx, { scope: s, params: { filter: [{ field: 'queue', op: 'EQ', value: '5' }], sort: [], page: 0, size: 20 } })
+    expect(r.status === 'done' && r.value.rows.every((d) => d.queue === 5)).toBe(true)
+    const m = await allSettled(rubDocPorts.filterMetaFx, { scope: s })
+    expect(m.status === 'done' && m.value.fields).toHaveLength(10)
+  })
+  it('данные валидны: счёт 20 цифр, у клиентских 810 в знаках 6–8; БИК 9; ИНН 10/12; КПП 9 или пусто', () => {
+    for (const d of makeRubDocs()) {
+      for (const acc of [d.fromAcc, d.toAcc]) {
+        expect(acc).toMatch(/^\d{20}$/)
+        if (/^40[5-8]/.test(acc)) expect(acc.slice(5, 8)).toBe('810')
+      }
+      for (const bic of [d.fromBic, d.toBic]) expect(bic).toMatch(/^\d{9}$/)
+      for (const inn of [d.fromInn, d.toInn]) expect(inn).toMatch(/^(\d{10}|\d{12})$/)
+      for (const kpp of [d.fromKpp, d.toKpp]) expect(kpp).toMatch(/^(\d{9}|0?)$/)
+    }
+  })
+  it('есть записи с блокировкой и с неактивностью (В-Р2)', () => {
+    const rows = makeRubDocs()
+    expect(rows.some((d) => d.lock !== null)).toBe(true)
+    expect(rows.some((d) => d.inactive !== null)).toBe(true)
+  })
+  // Р13 (условие эталона `dir==='IN' && i%4===1`): формула воспроизведена дословно, но при k=i%12
+  // (цикл направлений длиной 12, кратной 4) она недостижима — проверено и на самом стенде (0 пустых
+  // docRef из 87 строк). Порт математически совпадает с эталоном, отдельной проверки на непустое
+  // множество здесь нет: см. отчёт Task 12, находка для владельца.
+  it('условие пустого docRef (Р13) воспроизведено дословно — как на эталоне, ни разу не срабатывает', () => {
+    expect(makeRubDocs().some((d) => d.docRef === '')).toBe(false)
   })
 })

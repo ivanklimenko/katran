@@ -1,0 +1,12 @@
+/* «И:» / «S:» / «D:» — служебная подпись роли, не данные (спека 5b §2, R15) */
+.srTag {
+  display: inline-block;
+  width: var(--k-sp-4);
+  color: var(--k-faint);
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+}
+
+/* шрифт значения без смены цвета — цвет уже задаёт тон CopyValue (val/ink/ink2), а не tone="mono" (Р8) */
+.mono.mono {
+  font-family: var(--k-mono);
+}
