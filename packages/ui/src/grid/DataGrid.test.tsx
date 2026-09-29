@@ -208,6 +208,19 @@ describe('DataGrid', () => {
     indexed.forEach((i) => expect(i).toBeLessThanOrEqual(count))
     const skeleton = screen.getAllByRole('rowgroup', { hidden: true }).filter((g) => g.getAttribute('aria-hidden') === 'true')
     expect(skeleton).toHaveLength(8)
+    // номера скелетона страницы 1 — 1, 2, 3…
+    const firstOrds = skeleton.slice(0, 3).map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent)
+    expect(firstOrds).toEqual(['1', '2', '3'])
+  })
+
+  it('скелетон: номера строк продолжают нумерацию страницы (firstOrd = (page − 1) × pageSize + 1)', () => {
+    vi.useFakeTimers()
+    renderK(<DataGrid {...base({ rows: [], total: 87, page: 2, pageSize: 20, state: 'loading' })} />)
+    act(() => { vi.advanceTimersByTime(250) })
+    vi.useRealTimers()
+    const skeleton = screen.getAllByRole('rowgroup', { hidden: true }).filter((g) => g.getAttribute('aria-hidden') === 'true')
+    const firstOrd = within(skeleton[0]!).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent
+    expect(firstOrd).toBe('21')
   })
 
   it('ARIA: refreshing — aria-busy; empty и error — строка состояния с aria-rowindex=2 в пределах aria-rowcount', () => {

@@ -1,25 +1,66 @@
+/* Полоса подвала (W4): h-ctl-s + sp-3 = 36 — ближайшая сумма токенов к эталонным 37, допуск ± 2
+   (border-box считает padding и рамку внутрь min-height, иначе сумма превысила бы 37 на паддинги). */
 .nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: var(--k-sp-3);
-  padding: var(--k-sp-2) var(--k-sp-5);
+  column-gap: var(--k-sp-3);
+  box-sizing: border-box;
+  min-height: calc(var(--k-h-ctl-s) + var(--k-sp-3));
+  padding: 0 var(--k-sp-5);
+  background: var(--k-sunk);
   border-top: 1px solid var(--k-line);
   font-size: var(--k-fs-2);
   color: var(--k-muted);
 }
 
 .range {
+  justify-self: start;
   white-space: nowrap;
 }
 
 .pages {
   display: flex;
+  justify-self: center;
   align-items: center;
   gap: var(--k-sp-1);
-  margin-left: auto;
 }
 
 .gap {
   padding: 0 var(--k-sp-1);
   color: var(--k-faint);
+}
+
+/* кнопки номеров — компактные, ближе всего к эталонным 22 даёт токен h-field (23): выше специфичность
+   (.pages .pageBtn) перебивает .sizeS из Button.module.css независимо от порядка чанков в сборке */
+.pages .pageBtn {
+  min-width: var(--k-h-field);
+  height: var(--k-h-field);
+  padding: 0;
+  justify-content: center;
+}
+
+/* текущая страница — фон val, текст paper (контраст paper/val уже в contrast.rules.ts) */
+.pages .pageBtn[aria-current='page'] {
+  background: var(--k-val);
+  border-color: var(--k-val);
+  color: var(--k-paper);
+}
+
+.pages .navBtn {
+  width: var(--k-h-field);
+  height: var(--k-h-field);
+  font-size: var(--k-fs-1);
+}
+
+.pageSize {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: var(--k-sp-1);
+  white-space: nowrap;
+}
+
+.pageSizeLbl {
+  white-space: nowrap;
 }

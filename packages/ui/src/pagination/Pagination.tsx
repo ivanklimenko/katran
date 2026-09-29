@@ -1,4 +1,4 @@
-import { Button } from '../button'
+import { Button, IconButton } from '../button'
 import { Select } from '../input'
 import s from './Pagination.module.css'
 
@@ -36,19 +36,22 @@ export function Pagination({ page, pageSize, total, onPage, pageSizes, onPageSiz
   return (
     <nav aria-label="Страницы" className={s.nav}>
       <span className={s.range}>{range}</span>
-      {!!pageSizes?.length && onPageSize && (
-        <Select size="s" aria-label="На странице" value={String(pageSize)} onChange={(e) => onPageSize(Number(e.target.value))}
-          options={pageSizes.map((n) => ({ value: String(n), label: String(n) }))} />
-      )}
       <span className={s.pages}>
-        <Button size="s" disabled={page <= 1 || total === 0} onClick={() => onPage(page - 1)}>Назад</Button>
+        <IconButton size="s" className={s.navBtn} label="Назад" disabled={page <= 1 || total === 0} onClick={() => onPage(page - 1)}>‹</IconButton>
         {total > 0 && pageWindow(page, pages).map((p, i) =>
           p === '…'
             ? <span key={`gap${i}`} className={s.gap} aria-hidden="true">…</span>
-            : <Button key={p} size="s" pressed={p === page} aria-current={p === page ? 'page' : undefined} aria-label={`Страница ${p}`} onClick={() => onPage(p)}>{p}</Button>,
+            : <Button key={p} size="s" className={s.pageBtn} aria-current={p === page ? 'page' : undefined} aria-label={`Страница ${p}`} onClick={() => onPage(p)}>{p}</Button>,
         )}
-        <Button size="s" disabled={page >= pages || total === 0} onClick={() => onPage(page + 1)}>Вперёд</Button>
+        <IconButton size="s" className={s.navBtn} label="Вперёд" disabled={page >= pages || total === 0} onClick={() => onPage(page + 1)}>›</IconButton>
       </span>
+      {!!pageSizes?.length && onPageSize && (
+        <span className={s.pageSize}>
+          <span className={s.pageSizeLbl}>На странице</span>
+          <Select size="s" aria-label="На странице" value={String(pageSize)} onChange={(e) => onPageSize(Number(e.target.value))}
+            options={pageSizes.map((n) => ({ value: String(n), label: String(n) }))} />
+        </span>
+      )}
     </nav>
   )
 }

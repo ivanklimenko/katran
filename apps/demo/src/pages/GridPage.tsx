@@ -153,7 +153,7 @@ export function GridPage() {
         {...g}
         label="Валютные документы"
         layout={docsLayout}
-        pageSizes={[20, 50]}
+        pageSizes={[10, 20, 50, 100]}
         emptyTitle="По заданным условиям документов нет"
         emptyText="Измените условия отбора или сбросьте фильтр"
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}

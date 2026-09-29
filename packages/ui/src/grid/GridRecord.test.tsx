@@ -80,7 +80,7 @@ describe('GridRecord', () => {
 
 describe('GridSkeleton', () => {
   it('столько же tbody и строк, сколько у записей; весь скелетон скрыт от скринридера, без aria-rowindex', () => {
-    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} /></Table>)
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} firstOrd={1} /></Table>)
     const groups = screen.getAllByRole('rowgroup', { hidden: true })
     expect(groups).toHaveLength(3)
     groups.forEach((g) => expect(g).toHaveAttribute('aria-hidden', 'true'))
@@ -90,7 +90,7 @@ describe('GridSkeleton', () => {
     expect(screen.queryAllByRole('row')).toHaveLength(0)
   })
   it('резервирует геометрию записи: --k-lines и классы min-height у служебной ячейки и текстовых ячеек', () => {
-    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} /></Table>)
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} firstOrd={1} /></Table>)
     const cells = screen.getAllByRole('gridcell', { hidden: true })
     const lead = cells[0]!.firstElementChild
     expect(lead?.className).toMatch(/leadSkeleton/)
@@ -101,5 +101,19 @@ describe('GridSkeleton', () => {
     const purposeClamp = clamped[clamped.length - 1]! // сегмент "purpose" в строке спанов
     expect(purposeClamp.className).toMatch(/clampSkeleton/)
     expect(purposeClamp).toHaveStyle({ '--k-lines': '1' })
+  })
+  it('служебная ячейка — номера строк страницы (firstOrd + i), как в записи (класс ord)', () => {
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} firstOrd={21} /></Table>)
+    const groups = screen.getAllByRole('rowgroup', { hidden: true })
+    const ords = groups.map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent)
+    expect(ords).toEqual(['21', '22', '23'])
+  })
+  it('плашка колонки align: "right" прижата вправо (data-align на обёртке)', () => {
+    renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} firstOrd={1} /></Table>)
+    const cells = screen.getAllByRole('gridcell', { hidden: true })
+    const clamped = cells.map((c) => c.firstElementChild).filter((el): el is Element => el !== null)
+    // lead(0), st(1), num(2), f50(3), f59(4, align: right)
+    expect(clamped[4]!).toHaveAttribute('data-align', 'right')
+    expect(clamped[1]!).not.toHaveAttribute('data-align')
   })
 })
