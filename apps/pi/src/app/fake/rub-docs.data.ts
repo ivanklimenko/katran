@@ -92,16 +92,22 @@ export function makeRubDocs(n = 87): RubDoc[] {
     const [initiator, source, destination] = SYS[i % 6]!
     const day = 22 + (k > 7 ? 1 : 0)
     const hh = 7 + (i * 3) % 11
-    // Р13: у части входящих документов docRef пуст (эталон, стенд `rub-grid.tpl.html`) — покрывает состояние
-    // «нет значения» линк-кнопки docRef.
-    const docRef = direction === 'IN' && i % 4 === 1 ? '' : `${ED_BY_TYPE[type]}-26092${day % 10}000${pad(1800 + i * 7, 4)}`
+    // Р13/R15: у части входящих документов docRef пуст — покрывает состояние «нет значения» линк-кнопки
+    // docRef. Формула эталона (`dir==='IN' && i%4===1`) математически недостижима при k=i%12 (цикл
+    // направлений длиной 12, кратной 4 — направление и i%4 связаны однозначно, среди IN-позиций {0,3,6,11}
+    // единицы по модулю 4 нет; проверено и на самом стенде — 0 из 87 строк). Сознательное отклонение от
+    // эталона (класс C, зафиксировано в registry-drift.md): `i % 8 === 3` — тот же характер условия
+    // (часть входящих), но реально срабатывает (i=3,27,51,75 — 4 из 87 строк).
+    const docRef = direction === 'IN' && i % 8 === 3 ? '' : `${ED_BY_TYPE[type]}-26092${day % 10}000${pad(1800 + i * 7, 4)}`
     return {
       id: `rub-${pad(i, 4)}`, docNumber: String(2900 + i * 3), uuid: `${pad(i, 2)}e0c7a2-5b1d-4c8e-9f0a-${pad(i * 7919, 12)}`,
       txId: `TX${pad(i * 131, 8)}`, docRef,
       created: `2026-09-${day}T${pad(hh, 2)}:${pad((i * 17) % 60, 2)}:${pad((i * 7) % 60, 2)}`,
       changed: `2026-09-${day + (i % 9 === 4 ? 1 : 0)}T${pad(Math.min(23, hh + (i % 3)), 2)}:${pad((i * 29) % 60, 2)}:00`,
       type, edCode: ED_BY_TYPE[type], direction, dirTxt,
-      amount: Math.round(((i * 7919) % 250_000_000) + 5405) / 100, queue: 1 + (i * 5) % 5, prio: i % 7 === 3 ? 1 : 0,
+      // R16: формула эталона `1 + (i*5)%5` всегда даёт 1 (i*5 кратно 5) — баг стенда, воспроизводить не
+      // стали; `i*7` (7 и 5 взаимно просты) даёт весь диапазон 1..5.
+      amount: Math.round(((i * 7919) % 250_000_000) + 5405) / 100, queue: 1 + (i * 7) % 5, prio: i % 7 === 3 ? 1 : 0,
       fromName, fromAcc, fromInn, fromKpp, fromBic, fromBank, toName, toAcc, toInn, toKpp, toBic, toBank,
       initiator, source, destination, purpose: RPURP[i % RPURP.length]!,
       status, reason: rs ? REASONS[rs[i % rs.length]!]! : null,

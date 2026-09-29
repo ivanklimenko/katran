@@ -41,7 +41,12 @@ describe('контракт rub-docs', () => {
   it('search и filter-meta (10 полей)', async () => {
     const s = scope()
     const r = await allSettled(rubDocPorts.searchFx, { scope: s, params: { filter: [{ field: 'queue', op: 'EQ', value: '5' }], sort: [], page: 0, size: 20 } })
-    expect(r.status === 'done' && r.value.rows.every((d) => d.queue === 5)).toBe(true)
+    // R16: формула эталона `1 + (i*5)%5` всегда даёт 1 — фильтр по очерёдности 5 раньше проходил
+    // впустую (rows.length === 0, every() на пустом массиве — true). Явно проверяем непустой результат.
+    expect(r.status).toBe('done')
+    if (r.status !== 'done') return
+    expect(r.value.rows.length).toBeGreaterThan(0)
+    expect(r.value.rows.every((d) => d.queue === 5)).toBe(true)
     const m = await allSettled(rubDocPorts.filterMetaFx, { scope: s })
     expect(m.status === 'done' && m.value.fields).toHaveLength(10)
   })
@@ -61,11 +66,10 @@ describe('контракт rub-docs', () => {
     expect(rows.some((d) => d.lock !== null)).toBe(true)
     expect(rows.some((d) => d.inactive !== null)).toBe(true)
   })
-  // Р13 (условие эталона `dir==='IN' && i%4===1`): формула воспроизведена дословно, но при k=i%12
-  // (цикл направлений длиной 12, кратной 4) она недостижима — проверено и на самом стенде (0 пустых
-  // docRef из 87 строк). Порт математически совпадает с эталоном, отдельной проверки на непустое
-  // множество здесь нет: см. отчёт Task 12, находка для владельца.
-  it('условие пустого docRef (Р13) воспроизведено дословно — как на эталоне, ни разу не срабатывает', () => {
-    expect(makeRubDocs().some((d) => d.docRef === '')).toBe(false)
+  // Р13/R15: формула эталона (`dir==='IN' && i%4===1`) математически недостижима при k=i%12 (см. комментарий
+  // в rub-docs.data.ts и registry-drift.md) — заменена на `i%8===3` (класс C, сознательное отклонение),
+  // чтобы состояние «нет значения» LinkValue.docRef реально встречалось в данных.
+  it('есть записи с пустым docRef (Р13/R15)', () => {
+    expect(makeRubDocs().some((d) => d.docRef === '')).toBe(true)
   })
 })
