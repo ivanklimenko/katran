@@ -31,16 +31,19 @@ describe('createRegistry', () => {
     await allSettled(lifecycle.pageOpened, { scope })
     expect(calls).toEqual({ search: 2, meta: 1 })
   })
-  it('pageClosed снимает выделение, фильтры и страница остаются', async () => {
+  it('pageClosed снимает выделение, фильтры, сортировка и страница остаются', async () => {
     const { r, lifecycle, scope } = setup()
     await allSettled(lifecycle.pageOpened, { scope })
     await allSettled(r.filters.setLane, { scope, params: 'ERROR' })
+    // sortBy сбрасывает страницу — поэтому сортировка раньше setPage
+    await allSettled(r.grid.sortBy, { scope, params: [{ key: 'status', dir: 'desc' }] })
     await allSettled(r.grid.setPage, { scope, params: 2 })
     await allSettled(r.grid.select, { scope, params: { id: 'a', on: true } })
     await allSettled(lifecycle.pageClosed, { scope })
     expect(scope.getState(r.grid.$selection)).toEqual({ mode: 'ids', ids: [] })
     expect(scope.getState(r.filters.$lane)).toBe('ERROR')
     expect(scope.getState(r.grid.$page)).toBe(2)
+    expect(scope.getState(r.grid.$sort)).toEqual([{ key: 'status', dir: 'desc' }])
   })
   it('отказ каталога не трогает грид; повтор при следующем открытии', async () => {
     const { r, calls, lifecycle, scope } = setup(true)

@@ -22,11 +22,11 @@ const fsdZones = LAYERS.flatMap((layer, i) => {
       for (const s of unitsOf(lower)) zones.push({ target: `${PI}/${layer}`, from: `${PI}/${lower}/${s}`, except: ['./index.ts'], message: `FSD: ${lower}/${s} — только через публичный API (index.ts)` })
     }
   }
-  // соседи по слою — только @x у entities
+  // соседи по слою — только @x у entities, и только свой файл: fx-doc берёт doc-status/@x/fx-doc.ts, но не @x/rub-doc.ts
   if (layer !== 'app' && layer !== 'shared') {
     for (const t of slicesOf(layer)) {
       for (const f of slicesOf(layer).filter((x) => x !== t)) {
-        zones.push({ target: `${PI}/${layer}/${t}`, from: `${PI}/${layer}/${f}`, ...(layer === 'entities' ? { except: ['./@x'] } : {}), message: `FSD: ${layer}/${t} не импортирует соседа ${f}${layer === 'entities' ? ' (только через @x)' : ''}` })
+        zones.push({ target: `${PI}/${layer}/${t}`, from: `${PI}/${layer}/${f}`, ...(layer === 'entities' ? { except: [`./@x/${t}.ts`] } : {}), message: `FSD: ${layer}/${t} не импортирует соседа ${f}${layer === 'entities' ? ` (только через ${f}/@x/${t}.ts)` : ''}` })
       }
     }
   }
