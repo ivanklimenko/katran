@@ -32,12 +32,37 @@
 }
 
 /* кнопки номеров — компактные, ближе всего к эталонным 22 даёт токен h-field (23): выше специфичность
-   (.pages .pageBtn) перебивает .sizeS из Button.module.css независимо от порядка чанков в сборке */
+   (.pages .pageBtn) перебивает .sizeS из Button.module.css независимо от порядка чанков в сборке.
+   Button не трогаем — все переопределения ниже только на собственных классах Pagination. Порядок
+   правил — по возрастанию специфичности селектора (0,2,0) → (0,3,0) → (0,4,0): stylelint
+   no-descending-specificity требует не смешивать. */
 .pages .pageBtn {
   min-width: var(--k-h-field);
   height: var(--k-h-field);
   padding: 0;
   justify-content: center;
+}
+
+.pages .navBtn {
+  width: var(--k-h-field);
+  height: var(--k-h-field);
+  font-size: var(--k-fs-1);
+}
+
+/* Фикс-раунд 1: на стенде `.appf .pg button` в покое без рамки и фона (border: 0; background: none),
+   фон только на hover — у кита эти кнопки были ghost-кнопками Button (рамка line, фон paper), выглядели
+   «в коробке». Переопределяем на своих классах (специфичность 0,2,0, перебивает .ghost и .sizeS из
+   Button.module.css 0,1,0 независимо от порядка чанков в сборке), Button.tsx/.css не трогаем. */
+.pages .pageBtn,
+.pages .navBtn {
+  border-color: transparent;
+  background: none;
+}
+
+/* неактивная (disabled) — приглушённый текст, как на стенде (.appf .pg button[disabled]) */
+.pages .pageBtn:disabled,
+.pages .navBtn:disabled {
+  color: var(--k-faint);
 }
 
 /* текущая страница — фон val, текст paper (контраст paper/val уже в contrast.rules.ts) */
@@ -47,10 +72,12 @@
   color: var(--k-paper);
 }
 
-.pages .navBtn {
-  width: var(--k-h-field);
-  height: var(--k-h-field);
-  font-size: var(--k-fs-1);
+/* hover — фон hover, как в эталоне (:not не даёт погасить подсветку текущей страницы под курсором) */
+.pages .pageBtn:not([aria-current='page']):hover,
+.pages .navBtn:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--k-hover);
+  color: var(--k-ink2);
 }
 
 .pageSize {
