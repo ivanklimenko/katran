@@ -1290,7 +1290,7 @@ import { parseFxDoc } from './fxDoc.mapper'
 export const fxDocPorts = createGridPorts({ gridId: 'fx-docs', parseRow: parseFxDoc })
 ```
 
-- [ ] **Step 5: раскладка.** `ui/layout.tsx` — перенос `docsLayout` из `apps/demo/src/pages/GridPage.tsx` дословно, с заменами: `Doc` → `FxDoc`; `STATUS_TONE`/`STATUS_LABEL` — из `../../doc-status/@x/fx-doc`; `s.srTag` — из `./cells.module.css`; имя — `fxDocLayout`; константа `T = -1` с её комментарием переезжает сюда. После плана 5 брать раскладку из демо в её текущем виде (колонки R1–R16, сквозные строки), а не из этого описания. `ui/cells.module.css`:
+- [ ] **Step 5: раскладка.** `ui/layout.tsx` — перенос `docsLayout` из `apps/demo/src/pages/GridPage.tsx` дословно, с заменами: `Doc` → `FxDoc`; `STATUS_TONE`/`STATUS_LABEL` — из `../../doc-status/@x/fx-doc`; `s.srTag` — из `./cells.module.css`; имя — `fxDocLayout`; константа `T = -1` с её комментарием переезжает сюда. После плана 5b (исполнен на ветке `feat/registry-look`, `docs/STATE.md` §6, §9) брать раскладку из демо в её текущем виде (колонки R1–R16, сквозные строки: 58, «Маршрут», «S / R out», SWIFT-поля `SwiftField`, счёт 8…4, вид T1–T6/L1/P3/W4/Z1), а не из этого описания. `ui/cells.module.css`:
 
 ```css
 .srTag {
