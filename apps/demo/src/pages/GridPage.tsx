@@ -27,7 +27,7 @@ export const docsLayout: RecordLayout<Doc> = {
     { id: 'id', title: 'ID', subtitle: '№ · 20 вх / исх', width: 106, lines: 2,
       sort: [{ id: 'docNumber', label: 'Номер документа', type: 'number' }, { id: 'refIn', label: '20 вх' }, { id: 'refOut', label: '20 исх' }],
       render: (d) => <><CopyValue value={String(d.docNumber)} tone="ink" className={s.num} tabIndex={T} /><div><LinkValue name="uuid" value={d.id} tabIndex={T} /> <LinkValue name="refIn" value={d.refIn ?? undefined} tabIndex={T} /> <LinkValue name="refOut" value={d.refOut ?? undefined} tabIndex={T} /></div></> },
-    { id: 'created', title: 'Дата / Время', width: 121, lines: 3, fullHeight: true,
+    { id: 'created', title: 'Дата / Время', width: 132, lines: 3, fullHeight: true,
       sort: [{ id: 'created', label: 'Дата документа', type: 'date' }, { id: 'vdDt', label: 'Валютирование Дт', type: 'date' }, { id: 'vdKt', label: 'Валютирование Кт', type: 'date' }],
       render: (d) => {
         const [date, time] = formatDateTimeFull(d.created).split(' ')
@@ -48,7 +48,7 @@ export const docsLayout: RecordLayout<Doc> = {
     { id: 'type', title: 'Тип', width: 71, fullHeight: true, sort: [{ id: 'type', label: 'Тип сообщения' }], render: (d) => <Tag tone="mt">{d.type}</Tag> },
     { id: 'direction', title: 'Направление', width: 127, lines: 2, fullHeight: true, sort: [{ id: 'direction', label: 'Группа → название', order: ['IN', 'OUT', 'TRANSIT', 'OTHER'], then: 'dirTxt' }, { id: 'dirTxt', label: 'Название' }],
       render: (d) => <><span className={s.dirRow}><DirIcon dir={d.direction} /><CopyValue value={d.direction} tone="ink" className={s.dirCode} tabIndex={T} /></span><div><CopyValue value={d.dirTxt} tone="muted" size="s" maxWidth={105} tabIndex={T} /></div></> },
-    { id: 'amount', title: '32', subtitle: 'сумма', width: 96, lines: 2, align: 'right', fullHeight: true, sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }],
+    { id: 'amount', title: '32', subtitle: 'сумма', width: 102, lines: 2, align: 'right', fullHeight: true, sort: [{ id: 'amount', label: 'Сумма', type: 'number' }, { id: 'currency', label: 'Валюта' }],
       render: (d) => <><CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} /><div><CopyValue value={d.currency} tone="muted" size="s" tabIndex={T} /></div></>,
       split: {
         label: 'Валюта отдельной колонкой',

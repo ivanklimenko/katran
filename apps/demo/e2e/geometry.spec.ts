@@ -38,3 +38,14 @@ test('плотность 125 % масштабирует запись', async ({ 
   expect(Math.abs(big - base * 1.25)).toBeLessThanOrEqual(2)
   test.info().annotations.push({ type: 'geometry', description: `base=${base} density125=${big}` })
 })
+
+// Заголовок сортируемой колонки сидит внутри <button class="thBtn">: провайдер сбрасывает типографику
+// контролов (`:where(button,...) { text-transform: none }`), значение не наследуется от .th — падает
+// на само правило .thBtn (плане 5b, находка контроллера — прописные не применялись, хотя .th их задаёт).
+test('заголовок колонки — прописные (текст сортируемой кнопки, не только .th)', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const btn = page.getByRole('columnheader', { name: /Дата \/ Время/ }).getByRole('button').first()
+  const tt = await btn.evaluate((el) => getComputedStyle(el).textTransform)
+  expect(tt).toBe('uppercase')
+})

@@ -56,6 +56,38 @@ test('B1: заблокированная запись — кнопка откр�
   expect(valueColor).toBe(mutedColor)
 })
 
+// Кт валютирования красится в --k-warn классом демо .warn (спека 5b §3, R10) — .warn.warn (0,2,0)
+// бьёт CopyValue .muted (0,1,0) независимо от порядка правил в сборке (находка контроллера, раунд 1).
+test('Кт валютирования, если отличается от Дт, — цвет из --k-warn', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const { color, warn } = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('tbody[data-key]')]
+    for (const row of rows) {
+      const cells = row.querySelectorAll('[role=gridcell]')
+      const created = cells[3]
+      if (!created) continue
+      const btns = [...created.querySelectorAll('button')]
+      const dt = btns[2]?.textContent, kt = btns[3]?.textContent
+      if (dt && kt && dt !== kt) {
+        return { color: getComputedStyle(btns[3]!).color, warn: getComputedStyle(document.documentElement).getPropertyValue('--k-warn').trim() }
+      }
+    }
+    return { color: null, warn: null }
+  })
+  expect(color).not.toBeNull()
+  // сравниваем вычисленный цвет с токеном --k-warn через тот же приём, что и ниже в тесте B1: зонд с color: var(...)
+  const resolved = await page.evaluate((hex) => {
+    const probe = document.createElement('div')
+    probe.style.color = hex
+    document.body.appendChild(probe)
+    const c = getComputedStyle(probe).color
+    document.body.removeChild(probe)
+    return c
+  }, warn)
+  expect(color).toBe(resolved)
+})
+
 test('сброс ширины: двойной клик по ручке ресайза возвращает исходную ширину заголовка', async ({ page }) => {
   await page.goto('/#/grid')
   await page.locator('tbody[data-key]').first().waitFor()
