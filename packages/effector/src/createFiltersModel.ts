@@ -1,8 +1,9 @@
-import { combine, createEvent, createStore, sample, type EventCallable, type Store } from 'effector'
+import { combine, createEvent, createStore, is, sample, type EventCallable, type Store } from 'effector'
 import type { Condition, Filter, FilterMeta, Scalar } from './types'
 
 export type FiltersModelConfig = {
-  meta?: FilterMeta | undefined
+  /** Каталог полей: значением или стором (каталог, загружаемый с бека, — спека apps/pi §6.1). */
+  meta?: FilterMeta | Store<FilterMeta | null> | undefined
   initial?: Filter | undefined
   /** Поле, которым управляет лейн статусов (спека 1e, §3). Без него setLane — no-op. */
   laneField?: string | undefined
@@ -16,6 +17,8 @@ export type FiltersModel = {
   $dirty: Store<boolean>
   /** Значение условия EQ по laneField в применённых, иначе null (условие IN по тому же полю — тоже null). */
   $lane: Store<Scalar | null>
+  /** Каталог полей; null — ещё не загружен. */
+  $meta: Store<FilterMeta | null>
   // EventCallable, а не Event: снаружи события нужно вызывать (edit(...), apply()), просто Event этого не позволяет.
   edit: EventCallable<Condition>
   discard: EventCallable<string>
@@ -26,6 +29,7 @@ export type FiltersModel = {
   remove: EventCallable<string>
   /** Лейн: EQ по laneField сразу в применённые и черновик (без «Применить»); null — снять. */
   setLane: EventCallable<Scalar | null>
+  /** @deprecated Начальное значение каталога; читать $meta. */
   meta: FilterMeta | null
   laneField: string | null
 }
@@ -37,6 +41,8 @@ const upsert = (list: Filter, c: Condition): Filter => {
 const without = (list: Filter, field: string): Filter => list.filter((x) => x.field !== field)
 const same = (a: Filter, b: Filter) => JSON.stringify(a) === JSON.stringify(b)
 
+const isMetaStore = (m: FiltersModelConfig['meta']): m is Store<FilterMeta | null> => is.store(m)
+
 export function createFiltersModel({ meta, initial = [], laneField }: FiltersModelConfig = {}): FiltersModel {
   const edit = createEvent<Condition>()
   const discard = createEvent<string>()
@@ -45,6 +51,8 @@ export function createFiltersModel({ meta, initial = [], laneField }: FiltersMod
   const reset = createEvent<void>()
   const remove = createEvent<string>()
   const setLane = createEvent<Scalar | null>()
+
+  const $meta: Store<FilterMeta | null> = isMetaStore(meta) ? meta : createStore<FilterMeta | null>(meta ?? null)
 
   const $conditions = createStore<Filter>(initial)
   const $draft = createStore<Filter>(initial)
@@ -71,5 +79,5 @@ export function createFiltersModel({ meta, initial = [], laneField }: FiltersMod
     return c && c.op === 'EQ' ? c.value : null
   })
 
-  return { $conditions, $draft, $dirty, $lane, edit, discard, apply, revert, reset, remove, setLane, meta: meta ?? null, laneField: lane }
+  return { $conditions, $draft, $dirty, $lane, $meta, edit, discard, apply, revert, reset, remove, setLane, meta: isMetaStore(meta) ? null : (meta ?? null), laneField: lane }
 }
