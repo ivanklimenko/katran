@@ -49,7 +49,12 @@ describe('FilterPanel', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(toggle).toHaveTextContent('2')
     const list = screen.getByRole('list', { name: 'Применённые условия' })
-    expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Статус = Обработан', 'Сумма > 10'])
+    const items = within(list).getAllByRole('listitem')
+    expect(items.map((li) => li.textContent)).toEqual(['Статус = Обработан', 'Сумма > 10'])
+    // Чип — три части в отдельных элементах (поле, оператор, значение), не одна строка.
+    expect(items[0]?.children.length).toBeGreaterThanOrEqual(4) // cf, co, cv, ✕-кнопка
+    expect(items[0]?.textContent).toContain('Статус')
+    expect(items[0]?.textContent).toContain('Обработан')
     expect(await axe(container)).toHaveNoViolations()
     await u.click(within(list).getByRole('button', { name: 'Убрать условие: Статус = Обработан' }))
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
@@ -130,7 +135,8 @@ describe('FilterPanel', () => {
     await u.type(from, '2026-09-01')
     expect(to).toHaveValue('')
     await u.click(screen.getByRole('button', { name: 'Применить' }))
-    expect(screen.getByRole('list', { name: 'Применённые условия' })).toHaveTextContent('Валютирование от 01.09.2026 00:00 до 01.09.2026 23:59')
+    // Чип теперь из частей (conditionParts): поле · оператор словами (BETWEEN — «от … до») · значение диапазоном через «–».
+    expect(screen.getByRole('list', { name: 'Применённые условия' })).toHaveTextContent('Валютирование от … до 01.09.2026 00:00 – 01.09.2026 23:59')
     expect(from).toHaveValue('2026-09-01')
     expect(to).toHaveValue('')
     await u.clear(from)

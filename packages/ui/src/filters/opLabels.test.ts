@@ -1,4 +1,4 @@
-import { OP_LABEL, describeCondition } from './opLabels'
+import { OP_LABEL, describeCondition, conditionParts } from './opLabels'
 import type { FilterMeta } from './types'
 
 const meta: FilterMeta = { fields: [
@@ -10,6 +10,24 @@ const meta: FilterMeta = { fields: [
   { id: 'ts', label: 'Время', type: 'DATETIME', ops: [] },
   { id: 'kind', label: 'Вид', type: 'ENUM', ops: [] },
 ] }
+
+const partsMeta: FilterMeta = { fields: [
+  { id: 'status', label: 'Статус', type: 'ENUM', ops: [], values: [{ value: 'TO_EXPORT', label: 'К экспорту' }] },
+  { id: 'amount', label: 'Сумма', type: 'NUMBER', ops: [] },
+  { id: 'created', label: 'Дата документа', type: 'DATE', ops: [] },
+] }
+
+describe('conditionParts', () => {
+  it('EQ, IN, BETWEEN, IS_EMPTY — поле, оператор словами, значение', () => {
+    expect(conditionParts({ field: 'status', op: 'EQ', value: 'TO_EXPORT' }, partsMeta)).toEqual({ field: 'Статус', op: '=', value: 'К экспорту' })
+    expect(conditionParts({ field: 'status', op: 'IN', values: ['TO_EXPORT', 'X'] }, partsMeta)).toEqual({ field: 'Статус', op: 'в списке', value: 'К экспорту, X' })
+    expect(conditionParts({ field: 'created', op: 'BETWEEN', from: '2026-09-01', to: '2026-09-13' }, partsMeta)).toEqual({ field: 'Дата документа', op: 'от … до', value: '01.09.2026 – 13.09.2026' })
+    expect(conditionParts({ field: 'amount', op: 'IS_EMPTY' }, partsMeta)).toEqual({ field: 'Сумма', op: 'пусто', value: '' })
+  })
+  it('без меты — id поля как имя', () => {
+    expect(conditionParts({ field: 'x', op: 'NE', value: 5 })).toEqual({ field: 'x', op: '≠', value: '5' })
+  })
+})
 
 describe('describeCondition', () => {
   it('словарь покрывает все 14 операторов', () => {

@@ -3,18 +3,37 @@
   gap: var(--k-sp-2);
 }
 
+/* Полоса фильтров (эталон .filters стенда pi-constructor): sunk на всю ширину, 45 ≈ min-height
+   (h-ctl-l + sp-3) с паддингом и рамкой внутри — border-box: иначе паддинг sp-2 сверху/снизу
+   добавлялся бы поверх min-height, раздувая полосу (провайдер сбрасывает box-sizing контролов,
+   не div-ов, см. Provider.module.css). */
 .bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--k-sp-2);
-  min-height: var(--k-h-ctl-s);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--k-h-ctl-l) + var(--k-sp-3));
+  padding: var(--k-sp-2) var(--k-sp-5);
+  background: var(--k-sunk);
+  border-bottom: 1px solid var(--k-line);
 }
 
 .toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--k-sp-2);
+}
+
+.toggleIcon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.toggleIcon > svg {
+  width: var(--k-icon-s);
+  height: var(--k-icon-s);
 }
 
 .none {
@@ -24,27 +43,47 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--k-sp-1);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* Чип условия (эталон .achip): val-soft, части — поле ink2, оператор mono приглушённый, значение 600. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--k-sp-1);
   height: var(--k-h-ctl-s);
   padding: 0 var(--k-sp-1) 0 var(--k-sp-2);
-  border: 1px solid var(--k-line);
-  border-radius: var(--k-r-m);
-  background: var(--k-sunk);
-  color: var(--k-ink2);
+  border-radius: var(--k-r-s);
+  background: var(--k-val-soft);
+  color: var(--k-val);
   white-space: nowrap;
+}
+
+.cf {
+  color: var(--k-ink2);
+}
+
+.co {
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-muted);
+}
+
+.cv {
+  font-weight: 600;
+  color: var(--k-ink);
 }
 
 .chipX {
   color: var(--k-muted);
+}
+
+/* «Сбросить» — в ряду чипов, тот же рост, что у них (эталон: .fchip высотой под achip). */
+.chipBtn {
+  height: var(--k-h-ctl-s);
 }
 
 .body {

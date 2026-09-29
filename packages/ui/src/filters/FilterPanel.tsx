@@ -3,11 +3,13 @@ import { useStableId } from '../compat/useStableId'
 import { Button, IconButton } from '../button'
 import { Counter } from '../value'
 import { FilterField } from './FilterField'
-import { describeCondition } from './opLabels'
+import { describeCondition, conditionParts } from './opLabels'
 import type { Condition, Filter, FilterMeta } from './types'
 import s from './Filters.module.css'
 
 const Cross = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></svg>
+// Воронка — эталон (стенд pi-constructor, .fbtn svg), путь как есть.
+const Funnel = () => <svg viewBox="0 0 24 24"><path fill="currentColor" d="M4.2 5.4A1 1 0 015.1 4h13.8a1 1 0 01.8 1.6L14 12.2V18a1 1 0 01-1.5.86l-3-1.8A1 1 0 019 16.2v-4L4.3 5.6a1 1 0 01-.1-.2z" /></svg>
 
 export type FilterPanelProps = {
   label?: string | undefined
@@ -53,9 +55,10 @@ export function FilterPanel({ label = 'Фильтры', meta, conditions, draft,
   return (
     <div className={s.panel}>
       <div className={s.bar}>
-        <Button ref={toggleRef} size="s" aria-expanded={open} aria-controls={bodyId} className={s.toggle} onClick={() => onOpenChange(!open)}>
+        <Button ref={toggleRef} variant="primary" size="s" aria-expanded={open} aria-controls={bodyId} className={s.toggle} onClick={() => onOpenChange(!open)}>
+          <span className={s.toggleIcon} aria-hidden="true"><Funnel /></span>
           <span>{label}</span>
-          <Counter value={conditions.length} active={open} />
+          <Counter value={conditions.length} />
         </Button>
         {conditions.length === 0
           ? <span className={s.none}>условия не заданы</span>
@@ -63,16 +66,17 @@ export function FilterPanel({ label = 'Фильтры', meta, conditions, draft,
             <ul className={s.chips} aria-label="Применённые условия">
               {conditions.map((c) => {
                 const text = describeCondition(c, meta)
+                const parts = conditionParts(c, meta)
                 return (
-                  <li key={c.field} className={s.chip}>
-                    <span>{text}</span>
+                  <li key={c.field} className={s.chip} title={text}>
+                    <span className={s.cf}>{parts.field}</span> <span className={s.co}>{parts.op}</span> <span className={s.cv}>{parts.value}</span>
                     <IconButton size="s" label={`Убрать условие: ${text}`} className={s.chipX} onClick={(e) => remove(e, c.field)}><Cross /></IconButton>
                   </li>
                 )
               })}
             </ul>
           )}
-        {conditions.length > 0 && <Button size="s" onClick={reset}>Сбросить</Button>}
+        {conditions.length > 0 && <Button size="s" className={s.chipBtn} onClick={reset}>Сбросить</Button>}
       </div>
       <form id={bodyId} hidden={!open} className={s.body} onSubmit={submit}>
         <div className={s.fields}>

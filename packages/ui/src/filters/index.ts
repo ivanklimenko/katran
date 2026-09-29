@@ -1,5 +1,5 @@
 export * from './types'
-export { OP_LABEL, describeCondition } from './opLabels'
+export { OP_LABEL, describeCondition, conditionParts } from './opLabels'
 export { StatusLane, type StatusLaneProps, type LaneItem } from './StatusLane'
 export { FilterPanel, type FilterPanelProps } from './FilterPanel'
 export { BulkBar, type BulkBarProps } from './BulkBar'
