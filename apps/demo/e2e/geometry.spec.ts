@@ -67,3 +67,18 @@ test('подвал: неактивная кнопка номера без вид
   expect(style.borderWidth === '0px' || style.borderColor === 'rgba(0, 0, 0, 0)').toBe(true)
   expect(style.background).toBe('rgba(0, 0, 0, 0)')
 })
+
+// Задача 7 плана 5b: замеры новых полос по локаторам доступности — цели эталона ± 2 (спека §6):
+// лейн 36, строка фильтров 45, подвал 37. Локаторы не завязаны на CSS-классы: группа «Статусы»
+// (role=group), полоса с кнопкой «Фильтры» (её прямой родитель), nav «Страницы».
+test('лейн, строка фильтров, подвал — высоты полос по эталону ± 2', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const lane = (await page.getByRole('group', { name: 'Статусы' }).boundingBox())!.height
+  const filters = (await page.getByRole('button', { name: /^Фильтры/ }).locator('..').boundingBox())!.height
+  const footer = (await page.getByRole('navigation', { name: 'Страницы' }).boundingBox())!.height
+  expect(Math.abs(lane - 36)).toBeLessThanOrEqual(2)
+  expect(Math.abs(filters - 45)).toBeLessThanOrEqual(2)
+  expect(Math.abs(footer - 37)).toBeLessThanOrEqual(2)
+  test.info().annotations.push({ type: 'geometry', description: `lane=${lane} filters=${filters} footer=${footer}` })
+})
