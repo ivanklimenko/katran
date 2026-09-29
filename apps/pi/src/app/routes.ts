@@ -1,10 +1,14 @@
 import type { PageLifecycle } from '../shared/lib/lifecycle'
 import { lifecycle as fxDocs } from '../pages/fx-docs'
+import { lifecycle as rubDocs } from '../pages/rub-docs'
 
 /** Hash-роутер стенда. Внутри вместо него — адаптер к роутеру хоста: на вход экрана pageOpened, на уход pageClosed. */
-export type Route = 'fx-docs'
-export const routes: { id: Route; title: string }[] = [{ id: 'fx-docs', title: 'Валютные документы' }]
-const lifecycles: Record<Route, PageLifecycle> = { 'fx-docs': fxDocs }
+export type Route = 'fx-docs' | 'rub-docs'
+export const routes: { id: Route; title: string }[] = [
+  { id: 'fx-docs', title: 'Валютные документы' },
+  { id: 'rub-docs', title: 'Рублёвые документы' },
+]
+const lifecycles: Record<Route, PageLifecycle> = { 'fx-docs': fxDocs, 'rub-docs': rubDocs }
 
 export const parseRoute = (): Route => {
   const h = location.hash.replace(/^#\/?/, '')
@@ -16,7 +20,7 @@ export function startRouting(onRoute: (r: Route) => void): () => void {
   const go = () => {
     const next = parseRoute()
     if (next === current) return
-    if (current) lifecycles[current as Route].pageClosed()
+    if (current) lifecycles[current].pageClosed()
     current = next
     lifecycles[next].pageOpened()
     onRoute(next)
