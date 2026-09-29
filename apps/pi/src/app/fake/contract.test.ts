@@ -1,4 +1,5 @@
 import { allSettled, fork } from 'effector'
+import { STATUS_LABEL } from '../../entities/doc-status'
 import { fxDocPorts } from '../../entities/fx-doc'
 import { rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx } from '../../shared/api'
@@ -20,6 +21,23 @@ describe('контракт fx-docs', () => {
     expect(amounts).toEqual([...amounts].sort((a, b) => b - a))
     expect(r.value.total).toBeGreaterThanOrEqual(r.value.rows.length)
   })
+  it('search: двухуровневая сортировка — статус (по подписи), внутри статуса сумма по убыванию', async () => {
+    const r = await allSettled(fxDocPorts.searchFx, { scope: scope(), params: { filter: [], sort: [{ key: 'status', dir: 'asc' }, { key: 'amount', dir: 'desc' }], page: 0, size: 100 } })
+    expect(r.status).toBe('done')
+    if (r.status !== 'done') return
+    const rows = r.value.rows
+    expect(rows).toHaveLength(87)
+    const label = (st: string) => STATUS_LABEL[st as keyof typeof STATUS_LABEL]
+    // больше одной группы статусов и хоть одна группа из нескольких строк — иначе второй уровень не проверяется
+    expect(new Set(rows.map((d) => d.status)).size).toBeGreaterThan(1)
+    expect(rows.some((d, i) => i > 0 && rows[i - 1]!.status === d.status)).toBe(true)
+    for (let i = 1; i < rows.length; i++) {
+      const prev = rows[i - 1]!, cur = rows[i]!
+      const byStatus = label(prev.status).localeCompare(label(cur.status), 'ru')
+      expect(byStatus).toBeLessThanOrEqual(0)
+      if (byStatus === 0) expect(prev.amount).toBeGreaterThanOrEqual(cur.amount)
+    }
+  })
   it('facets и filter-meta', async () => {
     const s = scope()
     const f = await allSettled(fxDocPorts.facetsFx, { scope: s, params: { filter: [], field: 'status' } })
@@ -40,7 +58,8 @@ describe('контракт fx-docs', () => {
 describe('контракт rub-docs', () => {
   it('search и filter-meta (10 полей)', async () => {
     const s = scope()
-    const r = await allSettled(rubDocPorts.searchFx, { scope: s, params: { filter: [{ field: 'queue', op: 'EQ', value: '5' }], sort: [], page: 0, size: 20 } })
+    // R21: очерёдность — число; справочник ENUM отдаёт числовые value, и фильтр шлёт число, а не строку "5".
+    const r = await allSettled(rubDocPorts.searchFx, { scope: s, params: { filter: [{ field: 'queue', op: 'EQ', value: 5 }], sort: [], page: 0, size: 20 } })
     // R16: формула эталона `1 + (i*5)%5` всегда даёт 1 — фильтр по очерёдности 5 раньше проходил
     // впустую (rows.length === 0, every() на пустом массиве — true). Явно проверяем непустой результат.
     expect(r.status).toBe('done')
@@ -49,6 +68,8 @@ describe('контракт rub-docs', () => {
     expect(r.value.rows.every((d) => d.queue === 5)).toBe(true)
     const m = await allSettled(rubDocPorts.filterMetaFx, { scope: s })
     expect(m.status === 'done' && m.value.fields).toHaveLength(10)
+    const queue = m.status === 'done' ? m.value.fields.find((f) => f.id === 'queue') : undefined
+    expect(queue?.values?.map((v) => v.value)).toEqual([1, 2, 3, 4, 5])
   })
   it('данные валидны: счёт 20 цифр, у клиентских 810 в знаках 6–8; БИК 9; ИНН 10/12; КПП 9 или пусто', () => {
     for (const d of makeRubDocs()) {

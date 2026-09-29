@@ -22,7 +22,8 @@ export const rubDocsMeta: FilterMetaDto = {
   dictionaries: {
     docStatus: inline(STATUS_LABEL), rubType: inline(TYPE_NAME),
     direction: inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' }),
-    queue: inline({ 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' }),
+    // R21: очерёдность в записи — число, поэтому value справочника — числа 1…5 (не inline: Object.keys дал бы строки "1"…"5").
+    queue: { mode: 'INLINE', items: [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) })) },
   },
 }
 
@@ -97,7 +98,8 @@ export function makeRubDocs(n = 87): RubDoc[] {
     // направлений длиной 12, кратной 4 — направление и i%4 связаны однозначно, среди IN-позиций {0,3,6,11}
     // единицы по модулю 4 нет; проверено и на самом стенде — 0 из 87 строк). Сознательное отклонение от
     // эталона (класс C, зафиксировано в registry-drift.md): `i % 8 === 3` — тот же характер условия
-    // (часть входящих), но реально срабатывает (i=3,27,51,75 — 4 из 87 строк).
+    // (часть входящих), но реально срабатывает: IN при k ∈ {0,3,6,11} и i%8===3 → i=3,11,27,35,51,59,75,83 —
+    // 8 из 87 строк.
     const docRef = direction === 'IN' && i % 8 === 3 ? '' : `${ED_BY_TYPE[type]}-26092${day % 10}000${pad(1800 + i * 7, 4)}`
     return {
       id: `rub-${pad(i, 4)}`, docNumber: String(2900 + i * 3), uuid: `${pad(i, 2)}e0c7a2-5b1d-4c8e-9f0a-${pad(i * 7919, 12)}`,

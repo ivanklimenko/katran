@@ -120,13 +120,13 @@ RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ typ
 | `fromName` | строка — наименование отправителя | да | `"ООО «ЛЕЗЯФОТЫ ВЕФО»"` |
 | `fromAcc` | строка, 20 цифр — счёт отправителя | да | `"40702810999377318571"` |
 | `fromInn` | строка, 10 или 12 цифр | да | `"5790280657"` |
-| `fromKpp` | строка, 9 цифр или пусто | да | `"899351656"` |
+| `fromKpp` | строка: 9 цифр, `"0"` или пусто (физлица, ИП) | да | `"899351656"` |
 | `fromBic` | строка, 9 цифр | да | `"049757384"` |
 | `fromBank` | строка — наименование банка отправителя | да | `"АО «МУЛАПЯ БАНК»"` |
 | `toName` | строка — наименование получателя | да | `"АО «МЕФЯ ФОТЕ»"` |
 | `toAcc` | строка, 20 цифр — счёт получателя | да | `"40702810547442693048"` |
 | `toInn` | строка, 10 или 12 цифр | да | `"1265428092"` |
-| `toKpp` | строка, 9 цифр или пусто | да | `"409490573"` |
+| `toKpp` | строка: 9 цифр, `"0"` или пусто (физлица, ИП) | да | `"409490573"` |
 | `toBic` | строка, 9 цифр | да | `"042242532"` |
 | `toBank` | строка — наименование банка получателя | да | `"ФИЛИАЛ № 8771 БАНКА «ТЯПЯ» (ПАО)"` |
 | `initiator` | строка — код системы-инициатора | да | `"NCB.NCB_IN"` |
@@ -144,7 +144,7 @@ RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ typ
 
 ## 5. Примеры запросов и ответов
 
-Данные ниже — из тестов `apps/pi/src/app/fake/contract.test.ts` и `apps/pi/src/app/fake/server.test.ts`, где не сказано иное. Строки документов — иллюстративные (собраны по составу раздела 4, не взяты дословно из теста).
+Данные ниже — из тестов `apps/pi/src/app/fake/contract.test.ts` и `apps/pi/src/app/fake/server.test.ts`, где не сказано иное. Строки документов — настоящие ответы фейкового сервера на эти запросы (`makeFxDocs()`/`makeRubDocs()`), показана первая строка `content`; `page` — как в ответе.
 
 ### 5.1. `fx-docs`: `search`
 
@@ -160,26 +160,26 @@ POST /grids/fx-docs/search
 }
 ```
 
-Ответ — 200 (иллюстративно, состав строки — раздел 4.1):
+Ответ — 200, первая из 5 строк страницы (состав строки — раздел 4.1):
 
 ```json
 {
   "content": [
     {
-      "id": "0f3c0031-7b1d-4c8e-9f0a-284511392017", "docNumber": 804123, "refIn": "REF20260923031", "refOut": null,
-      "uetr": "04012233-1c2d-4e5f-8a9b-560012349087", "created": "2026-09-23T10:31:20", "vdDt": "2026-09-23", "vdKt": "2026-09-23",
-      "type": "MT103", "direction": "IN", "dirTxt": "Входящий от ЦБ", "amount": 4820000.5, "currency": "USD",
-      "f50name": "ООО «Северный ветер»", "f50acc": "40702840012345678901", "purpose": null,
-      "f52": "VKRBRU8KXXX", "f57": "NRDIRUMMXXX", "f59name": "АО «Прибой»", "f59acc": "40702840098765432109",
-      "status": "ERROR", "reason": "Не найден счёт получателя",
-      "sender": "VKRBRU8KXXX", "receiver": "HSTBDEHHXXX", "provS": "ЕРС", "provR": "LORO",
+      "id": "0f3c0005-7b1d-4c8e-9f0a-897088053636", "docNumber": 164275, "refIn": null, "refOut": "OUT4929193",
+      "uetr": "47867615-1c2d-4e5f-8a9b-495768832741", "created": "2026-09-23T10:37:56", "vdDt": "2026-09-23", "vdKt": "2026-09-23",
+      "type": "MT202", "direction": "OUT", "dirTxt": "Исходящий на Лоро", "amount": 4425396.3, "currency": "CNY",
+      "f50name": "ООО «Ромашка»", "f50acc": "4070215670167206879", "purpose": "Оплата по договору № 8545 от 08.09.2026, НДС не облагается",
+      "f52": "PLKZHKHHXXX", "f57": "VKRBRU8KXXX", "f59name": "ООО «Северный ветер»", "f59acc": "4070215697320128511",
+      "status": "ERROR", "reason": "Просрочена дата валютирования",
+      "sender": "NRDIRUMMXXX", "receiver": "VKRBRU8KXXX", "provS": "LORO", "provR": "LORO",
       "lock": null, "inactive": null, "f50opt": "F", "f59opt": "F",
-      "f52name": "VOSTOCHNY KREDIT BANK KHABAROVSK BR", "f57name": "NORDINVEST BANK MOSCOW",
-      "f58": null, "f58name": null, "outSender": "NRDIRUMMXXX", "outReceiver": "VKRBRU8KXXX",
-      "routeType": "NOSTRO", "routeRecv": "HSTBDEHHXXX", "routeAcc": "301108100123451000432"
+      "f52name": "POLARIS KREDIT BANK HELSINKI", "f57name": "VOSTOCHNY KREDIT BANK KHABAROVSK BR",
+      "f58": "VKRBRU8KXXX", "f58name": "VOSTOCHNY KREDIT BANK KHABAROVSK BR", "outSender": "VKRBRU8KXXX", "outReceiver": "PLKZHKHHXXX",
+      "routeType": "NOSTRO", "routeRecv": "BCLHLV22XXX", "routeAcc": "30114156514461469752"
     }
   ],
-  "page": { "number": 0, "size": 5, "totalElements": 8, "totalPages": 2, "hasNext": true }
+  "page": { "number": 0, "size": 5, "totalElements": 6, "totalPages": 2, "hasNext": true }
 }
 ```
 
@@ -277,33 +277,33 @@ POST /grids/fx-docs/search
 
 ### 5.5. `rub-docs`: `search`
 
-Запрос — фильтр по очерёдности `5` (`apps/pi/src/app/fake/contract.test.ts`, тест «search и filter-meta (10 полей)»):
+Запрос — фильтр по очерёдности `5`, значение — число, как `value` справочника `queue` (раздел 5.6) (`apps/pi/src/app/fake/contract.test.ts`, тест «search и filter-meta (10 полей)»):
 
 ```json
 POST /grids/rub-docs/search
 {
-  "filter": { "conditions": [{ "field": "queue", "op": "EQ", "value": "5" }] },
+  "filter": { "conditions": [{ "field": "queue", "op": "EQ", "value": 5 }] },
   "sort": [], "page": { "number": 0, "size": 20 }, "includeTotal": true
 }
 ```
 
-Ответ — 200 (иллюстративно, состав строки — раздел 4.2):
+Ответ — 200, первая из 17 строк (состав строки — раздел 4.2):
 
 ```json
 {
   "content": [
     {
-      "id": "rub-0058", "docNumber": "3074", "uuid": "58e0c7a2-5b1d-4c8e-9f0a-000459502000", "txId": "TX00007598", "docRef": "ED101-2609240001860",
-      "created": "2026-09-22T13:26:11", "changed": "2026-09-22T14:03:00",
-      "type": "PAYDOCRU", "edCode": "ED101", "direction": "IN", "dirTxt": "входящий от ЦБ на клиента",
-      "amount": 128340.55, "queue": 5, "prio": 0,
-      "fromName": "ООО «ЛЕЗЯФОТЫ ВЕФО»", "fromAcc": "40702810999377318571", "fromInn": "5790280657", "fromKpp": "899351656",
-      "fromBic": "049757384", "fromBank": "АО «МУЛАПЯ БАНК»",
-      "toName": "АО «МЕФЯ ФОТЕ»", "toAcc": "40702810547442693048", "toInn": "1265428092", "toKpp": "409490573",
-      "toBic": "042242532", "toBank": "ФИЛИАЛ № 8771 БАНКА «ТЯПЯ» (ПАО)",
-      "initiator": "NCB.NCB_IN", "source": "UFX", "destination": "RTL",
-      "purpose": "Оплата по счёту № 2923-2915 от 07.03.2026 за работы по договору 14-56 от 02.08.2026. В том числе НДС 20% — 13 148.08 руб.",
-      "status": "DONE", "reason": null, "lock": null, "inactive": null
+      "id": "rub-0002", "docNumber": "2906", "uuid": "02e0c7a2-5b1d-4c8e-9f0a-000000015838", "txId": "TX00000262", "docRef": "ED104-2609220001814",
+      "created": "2026-09-22T13:34:14", "changed": "2026-09-22T15:58:00",
+      "type": "REQDOCRU", "edCode": "ED104", "direction": "OUT", "dirTxt": "исходящий на ЦБ · взыскание",
+      "amount": 212.43, "queue": 5, "prio": 0,
+      "fromName": "ФЯБЕРИОВА ПИРАС ГИЗАОВНА", "fromAcc": "40817810516762861162", "fromInn": "256169407365", "fromKpp": "0",
+      "fromBic": "015920113", "fromBank": "ГЕВАХИСКОЕ ГУ БАНКА РОССИИ // УФК ПО ДИЗАДОСКОЙ ОБЛАСТИ",
+      "toName": "ИП ПОТОВЯОВА ПОСЯС БЕПЯОВИЧ", "toAcc": "40802810904985101300", "toInn": "409237987347", "toKpp": "",
+      "toBic": "045542573", "toBank": "ФИЛИАЛ № 9292 БАНКА «ХЕВЯ» (ПАО)",
+      "initiator": "CLT.CLT_DCR", "source": "CLX", "destination": "PRM",
+      "purpose": "Предоплата по договору поставки № 54-62 от 14.07.2026 за оборудование. НДС не облагается",
+      "status": "DONE", "reason": null, "lock": {"who": "Смирнова Е. В.", "since": "2026-09-23T11:26:00"}, "inactive": null
     }
   ],
   "page": { "number": 0, "size": 20, "totalElements": 17, "totalPages": 1, "hasNext": false }
@@ -314,7 +314,7 @@ POST /grids/rub-docs/search
 
 ### 5.6. `rub-docs`: `filter-meta`
 
-Ответ — ровно то, что отдаёт `GET /grids/rub-docs/filter-meta` (`apps/pi/src/app/fake/rub-docs.data.ts`, `rubDocsMeta`), 10 полей режима simple:
+Ответ — ровно то, что отдаёт `GET /grids/rub-docs/filter-meta` (`apps/pi/src/app/fake/rub-docs.data.ts`, `rubDocsMeta`), 10 полей режима simple. Справочник `queue` — единственный с числовыми `value` (`1`…`5`): поле `queue` в строке — число, поэтому и значение в условии фильтра — число (`"value": 5`, раздел 5.5), не строка `"5"`:
 
 ```json
 {
