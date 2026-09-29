@@ -4,6 +4,8 @@
 
 Основа — выжимка из скилла [effector-fsd](https://github.com/demark-pro/skills/tree/master/skills/effector-fsd) (MIT, состояние на 2026-07-07) и официальных доков FSD v2.1. Оставлено только то, что применимо у нас: effector 23.4 без Farfetched, Atomic Router, Next.js и SSR. Про роутинг хоста ничего не предполагается — там, где нужен признак «экран открыт», подставьте то, что даёт ваш роутер.
 
+Живой образец — `apps/pi` (реестры «Валютные документы» и «Рублёвые документы»): примеры этого документа приведены к его реальным именам (`entities/fx-doc`, `widgets/doc-registry`, `createPageLifecycle`). Перенос во внутреннее приложение — `docs/guides/pi-usage.md`.
+
 ## 1. Правила FSD, которые влияют на код с katran
 
 - Слои сверху вниз: `app → pages → widgets → features → entities → shared`. Импорт — только вниз и только через публичный API слайса (`index.ts`); внутри слайса — относительные пути. Соседние слайсы одного слоя друг друга не импортируют (исключение — `@x` между сущностями).
@@ -29,85 +31,103 @@
 | Персональные настройки грида на беке (адаптер `persist`) | `entities/<настройки>` или `app` | не `shared`: адаптер знает пользователя |
 | Запуск приложения, общая реакция на 401, инвалидация между экранами | `app/model` | связывает несколько слоёв |
 
-Пример реестра:
+Пример реестра — по образцу `apps/pi` (реестр `entities/fx-doc`, виджет `widgets/doc-registry`; `features/pi-annul` ниже — иллюстрация слоя, в `apps/pi` такой фичи нет, эндпоинт аннулирования не поставлен):
 
 ```txt
 src/
-  entities/pi/
+  entities/fx-doc/
     index.ts
-    api/search.ts          # searchFx, facetsFx, GridQuery → DTO бека
-    model/pi.ts            # тип записи, статусы, раскладка колонок
-    ui/pi-status.tsx
+    api/ports.ts             # fxDocPorts: searchFx, facetsFx, filterMetaFx
+    model/fxDoc.ts           # тип записи, раскладка колонок — apps/pi/src/entities/fx-doc/model, ui/layout.ts
+    ui/cells.tsx
   features/pi-annul/
-    index.ts               # piAnnulled, $$piAnnul
+    index.ts                 # piAnnulled, $$piAnnul
     api/annul.ts
     model/annul.model.ts
     ui/annul-button.tsx
-  pages/pi-registry/
+  widgets/doc-registry/
     index.ts
-    model/filters.model.ts
-    model/grid.model.ts
-    model/page.model.ts    # pageStarted, реакции на события фич
-    ui/pi-registry-page.tsx
+    lib/createRegistry.ts    # createFiltersModel + createGridModel + жизненный цикл экрана — раздел 3
+    ui/DocRegistry.tsx
+  pages/fx-docs/
+    index.ts
+    model/registry.model.ts  # createPageLifecycle() + widgets/doc-registry:createRegistry(...)
+    ui/FxDocsPage.tsx
 ```
 
 ## 3. Модели katran в приложении
 
 **Фабрики вызываются на верхнем уровне модуля модели**, не в компоненте и не в `useMemo`: юниты effector — статический граф, создание при рендере даёт новую модель на каждый маунт и утечку подписок.
 
-```ts
-// pages/pi-registry/model/filters.model.ts
-import { createFiltersModel } from '@katran/effector'
-import { piFilterMeta } from '@/entities/pi'
+В `apps/pi` фабрики вызываются не прямо в модели страницы, а внутри переиспользуемой обёртки `widgets/doc-registry/lib/createRegistry.ts` — оба реестра (`fx-docs`, `rub-docs`) отличаются только раскладкой и портами, а не устройством модели:
 
-export const filters = createFiltersModel({ meta: piFilterMeta, laneField: 'status' })
+```ts
+// widgets/doc-registry/lib/createRegistry.ts
+import { createFiltersModel, createGridModel, localStoragePersist } from '@katran/effector'
+import { gridColumns } from '@katran/ui'
+
+export function createRegistry<Row>(cfg: RegistryConfig<Row>) {
+  const $meta = createStore<FilterMeta | null>(null).on(cfg.ports.filterMetaFx.doneData, (_, m) => m)
+  const filters = createFiltersModel({ meta: $meta, laneField: 'status' })
+  const grid = createGridModel<Row>({
+    id: cfg.id,
+    columns: gridColumns(cfg.layout.columns),
+    $filter: filters.$conditions,
+    fetchFx: cfg.ports.searchFx,
+    facets: { field: 'status', fetchFx: cfg.ports.facetsFx },
+    persist: cfg.persist ?? localStoragePersist('katran-pi'),
+    rowKey: cfg.layout.rowKey,
+  })
+  // ...
+}
 ```
 
-```ts
-// pages/pi-registry/model/grid.model.ts
-import { createGridModel, localStoragePersist } from '@katran/effector'
-import { facetsFx, piLayout, searchFx, type Pi } from '@/entities/pi'
-import { filters } from './filters.model'
+Если у вас один реестр (не два одинаково устроенных, как в `apps/pi`) — оправданнее звать `createFiltersModel`/`createGridModel` прямо в `pages/<реестр>/model/filters.model.ts` и `grid.model.ts`, без обёртки; правило не в наличии `createRegistry`, а в том, что фабрики вызываются один раз при загрузке модуля:
 
-export const grid = createGridModel<Pi>({
-  id: 'pi-registry',
-  columns: piLayout.columns.map((c) => ({ id: c.id, width: c.width })),
-  $filter: filters.$conditions,
-  fetchFx: searchFx,
-  facets: { field: 'status', fetchFx: facetsFx },
-  persist: localStoragePersist('app'),
-  rowKey: piLayout.rowKey,
-})
+```ts
+// pages/fx-docs/model/registry.model.ts
+import { createPageLifecycle } from '../../../shared/lib/lifecycle'
+import { createRegistry } from '../../../widgets/doc-registry'
+import { fxDocLayout, fxDocPorts } from '../../../entities/fx-doc'
+
+export const lifecycle = createPageLifecycle()
+export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle })
 ```
 
-**Компонент только связывает.** `useGrid(grid)` и `useFilters(filters)` — единственное место встречи модели с `DataGrid` и панелью фильтров; юнитов в компоненте не создавать.
+**Компонент только связывает.** `useGrid(grid)` и `useFilters(filters)` — единственное место встречи модели с `DataGrid` и панелью фильтров; юнитов в компоненте не создавать (`pages/fx-docs/ui/FxDocsPage.tsx` передаёт готовый `registry` в `DocRegistry`, а не создаёт модель).
 
-**Первый запрос — из модели страницы.** Модель грида сама в бек не ходит, нужен `grid.refresh()`. В демо кита он вызывается из `useEffect` — для продукта лучше событие страницы, а компонент в лучшем случае только сообщает о нём:
+**Первый запрос — из события страницы.** Модель грида сама в бек не ходит, нужен `grid.refresh()`. Роль «события страницы» в `apps/pi` играет `lifecycle.pageOpened` (`createPageLifecycle`, раздел 1) — его вызывает роутер, когда экран открылся (`docs/guides/pi-usage.md`, раздел 5), а не компонент в `useEffect`:
 
 ```ts
-// pages/pi-registry/model/page.model.ts
-export const pageStarted = createEvent()
-sample({ clock: pageStarted, target: grid.refresh })
+// widgets/doc-registry/lib/createRegistry.ts
+sample({ clock: lifecycle.pageOpened, target: grid.refresh })
 ```
 
 ## 4. Статический граф: грабли, которые не видит линтер импортов
 
 **Модель страницы жива, пока жив модуль.** Импортированный модуль с `sample` реагирует всегда, даже когда экран закрыт; для remote в Module Federation — до перезагрузки хоста. Отсюда два следствия.
 
-1. Реакция страницы на событие фичи гейтится признаком «экран открыт», иначе закрытый реестр перезапрашивает данные после действия на другом экране:
+1. Реакция страницы на событие фичи гейтится признаком «экран открыт», иначе закрытый реестр перезапрашивает данные после действия на другом экране. В `apps/pi` это уже сделано на уровне виджета: `Registry.refreshRequested` (`widgets/doc-registry/lib/createRegistry.ts`) — внешний код зовёт `registry.refreshRequested()`, сам виджет решает, обновлять ли грид, по `lifecycle.$opened`:
+
+   ```ts
+   // widgets/doc-registry/lib/createRegistry.ts
+   sample({ clock: refreshRequested, filter: lifecycle.$opened, target: grid.refresh })
+   ```
+
+   По тому же образцу — реакция страницы на событие фичи из другого слайса:
 
    ```ts
    sample({
      clock: piAnnulled,
-     source: $registryOpened,   // из вашего роутера или pageStarted/pageClosed
+     source: lifecycle.$opened,   // из createPageLifecycle или своего роутера
      filter: Boolean,
      target: grid.refresh,
    })
    ```
 
-   Если после действия нужно обновить несколько экранов, это не реакции в каждой странице, а одна инвалидация в `app` или в сущности.
+   Если после действия нужно обновить несколько экранов, это не реакции в каждой странице, а одна инвалидация в `app` или в сущности — каждый реестр слушает общее событие через свой `refreshRequested`.
 
-2. Состояние моделей katran (фильтры, выделение, страница) переживает размонтирование экрана. Если при уходе с экрана оно должно сбрасываться — это решение экрана: `sample({ clock: pageClosed, target: [filters.reset, grid.clearSelection] })`.
+2. Состояние моделей katran (фильтры, выделение, страница) переживает размонтирование экрана. Если при уходе с экрана оно должно сбрасываться — это решение экрана: в `apps/pi` `createRegistry` снимает выделение при уходе безусловно (`sample({ clock: lifecycle.pageClosed, target: grid.clearSelection })`), а фильтры и сортировку намеренно оставляет — то же поведение, что у стенда-эталона (спека `2026-09-28-katran-pi-app-design.md` §7.2). Полный сброс экрана — `sample({ clock: pageClosed, target: [filters.reset, grid.clearSelection] })`.
 
 **Фича отдаёт факты, а не внутренности.** Публичный API фичи — UI, фасад `$$feature` и события-факты (`piAnnulled`), а не голый эффект, на `.done` которого подписывается страница. Иначе страница зависит от реализации фичи и не отличит «аннулировано» от «отменено пользователем».
 

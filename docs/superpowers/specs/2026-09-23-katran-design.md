@@ -55,7 +55,8 @@ katran/
     ui/         React-компоненты; deps: tokens, @floating-ui/dom
     effector/   фабрики моделей и хуки; deps: effector, effector-react
   apps/
-    demo/       витрина и боевые экраны → GitHub Pages
+    demo/       витрина компонентов → GitHub Pages
+    pi/         боевые экраны — реестры ПИ на FSD (`apps/pi`, §10) → GitHub Pages, /katran/pi/
   docs/
     superpowers/specs/, superpowers/plans/
 ```
@@ -70,6 +71,7 @@ katran/
 | `ui` | `tokens`, `react`, `@floating-ui/dom` | `effector`, всё из `packages/effector` |
 | `effector` | `effector`, `effector-react`, типы из `ui` (только `import type`) | DOM API, компоненты `ui` |
 | `demo` | всё | — |
+| `pi` | всё (плюс собственные FSD-границы `app → pages → widgets → entities → shared`, §10) | — |
 
 Типы контракта, нужные обоим слоям (`Sort`, `Selection`, `ColumnsState`, `GridViewState`; с среза 1e — `Condition`, `Filter`, `FilterMeta`, `Scalar`), объявлены в `ui` (`grid/types.ts`, `filters/types.ts`), `effector` их реэкспортирует: `ui` без них не соберёт компоненты, а `effector` может импортировать типы, но не наоборот.
 
@@ -428,9 +430,13 @@ const grid = createGridModel<Doc>({
 
 ---
 
-## 10. Демо и поставка
+## 10. Демо, боевые экраны и поставка
 
-`apps/demo` — Vite-приложение: страница токенов (палитра, кегли, плотность, темы), страница на каждый компонент с регуляторами, и **боевые экраны** — «Валютные документы» (реестр) и деталка на вымышленных правдоподобных данных (демо показывается Заказчику). Публикация — GitHub Pages из репозитория `ivanklimenko/katran`: репозиторий публичный (решение владельца 24.09.2026 — как у стенда `pi-constructor`), источник Pages — GitHub Actions, workflow `pages.yml` собирает демо при каждом push в `main`; адрес `https://ivanklimenko.github.io/katran/`.
+`apps/demo` — витрина компонентов: страница токенов (палитра, кегли, плотность, темы) и страница на каждый компонент с регуляторами. Боевых экранов демо больше не показывает — они переехали в `apps/pi`.
+
+`apps/pi` — прикладное приложение на Feature-Sliced Design с **боевыми экранами** на вымышленных правдоподобных данных (показываются Заказчику): «Валютные документы» и «Рублёвые документы», реестры платёжных инструкций. Устроено как переносимый образец для внутренних команд — единственный шов с бекендом (`requestFx`), порты сущностей с мапперами на контракт `vtb-filters`, фейковый сервер на том же контракте. Дизайн — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`; документы — `docs/guides/pi-usage.md` (перенос во внутреннее приложение) и `docs/reference/pi-api.md` (контракт для бекенда).
+
+Оба приложения публикуются на GitHub Pages из репозитория `ivanklimenko/katran`: репозиторий публичный (решение владельца 24.09.2026 — как у стенда `pi-constructor`), источник Pages — GitHub Actions, workflow `pages.yml` собирает демо и `apps/pi` при каждом push в `main` (`apps/pi/dist` копируется в `apps/demo/dist/pi`); адреса `https://ivanklimenko.github.io/katran/` и `https://ivanklimenko.github.io/katran/pi/`.
 
 Версии — semver, `CHANGELOG.md` вручную. Канал поставки в целевой проект не фиксируется (раздел 1.3); переносимость обеспечена разделом 3.4.
 
@@ -445,6 +451,7 @@ const grid = createGridModel<Doc>({
 | 1c. DataGrid | контракт 6.2, правила 6.3, скелетон, выделение, клавиатура | тесты `resolveSpans`/сортировки, замер высоты записи = эталон |
 | 1d. Модели | `createGridModel`, `createFiltersModel`, хуки | тесты правил 8.2 без DOM |
 | 1e. Реестр | `StatusLane`, `FilterPanel` simple, `BulkBar`, боевой экран в демо — дизайн `2026-09-24-katran-slice1e-registry-design.md` | сверка с эталоном, показ |
+| apps/pi | Реестры ПИ на FSD с переносимым швом данных: экран «Валютные документы» и e2e переехали из демо в `apps/pi`, добавлен рублёвый реестр по эталону `pi-constructor` — дизайн `2026-09-28-katran-pi-app-design.md` | сверка с эталоном (`registry-drift.md`, рублёвый реестр), e2e `apps/pi` 26/26, документы `pi-usage.md`/`pi-api.md` |
 | 1f. Advanced-фильтры | отдельный дизайн-заход → реализация | согласование вариантов до кода |
 | 2. Деталка | Drawer, Prompt, FieldRow, ConfigForm, InlineEdit, DateInput, модели форм | замеры drawer, два документа рядом |
 | 3. Дашборд | Chart, StatTile, PanelLayout | график по статусам на демо-данных |
