@@ -136,7 +136,52 @@
   outline-style: dotted;
 }
 
+/* «S:» / «R:» — служебная подпись роли, не данные (спека 5b §2, R15) */
 .srTag {
+  display: inline-block;
+  width: var(--k-sp-4);
   color: var(--k-faint);
-  font: 500 var(--k-fs-3) / 1 var(--k-mono);
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+}
+
+/* шрифт значения без смены цвета — цвет уже задаёт тон CopyValue (val/ink/ink2) */
+.mono {
+  font-family: var(--k-mono);
+}
+
+/* номер документа в ID — 600 (спека 5b §2, R17) */
+.num {
+  font-weight: 600;
+}
+
+/* код направления — mono 600 fs-3 (спека 5b §3, R11); цвет — тон CopyValue */
+.dirRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+}
+
+.dirIco {
+  width: var(--k-fs-1);
+  height: var(--k-fs-1);
+  flex: none;
+}
+
+.dirGlyph {
+  font: var(--k-fs-1) / 1 var(--k-sans);
+}
+
+.dirCode {
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+}
+
+/* назначение 70 — прописными с разрядкой (спека 5b §3, R9); цвет — тон CopyValue (ink2) */
+.purposeText {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Кт валютирования, если отличается от Дт (спека 5b §3, R10) */
+.warn {
+  color: var(--k-warn);
 }
