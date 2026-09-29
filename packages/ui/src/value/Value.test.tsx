@@ -91,6 +91,11 @@ describe('AccountValue', () => {
     expect(b.querySelector('b')).toHaveTextContent('840')
     expect(b).toHaveAttribute('data-k-tip-if', 'truncated')
   })
+  it('AccountValue tail=3 показывает три последних знака', () => {
+    renderK(<AccountValue value="40702810999377318571" tail={3} />)
+    const b = screen.getByRole('button')
+    expect(b).toHaveTextContent('40702810…571')
+  })
 })
 
 describe('SwiftField', () => {

@@ -1,0 +1,38 @@
+/* «И:» / «S:» / «D:» — служебная подпись роли, не данные (спека 5b §2, R15) */
+.srTag {
+  display: inline-block;
+  width: var(--k-sp-4);
+  color: var(--k-faint);
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+}
+
+/* шрифт значения без смены цвета — цвет уже задаёт тон CopyValue (val/ink/ink2), а не tone="mono" (Р8) */
+.mono.mono {
+  font-family: var(--k-mono);
+}
+
+/* номер документа в ID — 600 (как у валютного, cells.module.css fx-doc, R17: стенд) */
+.num.num {
+  font-weight: 600;
+}
+
+/* код направления — mono 600 fs-3 (как у валютного); цвет — тон CopyValue */
+.dirRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+}
+
+.dirIco {
+  width: var(--k-fs-1);
+  height: var(--k-fs-1);
+  flex: none;
+}
+
+.dirGlyph {
+  font: var(--k-fs-1) / 1 var(--k-sans);
+}
+
+.dirCode.dirCode {
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+}

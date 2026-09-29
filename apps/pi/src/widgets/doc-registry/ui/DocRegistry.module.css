@@ -1,0 +1,39 @@
+/* Перенесено из apps/demo/src/pages/Page.module.css дословно (R13: без .explain/.hlSpans — обучающая часть демо). */
+
+.h1 {
+  font: 700 var(--k-fs-h1) / 1.2 var(--k-sans);
+  margin: 0 0 var(--k-sp-2);
+}
+
+/* счётчик общего числа в заголовке экрана: Counter обёрнут, чтобы не адресовать класс компонента */
+.h1Counter {
+  margin-left: var(--k-sp-2);
+  vertical-align: middle;
+}
+
+.note {
+  color: var(--k-muted);
+  margin: 0 0 var(--k-sp-5);
+  max-width: var(--k-note-max);
+}
+
+/* Реестр занимает всю высоту, которую ему дал хост (у стенда — app/Shell .content); сам геометрию хоста не знает.
+   Хосту нужна определённая высота контейнера, иначе грид вырастет по содержимому. */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.head {
+  flex: none;
+}
+
+.lane {
+  margin: var(--k-sp-3) 0 var(--k-sp-2);
+}
+
+.filters {
+  margin: 0 0 var(--k-sp-3);
+}

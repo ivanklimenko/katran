@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": true, "types": ["vitest/globals"] }, "include": ["src", "vitest.setup.ts", "../../packages/ui/src/css-modules.d.ts", "../../packages/ui/src/test/jest-axe.d.ts", "../../packages/ui/src/test/vitest-matchers.d.ts"] }

@@ -1,6 +1,6 @@
-// Экран «Валютные документы» remote-модуля: упрощённая копия apps/demo/src/pages/GridPage.tsx
-// (лейн + панель фильтров + грид + полоса массовых действий) на моделях @katran/effector и фейковом бэкенде.
-// Данные вымышленные (генератор из демо).
+// Экран «Валютные документы» remote-модуля: упрощённый аналог реестра apps/pi (apps/pi/src/pages/fx-docs,
+// apps/pi/src/widgets/doc-registry; бывший экран демо GridPage.tsx) — лейн + панель фильтров + грид + полоса
+// массовых действий на моделях @katran/effector и фейковом бэкенде. Данные вымышленные (генератор из прежнего демо).
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'

@@ -17,6 +17,7 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
             <a key={r.id} href={`#/${r.id}`} className={s.link} aria-current={r.id === route ? 'page' : undefined}>{r.title}</a>
           ))}
         </nav>
+        <a className={s.link} href={import.meta.env.VITE_PI_URL ?? 'http://localhost:5185/'}>Реестры ПИ →</a>
       </aside>
       <div className={s.main}>
         <header className={s.head}>

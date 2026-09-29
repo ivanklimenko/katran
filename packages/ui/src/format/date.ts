@@ -31,3 +31,8 @@ export function formatDateTimeMinutes(iso: string): string {
   const d = parse(iso); if (!d) return ''
   return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`
 }
+/** «дд.мм чч:мм» — день.месяц без года и время без секунд (вторая строка «Изм.» рублёвого реестра, решение В-Р1). */
+export function formatDayMonthMinutes(iso: string): string {
+  const d = parse(iso); if (!d) return ''
+  return `${p2(d.getDate())}.${p2(d.getMonth() + 1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`
+}

@@ -1,4 +1,4 @@
-import { formatDate, formatDateTimeFull, formatDateTimeMinutes, formatDateTimeShort } from './date'
+import { formatDate, formatDateTimeFull, formatDateTimeMinutes, formatDateTimeShort, formatDayMonthMinutes } from './date'
 
 describe('даты', () => {
   const iso = '2026-09-22T07:33:22'
@@ -39,5 +39,10 @@ describe('даты', () => {
     } finally {
       vi.unstubAllEnvs()
     }
+  })
+  it('день.месяц и время без секунд — «дд.мм чч:мм»', () => {
+    expect(formatDayMonthMinutes('2026-09-23T08:13:00')).toBe('23.09 08:13')
+    expect(formatDayMonthMinutes('нет')).toBe('')
+    expect(formatDayMonthMinutes('')).toBe('')
   })
 })

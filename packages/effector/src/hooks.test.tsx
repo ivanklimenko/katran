@@ -1,9 +1,9 @@
 import { act } from '@testing-library/react'
-import { createEffect, createStore } from 'effector'
+import { createEffect, createEvent, createStore } from 'effector'
 import { createFiltersModel } from './createFiltersModel'
 import { createGridModel } from './createGridModel'
 import { renderHook } from './test/renderHook'
-import type { Filter, GridPage, GridQuery } from './types'
+import type { Filter, FilterMeta, GridPage, GridQuery } from './types'
 import { useFilters } from './useFilters'
 import { useGrid } from './useGrid'
 
@@ -39,6 +39,16 @@ describe('useGrid', () => {
 })
 
 describe('useFilters', () => {
+  it('meta — текущее значение стора каталога', () => {
+    const loaded = createEvent<FilterMeta>()
+    const $src = createStore<FilterMeta | null>(null).on(loaded, (_, m) => m)
+    const model = createFiltersModel({ meta: $src })
+    const { result } = renderHook(() => useFilters(model))
+    expect(result.current.meta).toBeNull()
+    act(() => { loaded({ fields: [] }) })
+    expect(result.current.meta).toEqual({ fields: [] })
+  })
+
   it('edit/apply через хук', () => {
     const model = createFiltersModel()
     const { result } = renderHook(() => useFilters(model))

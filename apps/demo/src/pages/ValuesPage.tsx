@@ -1,11 +1,14 @@
 import { AccountValue, CopyValue, Counter, FieldTag, LinkValue, StatusDot, Tag, type StatusTone } from '@katran/ui'
-import { STATUS_LABEL, STATUS_TONE, type Status } from '../data/docs'
 import s from './Page.module.css'
 
 const tones: StatusTone[] = ['flow', 'flowl', 'flowd', 'bad', 'badd', 'warn', 'ok', 'okl', 'grey']
 
 /** Статус демо на каждый тон (у каждого тона ровно один статус) — буква и имя точки берутся из его названия. */
-const statusOf = Object.fromEntries((Object.keys(STATUS_TONE) as Status[]).map((st) => [STATUS_TONE[st], STATUS_LABEL[st]])) as Record<StatusTone, string>
+const STATUS_LABEL: Record<StatusTone, string> = {
+  flow: 'В работе', flowl: 'К экспорту', flowd: 'В обработке', bad: 'Ошибка', badd: 'INVALID', warn: 'Отложенный',
+  ok: 'Обработан', okl: 'Экспортирован', grey: 'Отказ',
+}
+const statusOf = STATUS_LABEL
 
 export function ValuesPage() {
   return (

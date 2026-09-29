@@ -1,7 +1,21 @@
-import { allSettled, fork } from 'effector'
+import { allSettled, createEvent, createStore, fork } from 'effector'
 import { createFiltersModel } from './createFiltersModel'
+import type { FilterMeta } from './types'
 
 describe('createFiltersModel', () => {
+  it('meta значением: $meta отдаёт его; meta стором: $meta следует за стором', async () => {
+    const fixed = { fields: [{ id: 'a', label: 'А', type: 'STRING' as const, ops: [] }] }
+    expect(fork().getState(createFiltersModel({ meta: fixed }).$meta)).toEqual(fixed)
+    expect(fork().getState(createFiltersModel().$meta)).toBeNull()
+    const loaded = createEvent<FilterMeta>()
+    const $src = createStore<FilterMeta | null>(null).on(loaded, (_, m) => m)
+    const m = createFiltersModel({ meta: $src })
+    const scope = fork()
+    expect(scope.getState(m.$meta)).toBeNull()
+    await allSettled(loaded, { scope, params: fixed })
+    expect(scope.getState(m.$meta)).toEqual(fixed)
+  })
+
   it('edit → черновик; apply → применённые; $dirty отражает разницу', async () => {
     const m = createFiltersModel()
     const scope = fork()

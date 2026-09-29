@@ -18,7 +18,7 @@ export type FiltersBinding = {
 }
 
 export function useFilters(m: FiltersModel): FiltersBinding {
-  const [conditions, draft, dirty, lane] = useUnit([m.$conditions, m.$draft, m.$dirty, m.$lane])
+  const [conditions, draft, dirty, lane, meta] = useUnit([m.$conditions, m.$draft, m.$dirty, m.$lane, m.$meta])
   const [edit, discard, apply, revert, reset, remove, setLane] = useUnit([m.edit, m.discard, m.apply, m.revert, m.reset, m.remove, m.setLane])
-  return { conditions, draft, dirty, lane, meta: m.meta, edit, discard, apply, revert, reset, remove, setLane }
+  return { conditions, draft, dirty, lane, meta, edit, discard, apply, revert, reset, remove, setLane }
 }
