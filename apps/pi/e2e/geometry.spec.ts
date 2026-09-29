@@ -5,7 +5,7 @@ const h = async (page: Page, sel: string) => (await page.locator(sel).first().bo
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.clear()) })
 
 test('запись и шапка при 100 %', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.getByRole('button', { name: '100 %' }).click()
   await page.locator('tbody[data-key]').first().waitFor()
   const record = await h(page, 'tbody[data-key]')
@@ -18,7 +18,7 @@ test('запись и шапка при 100 %', async ({ page }) => {
 })
 
 test('скелетон повторяет высоту записи', async ({ page }) => {
-  await page.goto('/?slow=3000#/grid')
+  await page.goto('/?slow=3000#/fx-docs')
   await page.getByRole('button', { name: '100 %' }).click()
   await page.locator('table[role=grid] tbody').first().waitFor()
   const skeleton = await h(page, 'table[role=grid] tbody')
@@ -29,7 +29,7 @@ test('скелетон повторяет высоту записи', async ({ p
 })
 
 test('плотность 125 % масштабирует запись', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   await page.getByRole('button', { name: '100 %' }).click()
   const base = await h(page, 'tbody[data-key]')
@@ -43,7 +43,7 @@ test('плотность 125 % масштабирует запись', async ({ 
 // контролов (`:where(button,...) { text-transform: none }`), значение не наследуется от .th — падает
 // на само правило .thBtn (плане 5b, находка контроллера — прописные не применялись, хотя .th их задаёт).
 test('заголовок колонки — прописные (текст сортируемой кнопки, не только .th)', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   const btn = page.getByRole('columnheader', { name: /Дата \/ Время/ }).getByRole('button').first()
   const tt = await btn.evaluate((el) => getComputedStyle(el).textTransform)
@@ -55,7 +55,7 @@ test('заголовок колонки — прописные (текст со�
 // применяет каскад CSS Modules (getComputedStyle возвращает значения UA-таблицы стилей), поэтому
 // проверка — здесь, в реальном Chromium, не юнит-тестом.
 test('подвал: неактивная кнопка номера без видимой рамки и без фона в покое', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   const btn = page.getByRole('button', { name: 'Страница 2' })
   const style = await btn.evaluate((el) => {
@@ -72,7 +72,7 @@ test('подвал: неактивная кнопка номера без вид
 // лейн 36, строка фильтров 45, подвал 37. Локаторы не завязаны на CSS-классы: группа «Статусы»
 // (role=group), полоса с кнопкой «Фильтры» (её прямой родитель), nav «Страницы».
 test('лейн, строка фильтров, подвал — высоты полос по эталону ± 2', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   // плотность по умолчанию (autoDensity) зависит от screen.width — фиксируем 100 %, иначе полосы
   // измерялись бы на произвольной плотности в зависимости от экрана раннера

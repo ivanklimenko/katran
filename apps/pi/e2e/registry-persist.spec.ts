@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 // а это применилось бы и к page.reload() ниже и обнулило бы то, что должно пережить перезагрузку.
 
 test('«Валюта отдельной колонкой» добавляет колонку и переживает перезагрузку', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   await page.getByRole('button', { name: 'Состав колонок' }).click()
   await page.getByRole('checkbox', { name: 'Валюта отдельной колонкой' }).check()

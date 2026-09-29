@@ -21,7 +21,7 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: PAGES_BASE=/katran/ pnpm --filter demo build
+      - run: PAGES_BASE=/katran/ VITE_PI_URL=/katran/pi/ pnpm --filter demo build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/demo/dist

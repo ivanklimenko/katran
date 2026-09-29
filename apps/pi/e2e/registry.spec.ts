@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.clear()) })
 
 test('свёрнутая панель фильтров не показывает поля', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   const toggle = page.getByRole('button', { name: /^Фильтры/ })
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByLabel('Номер документа')).toBeHidden()
@@ -12,7 +12,7 @@ test('свёрнутая панель фильтров не показывает
 })
 
 test('подзаголовок отсортированной колонки — цвета заголовка', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   await page.locator('table[role=grid] thead th').filter({ hasText: 'ID' }).getByRole('button').first().click()
   await page.getByRole('menu').getByText('Номер документа', { exact: true }).click()
@@ -22,7 +22,7 @@ test('подзаголовок отсортированной колонки —
 })
 
 test('многоуровневая сортировка: Shift+клик по второму заголовку даёт два чипа', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   await page.getByRole('columnheader', { name: /Тип/ }).getByRole('button').first().click()
   await page.getByRole('columnheader', { name: /^52/ }).getByRole('button').first().click({ modifiers: ['Shift'] })
@@ -35,7 +35,7 @@ test('многоуровневая сортировка: Shift+клик по в�
 })
 
 test('B1: заблокированная запись — кнопка открытия с подсказкой и приглушённым значением; неактивная — чекбокс отключён', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   const locked = page.locator('tbody[data-state="locked"]').first()
   await locked.waitFor()
@@ -61,7 +61,7 @@ test('B1: заблокированная запись — кнопка откр�
 // Ячейка ищется по заголовку колонки «Дата / Время», строки Дт/Кт — по подписи (финал 5b, M7), не по позициям.
 // В записи-состоянии (заблокирована/неактивна) warn приглушён до muted (финал 5b, M3).
 test('Кт валютирования, если отличается от Дт, — цвет из --k-warn; в записи-состоянии — muted', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   // 100 записей на странице: на 20 может не оказаться записи-состояния с Кт ≠ Дт (данные детерминированы, но редки)
   await page.getByRole('combobox', { name: 'На странице' }).selectOption('100')
@@ -96,7 +96,7 @@ test('Кт валютирования, если отличается от Дт, 
 })
 
 test('сброс ширины: двойной клик по ручке ресайза возвращает исходную ширину заголовка', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   const slider = page.getByRole('slider', { name: 'Ширина колонки ID' })
   const th = page.locator('table[role=grid] thead th').filter({ has: slider })
@@ -115,7 +115,7 @@ test('сброс ширины: двойной клик по ручке реса�
 // Финал 5b, I1: обесцвечивание (grayscale + прозрачность) в записи-состоянии — только у статусной точки
 // ([data-st]); тег типа в той же записи непрозрачен, его текст приглушён токеном (--k-ink2 → muted).
 test('заблокированная запись: тег типа непрозрачен, точка статуса обесцвечена, замок — warn', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-state="locked"]').first().waitFor()
   const r = await page.evaluate(() => {
     const rec = document.querySelector('tbody[data-state="locked"]')!
@@ -142,7 +142,7 @@ test('заблокированная запись: тег типа непроз�
 // Финал 5b, I3 и I4: счётчик на primary-кнопке «Фильтры» — текст и рамка paper и в нуле (не faint на val);
 // лейн статусов на бумаге (эталон .slane), счётчики фона chip на нём видны.
 test('бейдж «Фильтры» читаем в нуле; лейн на фоне paper', async ({ page }) => {
-  await page.goto('/#/grid')
+  await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
   const r = await page.evaluate(() => {
     const probe = (v: string) => {

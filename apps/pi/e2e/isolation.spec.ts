@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 
 /** Переход на экран; в режиме ?hostile — предусловие: hostile.css применился (иначе проверки прошли бы вхолостую). */
 async function open(page: Page, q: '' | '?hostile') {
-  await page.goto(`/${q}#/grid`)
+  await page.goto(`/${q}#/fx-docs`)
   if (q === '?hostile') await page.waitForFunction(() => getComputedStyle(document.body).fontFamily.includes('Georgia'))
 }
 

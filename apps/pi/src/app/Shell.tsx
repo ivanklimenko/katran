@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, useKatran, type Theme } from '@katran/ui'
 import { densityOptions, type Density } from '@katran/tokens'
-import { routes, type Route } from './router'
+import { routes, type Route } from './routes'
 import s from './Shell.module.css'
 
 const themes: { id: Theme; title: string }[] = [{ id: 'light', title: 'Светлая' }, { id: 'dark', title: 'Тёмная' }, { id: 'system', title: 'Системная' }]
@@ -11,13 +11,12 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
   return (
     <div className={s.shell}>
       <aside className={s.side}>
-        <div className={s.brand}>katran</div>
+        <div className={s.brand}>katran · ПИ</div>
         <nav aria-label="Разделы">
           {routes.map((r) => (
             <a key={r.id} href={`#/${r.id}`} className={s.link} aria-current={r.id === route ? 'page' : undefined}>{r.title}</a>
           ))}
         </nav>
-        <a className={s.link} href={import.meta.env.VITE_PI_URL ?? 'http://localhost:5185/'}>Реестры ПИ →</a>
       </aside>
       <div className={s.main}>
         <header className={s.head}>
