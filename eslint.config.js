@@ -1,8 +1,37 @@
+import { existsSync, readdirSync } from 'node:fs'
 import tseslint from 'typescript-eslint'
 import importX from 'eslint-plugin-import-x'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
+
+// FSD-границы apps/pi (docs/guides/effector-fsd.md, спека apps/pi §4): слои только вниз, чужой слайс — только публичный API
+const PI = './apps/pi/src'
+const LAYERS = ['app', 'pages', 'widgets', 'entities', 'shared']
+const dirsOf = (path) => (existsSync(path) ? readdirSync(path, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [])
+const slicesOf = (layer) => dirsOf(`${PI}/${layer}`)
+// у shared единица с публичным API — сегмент (api), а в lib — каждый подкаталог (lib/lifecycle, lib/test)
+const unitsOf = (layer) => (layer === 'shared' ? slicesOf('shared').flatMap((seg) => (seg === 'lib' ? dirsOf(`${PI}/shared/lib`).map((x) => `lib/${x}`) : [seg])) : slicesOf(layer))
+const fsdZones = LAYERS.flatMap((layer, i) => {
+  const zones = []
+  // вверх — никогда
+  for (const upper of LAYERS.slice(0, i)) zones.push({ target: `${PI}/${layer}`, from: `${PI}/${upper}`, message: `FSD: ${layer} не импортирует ${upper}` })
+  // вниз — только index.ts слайса или сегмента shared
+  if (layer !== 'shared') {
+    for (const lower of LAYERS.slice(i + 1)) {
+      for (const s of unitsOf(lower)) zones.push({ target: `${PI}/${layer}`, from: `${PI}/${lower}/${s}`, except: ['./index.ts'], message: `FSD: ${lower}/${s} — только через публичный API (index.ts)` })
+    }
+  }
+  // соседи по слою — только @x у entities
+  if (layer !== 'app' && layer !== 'shared') {
+    for (const t of slicesOf(layer)) {
+      for (const f of slicesOf(layer).filter((x) => x !== t)) {
+        zones.push({ target: `${PI}/${layer}/${t}`, from: `${PI}/${layer}/${f}`, ...(layer === 'entities' ? { except: ['./@x'] } : {}), message: `FSD: ${layer}/${t} не импортирует соседа ${f}${layer === 'entities' ? ' (только через @x)' : ''}` })
+      }
+    }
+  }
+  return zones
+})
 
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**'] },
@@ -25,6 +54,7 @@ export default tseslint.config(
         zones: [
           { target: './packages/ui/src', from: './packages/effector', message: 'ui не импортирует effector' },
           { target: './packages/effector/src', from: './packages/ui/src', except: ['./index.ts'], message: 'effector импортирует из ui только типы через пакет' },
+          ...fsdZones,
         ],
       }],
       'no-restricted-imports': ['error', { paths: [
