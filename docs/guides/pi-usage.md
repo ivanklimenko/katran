@@ -31,9 +31,15 @@ apps/pi/src/
 
 Импорты в скопированном коде относительные (`../../../shared/api`, без алиасов `@/...`) — переносятся как есть, ничего не переписывать. Если в вашем проекте настроен алиас `@/`, можно (не обязательно) заменить относительные пути на алиас — это косметика, на поведение не влияет.
 
+**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/rub-doc/ui/cells.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
+
+- **CSS Modules для `*.module.css`** в сборщике. Vite включает их сам; webpack — `css-loader` с `modules: { auto: true }` (или правило на `/\.module\.css$/`). Имена классов в файлах — camelCase (`dirRow`, `srTag`), обращение в коде — `s.dirRow`, так что `localsConvention`/`exportLocalsConvention` можно не настраивать; у нас (`apps/pi/vite.config.ts`) стоят `camelCaseOnly` и `generateScopedName` вида `k-<файл>__<класс>` — это удобство отладки, не требование.
+- **Объявление типа `*.module.css` для TypeScript**, иначе `tsc` не пропустит импорт стиля. У нас — `packages/ui/src/css-modules.d.ts` (одна строка `declare module '*.module.css' { const classes: Record<string, string>; export default classes }`), подключён через `include` в `apps/pi/tsconfig.json`. У вас — такой же файл в своём `src` (или готовое объявление из `vite/client`, если вы на Vite).
+- **Порядок подключения стилей не важен**: там, где стиль слайса должен перебить класс компонента кита (моноширинный шрифт, жирный номер, цвет `warn`), в файле стоит удвоенный класс (`.num.num`, `.mono.mono`, `.warn.warn`) — специфичность выше, чем у одиночного класса кита, в каком бы порядке сборщик ни положил CSS. Не «упрощайте» эти селекторы до одинарных.
+
 ## 3. Монтирование страниц
 
-Обе страницы — обычные React-компоненты без пропов: `FxDocsPage` (`pages/fx-docs`), `RubDocsPage` (`pages/rub-docs`). Над ними обязателен `KatranProvider` (`@katran/ui`) — без него компоненты кита не находят тему/плотность/тултипы. Нужны также шрифты кита.
+Обе страницы — обычные React-компоненты: `FxDocsPage` (`pages/fx-docs`), `RubDocsPage` (`pages/rub-docs`). Единственный проп — необязательный `note?: string` — строка пояснения под заголовком реестра; без него строки нет. У нас текст про фейковый сервер передаёт `apps/pi/src/app/App.tsx` — в самих страницах текста стенда нет. Над ними обязателен `KatranProvider` (`@katran/ui`) — без него компоненты кита не находят тему/плотность/тултипы. Нужны также шрифты кита.
 
 ```tsx
 import '@katran/tokens/fonts.css'
@@ -50,7 +56,19 @@ export function DocumentsScreen() {
 }
 ```
 
-`storageKey` разводит настройки кита (тема, плотность, раскладка грида — `localStorage`) с другими экранами на той же странице. Подробности про `KatranProvider`, изоляцию стилей и CORS для шрифтов — `docs/consuming.md`.
+`storageKey` разводит **настройки провайдера** (тема и плотность, `localStorage`) с другими экранами на той же странице. **Раскладку грида он не разводит**: ширины, порядок и скрытые колонки, размер страницы, раздельные колонки сохраняет сам реестр — `createRegistry` (`apps/pi/src/widgets/doc-registry/lib/createRegistry.ts`) по умолчанию берёт `localStoragePersist('katran-pi')` из `@katran/effector`, и ключи в `localStorage` получаются `katran-pi:fx-docs` и `katran-pi:rub-docs` (префикс + `id` реестра) независимо от `storageKey`. Префикс `katran-pi` — наш; чтобы хранить раскладку под своим префиксом (или не в `localStorage`), передайте свой адаптер в `RegistryConfig.persist` в модели страницы:
+
+```ts
+// pages/fx-docs/model/registry.model.ts
+import { localStoragePersist } from '@katran/effector'
+
+export const registry = createRegistry({
+  id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle,
+  persist: localStoragePersist('documents'), // ключ в localStorage — documents:fx-docs
+})
+```
+
+Адаптер — любой объект `PersistAdapter` (`{ load(key), save(key, value) }`, тип экспортирует `@katran/effector`): `localStoragePersist(prefix)`, `memoryPersist()` (ничего не сохраняет между перезагрузками — так в тестах) или свой — например, на серверные настройки пользователя. Подробности про `KatranProvider`, изоляцию стилей и CORS для шрифтов — `docs/consuming.md`.
 
 **Почему сам `apps/pi` не импортирует `@katran/ui/styles.css`.** Пример выше — для вас, потребителя опубликованного пакета; в исходниках `apps/pi/src/app/entry.tsx` этой строки нет, и это не упущение. Внутри монорепо `apps/pi` берёт `@katran/ui` из исходников (`exports["."]` в `packages/ui/package.json` — `./src/index.ts`, не `dist`): `packages/ui/src/index.ts` сам импортирует `@katran/tokens/tokens.css` как побочный эффект первой строкой, а CSS каждого компонента (`Button.module.css` и т. п.) приезжает вместе с компонентом при импорте — Vite подключает такие модульные стили в общий бандл сам, отдельно собирать их не нужно. Отсюда у нас в `entry.tsx` — только `@katran/tokens/fonts.css` (шрифты `index.ts` не тянет, это осознанно отдельный импорт).
 Если вы ставите кит опубликованным пакетом (не из монорепо) — источников `src/*.module.css` у вас нет, только собранный `packages/ui/package.json` → `publishConfig.exports["./styles.css"]` = `./dist/ui.css` (единый файл со стилями всех компонентов, собранный при публикации). Поэтому в вашем коде явный `import '@katran/ui/styles.css'` обязателен — без него компоненты кита останутся без стилей. `@katran/tokens/tokens.css` в `dist/ui.css` уже включён (тот же побочный импорт в исходнике собирается в бандл), но шрифты `@katran/tokens/fonts.css` всё равно импортируются отдельно — `@font-face` не зависит от компонентов.
@@ -85,22 +103,26 @@ requestFx.use(myHandler)
 ### 4.1. Пример на `fetch`
 
 ```ts
-import { requestFx } from './shared/api'
-import { toApiError } from './shared/api'
+import { ApiError, requestFx, toApiError } from './shared/api'
 
 const API_BASE = 'https://your-backend.example/api' // адрес вашего бека
 
 requestFx.use(async ({ method, url, query, body }) => {
-  const qs = query ? `?${new URLSearchParams(query)}` : ''
-  const res = await fetch(`${API_BASE}${url}${qs}`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    credentials: 'include',
-  })
-  const data: unknown = res.headers.get('content-type')?.includes('json') ? await res.json() : null
-  if (!res.ok) throw toApiError(res.status, data)
-  return data
+  try {
+    const qs = query ? `?${new URLSearchParams(query)}` : ''
+    const res = await fetch(`${API_BASE}${url}${qs}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: 'include',
+    })
+    const data: unknown = res.headers.get('content-type')?.includes('json') ? await res.json() : null
+    if (!res.ok) throw toApiError(res.status, data)
+    return data
+  } catch (e) {
+    // сеть недоступна, CORS, битый JSON — fetch бросает TypeError/SyntaxError; эффект должен падать только ApiError
+    throw e instanceof ApiError ? e : toApiError(0, null)
+  }
 })
 ```
 
@@ -116,13 +138,13 @@ requestFx.use(async ({ method, url, query, body }) => {
   try {
     return (await api.request({ method, url, params: query, data: body })).data as unknown
   } catch (e) {
-    if (axios.isAxiosError(e)) throw toApiError(e.response?.status ?? 0, e.response?.data)
-    throw e
+    // и ответ не 2xx, и сетевой сбой (response нет → статус 0) — всё превращается в ApiError
+    throw toApiError(axios.isAxiosError(e) ? e.response?.status ?? 0 : 0, axios.isAxiosError(e) ? e.response?.data : null)
   }
 })
 ```
 
-`API_BASE`/`api` — переменные примера: подставьте адрес и способ авторизации своего бека (заголовок, cookie, интерцептор axios — где угодно внутри обработчика, до или после запроса). Важно только соблюсти правило выше: 2xx → JSON, иначе → `throw toApiError(status, body)`.
+`API_BASE`/`api` — переменные примера: подставьте адрес и способ авторизации своего бека (заголовок, cookie, интерцептор axios — где угодно внутри обработчика, до или после запроса). Важно только соблюсти правило выше: 2xx → JSON, иначе → `throw toApiError(status, body)`; сетевой сбой (ответа нет) — тоже `ApiError` (`toApiError(0, null)`), а не исходная ошибка `fetch`/axios: тип отказа `requestFx` — `ApiError`, и грид показывает сообщение именно из него.
 
 `requestFx.use(...)` вызывается один раз, синхронно, до первого рендера страницы — effector сохраняет `scope` при вызове `requestFx` изнутри обработчика (эффекты `searchFx`/`facetsFx`/`filterMetaFx` вызывают `requestFx` именно так, `apps/pi/src/shared/api/ports.ts`).
 
@@ -215,6 +237,7 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 - [ ] `?slow=N` и `?fail=search|facets|meta` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
 - [ ] Контрактные тесты (раздел 7) зелёные против вашего бека.
 - [ ] eslint-границы FSD перенесены в ваш конфиг (раздел 11) — импорты вверх по слоям и между соседними слайсами одного слоя запрещены линтом, не только на словах.
+- [ ] В скопированных слайсах нет упоминаний стенда (тексты, геометрия Shell, префикс persist): пояснение `note` страниц — ваше или не передано (раздел 3); высоту реестру даёт ваш контейнер экрана — `DocRegistry` занимает `height: 100%` родителя, у нас определённую высоту задаёт `apps/pi/src/app/Shell.module.css` (`.main`/`.content`), без неё грид вырастет по содержимому; раскладка грида хранится под вашим префиксом (`RegistryConfig.persist`, раздел 3), а не под `katran-pi`.
 
 ## 11. Границы слоёв — где смотреть правило
 
@@ -223,7 +246,7 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 ## 12. FSD-специфика этого документа
 
 - Публичный API каждого слайса — его `index.ts` (`entities/fx-doc/index.ts`, `widgets/doc-registry/index.ts`, `pages/fx-docs/index.ts`): импортируйте оттуда, не из внутренних путей (`entities/fx-doc/model/fxDoc.ts` напрямую — не FSD).
-- `doc-status` — сущность, общая для обоих документов (`@x`-реэкспорт в `entities/fx-doc/@x` и `entities/rub-doc/@x`, раздел 2 `docs/guides/effector-fsd.md`) — не дублируйте словарь статусов на своей стороне.
+- `doc-status` — сущность, общая для обоих документов. Соседям она отдаёт свой API через `@x`: `entities/doc-status/@x/fx-doc.ts` (для `fx-doc`) и `entities/doc-status/@x/rub-doc.ts` (для `rub-doc`) — у каждого соседа свой файл, и линт пускает `fx-doc` только в `@x/fx-doc.ts` (правило `@x` — раздел 1 `docs/guides/effector-fsd.md`; линт — раздел 11). Не дублируйте словарь статусов на своей стороне.
 - Модели (`createFiltersModel`, `createGridModel` — из `@katran/effector`; `createRegistry` — местная фабрика `apps/pi`, не кита, раздел «Зависимости» ниже) вызываются на верхнем уровне модуля модели страницы, не в компоненте — так уже сделано в `pages/*/model/registry.model.ts`, при переносе не оборачивайте их в `useMemo`.
 
 ## Зависимости
@@ -238,5 +261,17 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 | `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui` |
 | `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts` |
 | `@katran/tokens` | `workspace:*` | шрифты (`@katran/tokens/fonts.css`, раздел 3); токены переезжают вместе с `@katran/ui` (см. ниже) |
+
+**Для тестов слайсов** (если оставляете `*.test.ts(x)`, раздел 2) — dev-зависимости, версии как в `apps/pi/package.json` (библиотеки тестирования — под React 17):
+
+| Пакет | Версия | Зачем |
+|---|---|---|
+| `vitest` | `^5.0.1` | раннер; тесты пишут `describe`/`it`/`expect` без импорта — нужен `test.globals: true` (у нас `apps/pi/vitest.config.ts`) и `"types": ["vitest/globals"]` в `tsconfig` |
+| `jsdom` | `^30.1.1` | `test.environment: 'jsdom'` — тесты компонентов и роутера |
+| `@testing-library/react` | `^12.1.5` | последняя линия под React 17 (13+ — только React 18); на ней `shared/lib/test/renderK.tsx` — без неё тесты `widgets`/`app` не соберутся |
+| `@testing-library/dom` | `^8.20.1` | peer-зависимость `@testing-library/react@12` |
+| `@testing-library/jest-dom` | `^7.0.1` | матчеры `toBeInTheDocument` и т. п.; подключаются в setup-файле `import '@testing-library/jest-dom/vitest'` (у нас `apps/pi/vitest.setup.ts`) |
+| `@testing-library/user-event` | `^14.6.7` | клики и клавиатура в тестах компонентов |
+| `jest-axe` | `^11.0.0` | проверка доступности (`registries.a11y.test.tsx`, `DocRegistry.test.tsx`); `expect.extend(toHaveNoViolations)` — в том же setup-файле; типы — свой минимальный `packages/ui/src/test/jest-axe.d.ts` (не `@types/jest-axe`, он тянет типы Jest) |
 
 `createRegistry` (раздел 3 и «FSD-специфика» выше) — **не** экспорт `@katran/effector`, это местная фабрика `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts`, которая сама вызывает `createFiltersModel`/`createGridModel` кита внутри себя; переносится вместе со слайсом `widgets/doc-registry`, а не устанавливается из npm.

@@ -120,11 +120,10 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **`Tag` кита шире эталона на 4 px** — 8-символьный тег (`PAYDOCRU` 62.8 px против 58.8 px на стенде при одной и той же колонке 71) упирается в правый край ячейки без отступа (валютный реестр — `MT202COV`); причина в метриках `Tag` (padding/border) кита, не в данных рублёвого реестра — класс D в сверке `registry-drift.md` (Task 12, controller browser check).
 - **Число выбранных в режиме `'all'` игнорирует неактивные строки** — `total − except` не вычитает неактивные («без неактивных» в подписи `BulkBar`, но в `onClick(count)` уходит завышенное число); унаследовано от демо (Task 10, minor, deferred).
 - **Фейковый сервер не проверяет HTTP-метод маршрута** (`GET` на `search` тоже пройдёт) и **не валидирует `FacetsBody.field`** (неизвестное поле → `[]`, а не `400`) — `apps/pi/src/app/fake/server.ts` (Task 7, minor, deferred; см. также `docs/reference/pi-api.md` §6).
-- **Пустой `docRef` рублёвого реестра — на 8 строках** (`i = 3, 11, 27, 35, 51, 59, 75, 83`), а не на 4, как в комментарии `rub-docs.data.ts:93` и `registry-drift.md:375` — комментарий не поправлен вслед за фактической формулой (Task 12, minor, deferred).
-- **Сохранение сортировки при `pageClosed` не проверено тестом** — гарантировано структурой `createGridModel`, но спека §10 перечисляет «фильтры, сортировку, страницу» как сохраняемое явным списком (Task 9, minor, deferred).
 - **`fromFilterMetaResponse` молча перезаписывает группу при дубле `field.id` в `groups`**; строка `'ответ'` повторяется в трёх функциях `grid-contract.ts` (Task 5, minor, deferred).
-- **Граница 12↔13 знаков счёта не проверена тестом** (`account.test.ts` — заменена общим «короткий не сокращается»); то же для хвоста `tail: 3` — граница 11↔12 (Task 3, minor, deferred).
 - **`entities/fx-doc` экспортирует `ROUTE_TYPES`/`RouteType` сверх состава спеки §7.4** — нужны мапперу (Task 8, minor, deferred).
+- **Флаг «фасеты уже приходили» (`counted`) живёт в состоянии компонента `DocRegistry`, а не в модели** (финальное ревью, M5): при повторном монтировании экрана он снова `false` до первого непустого ответа; если первый ответ фасетов пуст (`[]`), лейн остаётся без чисел, а не с нулями, — пока не придёт непустой. Правило «до первого ответа без чисел» (`laneItems` в `entities/doc-status`) соблюдено; честнее — флаг в `createRegistry` по `facetsFx.done`.
+- **Ссылка демо «Реестры ПИ →» без `VITE_PI_URL` ведёт на `http://localhost:5185/`** (финальное ревью, M10; `apps/demo/src/Shell.tsx`) — на Pages адрес задаёт `.github/workflows/pages.yml` (`VITE_PI_URL=/katran/pi/`), но любая другая сборка демо без переменной получит ссылку на dev-порт `apps/pi`.
 
 Из плана 5b:
 
@@ -182,13 +181,13 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **`KatranProvider` не принимает `className`/`style`** — экран не растянуть на слот хоста: у корня только `min-height: 100%`, экран задаёт высоту сам (`docs/consuming.md`, «Что нужно от хоста»); API не расширялся в фикс-волне (решение контроллера, Ruling 10).
 - **`Input` 30 px рядом с кнопкой 28** — поле (`span.field`) под корнем кита `content-box` с рамкой: высота контента + 2 px рамки; в одной строке с кнопкой size m не выровнено.
 - **Глобальный `[data-theme="dark"]` в `tokens.css`** — если хост сам ставит `data-theme="dark"` на `html`, кит переключится на тёмную тему вместе с ним.
-- **e2e демо на порту 5182 с `reuseExistingServer: true`** (`apps/demo/playwright.config.ts`) — если порт занят чужим сервером, e2e проверит его, а не свежую сборку.
+- **e2e `apps/pi` на порту 5186 с `reuseExistingServer: true`** (`apps/pi/playwright.config.ts`; e2e демо больше нет) — если порт занят чужим сервером или превью старой сборки, e2e проверит его, а не свежую сборку.
 - **Линт API React 18+ не ловит алиас пространства имён** — `import * as R from 'react'` → `R.useId` проходит (селектор знает только `React.` и именованный импорт).
 
 Из плана 1 и раньше:
 
 - **Потребители `@katran/ui` внутри монорепо типизируются по исходникам** — нужен `css-modules.d.ts` в `include` (см. §8). Вне монорепо (тарбол или реестр) — по `dist/*.d.ts`: `publishConfig` переключает `types` на `dist` (план 4).
-- **Общий `generateScopedName`** — дубль в `packages/ui/vite.config.ts` и `apps/demo/vite.config.ts`.
+- **Общий `generateScopedName`** — продублирован в трёх местах: `packages/ui/vite.config.ts`, `apps/demo/vite.config.ts`, `apps/pi/vite.config.ts`.
 - `ThemeSwitch`/`DensitySwitch`, `useFlash`, вложенные поповеры, `Tabs`/`Menu` при всех disabled, тултип на `FieldTag` с клавиатуры.
 
 ## 8. Грабли

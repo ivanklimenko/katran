@@ -38,8 +38,10 @@ src/
   entities/fx-doc/
     index.ts
     api/ports.ts             # fxDocPorts: searchFx, facetsFx, filterMetaFx
-    model/fxDoc.ts           # тип записи, раскладка колонок — apps/pi/src/entities/fx-doc/model, ui/layout.ts
-    ui/cells.tsx
+    api/fxDoc.mapper.ts      # parseFxDoc: строка content[] → FxDoc
+    model/fxDoc.ts           # тип записи FxDoc
+    ui/layout.tsx            # fxDocLayout — раскладка колонок и рендер ячеек
+    ui/cells.module.css      # классы ячеек (двойные классы .num.num — перебить стиль кита)
   features/pi-annul/
     index.ts                 # piAnnulled, $$piAnnul
     api/annul.ts

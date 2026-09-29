@@ -2,11 +2,12 @@
 
 Дизайн-система для интерфейсов проекта: React + effector. Спецификация — `docs/superpowers/specs/2026-09-23-katran-design.md`.
 
-Пакеты: `@katran/tokens` (токены, шрифты), `@katran/ui` (компоненты), `@katran/effector` (модели). Демо — `apps/demo`.
+Пакеты: `@katran/tokens` (токены, шрифты), `@katran/ui` (компоненты), `@katran/effector` (модели). Демо-витрина — `apps/demo`; реестры ПИ на FSD (валютный и рублёвый, фейковый сервер на контракте `vtb-filters`) — `apps/pi`.
 
     corepack enable && pnpm install
     pnpm check        # генерация токенов, линт, тесты, сборка
-    pnpm --filter demo dev
+    pnpm --filter demo dev    # витрина, порт 5181
+    pnpm --filter pi dev      # реестры ПИ, порт 5185
 
 ## Подключение
 
@@ -100,7 +101,7 @@ export function DocsPage() {
 }
 ```
 
-Модель при создании в бек не ходит: первую загрузку запускает приложение вызовом `grid.refresh()`. Дальше запросы идут сами — при смене фильтра, сортировки, страницы и размера страницы; ответ на устаревший запрос отбрасывается. Правила связывания — спека 8.2. Рабочий экран — `apps/demo/src/pages/GridPage.tsx`.
+Модель при создании в бек не ходит: первую загрузку запускает приложение вызовом `grid.refresh()`. Дальше запросы идут сами — при смене фильтра, сортировки, страницы и размера страницы; ответ на устаревший запрос отбрасывается. Правила связывания — спека 8.2. Рабочий пример — `apps/pi`: связка моделей собрана в `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts`, экран — `apps/pi/src/pages/fx-docs`.
 
 Peer-зависимости `@katran/effector`: `effector` ≥ 23, `effector-react` ≥ 23, `react` ≥ 17.
 
@@ -112,12 +113,13 @@ Peer-зависимости `@katran/effector`: `effector` ≥ 23, `effector-rea
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, useFilters, useGrid } from '@katran/effector'
 import { BulkBar, Button, DataGrid, FilterPanel, StatusLane, type LaneItem } from '@katran/ui'
-import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Status } from './data/docs'
-import { createFakeBackend } from './data/fakeBackend'
+import { STATUS_LABEL, STATUS_TONE, STATUSES } from './entities/doc-status'
+import { fxDocPorts } from './entities/fx-doc'
 
-// Doc и layout — запись и раскладка, как в разделе «DataGrid» выше (поле `status` у `Doc` — поле лейна).
-// Эффекты приложения: в демо — фейковый бэкенд, в бою — POST /grids/{id}/search и /grids/{id}/facets.
-const { searchFx, facetsFx } = createFakeBackend(makeDocs(), layout)
+// Doc и layout — запись и раскладка, как в разделе «DataGrid» выше (поле `status` у `Doc` — поле лейна);
+// docsFilterMeta — каталог полей (FilterMeta). Эффекты — порты сущности поверх транспорта: POST /grids/{id}/search
+// и /grids/{id}/facets; в apps/pi их обслуживает фейковый сервер (apps/pi/src/app/fake), в бою — бек.
+const { searchFx, facetsFx } = fxDocPorts
 
 const filters = createFiltersModel({ meta: docsFilterMeta, laneField: 'status' })
 const grid = createGridModel<Doc>({
@@ -128,8 +130,6 @@ const grid = createGridModel<Doc>({
   fetchFx: searchFx,
   facets: { field: 'status', fetchFx: facetsFx },   // счётчики лейна; без конфигурации useGrid().facets всегда []
 })
-
-const STATUSES = Object.keys(STATUS_LABEL) as Status[]
 
 export function DocsPage() {
   const g = useGrid(grid)
@@ -162,7 +162,7 @@ export function DocsPage() {
 }
 ```
 
-Рабочий экран — `apps/demo/src/pages/GridPage.tsx` («Валютные документы» на фейковом бэкенде, 87 документов).
+Рабочий экран — `apps/pi`: виджет `apps/pi/src/widgets/doc-registry` (лейн, панель, грид, массовые действия), страницы `apps/pi/src/pages/fx-docs` и `apps/pi/src/pages/rub-docs` (по 87 документов на фейковом сервере `apps/pi/src/app/fake`). Как перенести во внутреннее приложение — `docs/guides/pi-usage.md`.
 
 ## Границы слоёв
 
@@ -170,12 +170,12 @@ export function DocsPage() {
 
 ## Замер геометрии
 
-Playwright-спека `apps/demo/e2e/geometry.spec.ts` замеряет реальную высоту записи, шапки и скелетона грида против production-сборки демо (`vite build` + `vite preview`). В `pnpm check` не входит — гоняется отдельно.
+Playwright-спеки `apps/pi/e2e/` (`geometry`, `isolation`, `registry`, `registry-persist`) замеряют реальную высоту записи, шапки и скелетона грида, полос лейна/фильтров/подвала и изоляцию от стилей хоста (`?hostile`) на обоих реестрах против production-сборки `apps/pi` (`vite build` + `vite preview`, порт 5186). В `pnpm check` не входит — гоняется отдельно.
 
 Установка браузера (один раз):
 
-    pnpm --filter demo exec playwright install chromium
+    pnpm --filter pi exec playwright install chromium
 
 Запуск:
 
-    pnpm --filter demo e2e
+    pnpm --filter pi e2e
