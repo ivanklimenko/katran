@@ -8,6 +8,8 @@ import { Counter } from './Counter'
 import { FieldTag } from './FieldTag'
 import { LinkValue } from './LinkValue'
 import { StatusDot, type StatusTone } from './StatusDot'
+import { SwiftField } from './SwiftField'
+import { Tag } from './Tag'
 
 const clip = () => { const writeText = vi.fn().mockResolvedValue(undefined); Object.assign(navigator, { clipboard: { writeText } }); return writeText }
 
@@ -40,6 +42,21 @@ describe('CopyValue', () => {
     expect(err).not.toHaveBeenCalled()
     err.mockRestore()
   })
+  it('size="s" и tone="muted" — классы второго кегля и приглушённого тона', () => {
+    renderK(<CopyValue value="x" size="s" tone="muted" />)
+    const btn = screen.getByRole('button', { name: /x/ })
+    expect(btn.className).toMatch(/small/)
+    expect(btn.className).toMatch(/muted/)
+  })
+})
+
+describe('Tag', () => {
+  it('тоны mt/warn/ok — data-tone', () => {
+    renderK(<><Tag tone="mt">MT103</Tag><Tag tone="warn">ЕРС</Tag><Tag tone="ok">VTO</Tag></>)
+    expect(screen.getByText('MT103')).toHaveAttribute('data-tone', 'mt')
+    expect(screen.getByText('ЕРС')).toHaveAttribute('data-tone', 'warn')
+    expect(screen.getByText('VTO')).toHaveAttribute('data-tone', 'ok')
+  })
 })
 
 describe('LinkValue', () => {
@@ -58,11 +75,11 @@ describe('LinkValue', () => {
 })
 
 describe('AccountValue', () => {
-  it('8…3, код валюты выделен, копируется полный', async () => {
+  it('8…4, код валюты выделен, копируется полный', async () => {
     const writeText = clip()
     renderK(<AccountValue value="40702840500000012345" />)
     const b = screen.getByRole('button')
-    expect(b).toHaveTextContent('40702840…345')
+    expect(b).toHaveTextContent('40702840…2345')
     expect(b.querySelector('b')).toHaveTextContent('840')
     await userEvent.click(b)
     expect(writeText).toHaveBeenCalledWith('40702840500000012345')
@@ -76,6 +93,21 @@ describe('AccountValue', () => {
   })
 })
 
+describe('SwiftField', () => {
+  it('опция, главное значение, подпись прописными; пусто — «—»', () => {
+    const { rerender } = renderK(<SwiftField opt="A" main="VKRBRU8KXXX" caption="АО «Прибой»" />)
+    expect(screen.getByText('A')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /VKRBRU8KXXX/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /АО «Прибой»/ })).toBeInTheDocument()
+    rerender(<SwiftField main="" />)
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+  it('без нарушений axe', async () => {
+    const { container } = renderK(<SwiftField opt="F" main="40702840000000000001" caption="ООО «Ромашка»" maxWidth={130} />)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
 describe('StatusDot / FieldTag / Counter', () => {
   it('точка с именем — role=img; без имени скрыта', () => {
     const { container } = renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
@@ -85,11 +117,19 @@ describe('StatusDot / FieldTag / Counter', () => {
   it('точка с подписью показывает её тултипом; без подписи — нет', () => {
     renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
     expect(screen.getByRole('img', { name: 'Обработан' })).toHaveAttribute('data-k-tip', 'Обработан')
-    expect(document.querySelector('[data-tone="bad"]')).not.toHaveAttribute('data-k-tip')
+    expect(document.querySelector('[data-st="bad"]')).not.toHaveAttribute('data-k-tip')
   })
   it('буква выводится и на светлом тоне', () => {
     renderK(<StatusDot tone="okl" letter="З" />)
-    expect(screen.getByText('З')).toHaveAttribute('data-tone', 'okl')
+    // тон точки — свой атрибут data-st, не общий data-tone: приглушение точки в записи не задевает Tag (финал 5b, I1)
+    expect(screen.getByText('З')).toHaveAttribute('data-st', 'okl')
+    expect(screen.getByText('З')).not.toHaveAttribute('data-tone')
+  })
+  it('размер l — точка 16 px с глифом по центру (запись)', () => {
+    renderK(<StatusDot tone="ok" size="l" letter="✓" />)
+    const dot = screen.getByText('✓')
+    expect(dot).toHaveAttribute('data-st', 'ok')
+    expect(dot.className).toMatch(/dotL/)
   })
   it('точки с буквами на всех девяти тонах — без нарушений axe', async () => {
     const letters: Record<StatusTone, string> = { flow: 'О', flowl: 'К', flowd: 'П', bad: 'О', badd: 'Н', warn: 'В', ok: 'И', okl: 'Э', grey: 'О' }
@@ -104,6 +144,13 @@ describe('StatusDot / FieldTag / Counter', () => {
   it('счётчик ноль помечен', () => {
     renderK(<Counter value={0} />)
     expect(screen.getByText('0')).toHaveAttribute('data-zero', 'true')
+  })
+  it('счётчик tone="accent" (на primary-кнопке) помечен data-tone, ноль — тоже; без тона атрибута нет', () => {
+    renderK(<><Counter value={0} tone="accent" /><Counter value={2} tone="accent" /><Counter value={5} /></>)
+    expect(screen.getByText('0')).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('0')).toHaveAttribute('data-zero', 'true')
+    expect(screen.getByText('2')).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('5')).not.toHaveAttribute('data-tone')
   })
   it('без нарушений axe', async () => {
     const { container } = renderK(<>

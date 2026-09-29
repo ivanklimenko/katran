@@ -38,3 +38,50 @@ test('плотность 125 % масштабирует запись', async ({ 
   expect(Math.abs(big - base * 1.25)).toBeLessThanOrEqual(2)
   test.info().annotations.push({ type: 'geometry', description: `base=${base} density125=${big}` })
 })
+
+// Заголовок сортируемой колонки сидит внутри <button class="thBtn">: провайдер сбрасывает типографику
+// контролов (`:where(button,...) { text-transform: none }`), значение не наследуется от .th — падает
+// на само правило .thBtn (плане 5b, находка контроллера — прописные не применялись, хотя .th их задаёт).
+test('заголовок колонки — прописные (текст сортируемой кнопки, не только .th)', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const btn = page.getByRole('columnheader', { name: /Дата \/ Время/ }).getByRole('button').first()
+  const tt = await btn.evaluate((el) => getComputedStyle(el).textTransform)
+  expect(tt).toBe('uppercase')
+})
+
+// Фикс-раунд 1 плана 5b задачи 6: кнопки номеров подвала наследовали ghost-вид Button (рамка + фон
+// paper) — на стенде `.appf .pg button` в покое без рамки и фона, только на hover фон hover. jsdom не
+// применяет каскад CSS Modules (getComputedStyle возвращает значения UA-таблицы стилей), поэтому
+// проверка — здесь, в реальном Chromium, не юнит-тестом.
+test('подвал: неактивная кнопка номера без видимой рамки и без фона в покое', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  const btn = page.getByRole('button', { name: 'Страница 2' })
+  const style = await btn.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    return { borderWidth: cs.borderTopWidth, borderColor: cs.borderTopColor, background: cs.backgroundColor }
+  })
+  // рамка не видна: либо нулевая ширина, либо прозрачный цвет (Button.module.css `.button` держит
+  // border: 1px solid transparent как базу — .pageBtn/.navBtn лишь подтверждают transparent поверх ghost)
+  expect(style.borderWidth === '0px' || style.borderColor === 'rgba(0, 0, 0, 0)').toBe(true)
+  expect(style.background).toBe('rgba(0, 0, 0, 0)')
+})
+
+// Задача 7 плана 5b: замеры новых полос по локаторам доступности — цели эталона ± 2 (спека §6):
+// лейн 36, строка фильтров 45, подвал 37. Локаторы не завязаны на CSS-классы: группа «Статусы»
+// (role=group), полоса с кнопкой «Фильтры» (её прямой родитель), nav «Страницы».
+test('лейн, строка фильтров, подвал — высоты полос по эталону ± 2', async ({ page }) => {
+  await page.goto('/#/grid')
+  await page.locator('tbody[data-key]').first().waitFor()
+  // плотность по умолчанию (autoDensity) зависит от screen.width — фиксируем 100 %, иначе полосы
+  // измерялись бы на произвольной плотности в зависимости от экрана раннера
+  await page.getByRole('button', { name: '100 %' }).click()
+  const lane = (await page.getByRole('group', { name: 'Статусы' }).boundingBox())!.height
+  const filters = (await page.getByRole('button', { name: /^Фильтры/ }).locator('..').boundingBox())!.height
+  const footer = (await page.getByRole('navigation', { name: 'Страницы' }).boundingBox())!.height
+  expect(Math.abs(lane - 36)).toBeLessThanOrEqual(2)
+  expect(Math.abs(filters - 45)).toBeLessThanOrEqual(2)
+  expect(Math.abs(footer - 37)).toBeLessThanOrEqual(2)
+  test.info().annotations.push({ type: 'geometry', description: `lane=${lane} filters=${filters} footer=${footer}` })
+})

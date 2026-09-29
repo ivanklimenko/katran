@@ -153,7 +153,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             </tr>
           </thead>
 
-          {showSkeleton && <GridSkeleton visible={visible} spanRows={spanRows} rows={p.skeletonRows ?? 8} />}
+          {showSkeleton && <GridSkeleton visible={visible} spanRows={spanRows} rows={p.skeletonRows ?? 8} firstOrd={(page - 1) * pageSize + 1} />}
 
           {showRows && rows.map((row, i) => {
             const id = layout.rowKey(row)

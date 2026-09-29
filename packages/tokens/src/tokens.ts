@@ -99,6 +99,7 @@ export const sizes = {
   'tip-max': 360,
   'dot-s': 7,
   'dot-m': 14,
+  'dot-l': 16,
   'counter': 18,
   'menu-min': 180,
   'progress': 3,
@@ -109,7 +110,8 @@ export const sizes = {
   'grid-rz': 7,
   'menu-max-h': 320,
   'filter-field': 220,
-  'grid-pad': 6,
+  'grid-pad': 8,
+  'grid-gap': 3,
   'hatch': 10,
 } as const
 

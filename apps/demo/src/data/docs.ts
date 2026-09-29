@@ -2,6 +2,7 @@ import type { FilterMeta } from '@katran/ui'
 
 export type Status = 'IN_PROGRESS' | 'TO_EXPORT' | 'PROCESSING' | 'ERROR' | 'DEFERRED' | 'EXPORTED' | 'INVALID' | 'REJECTED' | 'DONE'
 export type Direction = 'IN' | 'OUT' | 'TRANSIT' | 'OTHER'
+export type RouteType = 'LORO' | 'NOSTRO' | 'INTERNAL'
 export type Doc = {
   id: string; docNumber: number; refIn: string | null; refOut: string | null; uetr: string
   created: string; vdDt: string; vdKt: string
@@ -16,6 +17,16 @@ export type Doc = {
   lock: { who: string; since: string } | null
   /** Неактивна — не участвует в массовом выделении (спека 5a §6, B1). */
   inactive: { why: string } | null
+  /** Буква опции полей 50/59 (эталон `base.f['50']` в `grid.tpl.html`) — спека 5b §3. */
+  f50opt: string; f59opt: string
+  /** Наименования банков 52/57 — к уже имеющимся BIC f52/f57 (словарь эталона, обезличен). */
+  f52name: string; f57name: string
+  /** Поле 58 — только у MT202/MT202COV, иначе пусто (эталон `base.f['58']`). */
+  f58: string | null; f58name: string | null
+  /** S / R out (эталон `base.outS`/`base.outR`). */
+  outSender: string; outReceiver: string
+  /** Маршрут — тип, BIC получателя, счёт (эталон `RT`/`ACC_PFX`). */
+  routeType: RouteType; routeRecv: string; routeAcc: string
 }
 
 export const STATUS_LABEL: Record<Status, string> = {
@@ -26,6 +37,14 @@ export const STATUS_LABEL: Record<Status, string> = {
 export const STATUS_TONE: Record<Status, 'flow' | 'flowl' | 'flowd' | 'bad' | 'badd' | 'warn' | 'ok' | 'okl' | 'grey'> = {
   IN_PROGRESS: 'flow', TO_EXPORT: 'flowl', PROCESSING: 'flowd', ERROR: 'bad', INVALID: 'badd', DEFERRED: 'warn',
   DONE: 'ok', EXPORTED: 'okl', REJECTED: 'grey',
+}
+/** Глиф статусной точки — общий словарь для записи и лейна (спека 5b §4). */
+export const STATUS_GLYPH: Record<Status, string> = {
+  DONE: '✓', EXPORTED: '✓',
+  ERROR: '✕', INVALID: '✕',
+  REJECTED: '⊘',
+  DEFERRED: '!',
+  IN_PROGRESS: '·', TO_EXPORT: '·', PROCESSING: '·',
 }
 const enumValues = <K extends string>(labels: Record<K, string>) => (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }))
 /** Каталог полей панели фильтров — то, что бек отдаст в GET /grids/documents/filter-meta. */
@@ -46,6 +65,16 @@ const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '810' } as const
 const NAMES = ['ООО «Северный ветер»', 'АО «Прибой»', 'ЗАО «Василёк»', 'ООО «Ромашка»', 'ПАО «Титан»', 'ООО «Меридиан»', 'АО «Глобус»', 'ООО «Кедр»', 'ИП Иванов А. А.', 'ООО «Лотос»']
 const BICS = ['VKRBRU8KXXX', 'NRDIRUMMXXX', 'MRDNGB2LXXX', 'HSTBDEHHXXX', 'BCLHLV22XXX', 'CESEDEFFXXX', 'QWRTUS3NXXX', 'PLKZHKHHXXX']
 const PROV = ['ЕРС', 'LORO', 'NOSTRO', 'SUBOUL', 'VTO']
+// Наименования банков по BIC (словарь эталона `BANKS` в grid.tpl.html, обезличен; два BIC сверх словаря эталона — вымышлены по тому же образцу).
+const BANK_NAME: Record<string, string> = {
+  VKRBRU8KXXX: 'VOSTOCHNY KREDIT BANK KHABAROVSK BR', NRDIRUMMXXX: 'NORDINVEST BANK MOSCOW',
+  MRDNGB2LXXX: 'MERIDIAN INTERMEDIARY BANK LONDON', HSTBDEHHXXX: 'HANSEATIC TRADE BANK HAMBURG',
+  BCLHLV22XXX: 'BALTIC CLEARING BANK RIGA', CESEDEFFXXX: 'CENTRAL EURO SETTLEMENT AG FRANKFURT',
+  QWRTUS3NXXX: 'QUORUM TRADE BANK SINGAPORE', PLKZHKHHXXX: 'POLARIS KREDIT BANK HELSINKI',
+}
+// Маршрут: тип + BIC получателя (эталон `RT`), префикс балансового счёта (эталон `ACC_PFX`).
+const RT: [RouteType, string][] = [['NOSTRO', 'BCLHLV22XXX'], ['NOSTRO', 'HSTBDEHHXXX'], ['LORO', 'MRDNGB2LXXX'], ['INTERNAL', 'VKRBRU8KXXX'], ['NOSTRO', 'NRDIRUMMXXX']]
+const ACC_PFX = ['30114', '30110', '30109', '47422', '30111']
 
 /** Детерминированный ГПСЧ (mulberry32): одни и те же данные при каждом запуске. */
 function rng(seed: number) {
@@ -66,7 +95,8 @@ export function makeDocs(n = 87): Doc[] {
     const minute = 10 * 60 + 52 - i * 3
     const created = `2026-09-23T${pad(Math.floor(minute / 60), 2)}:${pad(minute % 60, 2)}:${pad(Math.floor(r() * 60), 2)}`
     const hasIn = r() > 0.3, hasOut = r() > 0.4
-    return {
+    // Порядок вызовов ГПСЧ ниже — как до плана 5b (записи 0..86 не сдвигаются); поля плана 5b — после core, без новых r().
+    const core = {
       id: `0f3c${pad(i, 4)}-7b1d-4c8e-9f0a-${pad(Math.floor(r() * 1e12), 12)}`,
       docNumber: 800 + Math.floor(r() * 900000),
       refIn: hasIn ? `REF2026092${pad(i, 4)}` : null,
@@ -84,6 +114,16 @@ export function makeDocs(n = 87): Doc[] {
       vdKt: r() > 0.85 ? '2026-09-24' : '2026-09-23',
       lock: i % 11 === 2 ? { who: ['Иванова М. П.', 'Кузнецов Д. А.', 'Смирнова Е. В.'][i % 3]!, since: `2026-09-23T${pad(9 + (i % 8), 2)}:${pad((i * 13) % 60, 2)}:00` } : null,
       inactive: i % 13 === 7 ? { why: ['Документ в архиве', 'Запись отозвана инициатором', 'Снят с обработки администратором'][i % 3]! } : null,
+    }
+    // Поля плана 5b (эталон grid.tpl.html): без новых вызовов ГПСЧ — только из уже вычисленных полей core.
+    return {
+      ...core,
+      f50opt: 'F', f59opt: 'F',
+      f52name: BANK_NAME[core.f52] ?? core.f52, f57name: BANK_NAME[core.f57] ?? core.f57,
+      f58: core.type.indexOf('MT202') === 0 ? core.f57 : null, f58name: core.type.indexOf('MT202') === 0 ? (BANK_NAME[core.f57] ?? core.f57) : null,
+      outSender: core.f57, outReceiver: core.f52,
+      routeType: RT[i % 5]![0], routeRecv: RT[i % 5]![1],
+      routeAcc: ACC_PFX[i % 5] + CCY[core.currency] + pad((i * 3) % 10, 1) + pad(1000 + (i * 37 + 261) % 9000, 4) + pad(1000000 + (i * 7919 + 430157) % 9000000, 7),
     }
   })
 }

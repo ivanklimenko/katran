@@ -6,6 +6,11 @@
   vertical-align: middle;
 }
 
+/* плашка колонки align: 'right' (сумма) — прижата к правому краю обёртки, как значение записи */
+.lines[data-align='right'] {
+  align-items: flex-end;
+}
+
 .line,
 .block {
   display: block;

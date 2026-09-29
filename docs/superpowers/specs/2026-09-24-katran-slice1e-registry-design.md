@@ -52,8 +52,10 @@ createGridModel({ …, facets?: { field: string; fetchFx: Effect<FacetsQuery, Fa
 
 ### 6.1. `StatusLane`
 
+**Отменено спекой 5b §4** (`docs/superpowers/specs/2026-09-28-katran-registry-look-design.md`): точка лейна без буквы — решением владельца 28.09 у лейна, как и у записи, точка с глифом (`StatusDot size="l"`, `LaneItem.glyph?: string | undefined`); вид лейна (полоса на всю ширину 36, кнопка 32, подчёркивание активной вместо рамки) — тоже по эталону, план 5b, L1. Контракт `LaneItem`/`StatusLaneProps` ниже — по факту реализации (5b добавляет `glyph`), поведение (клик по активному снимает, счётчики, порядок) не менялось.
+
 ```ts
-type LaneItem = { value: Scalar; label: string; tone: StatusTone; count?: number }
+type LaneItem = { value: Scalar; label: string; tone: StatusTone; count?: number | undefined; glyph?: string | undefined }
 type StatusLaneProps = {
   label: string                    // доступное имя группы: «Статусы»
   items: LaneItem[]
@@ -63,7 +65,7 @@ type StatusLaneProps = {
 }
 ```
 
-`<div role="group" aria-label>` из кнопок-переключателей (`Button` `size="s"` `variant="ghost"` с `pressed`): первая — «Все» со счётчиком-суммой `count` всех элементов (когда хотя бы у одного он задан), дальше по порядку `items`: `StatusDot` (`size="s"`, тон элемента, без буквы) + подпись + `Counter` (`data-zero` при 0, `active` у нажатой). Клик по активному — снятие (`onChange(null)`), как на стенде «Все». Одна строка без переноса, при нехватке ширины — горизонтальная прокрутка группы. Клавиатура — нативные кнопки, Tab по каждой. Приложение собирает `items` из своего словаря статусов и `facets` модели: `{ value, label: STATUS_LABEL[value], tone: STATUS_TONE[value], count }`; статусы с нулём остаются в лейне (счётчик 0), порядок — словаря приложения, не ответа бека.
+`<div role="group" aria-label>` из кнопок-переключателей — вид по эталону (план 5b, L1): полоса на всю ширину, высота 36 px с линией `line` снизу, кнопка 32 px (своя `.tab`, не `Button ghost`); активная — подчёркивание 2 px `val` (`aria-pressed`, без рамки). Первая — «Все» со счётчиком-суммой `count` всех элементов (когда хотя бы у одного он задан), дальше по порядку `items`: `StatusDot` (`size="m"`, тон элемента, `letter={it.glyph}` — точка 14 px с глифом) + подпись + `Counter` (`data-zero` при 0, `active` у нажатой). Клик по активному — снятие (`onChange(null)`), как на стенде «Все». Одна строка без переноса, при нехватке ширины — горизонтальная прокрутка группы. Клавиатура — нативные кнопки, Tab по каждой. Приложение собирает `items` из своего словаря статусов, `facets` модели и словаря глифов: `{ value, label: STATUS_LABEL[value], tone: STATUS_TONE[value], count, glyph: STATUS_GLYPH[value] }`; статусы с нулём остаются в лейне (счётчик 0), порядок — словаря приложения, не ответа бека. Словарь глифов общий для лейна и статусной точки записи (план 5b §4): ✓ — Обработан/Экспортирован, ✕ — Ошибка/INVALID, ⊘ — Отказ, ! — Отложенный, · — остальные.
 
 ### 6.2. `FilterPanel` (режим simple)
 

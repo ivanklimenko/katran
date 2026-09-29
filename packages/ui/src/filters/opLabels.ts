@@ -38,3 +38,18 @@ export function describeCondition(c: Condition, meta?: FilterMeta | null): strin
     default: return `${name} ${OP_LABEL[c.op]} ${showValue(c.value, field)}`
   }
 }
+
+/** Части чипа для вида эталона (спека 5b §4, P3): поле · оператор словами · значение —
+ * стили кладёт FilterPanel, здесь только данные. Оператор — из OP_LABEL, тот же словарь,
+ * что и в describeCondition (которая остаётся для доступного имени ✕ и тултипа). */
+export function conditionParts(c: Condition, meta?: FilterMeta | null): { field: string; op: string; value: string } {
+  const field = meta?.fields.find((f) => f.id === c.field)
+  const name = field?.label ?? c.field
+  const op = OP_LABEL[c.op]
+  switch (c.op) {
+    case 'IN': case 'NOT_IN': return { field: name, op, value: c.values.map((v) => showValue(v, field)).join(', ') }
+    case 'BETWEEN': return { field: name, op, value: `${showValue(c.from, field)} – ${showValue(c.to, field)}` }
+    case 'IS_EMPTY': case 'IS_NOT_EMPTY': return { field: name, op, value: '' }
+    default: return { field: name, op, value: showValue(c.value, field) }
+  }
+}

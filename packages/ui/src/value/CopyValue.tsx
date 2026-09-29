@@ -9,7 +9,9 @@ export type CopyValueProps = {
   display?: ReactNode | undefined
   /** Показано сокращённо → тултип с полным значением всегда. */
   short?: boolean | undefined
-  tone?: 'val' | 'ink' | 'ink2' | 'mono' | undefined
+  tone?: 'val' | 'ink' | 'ink2' | 'mono' | 'muted' | undefined
+  /** Второй кегль (fs-2 / lh-2) — вторые строки ячеек и сквозные строки. */
+  size?: 's' | undefined
   /** Максимальная ширина в px при плотности 1. */
   maxWidth?: number | undefined
   tabIndex?: number | undefined
@@ -18,7 +20,7 @@ export type CopyValueProps = {
 
 export const FLASH_MS = 600
 
-export function CopyValue({ value, display, short, tone = 'val', maxWidth, tabIndex, className }: CopyValueProps) {
+export function CopyValue({ value, display, short, tone = 'val', size, maxWidth, tabIndex, className }: CopyValueProps) {
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -35,7 +37,7 @@ export function CopyValue({ value, display, short, tone = 'val', maxWidth, tabIn
   return (
     <button
       type="button"
-      className={[s.copy, s[tone], flash ? s.flash : '', className].filter(Boolean).join(' ')}
+      className={[s.copy, s[tone], size === 's' ? s.small : '', flash ? s.flash : '', className].filter(Boolean).join(' ')}
       style={style}
       tabIndex={tabIndex}
       data-k-tip={value}

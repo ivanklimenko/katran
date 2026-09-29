@@ -51,6 +51,8 @@
   background: var(--k-paper);
   border-bottom: 1px solid var(--k-line);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .thBtn {
@@ -66,7 +68,20 @@
   border-radius: var(--k-r-s);
 }
 
-.thBtn:hover {
+/* Заголовок сортируемой колонки сидит внутри <button>: провайдер сбрасывает типографику контролов
+   (Provider.module.css `.root :where(button, input, select, textarea) { text-transform: none }`,
+   специфичность (0,1,0)). Инлайн-класс той же специфичности (0,1,0) зависел бы от порядка правил
+   в бандле — вместо этого берём вложенный селектор `.th .thBtn`: специфичность (0,2,0) бьёт сброс
+   провайдера независимо от порядка чанков в сборке. */
+.th .thBtn {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* наведение подсвечивает всю ячейку шапки, а не только кнопку внутри её паддинга — правило на .th
+   с сортируемой колонкой (атрибут aria-sort есть только когда у колонки есть ключи сортировки),
+   не на чужой класс кнопки */
+.th[aria-sort]:hover {
   background: var(--k-hover);
 }
 
@@ -86,6 +101,8 @@
   font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
   color: var(--k-muted);
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Подзаголовок отсортированной колонки (выбранный ключ) — цвета значения, как заголовок. */
@@ -220,8 +237,11 @@
 }
 
 /* --- запись --- */
+
+/* padding-top var(--k-grid-gap) — отступ между строкой колонок и сквозной строкой (Г2);
+   у первой строки записи он переопределён ниже на var(--k-grid-pad) */
 .record > tr > td {
-  padding: var(--k-sp-1) var(--k-sp-2) 0;
+  padding: var(--k-grid-gap) var(--k-sp-2) 0;
   vertical-align: top;
   overflow: hidden;
   white-space: nowrap;
@@ -255,9 +275,20 @@
   overflow: hidden;
 }
 
+/* сквозные строки записи — второй кегль (Г2 спеки 5b §2) */
+.record > tr:not(:first-child) .clamp {
+  font-size: var(--k-fs-2);
+  line-height: var(--k-lh-2);
+}
+
 /* скелетон текстовой ячейки резервирует ту же высоту, что и текст записи, а не высоту плашки */
 .clampSkeleton {
   min-height: calc(var(--k-lh-1) * var(--k-lines, 1));
+}
+
+/* сквозные строки скелетона — та же высота, что у сквозных строк записи (второй кегль выше) */
+.record > tr:not(:first-child) .clampSkeleton {
+  min-height: calc(var(--k-lh-2) * var(--k-lines, 1));
 }
 
 .cell[data-align='right'] {
@@ -374,7 +405,17 @@
   --k-val: var(--k-muted);
 }
 
-.record[data-state] [data-tone] {
+/* warn и opt (Кт валютирования, буква опции, теги) приглушаются только в ячейках значений (.cell .clamp):
+   на всей записи переопределение погасило бы и замок заблокированной записи в служебной ячейке —
+   он тона warn по спеке (финал 5b, M3) */
+.record[data-state] .cell .clamp {
+  --k-warn: var(--k-muted);
+  --k-opt: var(--k-muted);
+}
+
+/* обесцвечивается только статусная точка (свой атрибут data-st) — Tag и Counter носят data-tone
+   и приглушаются переопределением токенов выше, без прозрачности (финал 5b, I1) */
+.record[data-state] [data-st] {
   filter: grayscale(1);
   opacity: 0.55;
 }

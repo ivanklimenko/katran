@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -37,8 +37,24 @@ describe('Pagination', () => {
     renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} pageSizes={[]} onPageSize={() => {}} />)
     expect(screen.queryByRole('combobox')).toBeNull()
   })
+  it('видимый текст ‹ › на кнопках «Назад»/«Вперёд», доступные имена прежние', () => {
+    renderK(<Pagination page={2} pageSize={20} total={87} onPage={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Назад' })).toHaveTextContent('‹')
+    expect(screen.getByRole('button', { name: 'Вперёд' })).toHaveTextContent('›')
+  })
+  it('«На странице» — подпись видимым текстом и последний элемент полосы, после номеров', () => {
+    const { container } = renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} pageSizes={[20, 50]} onPageSize={() => {}} />)
+    expect(screen.getByText('На странице')).toBeInTheDocument()
+    const nav = container.querySelector('nav')!
+    const last = nav.lastElementChild as HTMLElement
+    expect(within(last).getByRole('combobox', { name: 'На странице' })).toBeInTheDocument()
+  })
   it('без нарушений axe', async () => {
     const { container } = renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} />)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+  it('без нарушений axe с «На странице»', async () => {
+    const { container } = renderK(<Pagination page={1} pageSize={20} total={87} onPage={() => {}} pageSizes={[20, 50]} onPageSize={() => {}} />)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

@@ -1,16 +1,48 @@
 .lane {
   display: flex;
-  gap: var(--k-sp-1);
+  align-items: center;
   overflow-x: auto;
   white-space: nowrap;
+  width: 100%;
 
-  /* Паддинг со всех сторон: overflow-x: auto обрезает и по Y, и по краям — без него фокус-кольцо кнопок (outline 2px + offset 1px) срезается сверху и у крайних кнопок слева/справа. */
-  padding: var(--k-sp-1);
+  /* Высота полосы (эталон .slane) — сумма токенов кнопки и зазора, без нового токена. */
+  min-height: calc(var(--k-h-ctl-l) + var(--k-sp-1));
+  border-bottom: 1px solid var(--k-line);
+
+  /* фон бумаги, как у эталонного .slane: на подложке страницы (ground) счётчики фона chip сливались бы */
+  background: var(--k-paper);
 }
 
-.item {
+.tab {
   display: inline-flex;
   align-items: center;
   gap: var(--k-sp-2);
   flex: none;
+  height: var(--k-h-ctl-l);
+  padding: 0 var(--k-sp-2);
+  border: 0;
+  border-radius: var(--k-r-s);
+  background: none;
+  box-shadow: inset 0 -2px 0 transparent;
+  font: 500 var(--k-fs-2) / 1 var(--k-sans);
+  color: var(--k-ink2);
+  cursor: pointer;
+  transition: color var(--k-t-fast), box-shadow var(--k-t-fast);
+}
+
+.tab:hover {
+  color: var(--k-ink);
+  background: var(--k-hover);
+}
+
+.tab[aria-pressed="true"] {
+  color: var(--k-val);
+  box-shadow: inset 0 -2px 0 var(--k-val);
+}
+
+/* Кольцо — внутрь (offset отрицательный): overflow-x: auto у .lane заодно обрезает и Y
+   (при overflow-x != visible браузер трактует overflow-y как auto), внешнее кольцо срезалось бы сверху. */
+.tab:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
 }

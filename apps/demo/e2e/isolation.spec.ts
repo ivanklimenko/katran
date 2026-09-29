@@ -78,6 +78,29 @@ test('враждебный хост: кнопка кита не наследуе
   test.info().annotations.push({ type: 'typography', description: `textTransform=${style.textTransform} letterSpacing=${style.letterSpacing}` })
 })
 
+// Задача 7 плана 5b: кнопки новых полос (лейн, подвал) держат высоту при враждебном сбросе хоста
+// так же, как запись выше — сравнение той же кнопки на чистой странице и на ?hostile, а не с
+// фиксированным числом (лейн/подвал сами не входят в коридор геометрии записи).
+test('враждебный хост: кнопки лейна и подвала той же высоты, что на чистой странице (± 1 px)', async ({ page }) => {
+  await open(page, '')
+  await page.locator('tbody[data-key]').first().waitFor()
+  // плотность по умолчанию (autoDensity) зависит от screen.width — фиксируем 100 % на обеих
+  // страницах, иначе сравнение чистая/?hostile могло бы случайно сойтись на разных плотностях
+  await page.getByRole('button', { name: '100 %' }).click()
+  const laneClean = (await page.getByRole('group', { name: 'Статусы' }).getByRole('button').first().boundingBox())!.height
+  const pageClean = (await page.getByRole('button', { name: 'Страница 2' }).boundingBox())!.height
+
+  await open(page, '?hostile')
+  await page.locator('tbody[data-key]').first().waitFor()
+  await page.getByRole('button', { name: '100 %' }).click()
+  const laneHostile = (await page.getByRole('group', { name: 'Статусы' }).getByRole('button').first().boundingBox())!.height
+  const pageHostile = (await page.getByRole('button', { name: 'Страница 2' }).boundingBox())!.height
+
+  expect(Math.abs(laneHostile - laneClean)).toBeLessThanOrEqual(1)
+  expect(Math.abs(pageHostile - pageClean)).toBeLessThanOrEqual(1)
+  test.info().annotations.push({ type: 'geometry', description: `lane clean=${laneClean} hostile=${laneHostile}; page clean=${pageClean} hostile=${pageHostile}` })
+})
+
 test('враждебный хост: ячейка записи без рамок хоста', async ({ page }) => {
   await open(page, '?hostile')
   await page.locator('tbody[data-key]').first().waitFor()
