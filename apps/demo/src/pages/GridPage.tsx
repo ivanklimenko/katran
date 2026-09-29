@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
 import { AccountValue, BulkBar, Button, Checkbox, CopyValue, Counter, DataGrid, FieldTag, FilterPanel, LinkValue, StatusDot, StatusLane, SwiftField, Tag, formatAmount, formatDate, formatDateTimeFull, gridColumns, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
-import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Direction, type Doc, type Status } from '../data/docs'
+import { docsFilterMeta, makeDocs, STATUS_GLYPH, STATUS_LABEL, STATUS_TONE, type Direction, type Doc, type Status } from '../data/docs'
 import { createFakeBackend } from '../data/fakeBackend'
 import s from './Page.module.css'
 
@@ -23,7 +23,7 @@ export const docsLayout: RecordLayout<Doc> = {
   rowKey: (d) => d.id,
   columns: [
     { id: 'status', menuTitle: 'Статус', width: 60, sort: [{ id: 'status', label: 'Статус' }, { id: 'reason', label: 'Причина статуса' }],
-      render: (d) => <StatusDot tone={STATUS_TONE[d.status]} label={STATUS_LABEL[d.status]} /> },
+      render: (d) => <StatusDot size="l" tone={STATUS_TONE[d.status]} letter={STATUS_GLYPH[d.status]} label={STATUS_LABEL[d.status]} /> },
     { id: 'id', title: 'ID', subtitle: '№ · 20 вх / исх', width: 106, lines: 2,
       sort: [{ id: 'docNumber', label: 'Номер документа', type: 'number' }, { id: 'refIn', label: '20 вх' }, { id: 'refOut', label: '20 исх' }],
       render: (d) => <><CopyValue value={String(d.docNumber)} tone="ink" className={s.num} tabIndex={T} /><div><LinkValue name="uuid" value={d.id} tabIndex={T} /> <LinkValue name="refIn" value={d.refIn ?? undefined} tabIndex={T} /> <LinkValue name="refOut" value={d.refOut ?? undefined} tabIndex={T} /></div></> },
@@ -116,7 +116,7 @@ export function GridPage() {
   const [counted, setCounted] = useState(false)
   if (!counted && g.facets.length > 0) setCounted(true)
   useEffect(() => { grid.refresh() }, [])
-  const lane: LaneItem[] = STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st], count: counted ? (g.facets.find((x) => String(x.value) === st)?.count ?? 0) : undefined }))
+  const lane: LaneItem[] = STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st], tone: STATUS_TONE[st], glyph: STATUS_GLYPH[st], count: counted ? (g.facets.find((x) => String(x.value) === st)?.count ?? 0) : undefined }))
   // действия полосы — демонстрационные: только объявляют, сколько выбрано
   const bulk = (what: string) => {
     const n = g.selection.mode === 'all' ? g.total - g.selection.except.length : g.selection.ids.length

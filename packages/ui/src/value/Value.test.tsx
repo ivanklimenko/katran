@@ -123,6 +123,12 @@ describe('StatusDot / FieldTag / Counter', () => {
     renderK(<StatusDot tone="okl" letter="З" />)
     expect(screen.getByText('З')).toHaveAttribute('data-tone', 'okl')
   })
+  it('размер l — точка 16 px с глифом по центру (запись)', () => {
+    renderK(<StatusDot tone="ok" size="l" letter="✓" />)
+    const dot = screen.getByText('✓')
+    expect(dot).toHaveAttribute('data-tone', 'ok')
+    expect(dot.className).toMatch(/dotL/)
+  })
   it('точки с буквами на всех девяти тонах — без нарушений axe', async () => {
     const letters: Record<StatusTone, string> = { flow: 'О', flowl: 'К', flowd: 'П', bad: 'О', badd: 'Н', warn: 'В', ok: 'И', okl: 'Э', grey: 'О' }
     const { container } = renderK(<>{(Object.keys(letters) as StatusTone[]).map((t) => <StatusDot key={t} tone={t} letter={letters[t]} label={t} />)}</>)

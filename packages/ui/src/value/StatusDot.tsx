@@ -2,7 +2,7 @@ import s from './Value.module.css'
 export type StatusTone = 'flow' | 'flowl' | 'flowd' | 'bad' | 'badd' | 'warn' | 'ok' | 'okl' | 'grey'
 export type StatusDotProps = {
   tone: StatusTone
-  size?: 's' | 'm' | undefined
+  size?: 's' | 'm' | 'l' | undefined
   /**
    * Буква в точке; допустима на всех тонах. На flow/flowd/bad/badd/warn/ok — цвет `paper`,
    * на flowl/okl/grey — `st-letter-soft` (контраст ≥ 4.5 в обеих темах).

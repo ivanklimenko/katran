@@ -104,6 +104,11 @@
   height: var(--k-dot-m);
 }
 
+.dotL {
+  width: var(--k-dot-l);
+  height: var(--k-dot-l);
+}
+
 .dot[data-tone="flow"] {
   background: var(--k-st-flow);
 }

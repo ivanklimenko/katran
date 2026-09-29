@@ -7,9 +7,9 @@ import { StatusLane, type LaneItem } from './StatusLane'
 import type { Scalar } from './types'
 
 const items: LaneItem[] = [
-  { value: 'IN_PROGRESS', label: 'В работе', tone: 'flow', count: 15 },
-  { value: 'ERROR', label: 'Ошибка', tone: 'bad', count: 6 },
-  { value: 'REJECTED', label: 'Отказ', tone: 'grey', count: 0 },
+  { value: 'IN_PROGRESS', label: 'В работе', tone: 'flow', count: 15, glyph: '·' },
+  { value: 'ERROR', label: 'Ошибка', tone: 'bad', count: 6, glyph: '✕' },
+  { value: 'REJECTED', label: 'Отказ', tone: 'grey', count: 0, glyph: '⊘' },
 ]
 function Host({ initial = null }: { initial?: Scalar | null }) {
   const [v, setV] = useState<Scalar | null>(initial)
@@ -17,7 +17,7 @@ function Host({ initial = null }: { initial?: Scalar | null }) {
 }
 
 describe('StatusLane', () => {
-  it('группа с именем, «Все» с суммой, aria-pressed у активной кнопки', async () => {
+  it('группа с именем, «Все» с суммой, aria-pressed у активной кнопки — не Button кита', async () => {
     const { container } = renderK(<Host />)
     const group = screen.getByRole('group', { name: 'Статусы' })
     const all = screen.getByRole('button', { name: /Все/ })
@@ -25,7 +25,16 @@ describe('StatusLane', () => {
     expect(all).toHaveTextContent('21')
     expect(screen.getByRole('button', { name: /Ошибка/ })).toHaveAttribute('aria-pressed', 'false')
     expect(group.querySelectorAll('button')).toHaveLength(4)
+    // фильтр — не Button кита: свои кнопки, без класса компонента Button
+    expect(all.className).not.toMatch(/\bbutton\b/)
     expect(await axe(container)).toHaveNoViolations()
+  })
+  it('глиф в точке кнопки, «Все» — без точки', () => {
+    renderK(<Host />)
+    expect(screen.getByRole('button', { name: /Ошибка/ })).toHaveTextContent('✕')
+    expect(screen.getByRole('button', { name: /В работе/ })).toHaveTextContent('·')
+    expect(screen.getByRole('button', { name: /Отказ/ })).toHaveTextContent('⊘')
+    expect(screen.getByRole('button', { name: /^Все/ }).querySelector('[data-tone]')).toBeNull()
   })
   it('клик выбирает статус, повторный клик и «Все» снимают', async () => {
     const u = userEvent.setup()
@@ -40,7 +49,7 @@ describe('StatusLane', () => {
     expect(screen.getByRole('button', { name: /В работе/ })).toHaveAttribute('aria-pressed', 'false')
   })
   it('без счётчиков — без чисел', () => {
-    const noCounts: LaneItem[] = items.map((it) => ({ value: it.value, label: it.label, tone: it.tone }))
+    const noCounts: LaneItem[] = items.map((it) => ({ value: it.value, label: it.label, tone: it.tone, glyph: it.glyph }))
     renderK(<StatusLane label="Статусы" items={noCounts} value={null} onChange={() => {}} />)
     expect(screen.getByRole('button', { name: /Все/ })).toHaveTextContent(/^Все$/)
   })

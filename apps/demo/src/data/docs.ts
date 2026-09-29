@@ -38,6 +38,14 @@ export const STATUS_TONE: Record<Status, 'flow' | 'flowl' | 'flowd' | 'bad' | 'b
   IN_PROGRESS: 'flow', TO_EXPORT: 'flowl', PROCESSING: 'flowd', ERROR: 'bad', INVALID: 'badd', DEFERRED: 'warn',
   DONE: 'ok', EXPORTED: 'okl', REJECTED: 'grey',
 }
+/** Глиф статусной точки — общий словарь для записи и лейна (спека 5b §4). */
+export const STATUS_GLYPH: Record<Status, string> = {
+  DONE: '✓', EXPORTED: '✓',
+  ERROR: '✕', INVALID: '✕',
+  REJECTED: '⊘',
+  DEFERRED: '!',
+  IN_PROGRESS: '·', TO_EXPORT: '·', PROCESSING: '·',
+}
 const enumValues = <K extends string>(labels: Record<K, string>) => (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }))
 /** Каталог полей панели фильтров — то, что бек отдаст в GET /grids/documents/filter-meta. */
 export const docsFilterMeta: FilterMeta = { fields: [
