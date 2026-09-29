@@ -34,7 +34,7 @@ describe('StatusLane', () => {
     expect(screen.getByRole('button', { name: /Ошибка/ })).toHaveTextContent('✕')
     expect(screen.getByRole('button', { name: /В работе/ })).toHaveTextContent('·')
     expect(screen.getByRole('button', { name: /Отказ/ })).toHaveTextContent('⊘')
-    expect(screen.getByRole('button', { name: /^Все/ }).querySelector('[data-tone]')).toBeNull()
+    expect(screen.getByRole('button', { name: /^Все/ }).querySelector('[data-st]')).toBeNull()
   })
   it('клик выбирает статус, повторный клик и «Все» снимают', async () => {
     const u = userEvent.setup()

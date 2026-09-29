@@ -4,6 +4,7 @@ import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { BulkBar } from '../filters/BulkBar'
 import { DataGrid, type DataGridProps } from './DataGrid'
+import { GridSkeleton } from './GridSkeleton'
 import type { RecordLayout, RowState } from './types'
 
 type Doc = { id: string; status: string; num: string; amount: number; purpose: string | null }
@@ -221,6 +222,11 @@ describe('DataGrid', () => {
     const skeleton = screen.getAllByRole('rowgroup', { hidden: true }).filter((g) => g.getAttribute('aria-hidden') === 'true')
     const firstOrd = within(skeleton[0]!).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent
     expect(firstOrd).toBe('21')
+  })
+
+  it('GridSkeleton без firstOrd нумерует с 1 (проп необязателен, финал 5b I5)', () => {
+    const { container } = renderK(<table><GridSkeleton visible={layout.columns.slice(0, 2)} spanRows={[]} rows={2} /></table>)
+    expect(Array.from(container.querySelectorAll('.ord')).map((el) => el.textContent)).toEqual(['1', '2'])
   })
 
   it('ARIA: refreshing — aria-busy; empty и error — строка состояния с aria-rowindex=2 в пределах aria-rowcount', () => {

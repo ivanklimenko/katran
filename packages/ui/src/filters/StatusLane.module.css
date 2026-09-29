@@ -8,6 +8,9 @@
   /* Высота полосы (эталон .slane) — сумма токенов кнопки и зазора, без нового токена. */
   min-height: calc(var(--k-h-ctl-l) + var(--k-sp-1));
   border-bottom: 1px solid var(--k-line);
+
+  /* фон бумаги, как у эталонного .slane: на подложке страницы (ground) счётчики фона chip сливались бы */
+  background: var(--k-paper);
 }
 
 .tab {

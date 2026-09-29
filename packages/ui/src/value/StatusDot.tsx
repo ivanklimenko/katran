@@ -12,7 +12,11 @@ export type StatusDotProps = {
   label?: string | undefined
 }
 
+/**
+ * Тон — атрибутом `data-st`, не общим `data-tone` (его носят Tag и Counter): грид обесцвечивает в
+ * заблокированной/неактивной записи только точки `[data-st]`, теги остаются читаемыми (финал 5b, I1).
+ */
 export function StatusDot({ tone, size = 'm', letter, label }: StatusDotProps) {
   const a11y = label ? { role: 'img', 'aria-label': label, 'data-k-tip': label } : { 'aria-hidden': true as const }
-  return <span className={[s.dot, s[`dot${size.toUpperCase()}`]].filter(Boolean).join(' ')} data-tone={tone} {...a11y}>{letter}</span>
+  return <span className={[s.dot, s[`dot${size.toUpperCase()}`]].filter(Boolean).join(' ')} data-st={tone} {...a11y}>{letter}</span>
 }

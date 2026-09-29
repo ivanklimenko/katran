@@ -44,7 +44,7 @@ const lane = (v: string | null) => (f: Filter): Filter => [...f.filter((x) => x.
 describe('FilterPanel', () => {
   it('строка состояния: кнопка с aria-expanded и счётчиком, чипы, «Сбросить»; без условий — «условия не заданы»', async () => {
     const u = userEvent.setup()
-    const { container } = renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }, { field: 'amount', op: 'GT', value: 10 }]} />)
+    renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }, { field: 'amount', op: 'GT', value: 10 }]} />)
     const toggle = screen.getByRole('button', { name: /Фильтры/ })
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(toggle).toHaveTextContent('2')
@@ -55,7 +55,6 @@ describe('FilterPanel', () => {
     expect(items[0]?.children.length).toBeGreaterThanOrEqual(4) // cf, co, cv, ✕-кнопка
     expect(items[0]?.textContent).toContain('Статус')
     expect(items[0]?.textContent).toContain('Обработан')
-    expect(await axe(container)).toHaveNoViolations()
     await u.click(within(list).getByRole('button', { name: 'Убрать условие: Статус = Обработан' }))
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
     await u.click(screen.getByRole('button', { name: 'Сбросить' }))
@@ -64,7 +63,29 @@ describe('FilterPanel', () => {
     await u.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('textbox', { name: 'Приказодатель' })).toBeNull()
+  })
+  // axe — отдельными случаями с явным таймаутом: под нагрузкой полного прогона два прохода axe в одном
+  // тесте с кликами упирались в таймаут по умолчанию 5 с (флак D4 плана 5b)
+  const AXE_TIMEOUT = 15_000
+  it('axe: строка с чипами и открытым телом', async () => {
+    const { container } = renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }, { field: 'amount', op: 'GT', value: 10 }]} />)
     expect(await axe(container)).toHaveNoViolations()
+  }, AXE_TIMEOUT)
+  it('axe: без условий, тело свёрнуто', async () => {
+    const { container } = renderK(<Host open={false} />)
+    expect(screen.getByText('условия не заданы')).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+  }, AXE_TIMEOUT)
+  it('чип: полный текст условия — общим тултипом data-k-tip, без нативного title; счётчик на primary-кнопке — tone accent и в нуле', () => {
+    const { rerender } = renderK(<Host initial={[{ field: 'status', op: 'EQ', value: 'DONE' }]} />)
+    const li = within(screen.getByRole('list', { name: 'Применённые условия' })).getAllByRole('listitem')[0]!
+    expect(li).toHaveAttribute('data-k-tip', 'Статус = Обработан')
+    expect(li).not.toHaveAttribute('title')
+    expect(screen.getByRole('button', { name: /Фильтры/ }).querySelector('[data-tone="accent"]')).toHaveTextContent('1')
+    rerender(<Host key="empty" />)
+    const zero = screen.getByRole('button', { name: /Фильтры/ }).querySelector('[data-tone="accent"]')
+    expect(zero).toHaveTextContent('0')
+    expect(zero).toHaveAttribute('data-zero', 'true')
   })
   it('поля по типам: строка → CONTAINS, число → EQ, ENUM → исходный скаляр; пустое поле снимает условие; Enter применяет; Отменить откатывает', async () => {
     const u = userEvent.setup()

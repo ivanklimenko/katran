@@ -8,8 +8,8 @@ export type GridSkeletonProps<Row> = {
   visible: ColumnDef<Row>[]
   spanRows: SpanCell<Row>[][]
   rows: number
-  /** Номер первой строки скелетона на странице: служебная ячейка каждой строки — firstOrd + i, как в записи. */
-  firstOrd: number
+  /** Номер первой строки скелетона на странице: служебная ячейка каждой строки — firstOrd + i, как в записи. По умолчанию 1. */
+  firstOrd?: number | undefined
 }
 
 /**
@@ -17,7 +17,7 @@ export type GridSkeletonProps<Row> = {
  * Для AT он скрыт (aria-hidden, без aria-rowindex): пустые gridcell ничего не сообщают,
  * о загрузке говорит aria-busy на таблице.
  */
-export function GridSkeleton<Row>({ visible, spanRows, rows, firstOrd }: GridSkeletonProps<Row>) {
+export function GridSkeleton<Row>({ visible, spanRows, rows, firstOrd = 1 }: GridSkeletonProps<Row>) {
   const perRecord = 1 + spanRows.length
   const span = perRecord > 1 ? perRecord : undefined
   const tall = visible.map((c) => c.fullHeight === true)

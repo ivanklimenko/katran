@@ -117,16 +117,18 @@ describe('StatusDot / FieldTag / Counter', () => {
   it('точка с подписью показывает её тултипом; без подписи — нет', () => {
     renderK(<><StatusDot tone="ok" label="Обработан" /><StatusDot tone="bad" /></>)
     expect(screen.getByRole('img', { name: 'Обработан' })).toHaveAttribute('data-k-tip', 'Обработан')
-    expect(document.querySelector('[data-tone="bad"]')).not.toHaveAttribute('data-k-tip')
+    expect(document.querySelector('[data-st="bad"]')).not.toHaveAttribute('data-k-tip')
   })
   it('буква выводится и на светлом тоне', () => {
     renderK(<StatusDot tone="okl" letter="З" />)
-    expect(screen.getByText('З')).toHaveAttribute('data-tone', 'okl')
+    // тон точки — свой атрибут data-st, не общий data-tone: приглушение точки в записи не задевает Tag (финал 5b, I1)
+    expect(screen.getByText('З')).toHaveAttribute('data-st', 'okl')
+    expect(screen.getByText('З')).not.toHaveAttribute('data-tone')
   })
   it('размер l — точка 16 px с глифом по центру (запись)', () => {
     renderK(<StatusDot tone="ok" size="l" letter="✓" />)
     const dot = screen.getByText('✓')
-    expect(dot).toHaveAttribute('data-tone', 'ok')
+    expect(dot).toHaveAttribute('data-st', 'ok')
     expect(dot.className).toMatch(/dotL/)
   })
   it('точки с буквами на всех девяти тонах — без нарушений axe', async () => {
@@ -142,6 +144,13 @@ describe('StatusDot / FieldTag / Counter', () => {
   it('счётчик ноль помечен', () => {
     renderK(<Counter value={0} />)
     expect(screen.getByText('0')).toHaveAttribute('data-zero', 'true')
+  })
+  it('счётчик tone="accent" (на primary-кнопке) помечен data-tone, ноль — тоже; без тона атрибута нет', () => {
+    renderK(<><Counter value={0} tone="accent" /><Counter value={2} tone="accent" /><Counter value={5} /></>)
+    expect(screen.getByText('0')).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('0')).toHaveAttribute('data-zero', 'true')
+    expect(screen.getByText('2')).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('5')).not.toHaveAttribute('data-tone')
   })
   it('без нарушений axe', async () => {
     const { container } = renderK(<>

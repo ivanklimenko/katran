@@ -405,7 +405,17 @@
   --k-val: var(--k-muted);
 }
 
-.record[data-state] [data-tone] {
+/* warn и opt (Кт валютирования, буква опции, теги) приглушаются только в ячейках значений (.cell .clamp):
+   на всей записи переопределение погасило бы и замок заблокированной записи в служебной ячейке —
+   он тона warn по спеке (финал 5b, M3) */
+.record[data-state] .cell .clamp {
+  --k-warn: var(--k-muted);
+  --k-opt: var(--k-muted);
+}
+
+/* обесцвечивается только статусная точка (свой атрибут data-st) — Tag и Counter носят data-tone
+   и приглушаются переопределением токенов выше, без прозрачности (финал 5b, I1) */
+.record[data-state] [data-st] {
   filter: grayscale(1);
   opacity: 0.55;
 }

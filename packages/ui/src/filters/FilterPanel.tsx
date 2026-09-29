@@ -58,7 +58,7 @@ export function FilterPanel({ label = 'Фильтры', meta, conditions, draft,
         <Button ref={toggleRef} variant="primary" size="s" aria-expanded={open} aria-controls={bodyId} className={s.toggle} onClick={() => onOpenChange(!open)}>
           <span className={s.toggleIcon} aria-hidden="true"><Funnel /></span>
           <span>{label}</span>
-          <Counter value={conditions.length} />
+          <Counter value={conditions.length} tone="accent" />
         </Button>
         {conditions.length === 0
           ? <span className={s.none}>условия не заданы</span>
@@ -68,7 +68,7 @@ export function FilterPanel({ label = 'Фильтры', meta, conditions, draft,
                 const text = describeCondition(c, meta)
                 const parts = conditionParts(c, meta)
                 return (
-                  <li key={c.field} className={s.chip} title={text}>
+                  <li key={c.field} className={s.chip} data-k-tip={text}>
                     <span className={s.cf}>{parts.field}</span> <span className={s.co}>{parts.op}</span> <span className={s.cv}>{parts.value}</span>
                     <IconButton size="s" label={`Убрать условие: ${text}`} className={s.chipX} onClick={(e) => remove(e, c.field)}><Cross /></IconButton>
                   </li>

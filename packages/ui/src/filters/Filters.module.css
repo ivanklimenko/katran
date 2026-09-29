@@ -4,9 +4,9 @@
 }
 
 /* Полоса фильтров (эталон .filters стенда pi-constructor): sunk на всю ширину, 45 ≈ min-height
-   (h-ctl-l + sp-3) с паддингом и рамкой внутри — border-box: иначе паддинг sp-2 сверху/снизу
-   добавлялся бы поверх min-height, раздувая полосу (провайдер сбрасывает box-sizing контролов,
-   не div-ов, см. Provider.module.css). */
+   (h-ctl-l + sp-3) с паддингом и рамкой внутри — border-box: провайдер делает content-box все
+   элементы внутри корня (`.root *`, см. Provider.module.css), и паддинг sp-2 сверху/снизу
+   добавлялся бы поверх min-height, раздувая полосу. */
 .bar {
   display: flex;
   align-items: center;
@@ -36,8 +36,9 @@
   height: var(--k-icon-s);
 }
 
+/* мелкий текст на полосе sunk — ink2 (как теги; финал 5b, I2) */
 .none {
-  color: var(--k-muted);
+  color: var(--k-ink2);
 }
 
 .chips {
@@ -50,11 +51,14 @@
   list-style: none;
 }
 
-/* Чип условия (эталон .achip): val-soft, части — поле ink2, оператор mono приглушённый, значение 600. */
+/* Чип условия (эталон .achip): val-soft, части — поле ink2, оператор mono ink2, значение val 600.
+   Ширина не больше тултипа (tip-max, эталон max-width 360): длинное значение обрезается многоточием,
+   полный текст — в тултипе чипа (финал 5b, M4). */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--k-sp-1);
+  max-width: var(--k-tip-max);
   height: var(--k-h-ctl-s);
   padding: 0 var(--k-sp-1) 0 var(--k-sp-2);
   border-radius: var(--k-r-s);
@@ -64,20 +68,28 @@
 }
 
 .cf {
+  flex: none;
   color: var(--k-ink2);
 }
 
+/* мелкий текст на val-soft — ink2 (финал 5b, I2) */
 .co {
+  flex: none;
   font: 600 var(--k-fs-3) / 1 var(--k-mono);
-  color: var(--k-muted);
+  color: var(--k-ink2);
 }
 
+/* значение — val, как на эталоне (.achip .v наследует val чипа; финал 5b, R) */
 .cv {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 600;
-  color: var(--k-ink);
+  color: var(--k-val);
 }
 
 .chipX {
+  flex: none;
   color: var(--k-muted);
 }
 

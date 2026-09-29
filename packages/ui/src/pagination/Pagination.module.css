@@ -14,9 +14,11 @@
   color: var(--k-muted);
 }
 
+/* мелкий текст на полосе sunk — ink2 (финал 5b, I2) */
 .range {
   justify-self: start;
   white-space: nowrap;
+  color: var(--k-ink2);
 }
 
 .pages {
