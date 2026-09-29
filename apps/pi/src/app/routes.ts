@@ -10,8 +10,9 @@ export const routes: { id: Route; title: string }[] = [
 ]
 const lifecycles: Record<Route, PageLifecycle> = { 'fx-docs': fxDocs, 'rub-docs': rubDocs }
 
+/** Маршрут — hash до «?»: хвост #/rub-docs?x не мешает (регуляторы стенда читаются из location.search, не из hash). */
 export const parseRoute = (): Route => {
-  const h = location.hash.replace(/^#\/?/, '')
+  const h = location.hash.replace(/^#\/?/, '').replace(/\?.*$/, '')
   return routes.find((r) => r.id === h)?.id ?? 'fx-docs'
 }
 

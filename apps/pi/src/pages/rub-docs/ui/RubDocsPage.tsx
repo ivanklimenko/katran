@@ -3,7 +3,8 @@ import { rubDocLayout } from '../../../entities/rub-doc'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { registry } from '../model/registry.model'
 
-export function RubDocsPage() {
+/** note — пояснение над реестром; текст задаёт приложение (у стенда — про фейковый сервер), слайс его не знает. */
+export function RubDocsPage({ note }: { note?: string | undefined }) {
   const { announce } = useKatran()
   return (
     <DocRegistry
@@ -11,7 +12,7 @@ export function RubDocsPage() {
       layout={rubDocLayout}
       title="Рублёвые документы"
       describe={(d) => `документ ${d.docNumber}`}
-      note="87 рублёвых документов на фейковом сервере с задержкой 0,25–0,65 с. Запись не кликабельна — деталку открывает кнопка; двойной клик — второй документ рядом. Tab попадает в сетку один раз, дальше — стрелки; Enter на ячейке — копировать/открыть."
+      note={note}
       bulkActions={[
         { label: 'Экспортировать', onClick: (n) => announce(`Экспорт: выбрано ${n}`) },
         { label: 'Отложить', onClick: (n) => announce(`Отложить: выбрано ${n}`) },

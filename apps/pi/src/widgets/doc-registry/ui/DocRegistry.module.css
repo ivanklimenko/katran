@@ -17,11 +17,12 @@
   max-width: var(--k-note-max);
 }
 
-/* .gridPage из демо: остаток вьюпорта под Shell.head (паддинг 2×k-sp-2 + кнопка size=s) и паддинг Shell.content (2×k-sp-5); граница head 1px в токенах не выражается — округление на 1px некритично. */
+/* Реестр занимает всю высоту, которую ему дал хост (у стенда — app/Shell .content); сам геометрию хоста не знает.
+   Хосту нужна определённая высота контейнера, иначе грид вырастет по содержимому. */
 .page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--k-h-ctl-s) - var(--k-sp-2) * 2 - var(--k-sp-5) * 2);
+  height: 100%;
   min-height: 0;
 }
 
