@@ -74,6 +74,9 @@ test('подвал: неактивная кнопка номера без вид
 test('лейн, строка фильтров, подвал — высоты полос по эталону ± 2', async ({ page }) => {
   await page.goto('/#/grid')
   await page.locator('tbody[data-key]').first().waitFor()
+  // плотность по умолчанию (autoDensity) зависит от screen.width — фиксируем 100 %, иначе полосы
+  // измерялись бы на произвольной плотности в зависимости от экрана раннера
+  await page.getByRole('button', { name: '100 %' }).click()
   const lane = (await page.getByRole('group', { name: 'Статусы' }).boundingBox())!.height
   const filters = (await page.getByRole('button', { name: /^Фильтры/ }).locator('..').boundingBox())!.height
   const footer = (await page.getByRole('navigation', { name: 'Страницы' }).boundingBox())!.height
