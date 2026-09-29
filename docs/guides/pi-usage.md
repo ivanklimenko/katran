@@ -52,6 +52,9 @@ export function DocumentsScreen() {
 
 `storageKey` разводит настройки кита (тема, плотность, раскладка грида — `localStorage`) с другими экранами на той же странице. Подробности про `KatranProvider`, изоляцию стилей и CORS для шрифтов — `docs/consuming.md`.
 
+**Почему сам `apps/pi` не импортирует `@katran/ui/styles.css`.** Пример выше — для вас, потребителя опубликованного пакета; в исходниках `apps/pi/src/app/entry.tsx` этой строки нет, и это не упущение. Внутри монорепо `apps/pi` берёт `@katran/ui` из исходников (`exports["."]` в `packages/ui/package.json` — `./src/index.ts`, не `dist`): `packages/ui/src/index.ts` сам импортирует `@katran/tokens/tokens.css` как побочный эффект первой строкой, а CSS каждого компонента (`Button.module.css` и т. п.) приезжает вместе с компонентом при импорте — Vite подключает такие модульные стили в общий бандл сам, отдельно собирать их не нужно. Отсюда у нас в `entry.tsx` — только `@katran/tokens/fonts.css` (шрифты `index.ts` не тянет, это осознанно отдельный импорт).
+Если вы ставите кит опубликованным пакетом (не из монорепо) — источников `src/*.module.css` у вас нет, только собранный `packages/ui/package.json` → `publishConfig.exports["./styles.css"]` = `./dist/ui.css` (единый файл со стилями всех компонентов, собранный при публикации). Поэтому в вашем коде явный `import '@katran/ui/styles.css'` обязателен — без него компоненты кита останутся без стилей. `@katran/tokens/tokens.css` в `dist/ui.css` уже включён (тот же побочный импорт в исходнике собирается в бандл), но шрифты `@katran/tokens/fonts.css` всё равно импортируются отдельно — `@font-face` не зависит от компонентов.
+
 Рендер — legacy, без `createRoot` (React 17):
 
 ```tsx
@@ -155,7 +158,7 @@ function FxDocsRoute() {
 - `apps/pi/src/entities/fx-doc/api/fxDoc.mapper.ts` — `parseFxDoc(raw, path)`
 - `apps/pi/src/entities/rub-doc/api/rubDoc.mapper.ts` — `parseRubDoc(raw, path)`
 
-Маппер получает `raw: unknown` (одну строку `content[]`) и обязан вернуть строго типизированный `FxDoc`/`RubDoc` (`entities/*/model/*.ts`) — весь остальной код (порты, грид, колонки) от формы бека не зависит, он видит только `FxDoc`/`RubDoc`. Разборщики полей — `str`, `num`, `oneOf`, `strOrNull`, `obj` из `apps/pi/src/shared/api/guards.ts`: бросают `contractError` с путём до поля, если форма не совпала (грид покажет ошибку, приложение не упадёт).
+Маппер получает `raw: unknown` (одну строку `content[]`) и обязан вернуть строго типизированный `FxDoc`/`RubDoc` (`entities/*/model/*.ts`) — весь остальной код (порты, грид, колонки) от формы бека не зависит, он видит только `FxDoc`/`RubDoc`. Разборщики полей — все семь экспортов `apps/pi/src/shared/api/guards.ts`: `obj`, `str`, `strOrNull`, `num`, `oneOf` использует построчный разбор в мапперах (`parseFxDoc`/`parseRubDoc` — каждое поле `FxDoc`/`RubDoc` идёт через один из этих четырёх плюс `obj` для вложенных `lock`/`inactive`); `arr` и `scalar` мапперам не нужны — ими пользуется `shared/api/grid-contract.ts` при разборе всего ответа `search`/`facets` (массив `content`/массив пар `{value,count}`, `scalar` — тип значения фасета). Каждый гард бросает `contractError` с путём до поля, если форма не совпала (грид покажет ошибку, приложение не упадёт).
 
 Если у бека отличается **каталог** `filter-meta` (набор доступных полей, справочники) или тело `search`/`facets` — правится `apps/pi/src/shared/api/grid-contract.ts` (`toSearchBody`, `toFacetsBody`, `fromSearchResponse`, `fromFacetsResponse`, `fromFilterMetaResponse`) — это уже расхождение не в составе строки, а в самом контракте `vtb-filters` §5–6, и меняется на весь `apps/pi`, а не на один грид.
 
@@ -221,4 +224,19 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 
 - Публичный API каждого слайса — его `index.ts` (`entities/fx-doc/index.ts`, `widgets/doc-registry/index.ts`, `pages/fx-docs/index.ts`): импортируйте оттуда, не из внутренних путей (`entities/fx-doc/model/fxDoc.ts` напрямую — не FSD).
 - `doc-status` — сущность, общая для обоих документов (`@x`-реэкспорт в `entities/fx-doc/@x` и `entities/rub-doc/@x`, раздел 2 `docs/guides/effector-fsd.md`) — не дублируйте словарь статусов на своей стороне.
-- Модели (`createFiltersModel`, `createGridModel`, `createRegistry`) вызываются на верхнем уровне модуля модели страницы, не в компоненте — так уже сделано в `pages/*/model/registry.model.ts`, при переносе не оборачивайте их в `useMemo`.
+- Модели (`createFiltersModel`, `createGridModel` — из `@katran/effector`; `createRegistry` — местная фабрика `apps/pi`, не кита, раздел «Зависимости» ниже) вызываются на верхнем уровне модуля модели страницы, не в компоненте — так уже сделано в `pages/*/model/registry.model.ts`, при переносе не оборачивайте их в `useMemo`.
+
+## Зависимости
+
+Версии — как в `apps/pi/package.json`; переносимые слайсы (`pages`/`widgets`/`entities`/`shared`) ставят те же пакеты и версии в вашем приложении:
+
+| Пакет | Версия | Кто именно |
+|---|---|---|
+| `react`, `react-dom` | `17.0.2` | среда выполнения (раздел «Среда выполнения» выше); peer-зависимость `@katran/ui` и `@katran/effector` — `>=17` |
+| `effector` | `^23.4.4` | peer-зависимость `@katran/effector` — `>=23` |
+| `effector-react` | `^23.3.0` | `useUnit` — вызывается напрямую в `widgets/doc-registry/ui/DocRegistry.tsx` (не только внутри `@katran/effector`); peer-зависимость `@katran/effector` — `>=23` |
+| `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui` |
+| `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts` |
+| `@katran/tokens` | `workspace:*` | шрифты (`@katran/tokens/fonts.css`, раздел 3); токены переезжают вместе с `@katran/ui` (см. ниже) |
+
+`createRegistry` (раздел 3 и «FSD-специфика» выше) — **не** экспорт `@katran/effector`, это местная фабрика `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts`, которая сама вызывает `createFiltersModel`/`createGridModel` кита внутри себя; переносится вместе со слайсом `widgets/doc-registry`, а не устанавливается из npm.

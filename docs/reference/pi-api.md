@@ -115,7 +115,7 @@ RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ typ
 | `direction` | одно из `IN`, `OUT`, `TRANSIT`, `OTHER` | да | `"IN"` |
 | `dirTxt` | строка — подпись направления | да | `"входящий от ЦБ на клиента"` |
 | `amount` | число | да | `54321.08` |
-| `queue` | число, `1`–`5` — очерёдность платежа | да | `3` |
+| `queue` | число — очерёдность платежа (в фильтре `filter-meta` — справочник `1`–`5`, раздел 5.6; тип и маппер (`rubDoc.mapper.ts`) диапазон не ограничивают) | да | `3` |
 | `prio` | `0` или `1` — приоритетный платёж | да | `0` |
 | `fromName` | строка — наименование отправителя | да | `"ООО «ЛЕЗЯФОТЫ ВЕФО»"` |
 | `fromAcc` | строка, 20 цифр — счёт отправителя | да | `"40702810999377318571"` |
@@ -352,12 +352,12 @@ POST /grids/rub-docs/search
 
 ### 5.7. `rub-docs`: ошибка 400
 
-Тот же класс ошибки, что у `fx-docs` (раздел 5.4), на неизвестном поле фильтра (иллюстративно — по правилу валидации фейкового сервера, `apps/pi/src/app/fake/server.ts`):
+Другой класс ошибки, чем у `fx-docs` (раздел 5.4) — неизвестное поле фильтра, а не недопустимый оператор: `fromInn` (ИНН отправителя) есть в строке `content[]` (раздел 4.2), но не входит в каталог `filter-meta` рублёвого реестра (раздел 5.6 — 10 полей, `fromInn` среди них нет; фильтровать можно только по `toInn`). Иллюстративно — по правилу валидации фейкового сервера, `apps/pi/src/app/fake/server.ts` (`validate`: поле условия не найдено в `meta.fields` → `UNKNOWN_FIELD`):
 
 ```json
 POST /grids/rub-docs/search
 {
-  "filter": { "conditions": [{ "field": "fromInn", "op": "GT", "value": "100" }] },
+  "filter": { "conditions": [{ "field": "fromInn", "op": "EQ", "value": "5790280657" }] },
   "sort": [], "page": { "number": 0, "size": 20 }, "includeTotal": true
 }
 ```
@@ -371,7 +371,7 @@ POST /grids/rub-docs/search
   "status": 400,
   "detail": "Ошибок: 1",
   "errors": [
-    { "path": "filter.conditions[0].op", "code": "OPERATOR_NOT_ALLOWED", "message": "Оператор GT недопустим для поля fromInn типа STRING" }
+    { "path": "filter.conditions[0].field", "code": "UNKNOWN_FIELD", "message": "Поле fromInn неизвестно" }
   ]
 }
 ```
