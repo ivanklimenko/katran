@@ -35,7 +35,9 @@ export const panelId = (tabs: string, item: string) => `${tabs}-panel-${item}`
 
 /** Ключ замера кнопки «••• N» среди замеров вкладок. */
 const MORE = '__more'
-type Fit = { avail: number; widths: Record<string, number>; more: number; gap: number }
+/** Ключ замера разделителя групп доступные | недоступные. */
+const SEP = '__sep'
+type Fit = { avail: number; widths: Record<string, number>; more: number; gap: number; sep: number }
 
 /** WAI-ARIA Tabs с ручной активацией: стрелки двигают фокус, Enter/Space выбирает. */
 export function Tabs({ id, items, value, onChange, orientation = 'horizontal', label, overflow = false, variant = 'segment' }: TabsProps) {
@@ -48,11 +50,15 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
   // С переполнением порядок фиксирован, недоступные — второй группой (эталон TABS, index.html:647)
   const ordered = overflow ? [...items.filter((it) => !it.disabled), ...items.filter((it) => it.disabled)] : items
   const selected = ordered.findIndex((it) => it.id === value)
+  const offAt = ordered.findIndex((it) => it.disabled)
   const shownIdx = overflow && fit
-    ? fitTabs(ordered.map((it) => fit.widths[it.id] ?? 0), fit.avail, fit.more, selected, fit.gap)
+    ? fitTabs(ordered.map((it) => fit.widths[it.id] ?? 0), fit.avail, fit.more, selected, fit.gap, offAt > 0 ? { at: offAt, width: fit.sep } : undefined)
     : ordered.map((_, i) => i)
   const shown = shownIdx.map((i) => ordered[i]!)
   const hidden = ordered.filter((_, i) => !shownIdx.includes(i))
+  // «•••» пропала (всё поместилось) — меню закрыто, иначе при новом сужении оно откроется само.
+  // Сброс во время рендера, как в Menu: setState в теле эффекта запрещён правилом react-hooks/set-state-in-effect.
+  if (menuOpen && hidden.length === 0) setMenuOpen(false)
   const enabled = shown.filter((it) => !it.disabled)
   const stopId = enabled.some((it) => it.id === value) ? value : enabled[0]?.id
   const focusAt = (i: number) => { const it = enabled[(i + enabled.length) % enabled.length]; if (it) refs.current[it.id]?.focus() }
@@ -78,7 +84,11 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
       box.querySelectorAll<HTMLElement>('[data-k-measure]').forEach((el) => { widths[el.getAttribute('data-k-measure') ?? ''] = el.offsetWidth })
       const list = box.querySelector<HTMLElement>('[role="tablist"]')
       const gap = list ? parseFloat(getComputedStyle(list).columnGap) || 0 : 0
-      setFit({ avail: box.clientWidth, widths, more: widths[MORE] ?? 0, gap })
+      // разделитель — рамка без ширины с полями: offsetWidth полей не включает, добавляем их
+      const sepEl = box.querySelector<HTMLElement>(`[data-k-measure="${SEP}"]`)
+      const sepCs = sepEl ? getComputedStyle(sepEl) : null
+      const sep = (widths[SEP] ?? 0) + (sepCs ? (parseFloat(sepCs.marginLeft) || 0) + (parseFloat(sepCs.marginRight) || 0) : 0)
+      setFit({ avail: box.clientWidth, widths, more: widths[MORE] ?? 0, gap, sep })
     }
     const ro = new ResizeObserver(measure)
     ro.observe(box)
@@ -136,6 +146,7 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
           </span>
         ))}
         <span data-k-measure={MORE} className={s.more}>••• 99</span>
+        <span data-k-measure={SEP} className={s.sep} />
       </div>
       <Menu
         open={menuOpen && hidden.length > 0}

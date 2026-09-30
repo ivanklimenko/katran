@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -15,23 +15,26 @@ const FX: TabItem[] = [
   { id: 'audit', label: 'Аудит' },
 ]
 
-// jsdom не считает раскладку: ширины — заглушкой (замер вкладки 100, замер «•••» 40, полоса — BAR),
-// ResizeObserver — синхронный: вызывает колбэк при observe, как первый замер в Chromium.
+// jsdom не считает раскладку: ширины — заглушкой (замер вкладки 100, «•••» 40, разделителя групп 9, полоса — BAR),
+// ResizeObserver — синхронный: вызывает колбэк при observe, как первый замер в Chromium; resize() — смена ширины полосы.
 // Колбэк получает массив записей, как настоящий: autoUpdate floating-ui (Popover меню) его разбирает.
 let BAR = 1000
+let observers: SyncResizeObserver[] = []
 class SyncResizeObserver {
   cb: (entries: unknown[]) => void
-  constructor(cb: (entries: unknown[]) => void) { this.cb = cb }
+  constructor(cb: (entries: unknown[]) => void) { this.cb = cb; observers.push(this) }
   observe() { this.cb([]) }
   unobserve() {}
-  disconnect() {}
+  disconnect() { observers = observers.filter((o) => o !== this) }
 }
+const resize = (w: number) => act(() => { BAR = w; observers.forEach((o) => o.cb([])) })
 beforeEach(() => {
   BAR = 1000
+  observers = []
   vi.stubGlobal('ResizeObserver', SyncResizeObserver)
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
     const m = this.getAttribute('data-k-measure')
-    return m === '__more' ? 40 : m ? 100 : 0
+    return m === '__more' ? 40 : m === '__sep' ? 9 : m ? 100 : 0
   })
   vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(() => BAR)
 })
@@ -70,6 +73,26 @@ describe('Tabs: переполнение (спека 2a §3.1)', () => {
     expect(names()).toEqual(['Общие данные', 'Доп. поля', 'Статусы', 'Комплаенс', 'Аудит'])
     expect(screen.getByRole('tab', { name: 'Аудит' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: 'Ещё вкладки: 6' })).toBeInTheDocument()
+  })
+
+  it('разделитель групп входит в расчёт: вкладка, которой не хватает места с ним, уходит в меню', () => {
+    // 9 вкладок × 100 + «•••» 40 = 940 ≤ 945, но с разделителем 9 — 949: «Нотификации» уходит в меню
+    BAR = 945
+    renderK(<Host />)
+    expect(names()).toEqual(['Общие данные', 'Доп. поля', 'Статусы', 'Комплаенс', 'Связанные документы', 'Задачи', 'Исходный текст', 'Аудит'])
+    expect(screen.getByRole('button', { name: 'Ещё вкладки: 3' })).toBeInTheDocument()
+  })
+
+  it('меню не остаётся открытым, когда «•••» пропадает: шире — всё видно, снова уже — меню закрыто', async () => {
+    BAR = 540
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: /Ещё вкладки/ }))
+    expect(screen.getByRole('menu', { name: 'Вкладки' })).toBeInTheDocument()
+    resize(5000)
+    expect(screen.queryByRole('button', { name: /Ещё вкладки/ })).toBeNull()
+    resize(540)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.getByRole('button', { name: /Ещё вкладки/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('выбор из меню — onChange, вкладка встаёт в полосу выбранной', async () => {
