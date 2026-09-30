@@ -1,0 +1,84 @@
+.cal {
+  display: grid;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-1);
+}
+
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-sp-2);
+}
+
+.calTitle {
+  font: 600 var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink);
+}
+
+.grid {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.wd {
+  width: var(--k-cal-cell);
+  height: var(--k-cal-cell);
+  padding: 0;
+  font: 500 var(--k-fs-3) / 1 var(--k-sans);
+  color: var(--k-muted);
+  text-align: center;
+}
+
+.cell {
+  padding: 0;
+}
+
+.day {
+  display: grid;
+  place-items: center;
+  width: var(--k-cal-cell);
+  height: var(--k-cal-cell);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--k-r-s);
+  background: none;
+  font: 400 var(--k-fs-1) / 1 var(--k-sans);
+  color: var(--k-ink);
+  cursor: pointer;
+}
+
+/* порядок — по каскаду: наведение ниже отметок диапазона, чтобы выбранный день не терял заливку под курсором */
+.day:hover {
+  background: var(--k-hover);
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+/* дни соседних месяцев — muted (faint не для читаемого текста, contrast.rules) */
+.day[data-out] {
+  color: var(--k-muted);
+}
+
+.day[data-today] {
+  border-color: var(--k-val);
+}
+
+.day[data-in] {
+  border-radius: 0;
+  background: var(--k-val-soft);
+}
+
+.day[data-edge] {
+  background: var(--k-val);
+  color: var(--k-paper);
+}
+
+.day[aria-disabled="true"] {
+  background: none;
+  color: var(--k-muted);
+  cursor: default;
+}
