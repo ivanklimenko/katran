@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { Option } from './options'
 import s from './Select.module.css'
 
@@ -29,9 +29,15 @@ function mark(text: string, q: string): ReactNode {
   return <>{text.slice(0, i)}<b>{text.slice(i, i + n)}</b>{text.slice(i + n)}</>
 }
 
-/** Список вариантов role=listbox: фокус остаётся в поле (aria-activedescendant), мышь не уводит его (mousedown отменён). */
+/** Список вариантов role=listbox: фокус остаётся в поле (aria-activedescendant), мышь не уводит его (mousedown отменён); клавиатура — у поля. */
 export function Listbox({ id, label, options, active, isSelected, multi, onPick, onActive, emptyText = 'Ничего не найдено', highlight }: ListboxProps) {
+  // Прокрутка к активному — только когда его сменила клавиатура: наведение мышью список не дёргает.
+  const byMouse = useRef(false)
+  // Выбор мышью — mouseup на том же пункте, где был mousedown (семантика клика). onClick у li потребовал бы
+  // пустого обработчика клавиш (jsx-a11y/click-events-have-key-events), а клавиатура у списка — у поля.
+  const pressed = useRef(-1)
   useEffect(() => {
+    if (byMouse.current) { byMouse.current = false; return }
     const el = document.getElementById(optionId(id, active))
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' })
   }, [id, active])
@@ -49,10 +55,9 @@ export function Listbox({ id, label, options, active, isSelected, multi, onPick,
             tabIndex={-1}
             data-active={i === active || undefined}
             className={s.opt}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onPick(o, i)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onPick(o, i) }}
-            onMouseMove={() => { if (i !== active) onActive(i) }}
+            onMouseDown={(e) => { e.preventDefault(); pressed.current = e.button === 0 ? i : -1 }}
+            onMouseUp={() => { const hit = pressed.current === i; pressed.current = -1; if (hit) onPick(o, i) }}
+            onMouseMove={() => { if (i !== active) { byMouse.current = true; onActive(i) } }}
           >
             {multi && <span className={s.box} data-on={sel || undefined} aria-hidden="true" />}
             <span className={s.optLabel}>{highlight !== undefined ? mark(o.label, highlight) : o.label}</span>
