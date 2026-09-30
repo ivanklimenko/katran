@@ -119,3 +119,63 @@
   padding: var(--k-sp-1);
   border-top: 1px solid var(--k-line);
 }
+
+/* поля «с» и «по» делят рамку поровну и сжимаются в узкой колонке */
+.rangeInput {
+  width: 100%;
+  min-width: 0;
+}
+
+.dash {
+  flex: none;
+  color: var(--k-muted);
+}
+
+.rangePop {
+  display: flex;
+  gap: var(--k-sp-2);
+}
+
+.presets {
+  display: grid;
+  align-content: start;
+  gap: var(--k-sp-1);
+  width: var(--k-preset-w);
+  margin: 0;
+  padding: var(--k-sp-1) var(--k-sp-2) var(--k-sp-1) 0;
+  border-right: 1px solid var(--k-line);
+  list-style: none;
+}
+
+.preset {
+  width: 100%;
+  height: var(--k-h-ctl-s);
+  padding: 0 var(--k-sp-2);
+  border: 0;
+  border-radius: var(--k-r-s);
+  background: none;
+  font: 400 var(--k-fs-1) / 1 var(--k-sans);
+  color: var(--k-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.preset:hover {
+  background: var(--k-hover);
+}
+
+.preset:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+.preset[aria-pressed="true"] {
+  background: var(--k-val-soft);
+  color: var(--k-val);
+}
+
+.preset:disabled {
+  background: none;
+  color: var(--k-muted);
+  cursor: default;
+}
