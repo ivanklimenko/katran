@@ -1,6 +1,6 @@
 # `apps/pi` — реестры ПИ на FSD с переносимым швом данных: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** новое приложение `apps/pi` в монорепо katran с экранами «Валютные документы» и «Рублёвые документы», разложенное по FSD так, чтобы внутри его код переносился слайсами или целиком, а менялся только обработчик транспорта.
 
@@ -63,8 +63,8 @@ docs/…  — Task 1, Task 14
 
 **Files:** только чтение.
 
-- [ ] **Step 1: планы 4 и 5 слиты.** `git log --oneline main | head -40` — есть коммиты планов «Совместимость» и «Реестр по эталону»; `docs/STATE.md` §6 называет их исполненными. Если нет — **остановиться** и сообщить владельцу: этот план идёт после них.
-- [ ] **Step 2: форма `Sort`.** Открыть `packages/ui/src/grid/types.ts`. **Подтверждено планом 5a**: форма ровно та, что план предполагал —
+- [x] **Step 1: планы 4 и 5 слиты.** `git log --oneline main | head -40` — есть коммиты планов «Совместимость» и «Реестр по эталону»; `docs/STATE.md` §6 называет их исполненными. Если нет — **остановиться** и сообщить владельцу: этот план идёт после них.
+- [x] **Step 2: форма `Sort`.** Открыть `packages/ui/src/grid/types.ts`. **Подтверждено планом 5a**: форма ровно та, что план предполагал —
 
 ```ts
 export type SortLevel = { key: string; dir: 'asc' | 'desc' }
@@ -73,9 +73,9 @@ export const MAX_SORT_LEVELS = 5
 ```
 
 Использовать эти имена в Task 5 (`toSearchBody`) и Task 7 (`fromSortDto`) без дополнительной проверки; больше форма `Sort` нигде в плане не читается.
-- [ ] **Step 3: `shortAccount`.** Открыть `packages/ui/src/format/account.ts`. Если у функции уже есть параметр длины хвоста — Task 3 пропускается (отметить в леджере, в Task 12 использовать фактическое имя пропа `AccountValue`).
-- [ ] **Step 4: конфиги демо.** Прочитать `apps/demo/package.json`, `vite.config.ts`, `tsconfig.json` после плана 4 (версия React, classic JSX runtime, таргет сборки). Task 4 копирует их — все отличия от текста Task 4 переносить как в демо.
-- [ ] **Step 5: `pnpm install && pnpm check`** — зелёный. Иначе остановиться.
+- [x] **Step 3: `shortAccount`.** Открыть `packages/ui/src/format/account.ts`. Если у функции уже есть параметр длины хвоста — Task 3 пропускается (отметить в леджере, в Task 12 использовать фактическое имя пропа `AccountValue`).
+- [x] **Step 4: конфиги демо.** Прочитать `apps/demo/package.json`, `vite.config.ts`, `tsconfig.json` после плана 4 (версия React, classic JSX runtime, таргет сборки). Task 4 копирует их — все отличия от текста Task 4 переносить как в демо.
+- [x] **Step 5: `pnpm install && pnpm check`** — зелёный. Иначе остановиться.
 
 ---
 
@@ -86,8 +86,8 @@ export const MAX_SORT_LEVELS = 5
 - Modify: `docs/reference/registry-drift.md` (раздел «Рублёвый реестр»)
 - Create (временно, удаляется в этой же задаче): `apps/demo/e2e-stand/stand.spec.ts`, `apps/demo/e2e-stand/playwright.config.ts`
 
-- [ ] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — хеш и дата. В `docs/STATE.md` §10 в строке «Рублёвый реестр (`rub-grid.html`)» заменить «не заморожен» на `<хеш>, <дата время>`, срез — «`apps/pi`», расхождения — «`docs/reference/registry-drift.md`, раздел «Рублёвый реестр»».
-- [ ] **Step 2: замер эталона.** Создать `apps/demo/e2e-stand/playwright.config.ts`:
+- [x] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — хеш и дата. В `docs/STATE.md` §10 в строке «Рублёвый реестр (`rub-grid.html`)» заменить «не заморожен» на `<хеш>, <дата время>`, срез — «`apps/pi`», расхождения — «`docs/reference/registry-drift.md`, раздел «Рублёвый реестр»».
+- [x] **Step 2: замер эталона.** Создать `apps/demo/e2e-stand/playwright.config.ts`:
 
 ```ts
 import { defineConfig } from '@playwright/test'
@@ -114,9 +114,9 @@ test('замер рублёвого реестра стенда', async ({ page 
 
 Run: `cd apps/demo && pnpm exec playwright test -c e2e-stand/playwright.config.ts --reporter=line`
 Expected: строка `STAND rub: record=… head=…`. Записать числа в `registry-drift.md` (Step 3) и в STATE §10 рядом с хешем. Удалить каталог `apps/demo/e2e-stand/`.
-- [ ] **Step 3: сверка.** Раздел «Рублёвый реестр» в `docs/reference/registry-drift.md` превратить в таблицу того же формата, что у валютного (`| № | Эталон | Кит | Класс | Решение | Где | Размер |`), по колонкам, сквозным строкам, лейну, фильтрам, сортировке, счёту, статусной точке, данным. Эталон — `rub-grid.tpl.html` на хеше Step 1; «кит» — то, что даст этот план по спеке §8.2 (кит рубля ещё не написан — сравнивается с планируемым). Классы C, известные заранее (записать с решением «Сознательно»): многоуровневая сортировка (В1); один стор условий лейна и панели; плоский каталог simple из 10 полей вместо групп.
-- [ ] **Step 4: вопросы владельцу.** Все пункты класса B собрать списком «вопросы владельцу» в конце раздела. **Остановиться и передать список контроллеру** — продолжать Task 12 можно только после решений; Task 2–11 от них не зависят.
-- [ ] **Step 5: commit.**
+- [x] **Step 3: сверка.** Раздел «Рублёвый реестр» в `docs/reference/registry-drift.md` превратить в таблицу того же формата, что у валютного (`| № | Эталон | Кит | Класс | Решение | Где | Размер |`), по колонкам, сквозным строкам, лейну, фильтрам, сортировке, счёту, статусной точке, данным. Эталон — `rub-grid.tpl.html` на хеше Step 1; «кит» — то, что даст этот план по спеке §8.2 (кит рубля ещё не написан — сравнивается с планируемым). Классы C, известные заранее (записать с решением «Сознательно»): многоуровневая сортировка (В1); один стор условий лейна и панели; плоский каталог simple из 10 полей вместо групп.
+- [x] **Step 4: вопросы владельцу.** Все пункты класса B собрать списком «вопросы владельцу» в конце раздела. **Остановиться и передать список контроллеру** — продолжать Task 12 можно только после решений; Task 2–11 от них не зависят.
+- [x] **Step 5: commit.**
 
 ```bash
 git add docs/STATE.md docs/reference/registry-drift.md
@@ -135,7 +135,7 @@ git commit -m "Рублёвый реестр: эталон заморожен, �
 **Interfaces:**
 - Produces: `FiltersModelConfig.meta?: FilterMeta | Store<FilterMeta | null> | undefined`; `FiltersModel.$meta: Store<FilterMeta | null>`; `FiltersBinding.meta` — текущее значение `$meta`. Поле `FiltersModel.meta` остаётся (`@deprecated`).
 
-- [ ] **Step 1: тесты (падают).** В `createFiltersModel.test.ts` добавить в `describe`:
+- [x] **Step 1: тесты (падают).** В `createFiltersModel.test.ts` добавить в `describe`:
 
 ```ts
   it('meta значением: $meta отдаёт его; meta стором: $meta следует за стором', async () => {
@@ -169,8 +169,8 @@ git commit -m "Рублёвый реестр: эталон заморожен, �
 ```
 
 (дополнить импорты `createEvent` и `type FilterMeta`).
-- [ ] **Step 2: запуск.** `pnpm --filter @katran/effector test` — FAIL: `$meta` не существует / `meta` не меняется.
-- [ ] **Step 3: реализация.** В `createFiltersModel.ts`:
+- [x] **Step 2: запуск.** `pnpm --filter @katran/effector test` — FAIL: `$meta` не существует / `meta` не меняется.
+- [x] **Step 3: реализация.** В `createFiltersModel.ts`:
 
 ```ts
 import { combine, createEvent, createStore, is, sample, type EventCallable, type Store } from 'effector'
@@ -218,9 +218,9 @@ const isMetaStore = (m: FiltersModelConfig['meta']): m is Store<FilterMeta | nul
 ```
 
 и в `return` — `meta` вместо `meta: m.meta`.
-- [ ] **Step 4: запуск.** `pnpm --filter @katran/effector test` — PASS; `pnpm check` — зелёный (демо передаёт каталог значением — работает).
-- [ ] **Step 5: CHANGELOG.** В `CHANGELOG.md` под «Не выпущено» → «Добавлено»: «`createFiltersModel({ meta })` принимает стор каталога; модель отдаёт `$meta`, `useFilters` — текущее значение. Поле `meta` модели устарело».
-- [ ] **Step 6: commit.**
+- [x] **Step 4: запуск.** `pnpm --filter @katran/effector test` — PASS; `pnpm check` — зелёный (демо передаёт каталог значением — работает).
+- [x] **Step 5: CHANGELOG.** В `CHANGELOG.md` под «Не выпущено» → «Добавлено»: «`createFiltersModel({ meta })` принимает стор каталога; модель отдаёт `$meta`, `useFilters` — текущее значение. Поле `meta` модели устарело».
+- [x] **Step 6: commit.**
 
 ```bash
 git add packages/effector/src/createFiltersModel.ts packages/effector/src/useFilters.ts packages/effector/src/createFiltersModel.test.ts packages/effector/src/hooks.test.tsx CHANGELOG.md
@@ -240,7 +240,7 @@ git commit -m "effector: каталог фильтров стором — \$meta
 **Interfaces:**
 - Produces: `shortAccount(acc: string, tail?: 3 | 4): ShortAccount` (по умолчанию 4 — поведение F3); `AccountValueProps.tail?: 3 | 4 | undefined`.
 
-- [ ] **Step 1: тесты (падают).** `account.test.ts`:
+- [x] **Step 1: тесты (падают).** `account.test.ts`:
 
 ```ts
 import { shortAccount } from './account'
@@ -268,8 +268,8 @@ describe('shortAccount', () => {
   })
 ```
 
-- [ ] **Step 2: запуск.** `pnpm --filter @katran/ui test` — FAIL.
-- [ ] **Step 3: реализация.** `account.ts` (сохранить JSDoc, обновив текст):
+- [x] **Step 2: запуск.** `pnpm --filter @katran/ui test` — FAIL.
+- [x] **Step 3: реализация.** `account.ts` (сохранить JSDoc, обновив текст):
 
 ```ts
 export type ShortAccount = { head: string; ccy: string; tail: string; short: boolean }
@@ -292,8 +292,8 @@ export function AccountValue({ value, full, tail, ...rest }: AccountValueProps) 
 ```
 
 (остальное без изменений).
-- [ ] **Step 4: запуск.** `pnpm --filter @katran/ui test` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 5: commit.**
+- [x] **Step 4: запуск.** `pnpm --filter @katran/ui test` — PASS; `pnpm check` — зелёный.
+- [x] **Step 5: commit.**
 
 ```bash
 git add packages/ui/src/format/account.ts packages/ui/src/format/account.test.ts packages/ui/src/value/AccountValue.tsx packages/ui/src/value/Value.test.tsx
@@ -320,7 +320,7 @@ git commit -m "ui: длина хвоста сокращённого счёта �
   - `HttpRequest = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; url: string; query?: Record<string, string> | undefined; body?: unknown }`; `requestFx: Effect<HttpRequest, unknown, ApiError>`
   - `renderK(ui)` — рендер под `KatranProvider` для тестов `apps/pi`
 
-- [ ] **Step 1: пакет.** `apps/pi/package.json` (версии зависимостей — как в `apps/demo/package.json` после плана 4; тестовые — как в `packages/ui/package.json`):
+- [x] **Step 1: пакет.** `apps/pi/package.json` (версии зависимостей — как в `apps/demo/package.json` после плана 4; тестовые — как в `packages/ui/package.json`):
 
 ```json
 {
@@ -388,8 +388,8 @@ createRoot(document.getElementById('root')!).render(<KatranProvider storageKey="
 ```
 
 Run: `pnpm install && pnpm --filter pi build` — PASS.
-- [ ] **Step 2: eslint и stylelint.** В `eslint.config.js` в блоке, выключающем `no-restricted-imports`, добавить `'apps/pi/src/**/*.{ts,tsx}'` в `files`. В корневом `package.json` в `lint` добавить `"apps/pi/src/**/*.css"` к списку stylelint.
-- [ ] **Step 3: тесты жизненного цикла (падают).** `shared/lib/lifecycle/createPageLifecycle.test.ts`:
+- [x] **Step 2: eslint и stylelint.** В `eslint.config.js` в блоке, выключающем `no-restricted-imports`, добавить `'apps/pi/src/**/*.{ts,tsx}'` в `files`. В корневом `package.json` в `lint` добавить `"apps/pi/src/**/*.css"` к списку stylelint.
+- [x] **Step 3: тесты жизненного цикла (падают).** `shared/lib/lifecycle/createPageLifecycle.test.ts`:
 
 ```ts
 import { allSettled, fork } from 'effector'
@@ -408,7 +408,7 @@ describe('createPageLifecycle', () => {
 })
 ```
 
-- [ ] **Step 4: реализация.** `createPageLifecycle.ts`:
+- [x] **Step 4: реализация.** `createPageLifecycle.ts`:
 
 ```ts
 import { createEvent, createStore, type EventCallable, type Store } from 'effector'
@@ -425,7 +425,7 @@ export function createPageLifecycle(): PageLifecycle {
 ```
 
 `index.ts`: `export { createPageLifecycle, type PageLifecycle } from './createPageLifecycle'`.
-- [ ] **Step 5: тесты транспорта (падают).** `shared/api/problem.test.ts`:
+- [x] **Step 5: тесты транспорта (падают).** `shared/api/problem.test.ts`:
 
 ```ts
 import { ApiError, contractError, toApiError } from './problem'
@@ -477,7 +477,7 @@ describe('requestFx', () => {
 ```
 
 Run: `pnpm --filter pi test` — FAIL (модулей нет).
-- [ ] **Step 6: реализация.** `shared/api/problem.ts`:
+- [x] **Step 6: реализация.** `shared/api/problem.ts`:
 
 ```ts
 /** Ошибка бека в формате RFC 9457 (контракт vtb-filters §8). */
@@ -548,8 +548,8 @@ export const renderK = (ui: ReactElement, o?: RenderOptions): RenderResult =>
   render(ui, { wrapper: ({ children }) => <KatranProvider>{children}</KatranProvider>, ...o })
 ```
 
-- [ ] **Step 7: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 8: commit.**
+- [x] **Step 7: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
+- [x] **Step 8: commit.**
 
 ```bash
 git add apps/pi eslint.config.js package.json pnpm-lock.yaml
@@ -572,7 +572,7 @@ git commit -m "apps/pi: каркас, жизненный цикл экрана, 
   - `toSearchBody(q: GridQuery): SearchBody`, `toFacetsBody(q: FacetsQuery): FacetsBody`, `fromSearchResponse<Row>(body, parseRow): GridPage<Row>`, `fromFacetsResponse(body): Facet[]`, `fromFilterMetaResponse(body): FilterMeta`, `OPERATORS`, `FIELD_TYPES`
   - `createGridPorts<Row>({ gridId, parseRow }): GridPorts<Row>`, `GridPorts<Row> = { searchFx: Effect<GridQuery, GridPage<Row>, ApiError>; facetsFx: Effect<FacetsQuery, Facet[], ApiError>; filterMetaFx: Effect<void, FilterMeta, ApiError> }`
 
-- [ ] **Step 1: тесты маппинга (падают).** `grid-contract.test.ts`:
+- [x] **Step 1: тесты маппинга (падают).** `grid-contract.test.ts`:
 
 ```ts
 import { ApiError } from './problem'
@@ -629,8 +629,8 @@ describe('контракт грида', () => {
 })
 ```
 
-- [ ] **Step 2: запуск.** `pnpm --filter pi test` — FAIL.
-- [ ] **Step 3: гарды.** `guards.ts`:
+- [x] **Step 2: запуск.** `pnpm --filter pi test` — FAIL.
+- [x] **Step 3: гарды.** `guards.ts`:
 
 ```ts
 import type { Scalar } from '@katran/effector'
@@ -675,7 +675,7 @@ export function scalar(v: unknown, path: string): Scalar {
 ```
 
 Путь в `obj`/`arr` пишется целиком (`content`, `content[0]`), в `str`/`num` — родитель плюс ключ: `str(o, 'id', 'content[0]')` → «content[0].id: …».
-- [ ] **Step 4: маппинг.** `grid-contract.ts`:
+- [x] **Step 4: маппинг.** `grid-contract.ts`:
 
 ```ts
 import type { Condition, Facet, FacetsQuery, Filter, FilterField, FilterFieldType, FilterMeta, GridPage, GridQuery, Scalar } from '@katran/effector'
@@ -755,8 +755,8 @@ export function fromFilterMetaResponse(body: unknown): FilterMeta {
 }
 ```
 
-- [ ] **Step 5: запуск.** `pnpm --filter pi test` — тесты маппинга PASS.
-- [ ] **Step 6: тесты портов (падают).** `ports.test.ts`:
+- [x] **Step 5: запуск.** `pnpm --filter pi test` — тесты маппинга PASS.
+- [x] **Step 6: тесты портов (падают).** `ports.test.ts`:
 
 ```ts
 import { allSettled, fork } from 'effector'
@@ -791,7 +791,7 @@ describe('createGridPorts', () => {
 })
 ```
 
-- [ ] **Step 7: реализация.** `ports.ts`:
+- [x] **Step 7: реализация.** `ports.ts`:
 
 ```ts
 import { createEffect, type Effect } from 'effector'
@@ -831,8 +831,8 @@ export {
 export { createGridPorts, type GridPorts } from './ports'
 ```
 
-- [ ] **Step 8: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 9: commit.**
+- [x] **Step 8: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
+- [x] **Step 9: commit.**
 
 ```bash
 git add apps/pi/src/shared/api
@@ -849,7 +849,7 @@ git commit -m "apps/pi: контракт грида vtb-filters и порты cr
 **Interfaces:**
 - Produces: правило `import-x/no-restricted-paths` для `apps/pi/src`: импорт только вниз по слоям; чужой слайс нижнего слоя — только `index.ts`; сегмент `shared` — только его `index.ts`; соседний слайс того же слоя — только `@x` (у `entities`), иначе запрещён.
 
-- [ ] **Step 1: генератор зон.** В начало `eslint.config.js`:
+- [x] **Step 1: генератор зон.** В начало `eslint.config.js`:
 
 ```js
 import { existsSync, readdirSync } from 'node:fs'
@@ -884,7 +884,7 @@ const fsdZones = LAYERS.flatMap((layer, i) => {
 ```
 
 и в существующее правило `'import-x/no-restricted-paths'` добавить `...fsdZones` в конец массива `zones`.
-- [ ] **Step 2: проверка на нарушениях (должна упасть).** Сейчас есть слои `app` и `shared` — на них и проверяем. Временный `apps/pi/src/app/__violation.ts`:
+- [x] **Step 2: проверка на нарушениях (должна упасть).** Сейчас есть слои `app` и `shared` — на них и проверяем. Временный `apps/pi/src/app/__violation.ts`:
 
 ```ts
 export { requestFx } from '../shared/api/request'
@@ -899,8 +899,8 @@ import '../../app/entry'
 
 Run: `pnpm exec eslint apps/pi/src/app/__violation.ts apps/pi/src/shared/api/__violation.ts`
 Expected: ровно две ошибки — «FSD: shared/api — только через публичный API (index.ts)» на первой строке первого файла (вторая строка — импорт через `index.ts` сегмента `lib/lifecycle` — без ошибки) и «FSD: shared не импортирует app» во втором файле. Удалить оба `__violation.ts`. Сиблинги и `@x` проверяются в Task 8 Step 8.
-- [ ] **Step 3: запуск.** `pnpm lint` — зелёный.
-- [ ] **Step 4: commit.**
+- [x] **Step 3: запуск.** `pnpm lint` — зелёный.
+- [x] **Step 4: commit.**
 
 ```bash
 git add eslint.config.js
@@ -923,7 +923,7 @@ git commit -m "eslint: FSD-границы apps/pi — слои вниз, сла�
   - `createFakeServer(grids: Record<string, FakeGrid>, opts?: FakeServerOptions): (req: HttpRequest) => Promise<unknown>`, `FakeServerOptions = { delayMs?: (() => number) | undefined; failing?: (() => string | null) | undefined }`
   - `browserFakeOptions: FakeServerOptions` (`?slow=N`, `?fail=search|facets|meta`)
 
-- [ ] **Step 1: тесты (падают).** `server.test.ts`:
+- [x] **Step 1: тесты (падают).** `server.test.ts`:
 
 ```ts
 import type { ColumnDef } from '@katran/ui'
@@ -979,7 +979,7 @@ describe('фейковый сервер', () => {
 ```
 
 Run: `pnpm --filter pi test` — FAIL.
-- [ ] **Step 2: фильтр.** `filter.ts` — перенос из `apps/demo/src/data/fakeBackend.ts` без изменения семантики:
+- [x] **Step 2: фильтр.** `filter.ts` — перенос из `apps/demo/src/data/fakeBackend.ts` без изменения семантики:
 
 ```ts
 import type { Condition, Filter } from '@katran/effector'
@@ -1017,7 +1017,7 @@ function matches(row: Record<string, unknown>, c: Condition): boolean {
 export const applyFilter = <Row extends Record<string, unknown>>(rows: Row[], f: Filter): Row[] => rows.filter((r) => f.every((c) => matches(r, c)))
 ```
 
-- [ ] **Step 3: каталог.** `meta.ts`:
+- [x] **Step 3: каталог.** `meta.ts`:
 
 ```ts
 import type { Condition, FilterFieldType } from '@katran/effector'
@@ -1041,7 +1041,7 @@ export const inline = (labels: Record<string, string>) =>
   ({ mode: 'INLINE' as const, items: Object.keys(labels).map((value) => ({ value, label: labels[value]! })) })
 ```
 
-- [ ] **Step 4: грид.** `grid.ts`:
+- [x] **Step 4: грид.** `grid.ts`:
 
 ```ts
 import type { Sort } from '@katran/effector'
@@ -1073,7 +1073,7 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
 }
 ```
 
-- [ ] **Step 5: сервер.** `server.ts`:
+- [x] **Step 5: сервер.** `server.ts`:
 
 ```ts
 import type { Filter } from '@katran/effector'
@@ -1135,8 +1135,8 @@ export const browserFakeOptions: FakeServerOptions = {
 }
 ```
 
-- [ ] **Step 6: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 7: commit.**
+- [x] **Step 6: запуск.** `pnpm --filter pi test` — PASS; `pnpm check` — зелёный.
+- [x] **Step 7: commit.**
 
 ```bash
 git add apps/pi/src/app/fake
@@ -1159,7 +1159,7 @@ git commit -m "apps/pi: фейковый сервер на контракте �
   - `entities/fx-doc`: `FxDoc`, `Direction`, `DIRECTIONS`, `DIRECTION_LABEL`, `FX_TYPES`, `CURRENCIES`, `fxDocLayout: RecordLayout<FxDoc>`, `fxDocPorts: GridPorts<FxDoc>`
   - `app/fake/grids.ts`: `fakeGrids: Record<string, FakeGrid>` (`'fx-docs'`; `'rub-docs'` — Task 12)
 
-- [ ] **Step 1: тесты статусов (падают).** `model/status.test.ts`:
+- [x] **Step 1: тесты статусов (падают).** `model/status.test.ts`:
 
 ```ts
 import { laneItems, STATUSES } from './status'
@@ -1176,7 +1176,7 @@ describe('laneItems', () => {
 })
 ```
 
-- [ ] **Step 2: статусы.** `model/status.ts` (словари — перенос из `apps/demo/src/data/docs.ts`):
+- [x] **Step 2: статусы.** `model/status.ts` (словари — перенос из `apps/demo/src/data/docs.ts`):
 
 ```ts
 import type { Facet } from '@katran/effector'
@@ -1209,7 +1209,7 @@ export const laneItems = (facets: Facet[], counted: boolean): LaneItem[] =>
 export { STATUS_LABEL, STATUS_TONE, STATUSES, type Status } from '../model/status'
 ```
 
-- [ ] **Step 3: тесты маппера (падают).** `api/fxDoc.mapper.test.ts`:
+- [x] **Step 3: тесты маппера (падают).** `api/fxDoc.mapper.test.ts`:
 
 ```ts
 import { ApiError } from '../../../shared/api'
@@ -1232,7 +1232,7 @@ describe('parseFxDoc', () => {
 })
 ```
 
-- [ ] **Step 4: модель и маппер.** `model/fxDoc.ts`:
+- [x] **Step 4: модель и маппер.** `model/fxDoc.ts`:
 
 ```ts
 import type { Status } from '../../doc-status/@x/fx-doc'
@@ -1290,7 +1290,7 @@ import { parseFxDoc } from './fxDoc.mapper'
 export const fxDocPorts = createGridPorts({ gridId: 'fx-docs', parseRow: parseFxDoc })
 ```
 
-- [ ] **Step 5: раскладка.** `ui/layout.tsx` — перенос `docsLayout` из `apps/demo/src/pages/GridPage.tsx` дословно, с заменами: `Doc` → `FxDoc`; `STATUS_TONE`/`STATUS_LABEL` — из `../../doc-status/@x/fx-doc`; `s.srTag` — из `./cells.module.css`; имя — `fxDocLayout`; константа `T = -1` с её комментарием переезжает сюда. После плана 5b (исполнен на ветке `feat/registry-look`, `docs/STATE.md` §6, §9) брать раскладку из демо в её текущем виде (колонки R1–R16, сквозные строки: 58, «Маршрут», «S / R out», SWIFT-поля `SwiftField`, счёт 8…4, вид T1–T6/L1/P3/W4/Z1), а не из этого описания. `ui/cells.module.css`:
+- [x] **Step 5: раскладка.** `ui/layout.tsx` — перенос `docsLayout` из `apps/demo/src/pages/GridPage.tsx` дословно, с заменами: `Doc` → `FxDoc`; `STATUS_TONE`/`STATUS_LABEL` — из `../../doc-status/@x/fx-doc`; `s.srTag` — из `./cells.module.css`; имя — `fxDocLayout`; константа `T = -1` с её комментарием переезжает сюда. После плана 5b (исполнен на ветке `feat/registry-look`, `docs/STATE.md` §6, §9) брать раскладку из демо в её текущем виде (колонки R1–R16, сквозные строки: 58, «Маршрут», «S / R out», SWIFT-поля `SwiftField`, счёт 8…4, вид T1–T6/L1/P3/W4/Z1), а не из этого описания. `ui/cells.module.css`:
 
 ```css
 .srTag {
@@ -1307,7 +1307,7 @@ export { fxDocPorts } from './api/ports'
 export { fxDocLayout } from './ui/layout'
 ```
 
-- [ ] **Step 6: данные и транспорт.** `app/fake/fx-docs.data.ts` — перенос `makeDocs` и словарей `REASONS`, `CCY`, `NAMES`, `BICS`, `PROV`, `rng`, `pick`, `pad`, `acc` из `apps/demo/src/data/docs.ts` дословно (имя — `makeFxDocs`, тип — `FxDoc`, статусы — `Status` из `../../entities/doc-status`), плюс каталог в форме DTO:
+- [x] **Step 6: данные и транспорт.** `app/fake/fx-docs.data.ts` — перенос `makeDocs` и словарей `REASONS`, `CCY`, `NAMES`, `BICS`, `PROV`, `rng`, `pick`, `pad`, `acc` из `apps/demo/src/data/docs.ts` дословно (имя — `makeFxDocs`, тип — `FxDoc`, статусы — `Status` из `../../entities/doc-status`), плюс каталог в форме DTO:
 
 ```ts
 import { CURRENCIES, FX_TYPES } from '../../entities/fx-doc'
@@ -1359,7 +1359,7 @@ import { fakeGrids } from './fake/grids'
 requestFx.use(createFakeServer(fakeGrids, browserFakeOptions))
 ```
 
-- [ ] **Step 7: контрактная цепочка.** `app/fake/contract.test.ts`:
+- [x] **Step 7: контрактная цепочка.** `app/fake/contract.test.ts`:
 
 ```ts
 import { allSettled, fork } from 'effector'
@@ -1400,8 +1400,8 @@ describe('контракт fx-docs', () => {
 })
 ```
 
-- [ ] **Step 8: запуск и проверка границ.** `pnpm --filter pi test` — PASS. Проверка линта на нарушении: временно добавить в `apps/pi/src/entities/fx-doc/api/ports.ts` строку `import '../../doc-status/model/status'` → `pnpm exec eslint apps/pi/src/entities/fx-doc/api/ports.ts` — ошибка «FSD: entities/fx-doc не импортирует соседа doc-status (только через @x)». Убрать строку, повторить — чисто. `pnpm check` — зелёный.
-- [ ] **Step 9: commit.**
+- [x] **Step 8: запуск и проверка границ.** `pnpm --filter pi test` — PASS. Проверка линта на нарушении: временно добавить в `apps/pi/src/entities/fx-doc/api/ports.ts` строку `import '../../doc-status/model/status'` → `pnpm exec eslint apps/pi/src/entities/fx-doc/api/ports.ts` — ошибка «FSD: entities/fx-doc не импортирует соседа doc-status (только через @x)». Убрать строку, повторить — чисто. `pnpm check` — зелёный.
+- [x] **Step 9: commit.**
 
 ```bash
 git add apps/pi/src/entities apps/pi/src/app/fake apps/pi/src/app/transport.ts
@@ -1432,7 +1432,7 @@ type Registry<Row> = {
 createRegistry<Row>(cfg: RegistryConfig<Row>): Registry<Row>
 ```
 
-- [ ] **Step 1: тесты (падают).** `lib/createRegistry.test.ts`:
+- [x] **Step 1: тесты (падают).** `lib/createRegistry.test.ts`:
 
 ```ts
 import { allSettled, createEffect, fork } from 'effector'
@@ -1502,7 +1502,7 @@ describe('createRegistry', () => {
 ```
 
 Run: `pnpm --filter pi test` — FAIL.
-- [ ] **Step 2: реализация.** `lib/createRegistry.ts`:
+- [x] **Step 2: реализация.** `lib/createRegistry.ts`:
 
 ```ts
 import { combine, createEvent, createStore, sample, type EventCallable, type Store } from 'effector'
@@ -1574,8 +1574,8 @@ export function createRegistry<Row>(cfg: RegistryConfig<Row>): Registry<Row> {
 ```
 
 `index.ts`: `export { createRegistry, type Registry, type RegistryConfig } from './lib/createRegistry'`.
-- [ ] **Step 3: запуск.** `pnpm --filter pi test` — PASS. Если тест «pageOpened» видит `search: 1` до `pageOpened` — модель грида не должна ходить при создании (основная спека 8.2); разбирать, не подгонять тест.
-- [ ] **Step 4: commit.**
+- [x] **Step 3: запуск.** `pnpm --filter pi test` — PASS. Если тест «pageOpened» видит `search: 1` до `pageOpened` — модель грида не должна ходить при создании (основная спека 8.2); разбирать, не подгонять тест.
+- [x] **Step 4: commit.**
 
 ```bash
 git add apps/pi/src/widgets/doc-registry
@@ -1612,7 +1612,7 @@ function DocRegistry<Row>(p: DocRegistryProps<Row>): ReactElement
 
 `split`/`onSplit` в `DataGrid` не отдельный проп `DocRegistry` — они приходят из `useGrid(registry.grid)` вместе с остальным биндингом (план 5a расширил `GridBinding`) и уходят в `<DataGrid {...g} …>` спредом без правки; `rowState`/`openHint` — экранные пропы, как `label`/`layout` (модель их не знает, спека 6.4).
 
-- [ ] **Step 1: тесты (падают).** `ui/DocRegistry.test.tsx`:
+- [x] **Step 1: тесты (падают).** `ui/DocRegistry.test.tsx`:
 
 ```tsx
 import { act, screen, waitFor } from '@testing-library/react'
@@ -1679,7 +1679,7 @@ describe('DocRegistry', () => {
 ```
 
 Run: `pnpm --filter pi test` — FAIL.
-- [ ] **Step 2: реализация.** `ui/DocRegistry.tsx` — перенос разметки `GridPage` из демо (без блока «Сквозные строки записи: как это управляется» и подсветки сегментов — это обучающая часть демо, не продукта):
+- [x] **Step 2: реализация.** `ui/DocRegistry.tsx` — перенос разметки `GridPage` из демо (без блока «Сквозные строки записи: как это управляется» и подсветки сегментов — это обучающая часть демо, не продукта):
 
 ```tsx
 import { useState } from 'react'
@@ -1753,8 +1753,8 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
 ```
 
 (eslint запрещает `effector-react` вне разрешённых мест — `apps/pi` разрешён в Task 4 Step 2.) `ui/DocRegistry.module.css` — перенос `.h1`, `.h1Counter`, `.note`, `.gridPage` → `.page`, `.gridHead` → `.head`, `.lane`, `.filters` из `apps/demo/src/pages/Page.module.css` дословно (с комментариями). `index.ts` дополнить: `export { DocRegistry, type BulkAction, type DocRegistryProps } from './ui/DocRegistry'`.
-- [ ] **Step 3: запуск.** `pnpm --filter pi test` — PASS. Если `findByRole('alert')` не дожидается — скелетон держится минимум 400 мс (STATE §3): поднять таймаут `findByRole(…, {}, { timeout: 2000 })`, не фейковые таймеры.
-- [ ] **Step 4: commit.**
+- [x] **Step 3: запуск.** `pnpm --filter pi test` — PASS. Если `findByRole('alert')` не дожидается — скелетон держится минимум 400 мс (STATE §3): поднять таймаут `findByRole(…, {}, { timeout: 2000 })`, не фейковые таймеры.
+- [x] **Step 4: commit.**
 
 ```bash
 git add apps/pi/src/widgets/doc-registry
@@ -1776,7 +1776,7 @@ git commit -m "apps/pi: DocRegistry — экран реестра из демо 
 - Consumes: `createRegistry`, `DocRegistry` (Task 9–10); `fxDocLayout`, `fxDocPorts`, `FxDoc` (Task 8); `createPageLifecycle` (Task 4).
 - Produces: `pages/fx-docs` → `FxDocsPage`, `lifecycle`; `app/routes.ts` → `Route`, `routes`, `startRouting(onRoute): () => void`.
 
-- [ ] **Step 1: модель и страница.** `pages/fx-docs/model/registry.model.ts`:
+- [x] **Step 1: модель и страница.** `pages/fx-docs/model/registry.model.ts`:
 
 ```ts
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -1814,7 +1814,7 @@ export function FxDocsPage() {
 ```
 
 `pages/fx-docs/index.ts`: `export { FxDocsPage } from './ui/FxDocsPage'` и `export { lifecycle } from './model/registry.model'`.
-- [ ] **Step 2: роутинг.** `app/routes.ts`:
+- [x] **Step 2: роутинг.** `app/routes.ts`:
 
 ```ts
 import type { PageLifecycle } from '../shared/lib/lifecycle'
@@ -1884,18 +1884,18 @@ import { App } from './App'
 createRoot(document.getElementById('root')!).render(<App />)
 ```
 
-- [ ] **Step 3: e2e.** `apps/pi/playwright.config.ts` — копия демо с портом `5186`. `apps/pi/e2e/geometry.spec.ts` — перенос `apps/demo/e2e/geometry.spec.ts` с заменой `'/#/grid'` → `'/#/fx-docs'` и `'/?slow=3000#/grid'` → `'/?slow=3000#/fx-docs'`.
+- [x] **Step 3: e2e.** `apps/pi/playwright.config.ts` — копия демо с портом `5186`. `apps/pi/e2e/geometry.spec.ts` — перенос `apps/demo/e2e/geometry.spec.ts` с заменой `'/#/grid'` → `'/#/fx-docs'` и `'/?slow=3000#/grid'` → `'/?slow=3000#/fx-docs'`.
 
 Run: `pnpm --filter pi e2e` — 3/3 PASS, те же числа, что у демо до переноса (STATE §6: запись 68, шапка 49, скелетон 68, 125 % → 84.75 — или числа после плана 5).
-- [ ] **Step 4: убрать экран из демо.** Удалить `apps/demo/src/pages/GridPage.tsx`, `apps/demo/src/data/`, `apps/demo/e2e/`, `apps/demo/playwright.config.ts`; из `apps/demo/package.json` — скрипт `e2e` и `@playwright/test`. В `router.ts` убрать маршрут `grid`; в `App.tsx` — импорт и запись `grid`. В `Shell.tsx` после `<nav>` добавить:
+- [x] **Step 4: убрать экран из демо.** Удалить `apps/demo/src/pages/GridPage.tsx`, `apps/demo/src/data/`, `apps/demo/e2e/`, `apps/demo/playwright.config.ts`; из `apps/demo/package.json` — скрипт `e2e` и `@playwright/test`. В `router.ts` убрать маршрут `grid`; в `App.tsx` — импорт и запись `grid`. В `Shell.tsx` после `<nav>` добавить:
 
 ```tsx
         <a className={s.link} href={import.meta.env.VITE_PI_URL ?? 'http://localhost:5185/'}>Реестры ПИ →</a>
 ```
 
 В `Page.module.css` удалить правила `.gridPage`, `.gridHead`, `.lane`, `.filters`, `.explain*`, `.code`, `.hlSpans …`, `.srTag`, `.h1Counter` (перенесены или больше не нужны; `rg -n "gridPage|h1Counter|srTag|explain|hlSpans" apps/demo/src` — пусто). В `.github/workflows/pages.yml` у шага сборки демо: `run: PAGES_BASE=/katran/ VITE_PI_URL=/katran/pi/ pnpm --filter demo build`.
-- [ ] **Step 5: запуск.** `pnpm check` — зелёный; `pnpm --filter pi e2e` — зелёный. Проверка в браузере: preview-конфигурация `pi` в `/Users/shaman/_CODE/VTB/.claude/launch.json` (`pnpm --dir katran --filter pi dev`, порт 5185; файл откатывается из `.bak` — добавить запись и в `.bak`, свои временные записи удалять точечно) → реестр грузится, лейн с числами, «Фильтры» открываются после каталога, `?fail=search` — ошибка и «Повторить», `?fail=meta` — кнопка «Фильтры» недоступна, консоль чистая.
-- [ ] **Step 6: commit.**
+- [x] **Step 5: запуск.** `pnpm check` — зелёный; `pnpm --filter pi e2e` — зелёный. Проверка в браузере: preview-конфигурация `pi` в `/Users/shaman/_CODE/VTB/.claude/launch.json` (`pnpm --dir katran --filter pi dev`, порт 5185; файл откатывается из `.bak` — добавить запись и в `.bak`, свои временные записи удалять точечно) → реестр грузится, лейн с числами, «Фильтры» открываются после каталога, `?fail=search` — ошибка и «Повторить», `?fail=meta` — кнопка «Фильтры» недоступна, консоль чистая.
+- [x] **Step 6: commit.**
 
 ```bash
 git add apps/pi apps/demo .github/workflows/pages.yml
@@ -1918,7 +1918,7 @@ git commit -m "apps/pi: экран «Валютные документы» пе�
 - Consumes: всё из Task 4–11; `AccountValue` с `tail` (Task 3).
 - Produces: `entities/rub-doc` → `RubDoc`, `RUB_TYPES`, `ED_BY_TYPE`, `TYPE_NAME`, `rubDocLayout`, `rubDocPorts`; `pages/rub-docs` → `RubDocsPage`, `lifecycle`; маршрут `rub-docs`.
 
-- [ ] **Step 1: тесты маппера и данных (падают).** `api/rubDoc.mapper.test.ts`:
+- [x] **Step 1: тесты маппера и данных (падают).** `api/rubDoc.mapper.test.ts`:
 
 ```ts
 import { parseRubDoc } from './rubDoc.mapper'
@@ -1967,7 +1967,7 @@ describe('контракт rub-docs', () => {
 })
 ```
 
-- [ ] **Step 2: модель, маппер, порты.** `model/rubDoc.ts`:
+- [x] **Step 2: модель, маппер, порты.** `model/rubDoc.ts`:
 
 ```ts
 import type { Status } from '../../doc-status/@x/rub-doc'
@@ -2021,7 +2021,7 @@ export function parseRubDoc(raw: unknown, path: string): RubDoc {
 ```
 
 `api/ports.ts`: `export const rubDocPorts = createGridPorts({ gridId: 'rub-docs', parseRow: parseRubDoc })` (импорты — как у `fx-doc`).
-- [ ] **Step 3: данные.** `app/fake/rub-docs.data.ts`: словари `RNAMES`, `RBANKS`, `RPURP`, `RTYPES`, `STS`, `REASONS`, `REASON_BY_ST`, `DIRS`, `SYS` — дословно из `/Users/shaman/_CODE/VTB/pi-constructor/rub-grid.tpl.html` на хеше эталона (Task 1; на 28.09 — строки 250–289), переведённые в `const` с типами. Генератор:
+- [x] **Step 3: данные.** `app/fake/rub-docs.data.ts`: словари `RNAMES`, `RBANKS`, `RPURP`, `RTYPES`, `STS`, `REASONS`, `REASON_BY_ST`, `DIRS`, `SYS` — дословно из `/Users/shaman/_CODE/VTB/pi-constructor/rub-grid.tpl.html` на хеше эталона (Task 1; на 28.09 — строки 250–289), переведённые в `const` с типами. Генератор:
 
 ```ts
 import type { RubDoc } from '../../entities/rub-doc'
@@ -2085,7 +2085,7 @@ export const rubDocsMeta: FilterMetaDto = {
 ```
 
 (`queue` в строке — число, в справочнике — строка: фейковый `EQ` сравнивает строкой `raw(v) === raw(c.value)` — совпадает. В `grids.ts` добавить `'rub-docs': fakeGrid(makeRubDocs(), rubDocLayout.columns, rubDocsMeta)`.)
-- [ ] **Step 4: раскладка.** `ui/layout.tsx` — колонки и сквозные строки по спеке §8.2 и таблице сверки Task 1; ячейки собираются из тех же компонентов, что у `fx-doc` (`StatusDot` без `letter`, `CopyValue`, `LinkValue`, `Tag`, `AccountValue`). Каркас:
+- [x] **Step 4: раскладка.** `ui/layout.tsx` — колонки и сквозные строки по спеке §8.2 и таблице сверки Task 1; ячейки собираются из тех же компонентов, что у `fx-doc` (`StatusDot` без `letter`, `CopyValue`, `LinkValue`, `Tag`, `AccountValue`). Каркас:
 
 ```tsx
 import { AccountValue, CopyValue, LinkValue, StatusDot, Tag, formatAmount, formatDateTimeShort, type RecordLayout } from '@katran/ui'
@@ -2136,12 +2136,12 @@ export { rubDocPorts } from './api/ports'
 export { rubDocLayout } from './ui/layout'
 ```
 
-- [ ] **Step 5: страница и маршрут.** `pages/rub-docs` — как `fx-docs` (Task 11 Step 1) с заменами: `rubDocLayout`, `rubDocPorts`, `id: 'rub-docs'`, заголовок «Рублёвые документы», `describe={(d) => \`документ ${d.docNumber}\`}`, `note` — «87 рублёвых документов на фейковом сервере…» (текст как у валютного). `routes.ts`: `Route = 'fx-docs' | 'rub-docs'`, запись `{ id: 'rub-docs', title: 'Рублёвые документы' }`, `lifecycles['rub-docs']`. `App.tsx`: `pages['rub-docs'] = RubDocsPage`.
-- [ ] **Step 6: e2e.** В `e2e/geometry.spec.ts` обернуть три теста в `for (const route of ['fx-docs', 'rub-docs'])` (имя теста — с маршрутом) и добавить для рублёвого сравнение с замером эталона Task 1: `expect(Math.abs(record - <запись эталона>)).toBeLessThanOrEqual(4)`.
+- [x] **Step 5: страница и маршрут.** `pages/rub-docs` — как `fx-docs` (Task 11 Step 1) с заменами: `rubDocLayout`, `rubDocPorts`, `id: 'rub-docs'`, заголовок «Рублёвые документы», `describe={(d) => \`документ ${d.docNumber}\`}`, `note` — «87 рублёвых документов на фейковом сервере…» (текст как у валютного). `routes.ts`: `Route = 'fx-docs' | 'rub-docs'`, запись `{ id: 'rub-docs', title: 'Рублёвые документы' }`, `lifecycles['rub-docs']`. `App.tsx`: `pages['rub-docs'] = RubDocsPage`.
+- [x] **Step 6: e2e.** В `e2e/geometry.spec.ts` обернуть три теста в `for (const route of ['fx-docs', 'rub-docs'])` (имя теста — с маршрутом) и добавить для рублёвого сравнение с замером эталона Task 1: `expect(Math.abs(record - <запись эталона>)).toBeLessThanOrEqual(4)`.
 
 Run: `pnpm --filter pi test && pnpm --filter pi e2e` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 7: проверка в браузере.** Как в Task 11 Step 5, для `#/rub-docs`; переключение экранов туда-обратно сохраняет фильтр и страницу, снимает выделение. Скриншот обоих экранов — в леджер.
-- [ ] **Step 8: commit.**
+- [x] **Step 7: проверка в браузере.** Как в Task 11 Step 5, для `#/rub-docs`; переключение экранов туда-обратно сохраняет фильтр и страницу, снимает выделение. Скриншот обоих экранов — в леджер.
+- [x] **Step 8: commit.**
 
 ```bash
 git add apps/pi
@@ -2155,7 +2155,7 @@ git commit -m "apps/pi: рублёвый реестр — сущность rub-d
 **Files:**
 - Modify: `.github/workflows/pages.yml`
 
-- [ ] **Step 1: сборка обоих приложений в один артефакт.** Шаги сборки:
+- [x] **Step 1: сборка обоих приложений в один артефакт.** Шаги сборки:
 
 ```yaml
       - run: PAGES_BASE=/katran/ VITE_PI_URL=/katran/pi/ pnpm --filter demo build
@@ -2167,8 +2167,8 @@ git commit -m "apps/pi: рублёвый реестр — сущность rub-d
 ```
 
 (Блочный стиль YAML — STATE §8: `${{ … }}` во flow-словаре GitHub не разбирает.)
-- [ ] **Step 2: локальная проверка.** `PAGES_BASE=/katran/pi/ pnpm --filter pi build` — в `apps/pi/dist/index.html` пути ассетов начинаются с `/katran/pi/`.
-- [ ] **Step 3: commit.** `git add .github/workflows/pages.yml && git commit -m "Pages: apps/pi публикуется по /katran/pi/ рядом с демо"`. После push в `main` (делает владелец или контроллер по его слову) — открыть `https://ivanklimenko.github.io/katran/pi/?c=1`: оба реестра, консоль чистая.
+- [x] **Step 2: локальная проверка.** `PAGES_BASE=/katran/pi/ pnpm --filter pi build` — в `apps/pi/dist/index.html` пути ассетов начинаются с `/katran/pi/`.
+- [x] **Step 3: commit.** `git add .github/workflows/pages.yml && git commit -m "Pages: apps/pi публикуется по /katran/pi/ рядом с демо"`. После push в `main` (делает владелец или контроллер по его слову) — открыть `https://ivanklimenko.github.io/katran/pi/?c=1`: оба реестра, консоль чистая.
 
 ---
 
@@ -2178,13 +2178,13 @@ git commit -m "apps/pi: рублёвый реестр — сущность rub-d
 - Create: `docs/guides/pi-usage.md`, `docs/reference/pi-api.md`, `apps/pi/README.md`
 - Modify: `docs/guides/effector-fsd.md`, `docs/STATE.md`, `CHANGELOG.md`, `docs/superpowers/specs/2026-09-23-katran-design.md` (§3, §10, §11)
 
-- [ ] **Step 1: `docs/reference/pi-api.md`** (для бекенда). Разделы:
+- [x] **Step 1: `docs/reference/pi-api.md`** (для бекенда). Разделы:
   1. Эндпоинты фронта: `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — ссылкой на контракт `vtb-filters` §5–6; `POST /grids/{gridId}/facets` — **предложение**: тело `{ filter: { conditions }, field }`, ответ `[{ value, count }]`, семантика фильтра как у search, счёт без условий по `field`.
   2. `gridId`: `fx-docs`, `rub-docs`.
   3. Состав строки `content[]` для каждого грида — таблица «поле · тип · обязательно · пример» по `FxDoc` и `RubDoc` (Task 8, 12).
   4. Примеры запросов и ответов — взять из `grid-contract.test.ts` и `contract.test.ts` (по одному search, facets, filter-meta и одна ошибка 400 для каждого грида).
   5. Каталоги полей обоих гридов (`fxDocsMeta`, `rubDocsMeta`) — как пример ответа filter-meta.
-- [ ] **Step 2: `docs/guides/pi-usage.md`** (для команды внутри). Разделы:
+- [x] **Step 2: `docs/guides/pi-usage.md`** (для команды внутри). Разделы:
   1. Что это: схема слоёв `app → pages → widgets → entities → shared`, где шов (`requestFx`), что наше и выбрасывается (`app/`).
   2. Путь «слайсы»: скопировать `pages`, `widgets`, `entities`, `shared` в свой `src`; в своём `app` — обработчик транспорта и адаптер роутера; смонтировать `FxDocsPage`/`RubDocsPage`; если в проекте алиас `@/` — импорты можно оставить относительными.
   3. Путь «remote»: `apps/pi` как remote webpack 5 MF — `bootstrap`-вход, `exposes` страниц, shared из спеки совместимости §2.4 (ссылкой), CORS шрифтов, ErrorBoundary хоста.
@@ -2218,11 +2218,11 @@ requestFx.use(async ({ method, url, query, body }) => {
   7. Контрактные тесты против своего бека: `contract.test.ts` с обработчиком из п. 4 в `fork({ handlers })`.
   8. Farfetched: `createQuery({ effect: fxDocPorts.searchFx })` — порты оборачиваются без переписывания.
   9. Чек-лист «перенос завершён»: транспорт подключён (нет ошибки «Транспорт не подключён»), оба экрана грузятся, `?`-регуляторы не нужны, контрактные тесты зелёные против своего бека, eslint-границы перенесены.
-- [ ] **Step 3: `apps/pi/README.md`** — запуск (`pnpm --filter pi dev`, порт 5185), тесты и e2e, регуляторы `?slow=N`, `?fail=search|facets|meta`, ссылки на `pi-usage.md` и `pi-api.md`.
-- [ ] **Step 4: `docs/guides/effector-fsd.md`** — примеры в разделах 2–4 привести к реальным именам (`entities/fx-doc`, `widgets/doc-registry`, `createPageLifecycle`, `refreshRequested`), в начале — строка «Живой образец — `apps/pi`».
-- [ ] **Step 5: STATE, CHANGELOG, основная спека.** STATE: §1–2 — `apps/pi`; §5 карта — `apps/pi` и `docs/guides`, `docs/reference/pi-api.md`; §6 — состояние после плана (число тестов, e2e); §7 — снятый техдолг «демо без регуляторов empty/error»; §9 — следующий шаг (срез 2 — деталка в `apps/pi`); §10 — эталон рубля (Task 1). CHANGELOG — «Добавлено: приложение `apps/pi`…». Основная спека: §3 — `apps/pi` в перечне приложений; §10 — боевые экраны живут в `apps/pi`, демо — витрина компонентов; §11 — строка среза «apps/pi».
-- [ ] **Step 6: проверка документа использования «с нуля».** Свежий субагент (Sonnet) получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: какие файлы скопировать, что написать в своём `app`, как проверить перенос. Ответ сверить с разделами; неясности — править документ.
-- [ ] **Step 7: commit.**
+- [x] **Step 3: `apps/pi/README.md`** — запуск (`pnpm --filter pi dev`, порт 5185), тесты и e2e, регуляторы `?slow=N`, `?fail=search|facets|meta`, ссылки на `pi-usage.md` и `pi-api.md`.
+- [x] **Step 4: `docs/guides/effector-fsd.md`** — примеры в разделах 2–4 привести к реальным именам (`entities/fx-doc`, `widgets/doc-registry`, `createPageLifecycle`, `refreshRequested`), в начале — строка «Живой образец — `apps/pi`».
+- [x] **Step 5: STATE, CHANGELOG, основная спека.** STATE: §1–2 — `apps/pi`; §5 карта — `apps/pi` и `docs/guides`, `docs/reference/pi-api.md`; §6 — состояние после плана (число тестов, e2e); §7 — снятый техдолг «демо без регуляторов empty/error»; §9 — следующий шаг (срез 2 — деталка в `apps/pi`); §10 — эталон рубля (Task 1). CHANGELOG — «Добавлено: приложение `apps/pi`…». Основная спека: §3 — `apps/pi` в перечне приложений; §10 — боевые экраны живут в `apps/pi`, демо — витрина компонентов; §11 — строка среза «apps/pi».
+- [x] **Step 6: проверка документа использования «с нуля».** Свежий субагент (Sonnet) получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: какие файлы скопировать, что написать в своём `app`, как проверить перенос. Ответ сверить с разделами; неясности — править документ.
+- [x] **Step 7: commit.**
 
 ```bash
 git add docs apps/pi/README.md CHANGELOG.md

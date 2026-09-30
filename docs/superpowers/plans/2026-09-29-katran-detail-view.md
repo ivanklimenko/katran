@@ -1,6 +1,6 @@
 # Срез 2a «Деталка на просмотр» в `apps/pi`: план реализации
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** деталка «Платёжная инструкция» открывается из обоих реестров `apps/pi` на просмотр: drawer A у правого края, drawer B слева от него для сравнения, шапка, лейн действий-заглушек, вкладки с переполнением, вкладка «Общие данные» валюты (MT103 / MT202 / MT202COV / MT199) и рубля (PAYDOCRU / REQDOCRU / PAYORDRU) по профилям стенда, порт детали и фейковый сервер.
 
@@ -73,10 +73,10 @@ docs/superpowers/specs/2026-09-23-katran-design.md · docs/superpowers/specs/202
 
 **Files:** только чтение.
 
-- [ ] **Step 1: `apps/pi` в `main`.** `git log --oneline -5 main` — есть слияние `00398d0` «Слияние feat/pi-app…» и коммит спеки `3c089d4`. Иначе **остановиться**: этот план идёт после `apps/pi`.
-- [ ] **Step 2: рабочая ветка.** Работа — в ветке `feat/detail-view` от `main` (worktree `katran/.worktrees/detail-view`, если контроллер так решил). В основной checkout не коммитить.
-- [ ] **Step 3: `pnpm install && pnpm check`** — зелёный. Записать в леджер число тестов (`pnpm test` — сумма по пакетам) и прогнать `pnpm --filter pi e2e` на переднем плане — 26/26. Иначе остановиться.
-- [ ] **Step 4: сверка имён, на которые опирается план.** Открыть и убедиться, что совпадает (если нет — записать в леджер фактическое имя и использовать его во всех задачах):
+- [x] **Step 1: `apps/pi` в `main`.** `git log --oneline -5 main` — есть слияние `00398d0` «Слияние feat/pi-app…» и коммит спеки `3c089d4`. Иначе **остановиться**: этот план идёт после `apps/pi`.
+- [x] **Step 2: рабочая ветка.** Работа — в ветке `feat/detail-view` от `main` (worktree `katran/.worktrees/detail-view`, если контроллер так решил). В основной checkout не коммитить.
+- [x] **Step 3: `pnpm install && pnpm check`** — зелёный. Записать в леджер число тестов (`pnpm test` — сумма по пакетам) и прогнать `pnpm --filter pi e2e` на переднем плане — 26/26. Иначе остановиться.
+- [x] **Step 4: сверка имён, на которые опирается план.** Открыть и убедиться, что совпадает (если нет — записать в леджер фактическое имя и использовать его во всех задачах):
   - `packages/ui/src/tabs/Tabs.tsx` — `TabItem = { id; label; count?; disabled? }`, проп `orientation`, экспорт `tabId`, `panelId`;
   - `packages/ui/src/overlay/Menu.tsx` — `MenuItem.hint`, `MenuItem.disabled`, `MenuProps.title`; `Popover` ловит Escape на `document` в фазе захвата и вызывает `stopPropagation`;
   - `packages/ui/src/grid/DataGrid.tsx` — `onOpen(row, { secondary, state })`, `secondary: e.detail >= 2 || e.shiftKey`; `GridRecord` ставит `data-key`, `data-state` на `tbody`;
@@ -84,7 +84,7 @@ docs/superpowers/specs/2026-09-23-katran-design.md · docs/superpowers/specs/202
   - `packages/tokens/src/tokens.src.ts` — `z.drawer = 100`, `durations` без `drawer` и `open-delay`, `sizes['h-field'] = 23`;
   - `apps/pi/src/shared/api/ports.ts` — `createGridPorts({ gridId, parseRow })` без детали; `apps/pi/src/app/fake/server.ts` — `ROUTE` без `documents`;
   - `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts` — `openRequested: EventCallable<{ id: string; secondary: boolean }>`.
-- [ ] **Step 5: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` и `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — рабочая копия чистая. Хеш — в леджер (Task 1 фиксирует его эталоном).
+- [x] **Step 5: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` и `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — рабочая копия чистая. Хеш — в леджер (Task 1 фиксирует его эталоном).
 
 ---
 
@@ -99,8 +99,8 @@ docs/superpowers/specs/2026-09-23-katran-design.md · docs/superpowers/specs/202
 - Produces: числа эталона `REF` для e2e Task 11 — ширина drawer, высота шапки, лейна, полосы вкладок, строки SWIFT-поля (валюта), строки таблицы сторон (рубль), положение B относительно A. Значения, прочитанные из CSS стенда при написании плана (Task 1 их подтверждает или заменяет): **drawer 800** (`.dw{width:800px}`), **шапка 44** (`.dh` 10 + кнопка 26 + 8), **лейн 36** (`.lane{height:36px}`), **полоса вкладок 32** (`.tabs span` 7 + 16.9 + 6 + 2), **строка SWIFT-поля 27** (`.cell{min-height:27px}`), **строка сторон рубля 23** (`.rpr{min-height:23px}`), **B вплотную слева от A**.
 - Produces: список вопросов B владельцу `В-Д1…` — ответы нужны до Task 8 (В-Д1), Task 9 (В-Д2, В-Д3), Task 11 (В-Д4). Задачи кита (2–6), шва данных (7) и виджета (10) решений не ждут.
 
-- [ ] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — хеш и дата. В `docs/STATE.md` §10 в строке «Деталка валюты и рубля (`index.html`)» заменить «не заморожена — развивается на стенде» на `<хеш>, <дата время> (замер: …; Step 3)`, срез — «2 (2a–2d)», расхождения — «`docs/reference/detail-drift.md`». Абзац «**Непереданные части** стенд развивает свободно (сейчас — деталка)» заменить на «**Непереданных частей** больше нет: деталка заморожена целиком (срез 2a, решение владельца 29.09); до конца 2d стенд остаётся витриной для пользователей и получает только исправления».
-- [ ] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
+- [x] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — хеш и дата. В `docs/STATE.md` §10 в строке «Деталка валюты и рубля (`index.html`)» заменить «не заморожена — развивается на стенде» на `<хеш>, <дата время> (замер: …; Step 3)`, срез — «2 (2a–2d)», расхождения — «`docs/reference/detail-drift.md`». Абзац «**Непереданные части** стенд развивает свободно (сейчас — деталка)» заменить на «**Непереданных частей** больше нет: деталка заморожена целиком (срез 2a, решение владельца 29.09); до конца 2d стенд остаётся витриной для пользователей и получает только исправления».
+- [x] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
 
 ```ts
 import { defineConfig } from '@playwright/test'
@@ -163,8 +163,8 @@ for (const file of ['grid.html', 'rub-grid.html'] as const) {
 
 Run: `cd apps/pi && pnpm exec playwright test -c e2e-stand/playwright.config.ts --reporter=line`
 Expected: две строки `STAND grid.html A: {...}` / `A+B: [...]` и две для `rub-grid.html`. У валютного: `drawer.w` = 800, `drawer.x` = 800; `head.h` ≈ 44; `lane.h` = 36; `tabs.h` ≈ 32; `field.h` = 27; в `A+B` B (`slot: "B"`) с `x` = 0, A с `x` = 800. У рублёвого вместо `field` — `partyRow.h` = 23. Скриншоты — в `apps/pi/test-results/…/stand-*.png` (для сверки в Task 11). Если число расходится с «Interfaces» больше чем на 1 px — записать фактическое, в Task 11 брать его (и токен в ките поправить задачей, где он вводится).
-- [ ] **Step 3: записать замер.** В STATE §10 в строку деталки — «замер: drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27, строка сторон рубля 23, B вплотную слева от A, Chromium 1600×1000» (фактические числа Step 2). Удалить каталог `apps/pi/e2e-stand/` (`rm -r apps/pi/e2e-stand`), убедиться, что `git status` его не показывает.
-- [ ] **Step 4: сверка — `docs/reference/detail-drift.md`.** Создать документ в формате `registry-drift.md`. Шапка — таблица «| | |» (Эталон — `pi-constructor`, `index.html` + хост `grid.html`/`rub-grid.html`, хеш Step 1; katran — `main` на момент сверки, хеш; Дата сверки; Метод — код `index.html` (FIELDS 597, PROFILES 625, TABS 647, TABS_RUB 723, ACTIONS 729–738, RFIELDS/RSECTIONS 689–722, `cell` 941, `gridHtml`/`textHtml`/`extraHtml` 993–1018, `txBlockHtml` 1023, `dhHtml`/`laneHtml`/`heroHtml` 1031–1065, `tabsHtml`/`fitTabs` 1082–1102, `rub*Html` 1111–1156, CSS `.dw` 77–300, 479–500), хост `grid.html:719–728` и `2151–2192`, Playwright-замер Step 2; «Замер эталона» — числа Step 2; «Вне объёма» — части 2b–2d по спеке §1.2, сверяются в начале своих подсрезов против того же хеша). Затем абзац «**Классы.** A/B/C/D» дословно по смыслу `registry-drift.md`. Затем «### Таблица сверки» `| № | Эталон | katran (план 2a) | Кл. | Решение | Где в ките | Объём |` — колонка «katran» описывает то, что даст этот план (кит ещё не написан). Начальное наполнение (проверить каждый пункт по коду стенда на хеше Step 1 и дописать найденное сверх списка — по шапке, лейну, вкладкам, «Общим» валюты и рубля, открытию/закрытию, Esc, фокусу):
+- [x] **Step 3: записать замер.** В STATE §10 в строку деталки — «замер: drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27, строка сторон рубля 23, B вплотную слева от A, Chromium 1600×1000» (фактические числа Step 2). Удалить каталог `apps/pi/e2e-stand/` (`rm -r apps/pi/e2e-stand`), убедиться, что `git status` его не показывает.
+- [x] **Step 4: сверка — `docs/reference/detail-drift.md`.** Создать документ в формате `registry-drift.md`. Шапка — таблица «| | |» (Эталон — `pi-constructor`, `index.html` + хост `grid.html`/`rub-grid.html`, хеш Step 1; katran — `main` на момент сверки, хеш; Дата сверки; Метод — код `index.html` (FIELDS 597, PROFILES 625, TABS 647, TABS_RUB 723, ACTIONS 729–738, RFIELDS/RSECTIONS 689–722, `cell` 941, `gridHtml`/`textHtml`/`extraHtml` 993–1018, `txBlockHtml` 1023, `dhHtml`/`laneHtml`/`heroHtml` 1031–1065, `tabsHtml`/`fitTabs` 1082–1102, `rub*Html` 1111–1156, CSS `.dw` 77–300, 479–500), хост `grid.html:719–728` и `2151–2192`, Playwright-замер Step 2; «Замер эталона» — числа Step 2; «Вне объёма» — части 2b–2d по спеке §1.2, сверяются в начале своих подсрезов против того же хеша). Затем абзац «**Классы.** A/B/C/D» дословно по смыслу `registry-drift.md`. Затем «### Таблица сверки» `| № | Эталон | katran (план 2a) | Кл. | Решение | Где в ките | Объём |` — колонка «katran» описывает то, что даст этот план (кит ещё не написан). Начальное наполнение (проверить каждый пункт по коду стенда на хеше Step 1 и дописать найденное сверх списка — по шапке, лейну, вкладкам, «Общим» валюты и рубля, открытию/закрытию, Esc, фокусу):
 
 | № | Эталон | katran (план 2a) | Кл. | Решение |
 |---|---|---|---|---|
@@ -194,8 +194,8 @@ Expected: две строки `STAND grid.html A: {...}` / `A+B: [...]` и дв�
 | Д24 | Высота строки SWIFT-поля — `min-height: 27px`; 23 px — строка таблицы сторон рубля (`.rpr`) | `FieldRow` — токен `field-row` 27; строка сторон — токен `party-row` 23 | — | Спека 2a §3.1 называла 23 для поля — уточнено замером |
 
   Раздел «### Замер эталона» — таблица чисел Step 2 (валюта, рубль, A+B) с селекторами. Раздел «### Вопросы владельцу» — все пункты класса B: **В-Д1** (заголовок валюты — «Платёжная инструкция» или «…ВАЛЮТА»; влияет на `FX_DETAIL_TITLE`, Task 8), **В-Д2** (состав вкладок рубля — как `TABS_RUB` стенда или иначе; Task 9), **В-Д3** (пути ED107 и коды операций рубля — как на стенде или по справочнику ЦБ; Task 9), **В-Д4** (открывать ли первую запись при входе на экран; Task 11). Раздел «### Не проверено» — что не удалось сверить.
-- [ ] **Step 5: вопросы владельцу.** Список «Вопросы владельцу» передать контроллеру. **Остановиться только перед Task 8** (нужен ответ В-Д1), **Task 9** (В-Д2, В-Д3) и **Task 11** (В-Д4); Task 2–7 и 10 идут без ответов. Ответ «как на эталоне» по любому вопросу — пункт делается по колонке «Эталон».
-- [ ] **Step 6: проверка и commit.** `pnpm lint` — зелёный (документы линт не трогает, но проверка обязательна после удаления `e2e-stand`).
+- [x] **Step 5: вопросы владельцу.** Список «Вопросы владельцу» передать контроллеру. **Остановиться только перед Task 8** (нужен ответ В-Д1), **Task 9** (В-Д2, В-Д3) и **Task 11** (В-Д4); Task 2–7 и 10 идут без ответов. Ответ «как на эталоне» по любому вопросу — пункт делается по колонке «Эталон».
+- [x] **Step 6: проверка и commit.** `pnpm lint` — зелёный (документы линт не трогает, но проверка обязательна после удаления `e2e-stand`).
 
 ```bash
 git add docs/STATE.md docs/reference/detail-drift.md
@@ -237,7 +237,7 @@ createDrawerStackModel(cfg?: DrawerStackConfig): DrawerStackModel
   `closeAll` — сверх перечня спеки §3.2: нужен для «`pageClosed` закрывает оба слота» (спека §4.3) без двух событий подряд.
 - Consumes: ничего нового.
 
-- [ ] **Step 1: тесты (падают).** Создать `packages/effector/src/createDrawerStackModel.test.ts`:
+- [x] **Step 1: тесты (падают).** Создать `packages/effector/src/createDrawerStackModel.test.ts`:
 
 ```ts
 import { allSettled, createStore, fork } from 'effector'
@@ -371,8 +371,8 @@ describe('createDrawerStackModel (спека 2a §3.2)', () => {
 })
 ```
 
-- [ ] **Step 2: запуск.** `pnpm --filter @katran/effector test -- createDrawerStackModel` — FAIL: модуль не найден.
-- [ ] **Step 3: реализация.** Создать `packages/effector/src/createDrawerStackModel.ts`:
+- [x] **Step 2: запуск.** `pnpm --filter @katran/effector test -- createDrawerStackModel` — FAIL: модуль не найден.
+- [x] **Step 3: реализация.** Создать `packages/effector/src/createDrawerStackModel.ts`:
 
 ```ts
 import { createEvent, createStore, sample, type Event, type EventCallable, type Store } from 'effector'
@@ -472,9 +472,9 @@ export function createDrawerStackModel(cfg: DrawerStackConfig = {}): DrawerStack
 export { createDrawerStackModel, type DrawerEntry, type DrawerSlot, type DrawerStackConfig, type DrawerStackModel, type DrawerStackState } from './createDrawerStackModel'
 ```
 
-- [ ] **Step 4: запуск.** `pnpm --filter @katran/effector test` — PASS (все прежние + 12 новых). `pnpm check` — зелёный.
-- [ ] **Step 5: CHANGELOG.** В `CHANGELOG.md` в конец списка «0.1.0 — в работе» добавить: «- Срез 2a: `createDrawerStackModel` в `@katran/effector` — стек двух drawer'ов деталки (A у правого края, B слева для сравнения): `open({ id, secondary })`, `close(slot)`, `closeTop`, `closeAll`, `setTab`, сигналы `opened`/`alreadyOpen`; правила эталона — обычное открытие заменяет A, `secondary` — в B (при пустом A — в A), повторное открытие открытого не меняет стек, закрытие A сдвигает B в A.»
-- [ ] **Step 6: commit.**
+- [x] **Step 4: запуск.** `pnpm --filter @katran/effector test` — PASS (все прежние + 12 новых). `pnpm check` — зелёный.
+- [x] **Step 5: CHANGELOG.** В `CHANGELOG.md` в конец списка «0.1.0 — в работе» добавить: «- Срез 2a: `createDrawerStackModel` в `@katran/effector` — стек двух drawer'ов деталки (A у правого края, B слева для сравнения): `open({ id, secondary })`, `close(slot)`, `closeTop`, `closeAll`, `setTab`, сигналы `opened`/`alreadyOpen`; правила эталона — обычное открытие заменяет A, `secondary` — в B (при пустом A — в A), повторное открытие открытого не меняет стек, закрытие A сдвигает B в A.»
+- [x] **Step 6: commit.**
 
 ```bash
 git add packages/effector/src/createDrawerStackModel.ts packages/effector/src/createDrawerStackModel.test.ts packages/effector/src/index.ts CHANGELOG.md
@@ -512,7 +512,7 @@ DrawerStack(props: DrawerStackProps): JSX.Element | null   // портал в к
 
 - Produces (токены): `sizes.drawer` 800, `sizes['drawer-shift']` 30, `sizes['fs-h2']` 16, `sizes['dw-pad']` 14, `sizes.lane` 36; `durations.drawer` 180 → CSS `--k-drawer`, `--k-drawer-shift`, `--k-fs-h2`, `--k-dw-pad`, `--k-lane`, `--k-t-drawer`. Значения — эталон (`.dw{width:800px}`, `slidein .18s translateX(30px)`, `.dh b{font-size:16px}`, `.db` и `.tabs` — 14 по горизонтали, `.lane{height:36px}`); Task 1 подтверждает замером.
 
-- [ ] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в `sizes` после строки `'hatch': 10, …` добавить:
+- [x] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в `sizes` после строки `'hatch': 10, …` добавить:
 
 ```ts
   // деталка (спека 2a §3.1, эталон .dw/.dh/.lane index.html:77–110): ширина drawer, сдвиг анимации появления,
@@ -531,7 +531,7 @@ DrawerStack(props: DrawerStackProps): JSX.Element | null   // портал в к
 ```
 
   Run: `pnpm gen && pnpm --filter @katran/tokens test` — PASS.
-- [ ] **Step 2: тесты (падают).** Создать `packages/ui/src/drawer/Drawer.test.tsx`:
+- [x] **Step 2: тесты (падают).** Создать `packages/ui/src/drawer/Drawer.test.tsx`:
 
 ```tsx
 import { useRef, useState, type ReactNode } from 'react'
@@ -670,7 +670,7 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- drawer` — FAIL: модуль не найден.
-- [ ] **Step 3: реализация.** Создать `packages/ui/src/drawer/Drawer.tsx`:
+- [x] **Step 3: реализация.** Создать `packages/ui/src/drawer/Drawer.tsx`:
 
 ```tsx
 import { useEffect, useRef, type ReactNode } from 'react'
@@ -903,9 +903,9 @@ export { DrawerStack, type DrawerStackItem, type DrawerStackProps } from './Draw
 ```
 
   В `packages/ui/src/index.ts` после `export * from './tabs'` добавить `export * from './drawer'`.
-- [ ] **Step 4: запуск.** `pnpm --filter @katran/ui test -- drawer` — PASS (10 тестов). `pnpm check` — зелёный (в том числе `check:target`: `@keyframes`, `prefers-reduced-motion`, `overflow: hidden auto`, `position: sticky` — в Chromium 88 есть).
-- [ ] **Step 5: CHANGELOG.** Добавить: «- Срез 2a: `Drawer` и `DrawerStack` в `@katran/ui` — не модальная панель деталки шириной `--k-drawer` (800) у правого края окна: роль `dialog` без `aria-modal`, имя — `label`, фокус в заголовок при открытии и по `focusKey`, возврат фокуса в `returnFocus` при закрытии, метка слота; `DrawerStack` — портал двух панелей (B слева от A), Esc закрывает верхнюю, кроме полей ввода, меню и поповеров; анимация появления отключается при `prefers-reduced-motion`. Токены `drawer`, `drawer-shift`, `fs-h2`, `dw-pad`, `lane`, `t-drawer`.»
-- [ ] **Step 6: commit.**
+- [x] **Step 4: запуск.** `pnpm --filter @katran/ui test -- drawer` — PASS (10 тестов). `pnpm check` — зелёный (в том числе `check:target`: `@keyframes`, `prefers-reduced-motion`, `overflow: hidden auto`, `position: sticky` — в Chromium 88 есть).
+- [x] **Step 5: CHANGELOG.** Добавить: «- Срез 2a: `Drawer` и `DrawerStack` в `@katran/ui` — не модальная панель деталки шириной `--k-drawer` (800) у правого края окна: роль `dialog` без `aria-modal`, имя — `label`, фокус в заголовок при открытии и по `focusKey`, возврат фокуса в `returnFocus` при закрытии, метка слота; `DrawerStack` — портал двух панелей (B слева от A), Esc закрывает верхнюю, кроме полей ввода, меню и поповеров; анимация появления отключается при `prefers-reduced-motion`. Токены `drawer`, `drawer-shift`, `fs-h2`, `dw-pad`, `lane`, `t-drawer`.»
+- [x] **Step 6: commit.**
 
 ```bash
 git add packages/ui/src/drawer/Drawer.tsx packages/ui/src/drawer/DrawerStack.tsx packages/ui/src/drawer/Drawer.module.css packages/ui/src/drawer/Drawer.test.tsx packages/ui/src/drawer/index.ts packages/ui/src/index.ts packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/generate.test.ts CHANGELOG.md
@@ -938,7 +938,7 @@ fitTabs(widths: number[], avail: number, more: number, selected: number, gap?: n
 - Produces (токены): `sizes['tab-line']` 32, `sizes['tab-px']` 10 → `--k-tab-line`, `--k-tab-px` (эталон `.tabs span{padding:7px 10px 6px}` + подчёркивание 2 → 32; Task 1 подтверждает).
 - Consumes: `Menu`, `MenuItem` (`../overlay`), `Counter` (`../value`).
 
-- [ ] **Step 1: токены.** В `sizes` после строки деталки Task 3 добавить:
+- [x] **Step 1: токены.** В `sizes` после строки деталки Task 3 добавить:
 
 ```ts
   // вкладки деталки линией (эталон .tabs index.html:127–129): высота полосы с подчёркиванием, горизонтальный отступ вкладки
@@ -946,7 +946,7 @@ fitTabs(widths: number[], avail: number, more: number, selected: number, gap?: n
 ```
 
   `pnpm gen`.
-- [ ] **Step 2: тесты `fitTabs` (падают).** Создать `packages/ui/src/tabs/fitTabs.test.ts`:
+- [x] **Step 2: тесты `fitTabs` (падают).** Создать `packages/ui/src/tabs/fitTabs.test.ts`:
 
 ```ts
 import { fitTabs } from './fitTabs'
@@ -972,7 +972,7 @@ describe('fitTabs (эталон fitTabs, index.html:1089)', () => {
 })
 ```
 
-- [ ] **Step 3: тесты переполнения (падают).** Создать `packages/ui/src/tabs/Tabs.overflow.test.tsx`:
+- [x] **Step 3: тесты переполнения (падают).** Создать `packages/ui/src/tabs/Tabs.overflow.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -1085,7 +1085,7 @@ describe('Tabs: переполнение (спека 2a §3.1)', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- tabs` — FAIL (нет `fitTabs`, нет пропа `overflow`).
-- [ ] **Step 4: реализация `fitTabs`.** Создать `packages/ui/src/tabs/fitTabs.ts`:
+- [x] **Step 4: реализация `fitTabs`.** Создать `packages/ui/src/tabs/fitTabs.ts`:
 
 ```ts
 /**
@@ -1114,7 +1114,7 @@ export function fitTabs(widths: number[], avail: number, more: number, selected:
 }
 ```
 
-- [ ] **Step 5: реализация `Tabs`.** Заменить `packages/ui/src/tabs/Tabs.tsx` целиком:
+- [x] **Step 5: реализация `Tabs`.** Заменить `packages/ui/src/tabs/Tabs.tsx` целиком:
 
 ```tsx
 import { Fragment, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
@@ -1362,9 +1362,9 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
 ```
 
   В `packages/ui/src/tabs/index.ts` добавить строку `export { fitTabs } from './fitTabs'`.
-- [ ] **Step 6: запуск.** `pnpm --filter @katran/ui test -- tabs` — PASS: прежние 6 тестов `Tabs.test.tsx` без правок + 5 `fitTabs` + 7 переполнения. `pnpm check` — зелёный.
-- [ ] **Step 7: CHANGELOG.** Добавить: «- Срез 2a: `Tabs` — проп `overflow` (недоступные вкладки второй группой, не поместившиеся — в меню «••• N» на `Menu` кита, выбранная всегда видна; пересчёт по `ResizeObserver`), проп `variant: 'segment' | 'line'` (линия с подчёркиванием — вкладки деталки), `TabItem.hint`; помощник `fitTabs`. Токены `tab-line`, `tab-px`. Без новых пропов `Tabs` ведёт себя как раньше.»
-- [ ] **Step 8: commit.**
+- [x] **Step 6: запуск.** `pnpm --filter @katran/ui test -- tabs` — PASS: прежние 6 тестов `Tabs.test.tsx` без правок + 5 `fitTabs` + 7 переполнения. `pnpm check` — зелёный.
+- [x] **Step 7: CHANGELOG.** Добавить: «- Срез 2a: `Tabs` — проп `overflow` (недоступные вкладки второй группой, не поместившиеся — в меню «••• N» на `Menu` кита, выбранная всегда видна; пересчёт по `ResizeObserver`), проп `variant: 'segment' | 'line'` (линия с подчёркиванием — вкладки деталки), `TabItem.hint`; помощник `fitTabs`. Токены `tab-line`, `tab-px`. Без новых пропов `Tabs` ведёт себя как раньше.»
+- [x] **Step 8: commit.**
 
 ```bash
 git add packages/ui/src/tabs/Tabs.tsx packages/ui/src/tabs/Tabs.module.css packages/ui/src/tabs/fitTabs.ts packages/ui/src/tabs/fitTabs.test.ts packages/ui/src/tabs/Tabs.overflow.test.tsx packages/ui/src/tabs/index.ts packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts CHANGELOG.md
@@ -1415,7 +1415,7 @@ FieldRow, ConfigForm, Disclosure
   Разметка, на которую опираются e2e и тесты приложения: строка поля — `data-field="<тег>"`, пустая — ещё `data-empty=""`; сводка — `data-part="hero"`.
 - Produces (токены, эталон index.html:131–260, 486–488; Task 1 подтверждает замером `field-row` и `party-row`): `field-row` 27, `field-tag` 26, `field-opt` 14, `field-gap` 6, `fs-pre` 11.5, `lh-pre` 16.3, `fs-hero` 13.5, `fs-sum` 17, `party-row` 23 и сетки блоков деталки приложения (`.tx`, `.rph/.rpr`, `.rsec .xr`, `.xg.byname .xr`, `RSECTIONS.agents`): `dt-dir` 62, `dt-acc` 156, `dt-sum` 150, `dt-st` 84, `dt-time` 104, `dt-bic` 90, `dt-label-s` 128, `dt-label-m` 150, `dt-label-l` 250.
 
-- [ ] **Step 1: токены.** В `sizes` после строки Task 4 добавить:
+- [x] **Step 1: токены.** В `sizes` после строки Task 4 добавить:
 
 ```ts
   // «Общие данные» деталки (эталон .cell/.hero/.amt/.cell.txt pre, index.html:131–260): строка SWIFT-поля 27, колонки тега/опции,
@@ -1426,7 +1426,7 @@ FieldRow, ConfigForm, Disclosure
 ```
 
   `pnpm gen`.
-- [ ] **Step 2: тесты (падают).** Создать `packages/ui/src/form/FieldRow.test.tsx`:
+- [x] **Step 2: тесты (падают).** Создать `packages/ui/src/form/FieldRow.test.tsx`:
 
 ```tsx
 import { screen } from '@testing-library/react'
@@ -1698,7 +1698,7 @@ describe('ConfigForm (спека 2a §3.1)', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- form` — FAIL: модули не найдены.
-- [ ] **Step 3: типы и представление.** Создать `packages/ui/src/form/types.ts`:
+- [x] **Step 3: типы и представление.** Создать `packages/ui/src/form/types.ts`:
 
 ```ts
 import type { ReactNode } from 'react'
@@ -1778,7 +1778,7 @@ export const defaultPresent: FieldPresenter = (_tag, v) => ({
 export const isEmptyValue = (v: FieldValue | null): boolean => v === null || (v.lines.length === 0 && !v.acc)
 ```
 
-- [ ] **Step 4: `FieldRow`.** Создать `packages/ui/src/form/FieldRow.tsx`:
+- [x] **Step 4: `FieldRow`.** Создать `packages/ui/src/form/FieldRow.tsx`:
 
 ```tsx
 import type { CSSProperties } from 'react'
@@ -1864,7 +1864,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
 }
 ```
 
-- [ ] **Step 5: `Disclosure`.** Создать `packages/ui/src/form/Disclosure.tsx`:
+- [x] **Step 5: `Disclosure`.** Создать `packages/ui/src/form/Disclosure.tsx`:
 
 ```tsx
 import { useState, type ReactNode } from 'react'
@@ -1923,7 +1923,7 @@ export function Disclosure({ title, aside, count, open, defaultOpen = false, onO
 }
 ```
 
-- [ ] **Step 6: `ConfigForm`.** Создать `packages/ui/src/form/ConfigForm.tsx`:
+- [x] **Step 6: `ConfigForm`.** Создать `packages/ui/src/form/ConfigForm.tsx`:
 
 ```tsx
 import { Fragment, useState, type ReactNode } from 'react'
@@ -2087,7 +2087,7 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
 }
 ```
 
-- [ ] **Step 7: стили.** Создать `packages/ui/src/form/Form.module.css`:
+- [x] **Step 7: стили.** Создать `packages/ui/src/form/Form.module.css`:
 
 ```css
 /* «Общие данные» деталки (спека 2a §3.1, эталон index.html:131–260) */
@@ -2486,9 +2486,9 @@ export { ConfigForm, type ConfigFormProps } from './ConfigForm'
 ```
 
   В `packages/ui/src/index.ts` после `export * from './drawer'` добавить `export * from './form'`.
-- [ ] **Step 8: запуск.** `pnpm --filter @katran/ui test -- form` — PASS (7 + 6 + 10). `pnpm check` — зелёный.
-- [ ] **Step 9: CHANGELOG.** Добавить: «- Срез 2a: `FieldRow`, `ConfigForm`, `Disclosure` в `@katran/ui` — строка SWIFT-поля (тег, буква опции, значение; пустое — бледная строка «не заполнено»; многострочные 70/72/79 с «ещё N стр.»), рендер «Общих данных» по схеме приложения (`FormSchema`: сводка, блоки-слоты, сетка пар, текст, extra, последовательность B, сворачиваемые секции), сворачиваемый блок с `aria-expanded`. Типы `FieldDef`, `FieldRef`, `FieldValue`, `FormSchema`, `HeroCell`, `SectionContent`, `FieldPresenter`. Токены строки поля, сводки и сеток блоков деталки (`field-*`, `fs-pre`, `lh-pre`, `fs-hero`, `fs-sum`, `party-row`, `dt-*`).»
-- [ ] **Step 10: commit.**
+- [x] **Step 8: запуск.** `pnpm --filter @katran/ui test -- form` — PASS (7 + 6 + 10). `pnpm check` — зелёный.
+- [x] **Step 9: CHANGELOG.** Добавить: «- Срез 2a: `FieldRow`, `ConfigForm`, `Disclosure` в `@katran/ui` — строка SWIFT-поля (тег, буква опции, значение; пустое — бледная строка «не заполнено»; многострочные 70/72/79 с «ещё N стр.»), рендер «Общих данных» по схеме приложения (`FormSchema`: сводка, блоки-слоты, сетка пар, текст, extra, последовательность B, сворачиваемые секции), сворачиваемый блок с `aria-expanded`. Типы `FieldDef`, `FieldRef`, `FieldValue`, `FormSchema`, `HeroCell`, `SectionContent`, `FieldPresenter`. Токены строки поля, сводки и сеток блоков деталки (`field-*`, `fs-pre`, `lh-pre`, `fs-hero`, `fs-sum`, `party-row`, `dt-*`).»
+- [x] **Step 10: commit.**
 
 ```bash
 git add packages/ui/src/form/types.ts packages/ui/src/form/present.ts packages/ui/src/form/FieldRow.tsx packages/ui/src/form/ConfigForm.tsx packages/ui/src/form/Disclosure.tsx packages/ui/src/form/Form.module.css packages/ui/src/form/index.ts packages/ui/src/form/FieldRow.test.tsx packages/ui/src/form/ConfigForm.test.tsx packages/ui/src/form/Disclosure.test.tsx packages/ui/src/index.ts packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts CHANGELOG.md
@@ -2521,8 +2521,8 @@ gridFocusTarget(grid: string, id: string, root?: ParentNode): HTMLElement | null
 - Produces (токены): `durations['open-delay']` 220 → `--k-t-open-delay` (эталон `setTimeout(…,220)`, grid.html:2172).
 - Consumes: `useUnmountGuard` (`../value/useUnmountGuard`).
 
-- [ ] **Step 1: токен.** В `durations` добавить `'open-delay': 220` (итог: `{ fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180, 'open-delay': 220 }`). `pnpm gen`.
-- [ ] **Step 2: тесты (падают).** Создать `packages/ui/src/grid/DataGrid.open.test.tsx`:
+- [x] **Step 1: токен.** В `durations` добавить `'open-delay': 220` (итог: `{ fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180, 'open-delay': 220 }`). `pnpm gen`.
+- [x] **Step 2: тесты (падают).** Создать `packages/ui/src/grid/DataGrid.open.test.tsx`:
 
 ```tsx
 import { act, fireEvent, screen } from '@testing-library/react'
@@ -2656,7 +2656,7 @@ describe('gridFocusTarget (спека 2a §5: фокус после закрыт
 ```
 
   Run: `pnpm --filter @katran/ui test -- DataGrid.open focusTarget` — FAIL.
-- [ ] **Step 3: `focusTarget.ts`.** Создать `packages/ui/src/grid/focusTarget.ts`:
+- [x] **Step 3: `focusTarget.ts`.** Создать `packages/ui/src/grid/focusTarget.ts`:
 
 ```ts
 /**
@@ -2673,7 +2673,7 @@ export function gridFocusTarget(grid: string, id: string, root: ParentNode = doc
 ```
 
   В `packages/ui/src/grid/index.ts` добавить `export { gridFocusTarget } from './focusTarget'`.
-- [ ] **Step 4: `DataGrid` и `GridRecord`.** В `packages/ui/src/grid/DataGrid.tsx`:
+- [x] **Step 4: `DataGrid` и `GridRecord`.** В `packages/ui/src/grid/DataGrid.tsx`:
   1. Импорты: первую строку заменить на `import { useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'`; строку `import { sizes } from '@katran/tokens'` — на `import { durations, sizes } from '@katran/tokens'`; добавить `import { useUnmountGuard } from '../value/useUnmountGuard'`.
   2. В `DataGridProps` комментарий и тип `onOpen` заменить, после `openHint` добавить `marked`:
 
@@ -2757,7 +2757,7 @@ const OPEN_DELAY = durations['open-delay']
 }
 ```
 
-- [ ] **Step 5: прежние тесты — под новую семантику.** В `packages/ui/src/grid/DataGrid.test.tsx` тест «открытие: кнопка, запись не кликабельна; второй клик — secondary» заменить:
+- [x] **Step 5: прежние тесты — под новую семантику.** В `packages/ui/src/grid/DataGrid.test.tsx` тест «открытие: кнопка, запись не кликабельна; второй клик — secondary» заменить:
 
 ```tsx
   it('открытие: кнопка, запись не кликабельна; клавиатурный клик — сразу, Shift — рядом (задержка — DataGrid.open.test)', async () => {
@@ -2783,9 +2783,9 @@ const OPEN_DELAY = durations['open-delay']
     expect(await screen.findByText('Открыт документ Бета (только просмотр)')).toBeInTheDocument()
 ```
 
-- [ ] **Step 6: запуск.** `pnpm --filter @katran/ui test` — PASS (все прежние, включая `DataGrid.keyboard.test.tsx` без правок: Enter на ячейке шлёт клик с detail 0, открытие сразу; + 9 + 3 новых). `pnpm --filter pi test` — PASS. `pnpm check` — зелёный.
-- [ ] **Step 7: CHANGELOG.** Добавить: «- Срез 2a: `DataGrid` — разведение жестов открытия (клик мышью — через 220 мс, токен `t-open-delay`; второй клик отменяет его и даёт одно `onOpen(…, { secondary: true })`; Shift — рядом сразу; клавиатура — сразу; раньше первый клик двойного открывал A, а второй — B с тем же документом), проп `marked` (запись, открытая в деталке, — `tbody[data-mark="a"|"b"]`, подсветка как на эталоне, пометка в имени кнопки открытия), атрибут `data-k-open` у кнопки открытия; помощник `gridFocusTarget(grid, id)` — куда вернуть фокус после закрытия деталки.»
-- [ ] **Step 8: commit.**
+- [x] **Step 6: запуск.** `pnpm --filter @katran/ui test` — PASS (все прежние, включая `DataGrid.keyboard.test.tsx` без правок: Enter на ячейке шлёт клик с detail 0, открытие сразу; + 9 + 3 новых). `pnpm --filter pi test` — PASS. `pnpm check` — зелёный.
+- [x] **Step 7: CHANGELOG.** Добавить: «- Срез 2a: `DataGrid` — разведение жестов открытия (клик мышью — через 220 мс, токен `t-open-delay`; второй клик отменяет его и даёт одно `onOpen(…, { secondary: true })`; Shift — рядом сразу; клавиатура — сразу; раньше первый клик двойного открывал A, а второй — B с тем же документом), проп `marked` (запись, открытая в деталке, — `tbody[data-mark="a"|"b"]`, подсветка как на эталоне, пометка в имени кнопки открытия), атрибут `data-k-open` у кнопки открытия; помощник `gridFocusTarget(grid, id)` — куда вернуть фокус после закрытия деталки.»
+- [x] **Step 8: commit.**
 
 ```bash
 git add packages/ui/src/grid/DataGrid.tsx packages/ui/src/grid/GridRecord.tsx packages/ui/src/grid/Grid.module.css packages/ui/src/grid/focusTarget.ts packages/ui/src/grid/focusTarget.test.ts packages/ui/src/grid/DataGrid.open.test.tsx packages/ui/src/grid/DataGrid.test.tsx packages/ui/src/grid/index.ts apps/pi/src/widgets/doc-registry/ui/DocRegistry.test.tsx packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts CHANGELOG.md
@@ -2835,7 +2835,7 @@ type DetailDomain<D, Row> = {
 
 - Produces (фейк): `FakeGrid.detail?: ((id: string) => unknown) | undefined`; `FakeGridOptions<Row>.detail?: ((row: Row, index: number) => unknown) | undefined`; маршрут `GET /grids/{gridId}/documents/{id}` → деталь, `null` → 404 «Документ не найден»; грид без `detail` → 404; регулятор `?fail=detail` → 500.
 
-- [ ] **Step 1: тесты (падают).** В `apps/pi/src/shared/api/ports.test.ts` импорты дополнить (`import { ApiError, contractError, toApiError } from './problem'`) и в `describe` добавить:
+- [x] **Step 1: тесты (падают).** В `apps/pi/src/shared/api/ports.test.ts` импорты дополнить (`import { ApiError, contractError, toApiError } from './problem'`) и в `describe` добавить:
 
 ```ts
   const withDetail = createGridPorts({
@@ -2903,7 +2903,7 @@ describe('strArr', () => {
 ```
 
   Run: `pnpm --filter pi test -- ports guards server` — FAIL.
-- [ ] **Step 2: гард и порты.** В `apps/pi/src/shared/api/guards.ts` после `arr` добавить:
+- [x] **Step 2: гард и порты.** В `apps/pi/src/shared/api/guards.ts` после `arr` добавить:
 
 ```ts
 export function strArr(v: unknown, path: string): string[] {
@@ -2958,7 +2958,7 @@ export function createGridPorts<Row, D>(
 ```
 
   В `apps/pi/src/shared/api/index.ts`: в строке гардов добавить `strArr`; строку портов заменить на `export { createGridPorts, type DetailParser, type DetailPort, type GridPorts, type GridPortsConfig } from './ports'`.
-- [ ] **Step 3: `shared/lib/detail`.** Создать `apps/pi/src/shared/lib/detail/types.ts`:
+- [x] **Step 3: `shared/lib/detail`.** Создать `apps/pi/src/shared/lib/detail/types.ts`:
 
 ```ts
 import type { ReactNode } from 'react'
@@ -3019,7 +3019,7 @@ export type DetailDomain<D, Row> = {
 export type { ActionIcon, DetailAction, DetailDomain, DetailSummary, DetailTab } from './types'
 ```
 
-- [ ] **Step 4: фейк.** В `apps/pi/src/app/fake/grid.ts` заменить типы и `fakeGrid`:
+- [x] **Step 4: фейк.** В `apps/pi/src/app/fake/grid.ts` заменить типы и `fakeGrid`:
 
 ```ts
 /** Один грид фейкового сервера: данные, колонки (ключи сортировки) и каталог. Наружу — только JSON контракта. */
@@ -3088,8 +3088,8 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
 ```
 
   В `apps/pi/src/app/fake/params.ts` комментарий заменить на: `/** Регуляторы стенда в адресе: ?slow=N — задержка ровно N мс (иначе 0,25–0,65 с); ?fail=search|facets|meta|detail — отказ 500. */`.
-- [ ] **Step 5: запуск.** `pnpm --filter pi test` — PASS (+3 портов, +2 гарда, +2 сервера). `pnpm check` — зелёный (eslint видит новый сегмент `shared/lib/detail` — зоны строятся по каталогам).
-- [ ] **Step 6: commit.**
+- [x] **Step 5: запуск.** `pnpm --filter pi test` — PASS (+3 портов, +2 гарда, +2 сервера). `pnpm check` — зелёный (eslint видит новый сегмент `shared/lib/detail` — зоны строятся по каталогам).
+- [x] **Step 6: commit.**
 
 ```bash
 git add apps/pi/src/shared/api/ports.ts apps/pi/src/shared/api/ports.test.ts apps/pi/src/shared/api/guards.ts apps/pi/src/shared/api/guards.test.ts apps/pi/src/shared/api/index.ts apps/pi/src/shared/lib/detail/index.ts apps/pi/src/shared/lib/detail/types.ts apps/pi/src/app/fake/server.ts apps/pi/src/app/fake/grid.ts apps/pi/src/app/fake/params.ts apps/pi/src/app/fake/server.test.ts
@@ -3142,7 +3142,7 @@ fxDocDetailDomain: DetailDomain<FxDocDetail, FxDoc>
 - Produces (фейк): `makeFxDocDetail(row: FxDoc, i: number): Record<string, unknown>` — DTO детали; `fakeGrids['fx-docs']` отвечает на `GET /grids/fx-docs/documents/{id}`.
 - Consumes: `strArr`, `obj`, `str`, `strOrNull`, `num`, `oneOf`, `arr`, `contractError`, `createGridPorts` с `parseDetail` (Task 7); `DetailTab`, `DetailAction`, `DetailSummary`, `DetailDomain` (Task 7); `ConfigForm`, `Disclosure`, `FieldDef`, `FieldView`, `FormSchema`, `HeroCell`, `Tag`, `StatusDot`, `LinkValue`, форматтеры (кит, Task 5).
 
-- [ ] **Step 1: проводки — тест (падает).** Создать `apps/pi/src/entities/posting/api/posting.mapper.test.ts`:
+- [x] **Step 1: проводки — тест (падает).** Создать `apps/pi/src/entities/posting/api/posting.mapper.test.ts`:
 
 ```ts
 import { ApiError } from '../../../shared/api'
@@ -3163,7 +3163,7 @@ describe('parseTx', () => {
 })
 ```
 
-- [ ] **Step 2: проводки — реализация.** Создать `apps/pi/src/entities/posting/model/posting.ts`:
+- [x] **Step 2: проводки — реализация.** Создать `apps/pi/src/entities/posting/model/posting.ts`:
 
 ```ts
 export const TX_DIRS = ['DEBIT', 'CREDIT'] as const
@@ -3375,7 +3375,7 @@ export { TxBlock } from '../ui/TxBlock'
 ```
 
   Run: `pnpm --filter pi test -- posting` — PASS.
-- [ ] **Step 3: модель валютной детали и профили.** Создать `apps/pi/src/entities/fx-doc/model/detail.ts`:
+- [x] **Step 3: модель валютной детали и профили.** Создать `apps/pi/src/entities/fx-doc/model/detail.ts`:
 
 ```ts
 import type { Tx } from '../../posting/@x/fx-doc'
@@ -3573,7 +3573,7 @@ describe('swiftPresent (эталон cell/full)', () => {
 })
 ```
 
-- [ ] **Step 4: маппер — тест (падает).** Создать `apps/pi/src/entities/fx-doc/api/detail.example.ts` — канонический пример ответа (Task 12 переносит его в `pi-api.md` дословно):
+- [x] **Step 4: маппер — тест (падает).** Создать `apps/pi/src/entities/fx-doc/api/detail.example.ts` — канонический пример ответа (Task 12 переносит его в `pi-api.md` дословно):
 
 ```ts
 /** Пример ответа GET /grids/fx-docs/documents/{id} (MT103, данные вымышленные; значения полей — со стенда, index.html:747–824). Источник примера в pi-api.md. */
@@ -3654,7 +3654,7 @@ describe('parseFxDocDetail (пример pi-api.md)', () => {
 })
 ```
 
-- [ ] **Step 5: маппер и порты.** Создать `apps/pi/src/entities/fx-doc/api/detail.mapper.ts`:
+- [x] **Step 5: маппер и порты.** Создать `apps/pi/src/entities/fx-doc/api/detail.mapper.ts`:
 
 ```ts
 import { contractError, obj, str, strArr, strOrNull } from '../../../shared/api'
@@ -3712,7 +3712,7 @@ export const fxDocPorts = createGridPorts({ gridId: 'fx-docs', parseRow: parseFx
 ```
 
   Run: `pnpm --filter pi test -- fx-doc` — PASS (маппер, профили).
-- [ ] **Step 6: блоки и домен — тест (падает).** Создать `apps/pi/src/entities/fx-doc/ui/detail.test.tsx`:
+- [x] **Step 6: блоки и домен — тест (падает).** Создать `apps/pi/src/entities/fx-doc/ui/detail.test.tsx`:
 
 ```tsx
 import { screen, within } from '@testing-library/react'
@@ -3797,7 +3797,7 @@ describe('«Общие данные» валюты (PROFILES стенда)', () 
 })
 ```
 
-- [ ] **Step 7: блоки и домен — реализация.** Создать `apps/pi/src/entities/fx-doc/ui/detail.tsx`:
+- [x] **Step 7: блоки и домен — реализация.** Создать `apps/pi/src/entities/fx-doc/ui/detail.tsx`:
 
 ```tsx
 import type { ReactNode } from 'react'
@@ -4052,7 +4052,7 @@ export { fxBlock, fxDocDetailDomain, fxDocSummary, fxHero, fxRowSummary } from '
 ```
 
   Run: `pnpm --filter pi test -- fx-doc` — PASS.
-- [ ] **Step 8: данные фейка.** Создать `apps/pi/src/app/fake/fx-docs.detail.ts`:
+- [x] **Step 8: данные фейка.** Создать `apps/pi/src/app/fake/fx-docs.detail.ts`:
 
 ```ts
 import type { FxDoc } from '../../entities/fx-doc'
@@ -4142,7 +4142,7 @@ export function makeFxDocDetail(row: FxDoc, i: number): Record<string, unknown> 
 ```
 
   В `apps/pi/src/app/fake/grids.ts` добавить импорт `import { makeFxDocDetail } from './fx-docs.detail'` и в опции `fx-docs` — `detail: makeFxDocDetail`: `fakeGrid(makeFxDocs(), fxDocLayout.columns, fxDocsMeta, { sortLabels: { status: STATUS_LABEL }, detail: makeFxDocDetail })`.
-- [ ] **Step 9: контрактная цепочка.** В `apps/pi/src/app/fake/contract.test.ts` добавить импорт `import { FX_TYPES } from '../../entities/fx-doc'` и блок:
+- [x] **Step 9: контрактная цепочка.** В `apps/pi/src/app/fake/contract.test.ts` добавить импорт `import { FX_TYPES } from '../../entities/fx-doc'` и блок:
 
 ```ts
 describe('контракт детали fx-docs (спека 2a §6): порт → requestFx → фейк', () => {
@@ -4186,8 +4186,8 @@ describe('контракт детали fx-docs (спека 2a §6): порт �
 ```
 
   (`fork`, `allSettled`, `requestFx`, `ApiError`, `createFakeServer`, `fakeGrids` в файле уже импортированы — проверить, недостающие добавить.)
-- [ ] **Step 10: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный (eslint: `fx-doc` берёт `posting` и `doc-status` только через `@x/fx-doc.ts`).
-- [ ] **Step 11: commit.**
+- [x] **Step 10: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный (eslint: `fx-doc` берёт `posting` и `doc-status` только через `@x/fx-doc.ts`).
+- [x] **Step 11: commit.**
 
 ```bash
 git add apps/pi/src/entities/posting apps/pi/src/entities/fx-doc/model/detail.ts apps/pi/src/entities/fx-doc/model/swift.ts apps/pi/src/entities/fx-doc/model/swift.test.ts apps/pi/src/entities/fx-doc/api/detail.mapper.ts apps/pi/src/entities/fx-doc/api/detail.example.ts apps/pi/src/entities/fx-doc/api/detail.mapper.test.ts apps/pi/src/entities/fx-doc/api/ports.ts apps/pi/src/entities/fx-doc/ui/detail.tsx apps/pi/src/entities/fx-doc/ui/detail.module.css apps/pi/src/entities/fx-doc/ui/detail.test.tsx apps/pi/src/entities/fx-doc/index.ts apps/pi/src/app/fake/fx-docs.detail.ts apps/pi/src/app/fake/grids.ts apps/pi/src/app/fake/contract.test.ts
@@ -4238,7 +4238,7 @@ RUB_DETAIL_EXAMPLE
 - Produces (фейк): `makeRubDocDetail(row: RubDoc, i: number): Record<string, unknown>`; `fakeGrids['rub-docs']` отвечает на `GET /grids/rub-docs/documents/{id}`.
 - Consumes: всё из Task 7; `TxBlock`, `parseTxs`, `Tx` (через `posting/@x/rub-doc.ts`); `Disclosure`, `LinkValue`, `Tag`, форматтеры (кит).
 
-- [ ] **Step 1: профили — тест (падает).** Создать `apps/pi/src/entities/rub-doc/model/profiles.test.ts`:
+- [x] **Step 1: профили — тест (падает).** Создать `apps/pi/src/entities/rub-doc/model/profiles.test.ts`:
 
 ```ts
 import { RUB_TYPES } from './rubDoc'
@@ -4270,7 +4270,7 @@ describe('профили рубля (PROFILES/RSECTIONS стенда, index.html
 })
 ```
 
-- [ ] **Step 2: модель и профили.** Создать `apps/pi/src/entities/rub-doc/model/profiles.ts`:
+- [x] **Step 2: модель и профили.** Создать `apps/pi/src/entities/rub-doc/model/profiles.ts`:
 
 ```ts
 import type { FormSchema } from '@katran/ui'
@@ -4411,7 +4411,7 @@ export { TxBlock } from '../ui/TxBlock'
 ```
 
   Run: `pnpm --filter pi test -- profiles` — PASS.
-- [ ] **Step 3: маппер — тест (падает).** Создать `apps/pi/src/entities/rub-doc/api/detail.example.ts` (значения — со стенда, первый рублёвый документ, index.html:895–911; обезличены):
+- [x] **Step 3: маппер — тест (падает).** Создать `apps/pi/src/entities/rub-doc/api/detail.example.ts` (значения — со стенда, первый рублёвый документ, index.html:895–911; обезличены):
 
 ```ts
 /** Пример ответа GET /grids/rub-docs/documents/{id} (PAYDOCRU, данные вымышленные, со стенда). Источник примера в pi-api.md. */
@@ -4481,7 +4481,7 @@ describe('parseRubDocDetail (пример pi-api.md)', () => {
 })
 ```
 
-- [ ] **Step 4: маппер и порты.** Создать `apps/pi/src/entities/rub-doc/api/detail.mapper.ts`:
+- [x] **Step 4: маппер и порты.** Создать `apps/pi/src/entities/rub-doc/api/detail.mapper.ts`:
 
 ```ts
 import { arr, contractError, obj, str, strArr, type Obj } from '../../../shared/api'
@@ -4546,7 +4546,7 @@ export const rubDocPorts = createGridPorts({ gridId: 'rub-docs', parseRow: parse
 ```
 
   Run: `pnpm --filter pi test -- rub-doc` — PASS.
-- [ ] **Step 5: блоки и секции — тест (падает).** Создать `apps/pi/src/entities/rub-doc/ui/detail.test.tsx`:
+- [x] **Step 5: блоки и секции — тест (падает).** Создать `apps/pi/src/entities/rub-doc/ui/detail.test.tsx`:
 
 ```tsx
 import { screen, within } from '@testing-library/react'
@@ -4625,7 +4625,7 @@ describe('«Общие данные» рубля (rubHtml стенда, index.ht
 })
 ```
 
-- [ ] **Step 6: блоки, секции, домен — реализация.** Создать `apps/pi/src/entities/rub-doc/ui/detail.tsx`:
+- [x] **Step 6: блоки, секции, домен — реализация.** Создать `apps/pi/src/entities/rub-doc/ui/detail.tsx`:
 
 ```tsx
 import type { CSSProperties, ReactNode } from 'react'
@@ -5128,7 +5128,7 @@ export { rubBlock, rubDocDetailDomain, rubDocSummary, rubHero, rubRowSummary, ru
 ```
 
   Run: `pnpm --filter pi test -- rub-doc` — PASS.
-- [ ] **Step 7: данные фейка.** В `apps/pi/src/app/fake/rub-docs.data.ts` у `const RBANKS` добавить `export` (строка 43: `export const RBANKS: [string, string, string][] = [`). Создать `apps/pi/src/app/fake/rub-docs.detail.ts`:
+- [x] **Step 7: данные фейка.** В `apps/pi/src/app/fake/rub-docs.data.ts` у `const RBANKS` добавить `export` (строка 43: `export const RBANKS: [string, string, string][] = [`). Создать `apps/pi/src/app/fake/rub-docs.detail.ts`:
 
 ```ts
 import { RUB_OPERATION, TYPE_NAME, type RubDoc } from '../../entities/rub-doc'
@@ -5203,7 +5203,7 @@ export function makeRubDocDetail(row: RubDoc, i: number): Record<string, unknown
 ```
 
   В `apps/pi/src/app/fake/grids.ts`: `import { makeRubDocDetail } from './rub-docs.detail'` и `'rub-docs': fakeGrid(makeRubDocs(), rubDocLayout.columns, rubDocsMeta, { sortLabels: { status: STATUS_LABEL }, detail: makeRubDocDetail })`.
-- [ ] **Step 8: контрактная цепочка.** В `apps/pi/src/app/fake/contract.test.ts` добавить импорт `import { RUB_TYPES } from '../../entities/rub-doc'` и блок:
+- [x] **Step 8: контрактная цепочка.** В `apps/pi/src/app/fake/contract.test.ts` добавить импорт `import { RUB_TYPES } from '../../entities/rub-doc'` и блок:
 
 ```ts
 describe('контракт детали rub-docs (спека 2a §6)', () => {
@@ -5235,8 +5235,8 @@ describe('контракт детали rub-docs (спека 2a §6)', () => {
 ```
 
   (дополнить импорт `import { makeRubDocDetail } from './rub-docs.detail'`; `makeRubDocs` уже импортирован.)
-- [ ] **Step 9: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный.
-- [ ] **Step 10: commit.**
+- [x] **Step 9: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный.
+- [x] **Step 10: commit.**
 
 ```bash
 git add apps/pi/src/entities/posting/@x/rub-doc.ts apps/pi/src/entities/rub-doc/model/detail.ts apps/pi/src/entities/rub-doc/model/profiles.ts apps/pi/src/entities/rub-doc/model/profiles.test.ts apps/pi/src/entities/rub-doc/api/detail.mapper.ts apps/pi/src/entities/rub-doc/api/detail.example.ts apps/pi/src/entities/rub-doc/api/detail.mapper.test.ts apps/pi/src/entities/rub-doc/api/ports.ts apps/pi/src/entities/rub-doc/ui/detail.tsx apps/pi/src/entities/rub-doc/ui/detail.module.css apps/pi/src/entities/rub-doc/ui/detail.test.tsx apps/pi/src/entities/rub-doc/index.ts apps/pi/src/app/fake/rub-docs.detail.ts apps/pi/src/app/fake/rub-docs.data.ts apps/pi/src/app/fake/grids.ts apps/pi/src/app/fake/contract.test.ts
@@ -5281,7 +5281,7 @@ DocDetail<D, Row>(props: DocDetailProps<D, Row>): JSX.Element | null
   Правила: кэш — по `id` на время открытого экрана (переключение A↔B, сдвиг B в A и повторное открытие не перезапрашивают); ответ, пришедший после `pageClosed`, в кэш не кладётся; `pageClosed` закрывает оба слота и очищает кэш, ошибки и счётчики фокуса. `$focus` считается по `id`, а не по слоту: при сдвиге B в A фокус не прыгает. Разметка для e2e: лейн — `[data-part="lane"]`, полоса вкладок — `[data-part="tabs"]`, скелетон — `[data-part="skeleton"]`, шапка — `[data-part="head"]` (Task 3).
 - Consumes: `createDrawerStackModel`, `DrawerSlot`, `DrawerStackModel` (Task 2); `Drawer`, `DrawerStack`, `Tabs` (`overflow`, `variant="line"`), `TabPanel`, `ConfigForm`, `Menu`, `IconButton`, `LinkValue`, `Tag`, `StatusDot`, `Skeleton`, `ErrorState`, `useLoadingGate`, `useKatran` (кит); `DetailDomain`, `DetailAction`, `DetailSummary`, `ActionIcon` (Task 7); `PageLifecycle`; `ApiError`. Сущностей виджет не импортирует (зона eslint `widgets → entities` разрешена, но спека §4.3 запрещает — проверяется ревью и отсутствием импорта в файлах этой задачи).
 
-- [ ] **Step 1: модель — тесты (падают).** Создать `apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts`:
+- [x] **Step 1: модель — тесты (падают).** Создать `apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts`:
 
 ```ts
 import { allSettled, createEffect, fork } from 'effector'
@@ -5398,7 +5398,7 @@ describe('createDetail (спека 2a §4.3)', () => {
 ```
 
   Run: `pnpm --filter pi test -- createDetail` — FAIL.
-- [ ] **Step 2: модель — реализация.** Создать `apps/pi/src/widgets/doc-detail/lib/createDetail.ts`:
+- [x] **Step 2: модель — реализация.** Создать `apps/pi/src/widgets/doc-detail/lib/createDetail.ts`:
 
 ```ts
 import { attach, combine, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
@@ -5499,7 +5499,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
 ```
 
   Run: `pnpm --filter pi test -- createDetail` — PASS (8).
-- [ ] **Step 3: компонент — тесты (падают).** Создать `apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx`:
+- [x] **Step 3: компонент — тесты (падают).** Создать `apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx`:
 
 ```tsx
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -5653,7 +5653,7 @@ describe('DocDetail (спека 2a §4.3, §5)', () => {
 })
 ```
 
-- [ ] **Step 4: компонент — реализация.** Создать `apps/pi/src/widgets/doc-detail/ui/icons.tsx`:
+- [x] **Step 4: компонент — реализация.** Создать `apps/pi/src/widgets/doc-detail/ui/icons.tsx`:
 
 ```tsx
 import type { ReactElement } from 'react'
@@ -5944,7 +5944,7 @@ export { DocDetail, type DocDetailProps } from './ui/DocDetail'
 ```
 
   Run: `pnpm --filter pi test -- doc-detail` — PASS.
-- [ ] **Step 5: axe на реальных профилях.** Создать `apps/pi/src/app/details.a11y.test.tsx`:
+- [x] **Step 5: axe на реальных профилях.** Создать `apps/pi/src/app/details.a11y.test.tsx`:
 
 ```tsx
 import { act, screen } from '@testing-library/react'
@@ -5996,8 +5996,8 @@ describe('a11y деталки на реальных профилях обоих 
 })
 ```
 
-- [ ] **Step 6: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный; `grep -rn "entities" apps/pi/src/widgets/doc-detail` — пусто (виджет сущностей не знает).
-- [ ] **Step 7: commit.**
+- [x] **Step 6: запуск.** `pnpm --filter pi test` — PASS. `pnpm check` — зелёный; `grep -rn "entities" apps/pi/src/widgets/doc-detail` — пусто (виджет сущностей не знает).
+- [x] **Step 7: commit.**
 
 ```bash
 git add apps/pi/src/widgets/doc-detail/index.ts apps/pi/src/widgets/doc-detail/lib/createDetail.ts apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx apps/pi/src/widgets/doc-detail/ui/DocDetail.module.css apps/pi/src/widgets/doc-detail/ui/icons.tsx apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx apps/pi/src/app/details.a11y.test.tsx
@@ -6017,7 +6017,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Produces: `DocRegistryProps<Row>.marked?: ((row: Row) => 'a' | 'b' | null) | undefined` (пробрасывается в `DataGrid`); модели страниц экспортируют `detail: Detail<FxDocDetail>` / `Detail<RubDocDetail>` рядом с `lifecycle` и `registry`; связь `sample({ clock: registry.openRequested, target: detail.open })`.
 - Consumes: `createDetail`, `DocDetail` (Task 10); `fxDocDetailDomain`, `rubDocDetailDomain`, `fxDocPorts.detailFx`, `rubDocPorts.detailFx` (Task 8, 9); `gridFocusTarget` (Task 6); числа `REF` (Task 1).
 
-- [ ] **Step 1: тесты (падают).** В `apps/pi/src/widgets/doc-registry/ui/DocRegistry.test.tsx` в `describe` добавить:
+- [x] **Step 1: тесты (падают).** В `apps/pi/src/widgets/doc-registry/ui/DocRegistry.test.tsx` в `describe` добавить:
 
 ```tsx
   it('marked — метка открытых в деталке на записи грида', async () => {
@@ -6086,7 +6086,7 @@ describe('страница rub-docs: реестр → деталка (спека
 ```
 
   Run: `pnpm --filter pi test -- registry.model DocRegistry` — FAIL (нет `detail`, нет `marked`).
-- [ ] **Step 2: `DocRegistry`.** В `apps/pi/src/widgets/doc-registry/ui/DocRegistry.tsx` в `DocRegistryProps` после `openHint` добавить
+- [x] **Step 2: `DocRegistry`.** В `apps/pi/src/widgets/doc-registry/ui/DocRegistry.tsx` в `DocRegistryProps` после `openHint` добавить
 
 ```ts
   /** Записи, открытые в деталке (спека 2a §3.1): 'a' — основная, 'b' — сравнение. Экран берёт из модели деталки. */
@@ -6094,7 +6094,7 @@ describe('страница rub-docs: реестр → деталка (спека
 ```
 
   в деструктуризацию пропсов — `marked`, в `<DataGrid …>` после `openHint={openHint}` — `marked={marked}`.
-- [ ] **Step 3: модели страниц.** Заменить `apps/pi/src/pages/fx-docs/model/registry.model.ts`:
+- [x] **Step 3: модели страниц.** Заменить `apps/pi/src/pages/fx-docs/model/registry.model.ts`:
 
 ```ts
 import { sample } from 'effector'
@@ -6143,7 +6143,7 @@ sample({ clock: firstRow, fn: (row) => ({ id: fxDocLayout.rowKey(row), secondary
 ```
 
   и в e2e Step 5 `AUTO_OPEN = true`.
-- [ ] **Step 4: экраны.** Заменить `apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`:
+- [x] **Step 4: экраны.** Заменить `apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`:
 
 ```tsx
 import { useUnit } from 'effector-react'
@@ -6230,7 +6230,7 @@ export function RubDocsPage({ note }: { note?: string | undefined }) {
 ```
 
   Run: `pnpm --filter pi test` — PASS. `pnpm check` — зелёный.
-- [ ] **Step 5: e2e.** Создать `apps/pi/e2e/detail.spec.ts` (числа `REF` — из Task 1, «Замер эталона» в `detail-drift.md`; если замер дал другие — подставить их):
+- [x] **Step 5: e2e.** Создать `apps/pi/e2e/detail.spec.ts` (числа `REF` — из Task 1, «Замер эталона» в `detail-drift.md`; если замер дал другие — подставить их):
 
 ```ts
 import { expect, test, type Page } from '@playwright/test'
@@ -6404,8 +6404,8 @@ test('враждебный хост (?hostile): ширина drawer и стро�
 
   Run (передний план, дождаться): `pnpm --filter pi e2e`
   Expected: PASS — прежние 26 + 11 новых = 37. Геометрию из аннотаций (`--reporter=list` показывает их в отчёте, либо `playwright show-report`) записать в леджер: они идут в `detail-drift.md` (Task 12). Скриншоты `detail-fx-docs.png`, `detail-rub-docs.png` положить рядом со скриншотами эталона Task 1 и сравнить глазами; расхождения вида — пункты класса D в `detail-drift.md` (Task 12).
-- [ ] **Step 6: проверка в браузере — делает контроллер.** `pnpm --filter pi dev` (5185): `#/fx-docs` — клик по кнопке открытия → A через ~0,2 с; двойной клик по другой записи → B слева, A на месте; Esc — B, потом A; `?fail=detail` — alert в drawer; `#/rub-docs` — стороны, секции, ED107; тёмная тема — контраст меток A/B и статусов; консоль без ошибок. Исполнитель этот шаг пропускает (правило контроллера из плана `apps/pi`, R14).
-- [ ] **Step 7: commit.**
+- [x] **Step 6: проверка в браузере — делает контроллер.** `pnpm --filter pi dev` (5185): `#/fx-docs` — клик по кнопке открытия → A через ~0,2 с; двойной клик по другой записи → B слева, A на месте; Esc — B, потом A; `?fail=detail` — alert в drawer; `#/rub-docs` — стороны, секции, ED107; тёмная тема — контраст меток A/B и статусов; консоль без ошибок. Исполнитель этот шаг пропускает (правило контроллера из плана `apps/pi`, R14).
+- [x] **Step 7: commit.**
 
 ```bash
 git add apps/pi/src/widgets/doc-registry/ui/DocRegistry.tsx apps/pi/src/widgets/doc-registry/ui/DocRegistry.test.tsx apps/pi/src/pages/fx-docs/model/registry.model.ts apps/pi/src/pages/fx-docs/model/registry.model.test.ts apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx apps/pi/src/pages/rub-docs/model/registry.model.ts apps/pi/src/pages/rub-docs/model/registry.model.test.ts apps/pi/src/pages/rub-docs/ui/RubDocsPage.tsx apps/pi/e2e/detail.spec.ts
@@ -6421,27 +6421,27 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 **Interfaces:**
 - Consumes: `FX_DETAIL_EXAMPLE`, `RUB_DETAIL_EXAMPLE` (Task 8, 9) — примеры в `pi-api.md` дословно из них; числа e2e Task 11 (аннотации `geometry`) — в `detail-drift.md`; ответы В-Д1…В-Д4 (Task 1).
 
-- [ ] **Step 1: `docs/reference/pi-api.md`.**
+- [x] **Step 1: `docs/reference/pi-api.md`.**
   1. В §1 «Эндпоинты» — строка `GET /grids/{gridId}/documents/{id}` с пометкой **предложение** (как `/facets`): «документ целиком для деталки; `id` — `id` строки `content[]`, кодируется в пути; 200 — объект документа; 404 — Problem Details «Документ не найден»; ошибки транспорта — как у search».
   2. Новый раздел **«7. Деталь документа (предложение)»**: семантика (деталь = строка реестра + поля деталки; номер, сумма, статус обязаны совпадать со строкой); таблица «поле · тип · обязательно · пример» для `fx-docs` по `FxDocDetail` (`numDate`, `valueDates[4]`, `fields{тег → {opt?, acc?, lines[]}}` с правилом «тег `B.…` — последовательность B MT202COV», `inSender`/`inReceiver` (null — нет входящего), `accDt`, `accKt`, `routeDesc`, `routeText`, `txId`, `txAt`, `txs[]` — `{dir: DEBIT|CREDIT, st: EXECUTED|PENDING|CANCELED, acc, reg, time|null, amount, currency}`, `tabsOff[]` — ключи вкладок без данных) и для `rub-docs` по `RubDocDetail` (`numDate`, `opCode`, `opName`, `scenario`, `sysFrom`, `sysTo`, `party.s|r` — 11 реквизитов, пустой — `''`, `purposeExtra`, `agents[]`, `budget`, `ed107{relId, initId, relDate, execDate, v{узел/реквизит → значение}}`, `collect`, `txAt`, `txs[]`, `tabsOff[]`); ключи вкладок `tabsOff` — таблицей по `FX_TABS`/`RUB_TABS`. Примеры ответа — JSON из `FX_DETAIL_EXAMPLE` и `RUB_DETAIL_EXAMPLE` дословно (с пометкой «проверяется тестом `detail.mapper.test.ts`»), пример 404.
   3. В §6 «Что не проверяет фейковый сервер» — «деталь строится из строки реестра формулами по номеру строки; метод запроса не проверяется».
-- [ ] **Step 2: `docs/guides/pi-usage.md`.** Новый раздел **«13. Деталка документа»** перед «Зависимости»:
+- [x] **Step 2: `docs/guides/pi-usage.md`.** Новый раздел **«13. Деталка документа»** перед «Зависимости»:
   1. Состав: `widgets/doc-detail` (`createDetail` — стек A/B кита + загрузка по слоту и кэш по `id`; `DocDetail` — `DrawerStack` кита, шапка, лейн, вкладки, «Общие данные» по `ConfigForm`), домен — объект `DetailDomain` сущности (`fxDocDetailDomain`, `rubDocDetailDomain`), проводки — `entities/posting`, типы — `shared/lib/detail`.
   2. Сборка на странице — код из Task 11 (модель: `createDetail({ detailFx, lifecycle })` + `sample({ clock: registry.openRequested, target: detail.open })`; экран: `DocRegistry marked` + `DocDetail rowOf returnFocus={(id) => gridFocusTarget(title, id)}`).
   3. Бек отдаёт деталь иначе — правится только `entities/*/api/detail.mapper.ts`; новый тип MT — профиль в `FX_PROFILES` и поля в `FX_FIELDS` (`entities/fx-doc/model/swift.ts`); рублёвые секции — `RSECTIONS`-константы `entities/rub-doc/model/profiles.ts`.
   4. Жизненный цикл: `pageClosed` закрывает деталку и чистит кэш — адаптер роутера (§5) делать ничего дополнительно не должен.
   5. Жесты: клик — через 220 мс (`DataGrid`), двойной — рядом, Shift — рядом сразу, Esc — сначала B.
   6. В чек-лист §10 — «деталка открывается, `GET …/documents/{id}` своего бека проходит контрактный тест (`contract.test.ts`, блоки «контракт детали»)».
-- [ ] **Step 3: `apps/pi/README.md`** — регулятор `?fail=detail`, раздел «Деталка» одной строкой со ссылкой на `pi-usage.md` §13.
-- [ ] **Step 4: `docs/reference/detail-drift.md`.** Колонку «katran» перевести из «план 2a» в факт: для каждого пункта — «сделано в Task N (коммит)» или класс D с описанием; раздел «Замер эталона» дополнить колонкой «кит (e2e Task 11)» с числами из аннотаций; расхождения вида по скриншотам Task 11 Step 5 — новые строки класса D с предложением; раздел «Вопросы владельцу» — ответы В-Д1…В-Д4 с датой.
-- [ ] **Step 5: STATE, CHANGELOG, спеки.**
+- [x] **Step 3: `apps/pi/README.md`** — регулятор `?fail=detail`, раздел «Деталка» одной строкой со ссылкой на `pi-usage.md` §13.
+- [x] **Step 4: `docs/reference/detail-drift.md`.** Колонку «katran» перевести из «план 2a» в факт: для каждого пункта — «сделано в Task N (коммит)» или класс D с описанием; раздел «Замер эталона» дополнить колонкой «кит (e2e Task 11)» с числами из аннотаций; расхождения вида по скриншотам Task 11 Step 5 — новые строки класса D с предложением; раздел «Вопросы владельцу» — ответы В-Д1…В-Д4 с датой.
+- [x] **Step 5: STATE, CHANGELOG, спеки.**
   - `docs/STATE.md`: §1 — деталка на просмотр в `apps/pi` (срез 2a); §5 карта — `widgets/doc-detail`, `entities/posting`, `shared/lib/detail`, `packages/ui/src/{drawer,form}`, `docs/reference/detail-drift.md`; §6 — состояние (число тестов по `pnpm test`, e2e 37); §7 — техдолг: действия лейна — заглушки до 2d, вкладки кроме «Общих» — 2b, правка — 2c, страницы демо для `Drawer`/`ConfigForm`/`Disclosure` (демо — витрина компонентов, спека 2a их не требовала); §9 — следующий шаг: срез 2b (остальные вкладки), его спека-дельта и сверка против того же хеша стенда; §10 — ссылка на `detail-drift.md` с итогом сверки.
   - `CHANGELOG.md`: «- Срез 2a (`apps/pi`): деталка «Платёжная инструкция» на просмотр из обоих реестров — drawer A и B рядом для сравнения, шапка, лейн действий-заглушек, вкладки с переполнением, «Общие данные» валюты (MT103/MT202/MT202COV/MT199) и рубля (PAYDOCRU/REQDOCRU/PAYORDRU); порт `detailFx` (`GET /grids/{gridId}/documents/{id}` — предложение в контракт), фейк детали и `?fail=detail`; виджет `doc-detail`, сущность `posting`.»
   - Основная спека: §3 — в перечне компонентов `@katran/ui` — `Drawer`, `DrawerStack`, `FieldRow`, `ConfigForm`, `Disclosure`, `Tabs` с `overflow`/`variant`; в `@katran/effector` — `createDrawerStackModel`; §10 — деталка живёт в `apps/pi` (виджет `doc-detail`), демо — витрина компонентов; §11 — строка «2a — деталка на просмотр» со ссылкой на спеку 2a и этот план (статус «исполнен»).
   - Спека `apps/pi`: §4 — раскладка дополнена `widgets/doc-detail`, `entities/posting` (соседи через `@x/fx-doc.ts`, `@x/rub-doc.ts`), `shared/lib/detail`; §7 — шов `openRequested` подключён к деталке в модели страницы; §9 — `pi-usage.md` §13 и `pi-api.md` §7.
   - Спека 2a: в шапке статус «исполнено планом `docs/superpowers/plans/2026-09-29-katran-detail-view.md`»; в §3.1 после блока типов `ConfigForm` — абзац «Уточнено по профилям стенда (план 2a, Task 5): `FieldDef.label`, `FieldDef.show`, `FieldValue.acc`, `FormSchema.fieldsTitle`/`fieldsHint`/`seqB`/`sectionsTitle`, сводка — ключами `hero` с `renderHero`, вид значения — `present` приложения; высота строки SWIFT-поля — 27 (замер Task 1), 23 — строка таблицы сторон рубля».
-- [ ] **Step 6: проверка `pi-usage.md` «с нуля» — делает контроллер.** Свежий субагент получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: как подключить деталку к своему реестру, что правится, если бек отдаёт деталь иначе, как проверить. Неясности — фикс-раундом этой задачи. Исполнитель субагентов не запускает (правило контроллера плана `apps/pi`, R18).
-- [ ] **Step 7: проверка и commit.** `pnpm check` — зелёный.
+- [x] **Step 6: проверка `pi-usage.md` «с нуля» — делает контроллер.** Свежий субагент получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: как подключить деталку к своему реестру, что правится, если бек отдаёт деталь иначе, как проверить. Неясности — фикс-раундом этой задачи. Исполнитель субагентов не запускает (правило контроллера плана `apps/pi`, R18).
+- [x] **Step 7: проверка и commit.** `pnpm check` — зелёный.
 
 ```bash
 git add docs/reference/pi-api.md docs/guides/pi-usage.md docs/reference/detail-drift.md apps/pi/README.md docs/STATE.md CHANGELOG.md docs/superpowers/specs/2026-09-23-katran-design.md docs/superpowers/specs/2026-09-28-katran-pi-app-design.md docs/superpowers/specs/2026-09-29-katran-detail-view-design.md
