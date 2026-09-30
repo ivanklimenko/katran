@@ -1,0 +1,102 @@
+.tagBox {
+  display: inline-grid;
+  gap: var(--k-sp-1);
+  min-width: 0;
+}
+
+/* Поле растёт по высоте при переносе чипов, дальше прокручивается. Строка чипа — h-ctl-s − sp-1;
+   вертикальный отступ по размеру ставит одну строку по центру поля высотой h-ctl того же size:
+   m — (28 − 20) / 2 = sp-1, s — (24 − 20) / 2 = sp-1 / 2. Предел — три строки чипов с двумя зазорами sp-1
+   (tag-max-h − 4 × sp-1: 84 − 16 = 68 = 3 × 20 + 2 × 4). */
+.tagField {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: auto;
+  min-height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
+  max-height: calc(var(--k-tag-max-h) - 4 * var(--k-sp-1));
+  padding-top: var(--k-sp-1);
+  padding-bottom: var(--k-sp-1);
+  overflow-y: auto;
+  cursor: text;
+}
+
+.tagField[data-size="s"] {
+  padding-top: calc(var(--k-sp-1) / 2);
+  padding-bottom: calc(var(--k-sp-1) / 2);
+}
+
+/* список чипов — гибкий блок внутри поля, строка ввода рядом; не display: contents — в Chromium 88
+   он убирает <ul> из дерева доступности, и роль списка теряется */
+.tags {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: var(--k-sp-1);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
+  padding-left: var(--k-sp-1);
+  border: 1px solid transparent;
+  border-radius: var(--k-r-s);
+  background: var(--k-val-soft);
+  color: var(--k-ink);
+  font-size: var(--k-fs-2);
+  cursor: default;
+}
+
+.tag[data-invalid] {
+  border-color: var(--k-bad);
+  background: var(--k-bad-soft);
+}
+
+/* выделенный клавиатурой — после невалидного: выделение видно и на красном чипе */
+.tag[data-selected] {
+  border-color: var(--k-val);
+  box-shadow: 0 0 0 1px var(--k-val);
+}
+
+.tagText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagX {
+  flex: none;
+  color: var(--k-muted);
+}
+
+.tagInput {
+  flex: 1 1 var(--k-sp-8);
+  min-width: var(--k-sp-8);
+  height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
+}
+
+.note {
+  font-size: var(--k-fs-2);
+  color: var(--k-ink2);
+}
+
+.pop {
+  min-width: var(--k-filter-field);
+}
+
+/* текст только для скринридера: пометка невалидного чипа */
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
