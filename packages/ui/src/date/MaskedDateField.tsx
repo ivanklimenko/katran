@@ -56,6 +56,9 @@ export type MaskedDateFieldProps = {
   format: DateFormat
   min?: IsoDay | undefined
   max?: IsoDay | undefined
+  /** Нижняя граница с минутой («по» не раньше «с» в тот же день): дата в тот же день с более ранним временем
+   * подсвечивается как невалидная, а наружу уходит день без времени. */
+  notBefore?: DateValue | undefined
   /** Полное, но невалидное или вне min/max — родитель подсвечивает рамку (без :has — Chromium 88). */
   onInvalidChange?: ((invalid: boolean) => void) | undefined
   id?: string | undefined
@@ -68,7 +71,7 @@ export type MaskedDateFieldProps = {
 /** Текстовое поле даты по шаблону. Показывает набираемое, пока значение снаружи совпадает с тем, что поле само отдало;
  * внешняя смена значения перерисовывает текст из значения (как у числового поля панели, спека 1e §6.2). */
 export const MaskedDateField = forwardRef<HTMLInputElement, MaskedDateFieldProps>(function MaskedDateField(
-  { value, onChange, format, min, max, onInvalidChange, id, placeholder, disabled, className, ...aria }, ref,
+  { value, onChange, format, min, max, notBefore, onInvalidChange, id, placeholder, disabled, className, ...aria }, ref,
 ) {
   const [typed, setTyped] = useState<{ text: string; snap: DateValue } | null>(null)
   // значение ушло от снимка (пресет, календарь, сброс снаружи) — снимок больше не нужен: иначе при возврате
@@ -76,18 +79,36 @@ export const MaskedDateField = forwardRef<HTMLInputElement, MaskedDateFieldProps
   if (typed !== null && typed.snap !== value) setTyped(null)
   const text = typed !== null && typed.snap === value ? typed.text : value ? formatDateText(value, format) : ''
   const inRange = (v: string) => (min === undefined || dayOf(v) >= min) && (max === undefined || dayOf(v) <= max)
+  // то же число, но время раньше нижней границы: день годится, минута — нет
+  const tooEarly = (v: string) => notBefore !== undefined && notBefore.length > 10 && v.length > 10 && dayOf(v) === dayOf(notBefore) && v < notBefore
+  // что уходит наружу для разобранного текста: вне диапазона — пусто, слишком раннее время — только день
+  const resolve = (p: DateValue | null): DateValue => (p === null || !inRange(p) ? '' : tooEarly(p) ? dayOf(p) : p)
   const parsed = parseDateText(text, format)
-  const invalid = text !== '' && isComplete(text, format) && (parsed === null || !inRange(parsed))
+  const invalid = text !== '' && isComplete(text, format) && (parsed === null || !inRange(parsed) || tooEarly(parsed))
 
   const { inputRef, edit } = useMaskCaret()
   useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
 
   const commit = (masked: string) => {
-    const p = parseDateText(masked, format)
-    const next: DateValue = p !== null && inRange(p) ? p : ''
+    const next = resolve(parseDateText(masked, format))
     setTyped({ text: masked, snap: next })
     if (next !== value) onChange(next)
   }
+
+  // границы сдвинулись под набранный текст: полный разбираемый текст снова годится (или уже не годится) —
+  // значение догоняет то, что показано в поле. Свежие значения читает из ref, эффект держится только на границах.
+  const live = useRef({ typed, value, format, resolve, onChange })
+  useEffect(() => { live.current = { typed, value, format, resolve, onChange } })
+  useEffect(() => {
+    const { typed: t, value: v, format: f, resolve: r, onChange: change } = live.current
+    if (t === null || t.snap !== v || !isComplete(t.text, f)) return
+    const p = parseDateText(t.text, f)
+    if (p === null) return
+    const target = r(p)
+    if (target === v) return
+    setTyped({ text: t.text, snap: target })
+    change(target)
+  }, [min, max, notBefore])
 
   const report = useRef(onInvalidChange)
   useEffect(() => { report.current = onInvalidChange })

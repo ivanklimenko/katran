@@ -57,26 +57,36 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
 
   const close = () => { setOpen(false); setPending(null); setHover(null) }
   const toggle = () => { if (open) { close(); return } setMonth(fromDay || t); setOpen(true) }
+  // время «с» переживает выбор дней, как у DateInput: новый день ставится под прежние часы
+  const fromTime = value.from ? timeOf(value.from) : ''
   const pick = (d: IsoDay) => {
-    if (pending === null) { setPending(d); onChange({ from: d, to: '' }); return }
+    if (pending === null) { setPending(d); onChange({ from: withDay(d, fromTime), to: '' }); return }
     const [a, b] = d < pending ? [d, pending] : [pending, d]
     setPending(null)
     setHover(null)
-    onChange({ from: a, to: b })
+    onChange({ from: withDay(a, fromTime), to: b })
     if (!time) setOpen(false)
   }
   const outside = (p: DatePreset) => { const r = p.range(t); return (min !== undefined && r.from < min) || (max !== undefined && r.to > max) }
   // отметка — по дням: время границ пресет не задаёт
   const matches = (p: DatePreset) => presetMatches(p, t, { from: fromDay, to: toDay })
   const applyPreset = (p: DatePreset) => {
-    onChange(p.range(t))
+    const r = p.range(t)
+    onChange(r)
+    setMonth(r.from)
     setPending(null)
     setHover(null)
     // со временем поповер остаётся: после пресета ещё нужно вписать часы (спека §3.6)
     if (!time) setOpen(false)
   }
-  // «с» позже уже стоящего «по» — «по» сбрасывается, иначе наружу ушёл бы период наоборот
-  const setFrom = (v: DateValue) => onChange({ from: v, to: v && toDay && dayOf(v) > toDay ? '' : value.to })
+  // «по» не может быть раньше «с»: позже днём — сбрасывается целиком, в тот же день раньше временем — остаётся день
+  const fitTo = (from: DateValue, to: DateValue): DateValue => {
+    if (!from || !to) return to
+    if (dayOf(from) > dayOf(to)) return ''
+    return dayOf(from) === dayOf(to) && timeOf(to) !== '' && timeOf(from) !== '' && to < from ? dayOf(to) : to
+  }
+  const setFrom = (v: DateValue) => onChange({ from: v, to: fitTo(v, value.to) })
+  const sameDay = fromDay !== '' && fromDay === toDay
   const toMin = fromDay && (min === undefined || fromDay > min) ? fromDay : min
 
   return (
@@ -84,11 +94,11 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
       <span ref={anchor} role="group" aria-label={label} className={[is.field, size === 's' ? is.sizeS : is.sizeM, invFrom || invTo ? is.invalid : '', s.dateField].filter(Boolean).join(' ')}>
         <MaskedDateField ref={fromInput} aria-label={`${label}, с`} value={value.from} onChange={setFrom} format={fmt} min={min} max={max} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvFrom} />
         <span className={s.dash} aria-hidden="true">–</span>
-        <MaskedDateField aria-label={`${label}, по`} value={value.to} onChange={(v) => onChange({ ...value, to: v })} format={fmt} min={toMin} max={max} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvTo} />
+        <MaskedDateField aria-label={`${label}, по`} value={value.to} onChange={(v) => onChange({ ...value, to: v })} format={fmt} min={toMin} max={max} notBefore={value.from} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvTo} />
         <IconButton size="s" label="Выбрать период" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
       </span>
       {quick.length > 0 && (
-        <span role="group" aria-label="Быстрый период" className={s.quick}>
+        <span role="group" aria-label={`${label}: быстрый период`} className={s.quick}>
           {quick.map((p) => {
             const on = matches(p)
             return <Button key={p.id} size="s" pressed={on} disabled={disabled || outside(p)} onClick={() => onChange(on ? EMPTY : p.range(t))}>{p.label}</Button>
@@ -108,8 +118,8 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
             <Calendar month={month} onMonthChange={setMonth} range={shown} onPick={pick} onHoverDay={(d) => { if (pending !== null) setHover(d) }} min={min} max={max} today={t} autoFocus />
             {time && (
               <div className={s.timeRow}>
-                <TimeField label="Время с" disabled={!value.from} value={value.from ? timeOf(value.from) : ''} onChange={(tm) => onChange({ ...value, from: withDay(value.from, tm) })} onEnter={close} />
-                <TimeField label="Время по" disabled={!value.to} value={value.to ? timeOf(value.to) : ''} onChange={(tm) => onChange({ ...value, to: withDay(value.to, tm) })} onEnter={close} />
+                <TimeField label="Время с" disabled={!value.from} value={value.from ? timeOf(value.from) : ''} onChange={(tm) => setFrom(withDay(value.from, tm))} onEnter={close} />
+                <TimeField label="Время по" disabled={!value.to} notBefore={sameDay ? timeOf(value.from) : undefined} value={value.to ? timeOf(value.to) : ''} onChange={(tm) => onChange({ ...value, to: withDay(value.to, tm) })} onEnter={close} />
                 <Button size="s" variant="primary" onClick={close}>Готово</Button>
               </div>
             )}
