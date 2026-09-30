@@ -1,8 +1,8 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { createEffect } from 'effector'
-import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery } from '@katran/effector'
+import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery, type SuggestQuery } from '@katran/effector'
 import type { RecordLayout, RowState } from '@katran/ui'
 import { ApiError } from '../../../shared/api'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -13,7 +13,7 @@ import { DocRegistry } from './DocRegistry'
 type Row = { id: string; status: string; name: string; inactive?: boolean }
 const layout: RecordLayout<Row> = { rowKey: (r) => r.id, columns: [{ id: 'name', title: 'Имя', render: (r) => r.name }] }
 
-function make(opts: { failSearch?: boolean; meta?: FilterMeta | null; rows?: Row[] } = {}) {
+function make(opts: { failSearch?: boolean; meta?: FilterMeta | null; rows?: Row[]; suggest?: ((q: SuggestQuery) => string[]) | undefined } = {}) {
   let fail = opts.failSearch ?? false
   const rows = opts.rows ?? [{ id: 'a', status: 'ERROR', name: 'Альфа' }]
   const ports = {
@@ -22,6 +22,7 @@ function make(opts: { failSearch?: boolean; meta?: FilterMeta | null; rows?: Row
       return { rows, total: rows.length }
     }),
     facetsFx: createEffect<FacetsQuery, Facet[], ApiError>(async () => [{ value: 'ERROR', count: 1 }]),
+    suggestFx: createEffect<SuggestQuery, string[], ApiError>(async (q) => opts.suggest?.(q) ?? []),
     filterMetaFx: createEffect<void, FilterMeta, ApiError>(async () => {
       if (opts.meta === null) return new Promise<FilterMeta>(() => {}) // каталог не приходит
       return opts.meta ?? { fields: [{ id: 'name', label: 'Имя', type: 'STRING', ops: [] }] }
@@ -98,6 +99,27 @@ describe('DocRegistry', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Выбрать запись 1' }))
     await userEvent.click(screen.getByRole('button', { name: /Выбрать все \d+ по фильтру/ }))
     expect(screen.getByRole('region', { name: 'Массовые действия' })).toHaveTextContent('без неактивных')
+  })
+  it('панель на новых контролах: подсказки из порта suggestFx, фраз по полю — несколько (onSetField, не совместимый режим)', async () => {
+    const u = userEvent.setup()
+    const asked: SuggestQuery[] = []
+    const meta: FilterMeta = { fields: [
+      { id: 'status', label: 'Статус', type: 'ENUM', ops: ['EQ'] },
+      { id: 'name', label: 'Имя', type: 'STRING', ops: ['CONTAINS', 'IN'], suggest: true },
+    ] }
+    const { registry, lifecycle } = make({ meta, suggest: (q) => { asked.push(q); return ['Альфа', 'Альфа-Центавра'] } })
+    renderK(<DocRegistry registry={registry} layout={layout} title="Реестр" describe={(r) => r.name} />)
+    act(() => { lifecycle.pageOpened() })
+    await screen.findByText('Альфа')
+    await u.click(await screen.findByRole('button', { name: /^Фильтры/, expanded: false }))
+    const input = screen.getByRole('combobox', { name: 'Имя' })
+    await u.type(input, 'аль')
+    expect(await screen.findByRole('option', { name: 'Альфа-Центавра' }, { timeout: 2000 })).toBeInTheDocument()
+    expect(asked[asked.length - 1]).toMatchObject({ field: 'name', query: 'аль', filter: [] })
+    await u.click(screen.getByRole('option', { name: 'Альфа-Центавра' }))
+    await u.type(input, 'бета{Enter}')
+    expect(within(screen.getByRole('list', { name: 'Имя' })).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.queryByText(/Не добавлено/)).toBeNull()
   })
   it('marked — метка открытых в деталке на записи грида', async () => {
     const { registry, lifecycle } = make()

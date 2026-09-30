@@ -1,6 +1,6 @@
 import { createEffect, type Effect } from 'effector'
-import type { Facet, FacetsQuery, FilterMeta, GridPage, GridQuery } from '@katran/effector'
-import { fromFacetsResponse, fromFilterMetaResponse, fromSearchResponse, toFacetsBody, toSearchBody, type RowParser } from './grid-contract'
+import type { Facet, FacetsQuery, FilterMeta, GridPage, GridQuery, SuggestQuery } from '@katran/effector'
+import { fromFacetsResponse, fromFilterMetaResponse, fromSearchResponse, fromSuggestResponse, toFacetsBody, toSearchBody, toSuggestBody, type RowParser } from './grid-contract'
 import { obj } from './guards'
 import type { ApiError } from './problem'
 import { requestFx } from './request'
@@ -10,6 +10,8 @@ export type GridPorts<Row> = {
   searchFx: Effect<GridQuery, GridPage<Row>, ApiError>
   facetsFx: Effect<FacetsQuery, Facet[], ApiError>
   filterMetaFx: Effect<void, FilterMeta, ApiError>
+  /** Подсказки при вводе: POST /grids/{gridId}/suggest — предложение в контракт, как /facets (docs/reference/pi-api.md). */
+  suggestFx: Effect<SuggestQuery, string[], ApiError>
 }
 /** Документ целиком (спека 2a §4.1): сущность проверяет форму ответа и переименовывает поля бека. Бросает contractError. */
 export type DetailParser<D> = (raw: unknown, path: string) => D
@@ -31,9 +33,11 @@ export function createGridPorts<Row, D>(
     fromFacetsResponse(await requestFx({ method: 'POST', url: `${base}/facets`, body: toFacetsBody(q) })))
   const filterMetaFx = createEffect<void, FilterMeta, ApiError>(async () =>
     fromFilterMetaResponse(await requestFx({ method: 'GET', url: `${base}/filter-meta` })))
-  if (!parseDetail) return { searchFx, facetsFx, filterMetaFx }
+  const suggestFx = createEffect<SuggestQuery, string[], ApiError>(async (q) =>
+    fromSuggestResponse(await requestFx({ method: 'POST', url: `${base}/suggest`, body: toSuggestBody(q) })))
+  if (!parseDetail) return { searchFx, facetsFx, filterMetaFx, suggestFx }
   // id — в пути: кодируется, чтобы «/», «?» и «#» в идентификаторе бека не ломали маршрут
   const detailFx = createEffect<string, D, ApiError>(async (id) =>
     parseDetail(obj(await requestFx({ method: 'GET', url: `${base}/documents/${encodeURIComponent(id)}` }), 'ответ'), 'ответ'))
-  return { searchFx, facetsFx, filterMetaFx, detailFx }
+  return { searchFx, facetsFx, filterMetaFx, suggestFx, detailFx }
 }

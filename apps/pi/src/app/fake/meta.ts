@@ -11,8 +11,10 @@ export const OPS_BY_TYPE: Record<FilterFieldType, Condition['op'][]> = {
   BOOLEAN: ['EQ', 'IS_EMPTY', 'IS_NOT_EMPTY'],
 }
 
-export const field = (id: string, label: string, type: FilterFieldType, dictionary?: string): FieldDto =>
-  ({ id, label, type, operators: OPS_BY_TYPE[type], dictionary })
+/** Необязательные свойства поля каталога: оператор по умолчанию (контракт §6) и подсказки (предложение). */
+export type FieldOpts = { defaultOperator?: Condition['op'] | undefined; suggest?: boolean | undefined }
+export const field = (id: string, label: string, type: FilterFieldType, dictionary?: string, opts: FieldOpts = {}): FieldDto =>
+  ({ id, label, type, operators: OPS_BY_TYPE[type], dictionary, ...opts })
 
 /** Встроенный справочник из словаря подписей: порядок — порядок ключей. */
 export const inline = (labels: Record<string, string>) =>

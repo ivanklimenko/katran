@@ -1,10 +1,10 @@
 import type { Filter } from '@katran/effector'
-import { toApiError, type FacetsBody, type FilterMetaDto, type HttpRequest, type Problem, type ProblemError, type SearchBody } from '../../shared/api'
+import { toApiError, type FacetsBody, type FilterMetaDto, type HttpRequest, type Problem, type ProblemError, type SearchBody, type SuggestBody } from '../../shared/api'
 import type { FakeGrid } from './grid'
 
 export type FakeServerOptions = { delayMs?: (() => number) | undefined; failing?: (() => string | null) | undefined }
 
-const ROUTE = /^\/grids\/([^/]+)\/(search|facets|filter-meta)$/
+const ROUTE = /^\/grids\/([^/]+)\/(search|facets|suggest|filter-meta)$/
 const DOCUMENT = /^\/grids\/([^/]+)\/documents\/([^/]+)$/
 const fail = (status: number, title: string, detail: string): never => {
   const p: Problem = { type: 'urn:katran:fake', title, status, detail }
@@ -46,11 +46,20 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
     if (!grid) return fail(404, 'Неизвестный грид', gridId)
     if (opts.failing?.() === (op === 'filter-meta' ? 'meta' : op)) return fail(500, 'Сбой сервера', `Регулятор ?fail=${op === 'filter-meta' ? 'meta' : op}`)
     if (op === 'filter-meta') return grid.meta
-    const body = req.body as SearchBody | FacetsBody
+    const body = req.body as SearchBody | FacetsBody | SuggestBody
     const errors = validate(grid.meta, body.filter.conditions, 'page' in body ? body.page.size : null)
     if (errors.length > 0) {
       const p: Problem = { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: `Ошибок: ${errors.length}`, errors }
       throw toApiError(400, p)
+    }
+    if (op === 'suggest') {
+      const sb = body as SuggestBody
+      const f = grid.meta.fields.find((x) => x.id === sb.field)
+      const bad: ProblemError[] = []
+      if (!f || f.suggest !== true) bad.push({ path: 'field', code: 'SUGGEST_NOT_SUPPORTED', message: `У поля ${sb.field} нет подсказок` })
+      if (!(sb.limit >= 1 && sb.limit <= 50)) bad.push({ path: 'limit', code: 'LIMIT_OUT_OF_RANGE', message: 'limit — от 1 до 50' })
+      if (bad.length > 0) throw toApiError(400, { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
+      return grid.suggest(sb)
     }
     return op === 'search' ? grid.search(body as SearchBody) : grid.facets(body as FacetsBody)
   }

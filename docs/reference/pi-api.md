@@ -1,6 +1,6 @@
 # API `apps/pi` для бекенда
 
-Документ для команды бекенда: какими запросами пользуется фронт `apps/pi` (реестры «Валютные документы» и «Рублёвые документы»), какой состав строки ожидает каждый грид, и примеры запросов/ответов. Контракт транспорта — `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — из `vtb-filters` (`/Users/shaman/_CODE/VTB/vtb-filters/docs/filter-contract.md`, §5–6 «Запрос поиска», «Каталог фильтров»; здесь контракт не копируется, только состав строки и примеры под наши гриды). Эндпоинты `POST /grids/{gridId}/facets` и `GET /grids/{gridId}/documents/{id}` в контракте `vtb-filters` не описаны — это наши предложения (разделы 1.3 и 1.4, состав детали — раздел 7).
+Документ для команды бекенда: какими запросами пользуется фронт `apps/pi` (реестры «Валютные документы» и «Рублёвые документы»), какой состав строки ожидает каждый грид, и примеры запросов/ответов. Контракт транспорта — `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — из `vtb-filters` (`/Users/shaman/_CODE/VTB/vtb-filters/docs/filter-contract.md`, §5–6 «Запрос поиска», «Каталог фильтров»; здесь контракт не копируется, только состав строки и примеры под наши гриды). Эндпоинты `POST /grids/{gridId}/facets`, `GET /grids/{gridId}/documents/{id}` и `POST /grids/{gridId}/suggest`, а также признак поля `suggest` в каталоге в контракте `vtb-filters` не описаны — это наши предложения (разделы 1.3, 1.4 и 1.5, состав детали — раздел 7).
 
 Реализация на фронте — `apps/pi/src/shared/api/grid-contract.ts` (сборка тела запроса и разбор ответа) и `apps/pi/src/app/fake/server.ts` (фейковый сервер на этом же контракте, для разработки без бека).
 
@@ -12,7 +12,17 @@
 
 ### 1.2. `GET /grids/{gridId}/filter-meta`
 
-Контракт `vtb-filters` §6 «Каталог фильтров» дословно: `{ gridId?, groups?, fields: [{ id, label, type, operators, dictionary? }], dictionaries? }`. Оба грида `apps/pi` — режим simple: `groups` не используется (плоский список полей), справочники — `INLINE` (значения перечислены в самом ответе, без отдельного запроса).
+Контракт `vtb-filters` §6 «Каталог фильтров» дословно: `{ gridId?, groups?, fields: [{ id, label, type, operators, dictionary?, defaultOperator?, suggest? }], dictionaries? }`. Оба грида `apps/pi` — режим simple: `groups` не используется (плоский список полей), справочники — `INLINE` (значения перечислены в самом ответе, без отдельного запроса).
+
+Два необязательных свойства поля определяют, какой контрол панель фильтров покажет для поля:
+
+- `defaultOperator` — оператор по умолчанию (контракт §6), один из `operators` поля. `IN` у полей `STRING` и `NUMBER` включает ввод **списка значений**: пользователь вставляет или вводит номера и референсы через пробел, запятую или с новой строки, панель шлёт одно условие `IN` (до 500 значений). Без `defaultOperator` поле `STRING` — ввод фраз, `NUMBER` — одно значение или диапазон.
+- `suggest: true` — **предложение** (`docs/reference/suggest-proposal.md`): у поля есть подсказки при вводе, панель запрашивает их через `POST /grids/{gridId}/suggest` (раздел 1.5). Без свойства или с `false` подсказок нет, и `suggest` для такого поля бек отклоняет `400`.
+
+Как панель складывает условия (для сведения бека):
+
+- фразы одного поля приходят **несколькими условиями `CONTAINS` по этому полю** — все должны выполняться (AND, контракт §4.4): `[{ "field": "purpose", "op": "CONTAINS", "value": "договор" }, { "field": "purpose", "op": "CONTAINS", "value": "НДС" }]`;
+- списки номеров и референсов — одно условие `IN` со значениями, не больше 500 (предел контракта).
 
 ### 1.3. `POST /grids/{gridId}/facets` (предложение)
 
@@ -50,9 +60,34 @@
 - `404` — Problem Details «Документ не найден» (пример — раздел 7.5); неизвестный `gridId` — тоже `404`.
 - Ошибки транспорта и `5xx` — как у `search` (раздел 2): фронт показывает текст ошибки внутри drawer'а с кнопкой «Повторить», реестр продолжает работать.
 
+### 1.5. `POST /grids/{gridId}/suggest` (предложение)
+
+В контракте `vtb-filters` не описан. Нужен полю ввода фраз в панели фильтров: пока пользователь печатает, под полем — значения этого поля, которые реально встречаются в выборке. Вызывается только для полей с `suggest: true` в каталоге (раздел 1.2); фронт ждёт паузу ввода (250 мс) и не шлёт пустой запрос. Подробное обоснование — `docs/reference/suggest-proposal.md`.
+
+**Тело запроса:**
+
+```json
+{ "filter": { "conditions": [{ "field": "status", "op": "EQ", "value": "ERROR" }] }, "field": "reason", "query": "с", "limit": 10 }
+```
+
+**Ответ — 200:**
+
+```json
+{ "items": ["Санкционный стоп-лист", "Не найден счёт получателя", "Просрочена дата валютирования"] }
+```
+
+Семантика:
+
+- `filter.conditions` — тот же формат условий, что у `search` §5.1 контракта `vtb-filters`; фронт присылает применённый фильтр **без условий по самому полю `field`** (как у `facets`, раздел 1.3): подсказки не должны сужаться уже введёнными фразами этого же поля.
+- `field` — идентификатор поля из каталога с `suggest: true`.
+- `query` — введённый текст (фронт обрезает пробелы по краям); совпадение — **вхождение без учёта регистра**.
+- `limit` — от 1 до 50 (фронт шлёт 10).
+- `items` — **различные** значения поля среди записей, попадающих под `filter`, содержащие `query`, **по убыванию частоты** (при равной частоте — по алфавиту); не больше `limit`. Пустые значения не включаются.
+- Ошибки — Problem Details (раздел 2): поле без `suggest: true` или неизвестное — `400` с кодом `SUGGEST_NOT_SUPPORTED` (путь `field`), `limit` вне 1–50 — `400` с кодом `LIMIT_OUT_OF_RANGE` (путь `limit`); условия `filter` проверяются как у `search`; неизвестный `gridId` — `404`. Отказ подсказок не мешает работе с фильтром: фронт просто не показывает список.
+
 ## 2. Ошибки
 
-RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ type, title, status?, detail?, errors?: [{ path, code, message }] }`. `apps/pi` разбирает `errors[].code` только для отображения — коды не фиксированы контрактом на нашей стороне, использовать любые говорящие (в фейковом сервере — `UNKNOWN_FIELD`, `OPERATOR_NOT_ALLOWED`, `PAGE_SIZE_OUT_OF_RANGE`).
+RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ type, title, status?, detail?, errors?: [{ path, code, message }] }`. `apps/pi` разбирает `errors[].code` только для отображения — коды не фиксированы контрактом на нашей стороне, использовать любые говорящие (в фейковом сервере — `UNKNOWN_FIELD`, `OPERATOR_NOT_ALLOWED`, `PAGE_SIZE_OUT_OF_RANGE`; у подсказок — `SUGGEST_NOT_SUPPORTED`, `LIMIT_OUT_OF_RANGE`).
 
 ## 3. `gridId`
 
@@ -221,21 +256,26 @@ POST /grids/fx-docs/facets
 
 ### 5.3. `fx-docs`: `filter-meta`
 
-Ответ — ровно то, что отдаёт `GET /grids/fx-docs/filter-meta` в фейковом сервере (`apps/pi/src/app/fake/fx-docs.data.ts`, `fxDocsMeta`), 9 полей режима simple:
+Ответ — ровно то, что отдаёт `GET /grids/fx-docs/filter-meta` в фейковом сервере (`apps/pi/src/app/fake/fx-docs.data.ts`, `fxDocsMeta`), 14 полей режима simple в порядке панели. Номер документа и референсы (поле 20 входящего и исходящего) — `defaultOperator: "IN"` (ввод списком), наименования сторон, BIC 52, назначение и причина статуса — `suggest: true` (подсказки, раздел 1.5):
 
 ```json
 {
   "gridId": "fx-docs",
   "fields": [
-    { "id": "docNumber", "label": "Номер документа", "type": "NUMBER", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
+    { "id": "docNumber", "label": "Номер документа", "type": "NUMBER", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "defaultOperator": "IN" },
+    { "id": "refIn", "label": "20 вх", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "defaultOperator": "IN" },
+    { "id": "refOut", "label": "20 исх", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "defaultOperator": "IN" },
     { "id": "status", "label": "Статус", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "docStatus" },
     { "id": "type", "label": "Тип сообщения", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "fxType" },
     { "id": "direction", "label": "Направление", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "direction" },
     { "id": "currency", "label": "Валюта", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "currency" },
     { "id": "amount", "label": "Сумма", "type": "NUMBER", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
     { "id": "created", "label": "Дата документа", "type": "DATE", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IS_EMPTY", "IS_NOT_EMPTY"] },
-    { "id": "f50name", "label": "Приказодатель", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
-    { "id": "f59name", "label": "Бенефициар", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] }
+    { "id": "f50name", "label": "Приказодатель", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "f59name", "label": "Бенефициар", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "f52", "label": "BIC 52", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "purpose", "label": "Назначение", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "reason", "label": "Причина статуса", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true }
   ],
   "dictionaries": {
     "docStatus": { "mode": "INLINE", "items": [
@@ -323,22 +363,22 @@ POST /grids/rub-docs/search
 
 ### 5.6. `rub-docs`: `filter-meta`
 
-Ответ — ровно то, что отдаёт `GET /grids/rub-docs/filter-meta` (`apps/pi/src/app/fake/rub-docs.data.ts`, `rubDocsMeta`), 10 полей режима simple. Справочник `queue` — единственный с числовыми `value` (`1`…`5`): поле `queue` в строке — число, поэтому и значение в условии фильтра — число (`"value": 5`, раздел 5.5), не строка `"5"`:
+Ответ — ровно то, что отдаёт `GET /grids/rub-docs/filter-meta` (`apps/pi/src/app/fake/rub-docs.data.ts`, `rubDocsMeta`), 10 полей режима simple. Номер документа и ИНН получателя — `defaultOperator: "IN"` (ввод списком), наименования отправителя и получателя — `suggest: true`. Справочник `queue` — единственный с числовыми `value` (`1`…`5`): поле `queue` в строке — число, поэтому и значение в условии фильтра — число (`"value": 5`, раздел 5.5), не строка `"5"`:
 
 ```json
 {
   "gridId": "rub-docs",
   "fields": [
-    { "id": "docNumber", "label": "Номер документа", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
+    { "id": "docNumber", "label": "Номер документа", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "defaultOperator": "IN" },
     { "id": "status", "label": "Статус", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "docStatus" },
     { "id": "type", "label": "Тип документа", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "rubType" },
     { "id": "direction", "label": "Группа направления", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "direction" },
     { "id": "amount", "label": "Сумма", "type": "NUMBER", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
     { "id": "queue", "label": "Очерёдность", "type": "ENUM", "operators": ["EQ", "NE", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "dictionary": "queue" },
     { "id": "created", "label": "Дата создания", "type": "DATE", "operators": ["EQ", "NE", "GT", "GTE", "LT", "LTE", "BETWEEN", "IS_EMPTY", "IS_NOT_EMPTY"] },
-    { "id": "fromName", "label": "Наименование отправителя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
-    { "id": "toName", "label": "Наименование получателя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] },
-    { "id": "toInn", "label": "ИНН получателя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"] }
+    { "id": "fromName", "label": "Наименование отправителя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "toName", "label": "Наименование получателя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "suggest": true },
+    { "id": "toInn", "label": "ИНН получателя", "type": "STRING", "operators": ["EQ", "NE", "CONTAINS", "STARTS_WITH", "ENDS_WITH", "IN", "NOT_IN", "IS_EMPTY", "IS_NOT_EMPTY"], "defaultOperator": "IN" }
   ],
   "dictionaries": {
     "docStatus": { "mode": "INLINE", "items": [
@@ -385,15 +425,67 @@ POST /grids/rub-docs/search
 }
 ```
 
+### 5.8. `fx-docs`: `suggest` (предложение)
+
+Запрос — подсказки по приказодателю на ввод «ооо» без фильтра (`apps/pi/src/app/fake/contract.test.ts`, тест «suggest: различные значения поля по выборке…»; здесь `limit` 10, в тесте — 3):
+
+```json
+POST /grids/fx-docs/suggest
+{ "filter": { "conditions": [] }, "field": "f50name", "query": "ооо", "limit": 10 }
+```
+
+Ответ — 200 (настоящий ответ фейкового сервера; значений с «ооо» в наборе пять, поэтому их меньше `limit`):
+
+```json
+{ "items": ["ООО «Ромашка»", "ООО «Кедр»", "ООО «Лотос»", "ООО «Меридиан»", "ООО «Северный ветер»"] }
+```
+
+С фильтром по другому полю выборка сужается — подсказки причины статуса среди документов в статусе «Ошибка» (пример раздела 1.5):
+
+```json
+POST /grids/fx-docs/suggest
+{ "filter": { "conditions": [{ "field": "status", "op": "EQ", "value": "ERROR" }] }, "field": "reason", "query": "с", "limit": 5 }
+```
+
+```json
+{ "items": ["Санкционный стоп-лист", "Не найден счёт получателя", "Просрочена дата валютирования"] }
+```
+
+### 5.9. `fx-docs`: `suggest`, ошибка 400
+
+Поле без `suggest: true` (сумма) и `limit` вне диапазона — обе ошибки в одном ответе (`apps/pi/src/app/fake/server.ts`):
+
+```json
+POST /grids/fx-docs/suggest
+{ "filter": { "conditions": [] }, "field": "amount", "query": "1", "limit": 100 }
+```
+
+Ответ — 400:
+
+```json
+{
+  "type": "urn:vtb:grid:filter-validation",
+  "title": "Некорректный запрос подсказок",
+  "status": 400,
+  "detail": "Ошибок: 2",
+  "errors": [
+    { "path": "field", "code": "SUGGEST_NOT_SUPPORTED", "message": "У поля amount нет подсказок" },
+    { "path": "limit", "code": "LIMIT_OUT_OF_RANGE", "message": "limit — от 1 до 50" }
+  ]
+}
+```
+
 ## 6. Что не проверяет фейковый сервер (не полагаться на это в проде)
 
 Фейковый сервер `apps/pi/src/app/fake/server.ts` — упрощение для разработки без бека, а не образец полной валидации:
 
 - HTTP-метод маршрута не проверяется (`GET` на `search` тоже пройдёт).
 - `FacetsBody.field` не сверяется с каталогом — неизвестное поле вернёт пустой массив, а не `400`.
+- Границы `DATETIME` сравниваются строкой настенного времени: смещение зоны в значении условия не учитывается. Настоящий бек обязан приводить момент к одной зоне.
+- Подсказки (`suggest`, раздел 1.5) считаются по данным стенда (87 валютных и набор рублёвых документов) полным перебором; частоты и порядок — свойство этих данных, не образец. Регулятор `?fail=suggest` (ответ `500`) есть только у фейка.
 - Деталь документа (`GET …/documents/{id}`, раздел 7) строится из строки реестра формулами по номеру строки (`apps/pi/src/app/fake/fx-docs.detail.ts`, `rub-docs.detail.ts`); метод запроса не проверяется. Регулятор `?fail=detail` (ответ `500`) есть только у фейка; `404` фейк отдаёт на любой `id`, которого нет среди строк реестра, с `type` `urn:katran:fake` (пример — раздел 7.5) — у настоящего бека правило «документа нет» и `type` свои, фронт смотрит только на статус и текст (раздел 1.4).
 
-Настоящий бек должен проверять метод и поле фасетов.
+Настоящий бек должен проверять метод, поле фасетов и зону в границах `DATETIME`.
 
 ## 7. Деталь документа (предложение)
 

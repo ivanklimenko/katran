@@ -4,20 +4,20 @@ import { ED_BY_TYPE, TYPE_NAME, type RubDoc, type RubType } from '../../entities
 import type { FilterMetaDto } from '../../shared/api'
 import { field, inline } from './meta'
 
-/** То, что бек отдаст в GET /grids/rub-docs/filter-meta (десять полей режима simple, спека §8.2). */
+/** То, что бек отдаст в GET /grids/rub-docs/filter-meta (десять полей режима simple, спека §8.2): номер и ИНН — списком (IN), наименования — с подсказками. */
 export const rubDocsMeta: FilterMetaDto = {
   gridId: 'rub-docs',
   fields: [
-    field('docNumber', 'Номер документа', 'STRING'),
+    field('docNumber', 'Номер документа', 'STRING', undefined, { defaultOperator: 'IN' }),
     field('status', 'Статус', 'ENUM', 'docStatus'),
     field('type', 'Тип документа', 'ENUM', 'rubType'),
     field('direction', 'Группа направления', 'ENUM', 'direction'),
     field('amount', 'Сумма', 'NUMBER'),
     field('queue', 'Очерёдность', 'ENUM', 'queue'),
     field('created', 'Дата создания', 'DATE'),
-    field('fromName', 'Наименование отправителя', 'STRING'),
-    field('toName', 'Наименование получателя', 'STRING'),
-    field('toInn', 'ИНН получателя', 'STRING'),
+    field('fromName', 'Наименование отправителя', 'STRING', undefined, { suggest: true }),
+    field('toName', 'Наименование получателя', 'STRING', undefined, { suggest: true }),
+    field('toInn', 'ИНН получателя', 'STRING', undefined, { defaultOperator: 'IN' }),
   ],
   dictionaries: {
     docStatus: inline(STATUS_LABEL), rubType: inline(TYPE_NAME),
