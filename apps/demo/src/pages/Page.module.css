@@ -58,3 +58,70 @@
   padding: var(--k-sp-4);
   flex: 1;
 }
+
+/* строка полей витрины: поля ввода разной ширины в сетке, как в панели фильтров */
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--k-filter-field), 1fr));
+  gap: var(--k-sp-3);
+  align-items: start;
+  margin-top: var(--k-sp-2);
+  padding: var(--k-sp-3);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+}
+
+.field {
+  display: grid;
+  gap: var(--k-sp-1);
+  min-width: 0;
+}
+
+.caption {
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-muted);
+}
+
+/* текущее значение контролов: то, что получит условие фильтра */
+.live {
+  display: grid;
+  gap: var(--k-sp-1);
+  margin: var(--k-sp-2) 0;
+  padding: var(--k-sp-2);
+  border-radius: var(--k-r-s);
+  background: var(--k-sunk);
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+}
+
+.liveRow {
+  display: flex;
+  gap: var(--k-sp-2);
+}
+
+.liveRow dt {
+  flex: none;
+  color: var(--k-muted);
+}
+
+.liveRow dt::after {
+  content: ":";
+}
+
+.liveRow dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--k-ink);
+}
+
+.code {
+  margin: 0;
+  padding: var(--k-sp-2);
+  max-height: var(--k-menu-max-h);
+  overflow: auto;
+  border-radius: var(--k-r-s);
+  background: var(--k-sunk);
+  color: var(--k-ink);
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+}
