@@ -99,4 +99,11 @@ describe('DocRegistry', () => {
     await userEvent.click(screen.getByRole('button', { name: /Выбрать все \d+ по фильтру/ }))
     expect(screen.getByRole('region', { name: 'Массовые действия' })).toHaveTextContent('без неактивных')
   })
+  it('marked — метка открытых в деталке на записи грида', async () => {
+    const { registry, lifecycle } = make()
+    renderK(<DocRegistry registry={registry} layout={layout} title="Реестр" describe={(r) => r.name} marked={(r) => (r.id === 'a' ? 'a' : null)} />)
+    act(() => { lifecycle.pageOpened() })
+    await screen.findByText('Альфа')
+    expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-mark', 'a')
+  })
 })
