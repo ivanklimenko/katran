@@ -19,10 +19,12 @@ export type DocRegistryProps<Row> = {
   rowState?: ((row: Row) => RowState) | undefined
   /** Подсказка кнопки открытия обычной записи (спека 5a §6, B7). */
   openHint?: string | undefined
+  /** Записи, открытые в деталке (спека 2a §3.1): 'a' — основная, 'b' — сравнение. Экран берёт из модели деталки. */
+  marked?: ((row: Row) => 'a' | 'b' | null) | undefined
 }
 
 /** Экран реестра документов: заголовок, лейн статусов, панель фильтров, грид, полоса массовых действий. */
-export function DocRegistry<Row>({ registry, layout, title, describe, note, bulkActions = [], rowState, openHint }: DocRegistryProps<Row>) {
+export function DocRegistry<Row>({ registry, layout, title, describe, note, bulkActions = [], rowState, openHint, marked }: DocRegistryProps<Row>) {
   const g = useGrid(registry.grid)
   const f = useFilters(registry.filters)
   const openRequested = useUnit(registry.openRequested)
@@ -58,6 +60,7 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
         emptyAction={{ label: 'Сбросить фильтр', onClick: () => f.reset() }}
         rowState={rowState}
         openHint={openHint}
+        marked={marked}
         onOpen={(row, { secondary, state }) => {
           const msg = `Открыт ${describe(row)}${secondary ? ' — второй drawer рядом' : ''}${state?.kind === 'locked' ? ' (только просмотр)' : ''}`
           setOpened(msg)

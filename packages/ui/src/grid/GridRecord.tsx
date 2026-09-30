@@ -22,6 +22,8 @@ export type GridRecordProps<Row> = {
   cellProps?: CellProps | undefined
   /** Заблокирована/неактивна (спека 5a §6, B1) — управляет data-state на tbody и приглушением значений. */
   state?: RowState | undefined
+  /** Открыта в деталке (спека 2a §3.1): data-mark на tbody, подсветка как selA/selB эталона. */
+  mark?: 'a' | 'b' | null | undefined
 }
 
 /** Между сегментами и по краям — заглушки по колонкам первой строки; высокие колонки (tall[i]) заняты rowSpan, заглушка их не пересекает. */
@@ -48,13 +50,13 @@ export function fillSegments<Row>(segs: SpanCell<Row>[], tall: number | boolean[
   return out
 }
 
-export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected, rowIndex, cellProps, state }: GridRecordProps<Row>) {
+export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected, rowIndex, cellProps, state, mark }: GridRecordProps<Row>) {
   const cp = cellProps ?? (() => ({}))
   const perRecord = 1 + spanRows.length
   const span = perRecord > 1 ? perRecord : undefined
   const tall = visible.map((c) => c.fullHeight === true)
   return (
-    <tbody className={[s.record, selected ? s.selected : ''].filter(Boolean).join(' ')} data-key={rowKey} data-state={state?.kind}>
+    <tbody className={[s.record, selected ? s.selected : ''].filter(Boolean).join(' ')} data-key={rowKey} data-state={state?.kind} data-mark={mark ?? undefined}>
       <tr role="row" aria-rowindex={rowIndex} aria-selected={selected}>
         <td role="gridcell" className={s.cell} rowSpan={span} {...cp(0, 0)}><div className={s.lead}>{lead}</div></td>
         {visible.map((c, i) => (

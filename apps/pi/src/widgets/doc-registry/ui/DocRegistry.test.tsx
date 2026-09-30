@@ -75,10 +75,10 @@ describe('DocRegistry', () => {
     await screen.findByText('Альфа')
     expect(screen.getByText('Документ не открыт')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Открыть запись 1' }))
-    expect(screen.getByText('Открыт документ Альфа')).toBeInTheDocument()
+    expect(await screen.findByText('Открыт документ Альфа')).toBeInTheDocument()
     expect(screen.queryByText('Документ не открыт')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Заблокирована/ }))
-    expect(screen.getByText('Открыт документ Бета (только просмотр)')).toBeInTheDocument()
+    expect(await screen.findByText('Открыт документ Бета (только просмотр)')).toBeInTheDocument()
   })
   it('R13: BulkBar allNote «без неактивных» — если на странице есть неактивная запись', async () => {
     const rows: Row[] = [{ id: 'a', status: 'ERROR', name: 'Альфа' }, { id: 'b', status: 'ERROR', name: 'Бета', inactive: true }]
@@ -98,5 +98,12 @@ describe('DocRegistry', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Выбрать запись 1' }))
     await userEvent.click(screen.getByRole('button', { name: /Выбрать все \d+ по фильтру/ }))
     expect(screen.getByRole('region', { name: 'Массовые действия' })).toHaveTextContent('без неактивных')
+  })
+  it('marked — метка открытых в деталке на записи грида', async () => {
+    const { registry, lifecycle } = make()
+    renderK(<DocRegistry registry={registry} layout={layout} title="Реестр" describe={(r) => r.name} marked={(r) => (r.id === 'a' ? 'a' : null)} />)
+    act(() => { lifecycle.pageOpened() })
+    await screen.findByText('Альфа')
+    expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-mark', 'a')
   })
 })

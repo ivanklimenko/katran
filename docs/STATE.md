@@ -1,12 +1,12 @@
 # Состояние проекта katran
 
-Обновлено: 2026-09-29. Документ для человека, который проект не видел. Решения — со ссылками на спеку; хронологии здесь нет.
+Обновлено: 2026-09-30. Документ для человека, который проект не видел. Решения — со ссылками на спеку; хронологии здесь нет.
 
 ## 1. Назначение
 
 Katran — самостоятельная дизайн-система (React + effector) для интерфейсов проекта: реестры документов, формы правки, дашборды. Источник вида и поведения — ванильный стенд `pi-constructor` (реестр валютных ПИ + деталка), прошедший дизайн-ревью; стенд замораживается по срезам в момент передачи в кит (§10). Спека: `docs/superpowers/specs/2026-09-23-katran-design.md`.
 
-Боевые экраны на ките живут в `apps/pi` — реестры «Валютные документы» и «Рублёвые документы» на FSD, с переносимым швом данных для внутренних команд (спека `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`, документы использования — `docs/guides/pi-usage.md` и `docs/reference/pi-api.md`). `apps/demo` — витрина компонентов кита (страница токенов и по странице на компонент), боевых экранов больше не показывает.
+Боевые экраны на ките живут в `apps/pi` — реестры «Валютные документы» и «Рублёвые документы» на FSD, с переносимым швом данных для внутренних команд (спека `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`, документы использования — `docs/guides/pi-usage.md` и `docs/reference/pi-api.md`), и деталка документа «Платёжная инструкция» на просмотр из обоих реестров — срез 2a (спека `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; drawer A и B рядом для сравнения, «Общие данные» валюты и рубля; остальные вкладки, правка и настоящие действия — подсрезы 2b–2d). `apps/demo` — витрина компонентов кита (страница токенов и по странице на компонент), боевых экранов больше не показывает.
 
 ## 2. Стек и почему
 
@@ -61,26 +61,34 @@ packages/tokens/src   tokens.src.ts (источник) · generate.ts · tokens.
 packages/ui/src       provider/ (KatranProvider, useKatran, LiveRegion) · tooltip/ · button/ · input/ · value/ (CopyValue, LinkValue,
                       AccountValue, FieldTag, StatusDot, Tag, Counter) · overlay/ (Popover, Menu) · state/ (Skeleton, ProgressBar,
                       EmptyState, ErrorState, useLoadingGate) · pagination/ · tabs/ · grid/ (types, resolveSpans, sortRows, selection,
-                      GridRecord, GridSkeleton, ColumnHeader, ColumnsMenu, useGridKeyboard, DataGrid со слотом toolbar) ·
+                      GridRecord, GridSkeleton, ColumnHeader, ColumnsMenu, useGridKeyboard, DataGrid со слотом toolbar, marked,
+                      gridFocusTarget) · drawer/ (Drawer, DrawerStack — деталка A/B, срез 2a) · form/ (FieldRow, ConfigForm,
+                      Disclosure, типы FormSchema/FieldDef/FieldValue, defaultPresent — «Общие данные» по схеме, срез 2a) ·
                       filters/ (types — Condition/Filter/FilterMeta и др., opLabels — OP_LABEL/describeCondition, fieldOps —
                       fieldOp/draftOf/conditionFrom/isoDay*, внутренние, не экспортируются; StatusLane, FilterField, FilterPanel, BulkBar) ·
                       format/ · compat/ (useStableId — React.useId, если есть, иначе счётчик модуля; план 4) · test/ (renderK, шимы)
 packages/effector/src types.ts (Filter, GridQuery, GridPage, PersistAdapter, Facet, FacetsQuery — типы фильтра реэкспортированы из
                       `@katran/ui`) · persist.ts · createFiltersModel.ts (setLane, $lane, revert) · createGridModel.ts (facets, $facets)
                       · useGrid.ts (facets, onSelectAll, onClearSelection) · useFilters.ts (lane, setLane, revert, meta)
+                      · createDrawerStackModel.ts (стек A/B деталки, срез 2a)
 apps/demo/src         router.ts (хеш) · Shell.tsx (тема/плотность) · pages/* (Tokens, Buttons, Inputs, Values, Overlays, States,
                       Pagination, Tabs) — витрина компонентов, боевых экранов нет (переехали в apps/pi, план 6)
 apps/pi/src           FSD: app/ (entry.tsx — legacy render, routes.ts — hash-роутер #/fx-docs·#/rub-docs → pageOpened/pageClosed,
                       transport.ts — requestFx.use(...), fake/ — фейковый сервер на контракте vtb-filters, 87 записей на грид) ·
                       pages/{fx-docs,rub-docs} (createPageLifecycle + widgets/doc-registry:createRegistry) · widgets/doc-registry
-                      (createRegistry — фильтры + грид + фасеты лейна + жизненный цикл экрана; DocRegistry) · entities/{fx-doc,rub-doc}
-                      (типы FxDoc/RubDoc, порты searchFx/facetsFx/filterMetaFx, мапперы, раскладка колонок) · entities/doc-status
-                      (STATUSES, STATUS_LABEL/STATUS_TONE/STATUS_GLYPH, общий для обоих документов через @x) · shared/api
-                      (requestFx, grid-contract.ts — контракт vtb-filters, problem.ts — ApiError/Problem Details, guards.ts) ·
-                      shared/lib/lifecycle (createPageLifecycle) · граница FSD — eslint.config.js, fsdZones
+                      (createRegistry — фильтры + грид + фасеты лейна + жизненный цикл экрана; DocRegistry) · widgets/doc-detail
+                      (createDetail — стек кита + загрузка по слоту и кэш по id; DocDetail — шапка, лейн, вкладки, ConfigForm; срез 2a) ·
+                      entities/{fx-doc,rub-doc} (типы FxDoc/RubDoc и FxDocDetail/RubDocDetail, порты searchFx/facetsFx/filterMetaFx/
+                      detailFx, мапперы, раскладка колонок, профили деталки — swift.ts/profiles.ts, домен fx/rubDocDetailDomain) ·
+                      entities/posting (проводки деталки Tx, TxBlock; соседям через @x) · entities/doc-status (STATUSES,
+                      STATUS_LABEL/STATUS_TONE/STATUS_GLYPH, общий для обоих документов через @x) · shared/api (requestFx,
+                      grid-contract.ts — контракт vtb-filters, createGridPorts с parseDetail, problem.ts — ApiError/Problem Details,
+                      guards.ts) · shared/lib/lifecycle (createPageLifecycle) · shared/lib/detail (DetailDomain — шов «сущность →
+                      виджет деталки») · граница FSD — eslint.config.js, fsdZones
 apps/pi/e2e           geometry.spec.ts (высота записи/шапки/скелетона, плотность 125 % для обоих реестров) · isolation.spec.ts
                       (изоляция от хоста, режим `?hostile`) · registry.spec.ts, registry-persist.spec.ts (панель фильтров, сортировка,
-                      сохранение раскладки) + playwright.config.ts — против production-сборки (`pnpm --filter pi e2e`, порт 5186)
+                      сохранение раскладки) · detail.spec.ts (деталка: геометрия против эталона, A+B, жесты, Esc, ?fail=detail,
+                      уход с экрана, ?hostile; срез 2a) + playwright.config.ts — против production-сборки (`pnpm --filter pi e2e`, порт 5186)
 eslint.config.js      правила границы слоёв (§3) и запрет API React 18+ в `packages/ui`, `packages/effector` (план 4); `fsdZones` —
                       границы FSD `apps/pi` (`app → pages → widgets → entities → shared`, план 6)
 scripts               use-react.mjs (переключение devDeps на React 17/19, CI-задача `react19`) · check-css-target.mjs (CSS-часть
@@ -89,11 +97,12 @@ examples/federation   макет встраивания кита в метапр
                       на webpack 5, e2e/check.mjs (21/21), порты 5210–5213 (план 4, README там же)
 docs/consuming.md     контракт для remote-команды: установка, shared-конфиг MF, `KatranProvider`, CORS для шрифтов (план 4)
 docs/guides           effector-fsd.md — рекомендация потребителям: где держать модели katran в FSD-приложении, живой образец apps/pi ·
-                      pi-usage.md — перенос реестров apps/pi во внутреннее приложение (план 6)
-docs/reference         registry-drift.md — сверка apps/pi с эталоном pi-constructor · pi-api.md — API apps/pi для бекенда (план 6)
+                      pi-usage.md — перенос реестров apps/pi во внутреннее приложение (план 6; деталка — §13, срез 2a)
+docs/reference         registry-drift.md — сверка apps/pi с эталоном pi-constructor · pi-api.md — API apps/pi для бекенда (план 6;
+                      деталь документа — §7, срез 2a) · detail-drift.md — сверка деталки с эталоном (срез 2a)
 docs/superpowers      specs/ (основная спека · спека-дополнение среза 1e · спека совместимости · спека-дельта 5a «структура» ·
-                      спека-дельта 5b «вид» · спека `apps/pi`) · plans/ (планы 1, 2, 2.1 «решения владельца», 3 (срез 1e), 4
-                      «совместимость», 5a, 5b, 6 `apps/pi` исполнены)
+                      спека-дельта 5b «вид» · спека `apps/pi` · спека-дельта 2a «деталка на просмотр») · plans/ (планы 1, 2, 2.1
+                      «решения владельца», 3 (срез 1e), 4 «совместимость», 5a, 5b, 6 `apps/pi`, 2a «деталка на просмотр» исполнены)
 .github/workflows     ci.yml (задачи `check` на React 17 и `react19` — тесты и сборка пакетов кита на React 19) · pages.yml (демо →
                       https://ivanklimenko.github.io/katran/, apps/pi собирается отдельно с `PAGES_BASE=/katran/pi/` и копируется
                       в `apps/demo/dist/pi` → https://ivanklimenko.github.io/katran/pi/)
@@ -102,7 +111,7 @@ docs/superpowers      specs/ (основная спека · спека-допо
 ## 6. Состояние
 
 - **Репо:** github.com/ivanklimenko/katran, публичный с 24.09.2026 (решение владельца: демо на GitHub Pages, как у стенда `pi-constructor`; до этого был приватным и Pages падал); ревьюер `abugaets` приглашён (на 23.09 приглашение не принято). CI (`ci.yml`) зелёный на `main`.
-- **`main` = планы 1, 2, 2.1, 3, 4 и 5a.** План 4 слит 2026-09-28 merge-коммитом из `feat/compat`; план 5a исполнен на ветке `feat/registry-structure` (worktree). План 1 (фундамент + примитивы, 15 задач, 81 тест) слит 2026-09-23; план 2 и план 2.1 (решения владельца) — 2026-09-24; план 3 (срез 1e) слит 2026-09-24 fast-forward из ветки `feat/slice1e-registry` (ветка на origin оставлена, worktree удалён).
+- **`main` = планы 1, 2, 2.1, 3, 4, 5a, 5b и 6 (`apps/pi`), плюс спека и план 2a.** План 4 слит 2026-09-28 merge-коммитом `5922f14` из `feat/compat`; план 5a — merge-коммитом `ed2d4b3` из `feat/registry-structure`; план 5b — `7d312a0` из `feat/registry-look`; план 6 — `00398d0` из `feat/pi-app`. План 2a исполнен на ветке `feat/detail-view` и в `main` не слит (§9). План 1 (фундамент + примитивы, 15 задач, 81 тест) слит 2026-09-23; план 2 и план 2.1 (решения владельца) — 2026-09-24; план 3 (срез 1e) слит 2026-09-24 fast-forward из ветки `feat/slice1e-registry` (ветка на origin оставлена, worktree удалён).
 - **План 2 исполнен целиком** (`docs/superpowers/plans/2026-09-23-katran-slice1-grid.md`, 14 задач, последний коммит `1ca7663`). Состав: `DataGrid` с семейством (типы, `resolveSpans`, `sortRows`, выделение, `ColumnHeader`, `ColumnsMenu`, клавиатура, скелетон), пакет `@katran/effector` (`createFiltersModel`, `createGridModel`, хуки, persist), демо «Реестр», Playwright-замер. Финальное ревью ветки (Opus) → фикс-волна из 6 коммитов → повторное ревью фикс-волны: замечаний нет. Документы (спека, план, CHANGELOG, README, этот файл) приведены к коду отдельным коммитом.
 - **Проверки на `1ca7663`:** 160 тестов (tokens 12, ui 125, effector 23), `pnpm check` зелёный. **e2e после плана 2.1** (запись как на стенде, коридор 64–72): 3/3 — запись 68 px, шапка 49, скелетон 68, плотность 125 % → 84.75; стенд `pi-constructor` по замеру 24.09 — запись 68, шапка 48.
 - **Открытые решения владельца:** нет — три вопроса от 24.09 (высота записи, Pages, буква StatusDot) решены и исполнены планом 2.1 (`docs/superpowers/plans/2026-09-24-katran-owner-decisions.md`).
@@ -113,7 +122,25 @@ docs/superpowers      specs/ (основная спека · спека-допо
 
 - **План 6 `apps/pi` (реестры ПИ на FSD, переносимый шов данных) исполнен целиком**, ветка `feat/pi-app` (worktree `katran/.worktrees/pi-app`, от `main` `7d312a0`), спека — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`, 14 задач (`.superpowers/sdd/2026-09-28-katran-pi-app/`). Состав: заморозка рублёвого реестра стенда и сверка с ним (Task 1, эталон `e065bfb`, коммит `d7de5ba`; вопросы владельца В-Р1/В-Р2 решены 29.09 — формат даты рубля как на эталоне, `lock`/`inactive` переносятся); правки кита 6.1–6.2 — `createFiltersModel({ meta })` принимает стор каталога (Task 2, `9fc295e`), `shortAccount`/`AccountValue` с параметром `tail: 3 | 4` (Task 3, `682f56a`); каркас `apps/pi` на FSD — `shared/api` (транспорт `requestFx`, `ApiError`/Problem Details) и `shared/lib/lifecycle` (`createPageLifecycle`) (Task 4, `7520712`); контракт `vtb-filters` в `grid-contract.ts` и порты `createGridPorts` (Task 5, `939f14c`); eslint-границы FSD (`fsdZones` в `eslint.config.js`) (Task 6, `23fc8c7`); фейковый сервер на контракте — search/facets/filter-meta, Problem Details, регуляторы `?slow`/`?fail` (Task 7, `b7c4f1f`); `entities/doc-status`, `entities/fx-doc` (порты, маппер, раскладка), данные и контрактные тесты (Task 8, `0d32308`); `widgets/doc-registry` — `createRegistry` (фильтры + грид + фасеты лейна + жизненный цикл экрана) (Task 9, `d577021`); `DocRegistry` — экран реестра поверх `createRegistry` (Task 10, `6a2971d`); экран «Валютные документы» переехал из `apps/demo` в `pages/fx-docs`, роутер вызывает жизненный цикл страниц, e2e геометрии/изоляции/реестра — 23/23 (Task 11, `950b712`; демо стало витриной без боевых экранов); `entities/rub-doc`, `pages/rub-docs`, форматтер `formatDayMonthMinutes` — рублёвый реестр по сверке `registry-drift.md`, e2e 26/26 (Task 12, `6ebd250`..`15a606e`, фикс-раунд `50f1ed5` — достижимая формула пустого `docRef`, очерёдность 1–5, `axe` обоих реестров); Pages `/katran/pi/` (`PAGES_BASE=/katran/pi/`, `apps/pi/dist` копируется в `apps/demo/dist/pi`) (Task 13, `c2ac3d9`); документы использования (Task 14, этот коммит) — `docs/guides/pi-usage.md` (перенос во внутреннее приложение, два пути — слайсы и remote), `docs/reference/pi-api.md` (контракт для бекенда, состав `content[]`, примеры из тестов), `apps/pi/README.md`, `docs/guides/effector-fsd.md` (примеры приведены к реальным именам apps/pi). Ревью — после каждой задачи (subagent-driven-development). **Проверки:** 325 тестов (`tokens` 13, `ui` 226, `effector` 36, `apps/pi` 50), `pnpm check` зелёный; e2e `apps/pi` 26/26 (`geometry`, `isolation`, `registry`, `registry-persist` — оба реестра, запись/шапка/скелетон/плотность в коридорах основной спеки §9, сравнение с эталонами стенда); `apps/demo` e2e больше нет — геометрия и изоляция проверяются в `apps/pi`. Техдолг — §7.
 
-## 7. Техдолг (после плана 6)
+- **План 2a «Деталка на просмотр» исполнен целиком**, ветка `feat/detail-view` (worktree `katran/.worktrees/detail-view`, от `main` `62afd32`, в `main` не слита), спека-дельта — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`, план — `docs/superpowers/plans/2026-09-29-katran-detail-view.md`, 13 задач (`.superpowers/sdd/2026-09-29-katran-detail-view/`). Состав: заморозка деталки стенда целиком (эталон `e065bfb`), замер и сверка `docs/reference/detail-drift.md` (Task 1, `a620cde`; решения владельца В-Д1…В-Д5 от 30.09 — `315812b`); кит — `createDrawerStackModel` (Task 2, `f5b42e8`), `Drawer`/`DrawerStack` (Task 3, `c8796ef`; видимый тултип забирает Esc — `e69bac4`), `Tabs` с `overflow`/`variant` (Task 4, `c2f4f4e`, `1e874c1`), `FieldRow`/`ConfigForm`/`Disclosure` (Task 5, `97b5f79`), жесты и `marked` в `DataGrid` (Task 6, `7b5a0c0`); `apps/pi` — порт `detailFx` в `createGridPorts`, `shared/lib/detail`, фейк `GET …/documents/{id}` и `?fail=detail` (Task 7, `aa9e8e2`), деталь валюты — профили MT, маппер, блоки, `entities/posting` (Task 8, `048cac4`), деталь рубля — профили, стороны, секции (Task 9, `f146e6c`), виджет `widgets/doc-detail` (Task 10, `97c564a`), страницы — связка с реестром, метка открытых, первая запись в A при входе (В-Д4), e2e против замера эталона (Task 11, `f11adca`, `460401a`); документы — `pi-api.md` §1.4/§7, `pi-usage.md` §13, итог `detail-drift.md`, спеки, этот файл (Task 12). Ревью — после каждой задачи (subagent-driven-development), фикс-раунды на задачах 1, 3, 4, 11. **Проверки:** 480 тестов (`tokens` 16, `ui` 289, `effector` 48, `apps/pi` 127; на входе в план — 332), `pnpm check` зелёный (включая `check:target`); e2e `apps/pi` 37/37 (26 прежних + 11 деталки: drawer 800, правый край 1600, шапка 44, лейн 36, вкладки 32, строка поля 27, строка сторон рубля 24 против 23 эталона — в допуске ± 2; A+B, двойной клик, Shift, Esc, повторное открытие, «••• N», скелетон, `?fail=detail`, уход с экрана, `?hostile`). Итог сверки — 30 пунктов: C 25, D 3, A 0, B 0; один (Д24, высоты строк) совпал с эталоном, один (Д29) ждёт ответа владельца на В-Д6, класс не присвоен. **Финальная волна после ревью ветки:** автооткрытие не забирает фокус (R10), возврат фокуса — только потерянного, закрытие A при открытом B — фокус в оставшийся (R11), счётчик визитов в `createDetail`, линт-зона `doc-detail` ↛ `entities`, название поля в `FieldRow` для скринридера, без мёртвой подсказки на недоступной вкладке; тесты `tokens` 16, `ui` 295, `effector` 49, `apps/pi` 135, e2e `apps/pi` 40/40. Техдолг — §7.
+
+## 7. Техдолг (после плана 2a)
+
+Из плана 2a (деталка на просмотр):
+
+- **Объём среза, не дефекты:** действия лейна — заглушки с `announce` до 2d (вместе с эндпоинтами); вкладки кроме «Общих данных» — состояние «будет в срезе 2b»; правка, аудит поля, саджест, `Prompt`, `DateInput` — 2c.
+- **Drawer перекрывает шапку хоста:** `position: fixed; top: 0; bottom: 0`, `z-index` `--k-z-drawer` (100) — на всю высоту окна; настройки отступа сверху (под верхнюю панель метаприложения) нет — нужен проп или токен `Drawer`/`DrawerStack` (`docs/guides/pi-usage.md` §13.2).
+- **Страниц демо для `Drawer`/`DrawerStack`, `ConfigForm`/`FieldRow`, `Disclosure` нет** — демо — витрина компонентов, спека 2a их не требовала; компоненты видны только в `apps/pi`.
+- **Сверка, класс D** (`docs/reference/detail-drift.md`): строка таблицы сторон рубля 24 вместо 23 (Д27, в допуске); метка открытой записи на заблокированной/неактивной записи — полоса A приглушена, штриховка перебивает фон метки (Д28, лечится `:not([data-mark])` в ките); бледные пустые строки реквизитов рубля (Д30). Открытый вопрос владельцу — В-Д6 (Д29): ширина drawer растёт с плотностью, при 125 % B уходит за левый край окна уже 2000 px.
+- **Дубли пустого значения и его CSS** в блоках `entities/fx-doc` и `entities/rub-doc` (ревью Task 9, M1; текст уже единый — «не заполнено»).
+- **`createDetail`:** нет теста минимальной длительности скелетона в виджете (ревью Task 10, M4); `firstTab` по умолчанию `'main'`, а не первая вкладка домена (M6).
+- **Esc и наложения:** при открытом `Menu`/`Popover` с фокусом на якоре Esc закрывает и наложение, и drawer (ревью Task 3, M1); видимый тултип внутри `Popover`/`Menu` — Esc прячет тултип и закрывает поповер; при нескольких `KatranProvider` тултип одного глушит Esc стека другого (теоретически); видимый тултип отменяет действие Esc по умолчанию (очистка `input[type=search]`) — задокументировано в `TooltipLayer` и CHANGELOG; Esc в гриде при постоянно открытой деталке (В-Д4) закрывает её, а не возвращает фокус в ячейку — вопрос владельцу (R13, финальное ревью M-a).
+- **Возврат фокуса `Drawer`:** «фокус, поставленный прошлым закрытием, не пользовательский» помнится одним элементом на модуль (`restoredTo` в `Drawer.tsx`), не на провайдер; если пользователь сам вернулся на ту же кнопку и нажал Esc, фокус уйдёт на кнопку закрываемой записи — безвредно.
+- **`Tabs` с переполнением:** фокус после выбора из меню «•••» — на «•••», а не на вкладке (ревью Task 4, M2); замер устаревает при смене `items` без смены ширины (M3); `overflow` + вертикальные вкладки не защищено (M4); замер в `span` наследует `letter-spacing`, кнопка — нет; `segment` + `overflow` не учитывает поля `.horizontal`; вкладка из `tabsOff`, выбранная до загрузки, остаётся выбранной после (финальное ревью M-f); `TabPanel` сбрасывает раскрытие полей при переключении вкладок (M-g).
+- **`ConfigForm`:** кит знает префикс «B.» (регулярка дважды — `ConfigForm.tsx`, `FieldRow.tsx`); `FieldDef.kind` `'party'`/`'bank'` и `FieldDef.width` китом не используются (нужны правке, 2c); у `text`/`extra` без `grid` нет «Развернуть поля»; высота текстового поля на 1 px ниже эталона — не замерено (ревью Task 5, M1, M5–M7).
+- **`DataGrid`:** таймер открытия (220 мс) не снимается при смене страницы грида — откроется кликнутая запись (ревью Task 6, M1); Shift+двойной клик даёт два `secondary` (модель гасит повтор, M2).
+- **Шов и фейк:** битая `%`-последовательность `id` в фейке → `URIError` вместо `ApiError 400` (ревью Task 7, M1); нет типовой проверки, что без `parseDetail` у портов нет `detailFx` (M2); данные фейка: поле 70 кириллицей (на стенде латиница), у `REJECTED` на Кт и `EXECUTED`, и `CANCELED`, ED107 не связан со сторонами документа, УИП из нулей, посредники без подсказки полного значения (Task 8 M3–M4, Task 9 M3–M5); `tabsOff` не сверяется с набором вкладок (описано в `pi-api.md` §7.1).
+- **e2e деталки хрупкие места:** ожидание анимаций (`getAnimations().finished`), `waitForTimeout(400)`, цикл закрытия в `start()` (ревью Task 11, M4); дубль блока В-Д4 в моделях `fx-docs`/`rub-docs` (M3); при пустом первом ответе реестра автооткрытие сработает на первом непустом ответе визита, уже после действий пользователя (M2).
 
 Из плана 6 (`apps/pi`):
 
@@ -213,14 +240,14 @@ docs/superpowers      specs/ (основная спека · спека-допо
 
 ## 9. Следующий шаг
 
-**Планы 5a, 5b и 6 (`apps/pi`) исполнены целиком** (6 — 2026-09-29, §6, ветка `feat/pi-app`, worktree `katran/.worktrees/pi-app`): реестр по эталону (структура и вид) и реестры ПИ на FSD с переносимым швом данных. Открытое из них — техдолг §7.
+**План 2a «Деталка на просмотр» исполнен целиком** (2026-09-30, §6, ветка `feat/detail-view`, worktree `katran/.worktrees/detail-view`); планы 5a, 5b и 6 (`apps/pi`) — в `main` (6 слит merge-коммитом `00398d0`). Открытое — техдолг §7 и вопрос владельцу В-Д6 (`docs/reference/detail-drift.md`).
 
 Решения, принятые за владельца при исполнении 5b (ждут его взгляда): текст тегов ролей и мелкий текст на полосах `sunk`/`val-soft` — `ink2` (цветной/`muted` не проходит 4.5, пороги не понижались); ширины «Дата / Время» 132 и 32 — 102 по содержимому (секунды по В5, суммы до 5 млн), класс C в сверке; значение чипа фильтра — `val`, как на эталоне; у лейна фон `paper`; новое правило контраста `muted` на `warn-soft`/`ok-soft`/`opt-soft` ≥ 4.0 (приглушённые теги в заблокированной/неактивной записи; запас `opt-soft` 4.01). Для потребителей кита: `StatusDot` держит тон в `data-st` (было `data-tone`), кнопки номеров пагинации без `aria-pressed` (только `aria-current`) — в CHANGELOG.
 
-1. **Слияние `feat/pi-app` в `main`** — по слову владельца (ветка не сливается сама собой субагентами, `.superpowers/sdd/2026-09-28-katran-pi-app/`). После слияния: деплой Pages покажет боевые экраны `apps/pi` по адресу `https://ivanklimenko.github.io/katran/pi/` (workflow `pages.yml` уже собирает оба приложения, Task 13); конфигурация `katran-pi` в `/Users/shaman/_CODE/VTB/.claude/launch.json` переключается с пути worktree `pi-app` на основной checkout `katran` (грабля R14 — см. §8).
-2. **Затем выбор владельца**: срез 2 (деталка, строится уже в `apps/pi`, спека §5.2 основной спеки) либо план «Advanced-фильтры» (отдельный дизайн-заход: каталог полей с группами и поиском, модификатор оператора, наборы фильтров, OR — спека 7.2 основной спеки). Оба не блокируют друг друга — модель фильтров одна на оба режима (§7.1 основной спеки).
+1. **Слияние `feat/detail-view` в `main`** — по слову владельца (субагенты ветку не сливают, `.superpowers/sdd/2026-09-29-katran-detail-view/`). После слияния деплой Pages покажет деталку в `https://ivanklimenko.github.io/katran/pi/`; временная конфигурация `katran-pi-detail` в `/Users/shaman/_CODE/VTB/.claude/launch.json` и её копия в `.bak` удаляются (грабля про `.bak` — §8).
+2. **Затем срез 2b** — остальные вкладки деталки (Доп. поля, Статусы, Комплаенс, Связанные, Задачи, Нотификации, Исходный текст / ED244, Стриминг, MPU, Аудит): своя спека-дельта и план, сверка в начале подсреза против того же замороженного эталона `e065bfb` (`detail-drift.md`, раздел «2b–2d»). Параллельно и независимо — план «Advanced-фильтры» (спека 7.2 основной спеки), если владелец выберет его раньше.
 
-Грабли исполнения субагентами (5a/5b/6): исполнитель зависает, ожидая фоновый e2e — в брифе требовать прогон `pnpm --filter demo e2e`/`pnpm --filter pi e2e` на переднем плане, дожидаться результата; после прерывания владельцем проверять `git status` worktree на незакоммиченный WIP; jsdom не видит каскад CSS-модулей — визуальные и цветовые проверки только в e2e (Chromium); axe в jsdom не видит контраст — контраст новых пар проверять правилами токенов и выборкой пикселей со скриншотов.
+Грабли исполнения субагентами (5a/5b/6/2a): исполнитель зависает, ожидая фоновый e2e — в брифе требовать прогон `pnpm --filter demo e2e`/`pnpm --filter pi e2e` на переднем плане, дожидаться результата; после прерывания владельцем проверять `git status` worktree на незакоммиченный WIP; jsdom не видит каскад CSS-модулей — визуальные и цветовые проверки только в e2e (Chromium); axe в jsdom не видит контраст — контраст новых пар проверять правилами токенов и выборкой пикселей со скриншотов.
 
 ## 10. Эталон и заморозка по срезам
 
@@ -228,7 +255,7 @@ docs/superpowers      specs/ (основная спека · спека-допо
 
 - **Точка передачи.** Когда срез начинают переносить, коммит стенда фиксируется как эталон среза (таблица ниже). Спека среза ссылается на этот коммит; e2e кита сверяет геометрию с ним.
 - **После передачи** новое поведение этой части идёт только через кит: спека-дельта → модель effector → компонент → демо. На стенде эта часть получает только исправления. Витрина переданной части для пользователей — демо кита на Pages.
-- **Непереданные части** стенд развивает свободно (сейчас — деталка).
+- **Непереданных частей** больше нет: деталка заморожена целиком (срез 2a, решение владельца 29.09); до конца 2d стенд остаётся витриной для пользователей и получает только исправления.
 - **Effector как критерий переноса.** Поведение, переезжающее со стенда, выражается моделью в `@katran/effector`, а не локальным состоянием компонента: на стенде состояние живёт в замыканиях (`SORT`, выбор деталки A/B, `f.hist`), в ките у каждого куска — модель. Нет модели — поведение не перенесено.
 - **Сверка.** При заморозке части составляется список расхождений кита с эталоном (класс A — стенд ушёл вперёд после переноса; B — было на стенде, в срез не попало; C — кит отличается сознательно, со ссылкой на решение; D — дефект кита). Решённые пункты A/B/D идут в план; C фиксируются, чтобы их не «чинили».
 - **Конец пути.** Когда в кит переедет деталка (срез 2), демо кита заменит стенд для пользователей, стенд уходит в архив.
@@ -236,5 +263,5 @@ docs/superpowers      specs/ (основная спека · спека-допо
 | Часть стенда | Эталон (pi-constructor) | Срез кита | Расхождения |
 |---|---|---|---|
 | Валютный реестр (`grid.html`) | `887b37f`, 2026-09-24 16:15 | 1 (1a–1e) | `docs/reference/registry-drift.md` |
-| Деталка валюты и рубля (`index.html`) | не заморожена — развивается на стенде | 2 | — |
+| Деталка валюты и рубля (`index.html`) | `e065bfb`, 2026-09-28 18:38:28 +0300 (замер: drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27, строка сторон рубля 23, B вплотную слева от A, Chromium 1600×1000) | 2 (2a–2d); 2a исполнен | `docs/reference/detail-drift.md` — итог 2a: геометрия в допуске ± 2 (e2e `apps/pi` 40/40 после финальной волны, строка сторон 24), C 25, D 3 (Д27, Д28, Д30), Д29 — открытый вопрос В-Д6; 2b–2d сверяются в начале своих подсрезов против того же коммита |
 | Рублёвый реестр (`rub-grid.html`) | `e065bfb`, 2026-09-28 18:38:28 +0300 (замер: запись 68, шапка 48, Chromium 1600×1000) | `apps/pi` | `docs/reference/registry-drift.md`, раздел «Рублёвый реестр» |

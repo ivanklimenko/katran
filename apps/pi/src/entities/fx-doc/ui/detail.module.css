@@ -1,0 +1,103 @@
+/* Блоки «Общих данных» валюты (эталон .msgs/.hero/.amt/.ln, index.html:131–175) */
+.msgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.col {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 var(--k-sp-2);
+  align-content: start;
+  min-width: 0;
+  padding: var(--k-sp-1) var(--k-sp-2);
+}
+
+.col + .col {
+  border-left: 1px solid var(--k-line);
+}
+
+.colTitle {
+  grid-column: 1 / -1;
+  font: 500 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.03em;
+  color: var(--k-muted);
+}
+
+.lbl {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.mono {
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
+  letter-spacing: -0.01em;
+  color: var(--k-val);
+}
+
+.cut {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.none {
+  color: var(--k-faint);
+}
+
+.ar {
+  margin: 0 var(--k-sp-1);
+  color: var(--k-faint);
+}
+
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.heroSub {
+  font-weight: 500;
+}
+
+.amt {
+  font: 600 var(--k-fs-sum) / 1 var(--k-sans);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ccy {
+  margin-left: var(--k-sp-1);
+  font-size: var(--k-fs-1);
+  font-weight: 600;
+  color: var(--k-val);
+}
+
+.same {
+  margin-left: var(--k-sp-1);
+  font-size: var(--k-fs-2);
+  color: var(--k-ok);
+}
+
+.routeLine {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0 var(--k-sp-2);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.routeText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--k-val);
+}

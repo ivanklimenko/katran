@@ -1,0 +1,97 @@
+/* Блок «Транзакции» (эталон .tx/.txs, index.html:176–186) */
+.summary {
+  display: inline-flex;
+  gap: var(--k-sp-1);
+}
+
+.sumItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.ids {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+  margin-left: auto;
+}
+
+.at {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.rows {
+  margin: 0 calc(-1 * var(--k-sp-2));
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--k-dt-dir) var(--k-dt-acc) var(--k-dt-sum) var(--k-dt-st) minmax(0, 1fr) var(--k-dt-time);
+  gap: 0 var(--k-sp-2);
+  align-items: center;
+  min-height: var(--k-h-field);
+  padding: 0 var(--k-sp-2);
+  border-top: 1px solid var(--k-line2);
+  white-space: nowrap;
+}
+
+.row > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.dir svg {
+  flex: none;
+  width: var(--k-fs-1);
+  height: var(--k-fs-1);
+}
+
+.acc {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-val);
+}
+
+.sum {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ccy {
+  margin-left: var(--k-sp-1);
+  font-size: var(--k-fs-2);
+  font-weight: 600;
+  color: var(--k-val);
+}
+
+.st {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  font: 600 var(--k-fs-3) / 1 var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.reg {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.time {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--k-ink2);
+}

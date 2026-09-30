@@ -5,6 +5,7 @@ import type { FakeGrid } from './grid'
 export type FakeServerOptions = { delayMs?: (() => number) | undefined; failing?: (() => string | null) | undefined }
 
 const ROUTE = /^\/grids\/([^/]+)\/(search|facets|filter-meta)$/
+const DOCUMENT = /^\/grids\/([^/]+)\/documents\/([^/]+)$/
 const fail = (status: number, title: string, detail: string): never => {
   const p: Problem = { type: 'urn:katran:fake', title, status, detail }
   throw toApiError(status, p)
@@ -27,6 +28,17 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
   return async (req: HttpRequest): Promise<unknown> => {
     const delay = opts.delayMs?.() ?? 0
     if (delay > 0) await new Promise((r) => setTimeout(r, delay))
+    const doc = DOCUMENT.exec(req.url)
+    if (doc) {
+      const [, gridId = '', raw = ''] = doc
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (opts.failing?.() === 'detail') return fail(500, 'Сбой сервера', 'Регулятор ?fail=detail')
+      const id = decodeURIComponent(raw)
+      const body = grid.detail ? grid.detail(id) : null
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
     const m = ROUTE.exec(req.url)
     if (!m) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
     const [, gridId = '', op = ''] = m

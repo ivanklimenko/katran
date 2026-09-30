@@ -55,6 +55,8 @@ export default tseslint.config(
           { target: './packages/ui/src', from: './packages/effector', message: 'ui не импортирует effector' },
           { target: './packages/effector/src', from: './packages/ui/src', except: ['./index.ts'], message: 'effector импортирует из ui только типы через пакет' },
           ...fsdZones,
+          // сверх слоёв: деталка — общий виджет, домен получает пропсами (спека 2a §4.3)
+          { target: `${PI}/widgets/doc-detail`, from: `${PI}/entities`, message: 'FSD: doc-detail получает домен пропсами (спека 2a §4.3)' },
         ],
       }],
       'no-restricted-imports': ['error', { paths: [

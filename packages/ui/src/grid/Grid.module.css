@@ -270,6 +270,17 @@
   background: var(--k-val-soft);
 }
 
+/* открытые в деталке (спека 2a §3.1, эталон selA/selB grid.html:651–654): A — val, B — warn. После наведения
+   и выделения: при равной специфичности метка побеждает их; полоса слева — в конце файла, после полосы блокировки
+   (порядок — ради no-descending-specificity) */
+.record[data-mark='a'] > tr > td {
+  background: var(--k-val-soft);
+}
+
+.record[data-mark='b'] > tr > td {
+  background: var(--k-warn-row);
+}
+
 .clamp {
   max-height: calc(var(--k-lh-1) * var(--k-lines, 1));
   overflow: hidden;
@@ -436,4 +447,14 @@
 
 .openLocked {
   color: var(--k-warn);
+}
+
+/* полоса открытой в деталке записи (фон — выше, у наведения): после полосы блокировки — при равной специфичности
+   метка побеждает её */
+.record[data-mark='a'] > tr:first-child > td:first-child {
+  box-shadow: inset 3px 0 0 var(--k-val);
+}
+
+.record[data-mark='b'] > tr:first-child > td:first-child {
+  box-shadow: inset 3px 0 0 var(--k-warn);
 }

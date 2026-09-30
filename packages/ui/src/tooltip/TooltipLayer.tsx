@@ -19,6 +19,8 @@ export function TooltipLayer({ root }: Props) {
   const [state, setState] = useState<{ el: HTMLElement; text: string } | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const current = useRef<HTMLElement | null>(null)
+  // тултип на экране (а не только ждёт задержки) — Esc тогда принадлежит ему
+  const shown = useRef(false)
 
   useEffect(() => {
     const host = root.current
@@ -28,6 +30,7 @@ export function TooltipLayer({ root }: Props) {
       window.clearTimeout(timer.current)
       current.current?.removeAttribute('aria-describedby')
       current.current = null
+      shown.current = false
       setState(null)
     }
     const show = (el: HTMLElement) => {
@@ -37,6 +40,7 @@ export function TooltipLayer({ root }: Props) {
       current.current = el
       timer.current = window.setTimeout(() => {
         el.setAttribute('aria-describedby', id)
+        shown.current = true
         setState({ el, text: el.dataset.kTip ?? '' })
       }, durations.base)
     }
@@ -48,7 +52,17 @@ export function TooltipLayer({ root }: Props) {
       if (to && t.contains(to)) return
       hide()
     }
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') hide() }
+    /**
+     * Видимый тултип забирает Esc себе: preventDefault — сигнал слоям ниже (DrawerStack), что Esc уже обработан;
+     * без видимого тултипа событие не трогаем. Всплытие не гасим — поповеру и полям Esc по-прежнему приходит.
+     * Цена: preventDefault на захвате window отменяет и действие Esc по умолчанию, пока тултип виден, — например,
+     * очистку input[type=search]. Первый Esc прячет тултип, второй делает своё (CHANGELOG, TooltipLayer).
+     */
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (shown.current) e.preventDefault()
+      hide()
+    }
 
     // Цель могла исчезнуть вместе со своим поддеревом (закрылся поповер, ушла строка) —
     // события ухода указателя при этом не приходит, тултип повис бы у пустого места.
@@ -61,10 +75,11 @@ export function TooltipLayer({ root }: Props) {
     host.addEventListener('pointerout', onOut)
     host.addEventListener('focusin', onOver)
     host.addEventListener('focusout', onOut)
-    // Escape — на документе в фазе погружения: поповер глушит всплытие своего
-    // keydown (stopPropagation), а слой монтируется раньше любого поповера,
-    // поэтому в capture его слушатель вызывается первым.
-    document.addEventListener('keydown', onKey, true)
+    // Escape — на window в фазе погружения: поповер глушит всплытие своего keydown (stopPropagation),
+    // а захват на window идёт раньше захвата на document при любом порядке подписки — слой видит Esc
+    // первым и успевает пометить его (preventDefault) до поповера и DrawerStack, даже если деталка
+    // открыта с монтирования (эффекты детей подписываются раньше эффекта провайдера).
+    window.addEventListener('keydown', onKey, true)
     return () => {
       hide()
       watch.disconnect()
@@ -72,7 +87,7 @@ export function TooltipLayer({ root }: Props) {
       host.removeEventListener('pointerout', onOut)
       host.removeEventListener('focusin', onOver)
       host.removeEventListener('focusout', onOut)
-      document.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('keydown', onKey, true)
     }
   }, [root, id])
 

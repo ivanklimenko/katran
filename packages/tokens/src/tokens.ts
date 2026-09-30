@@ -113,6 +113,31 @@ export const sizes = {
   'grid-pad': 8,
   'grid-gap': 3,
   'hatch': 10,
+  'drawer': 800,
+  'drawer-shift': 30,
+  'fs-h2': 16,
+  'dw-pad': 14,
+  'lane': 36,
+  'tab-line': 32,
+  'tab-px': 10,
+  'field-row': 27,
+  'field-tag': 26,
+  'field-opt': 14,
+  'field-gap': 6,
+  'fs-pre': 11.5,
+  'lh-pre': 16.3,
+  'fs-hero': 13.5,
+  'fs-sum': 17,
+  'party-row': 23,
+  'dt-dir': 62,
+  'dt-acc': 156,
+  'dt-sum': 150,
+  'dt-st': 84,
+  'dt-time': 104,
+  'dt-bic': 90,
+  'dt-label-s': 128,
+  'dt-label-m': 150,
+  'dt-label-l': 250,
 } as const
 
 export const fonts = {
@@ -132,6 +157,8 @@ export const durations = {
   'base': 200,
   'sk-show': 200,
   'sk-min': 400,
+  'drawer': 180,
+  'open-delay': 220,
 } as const
 
 export const densities = [1, 1.1, 1.25] as const

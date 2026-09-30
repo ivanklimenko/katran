@@ -1,10 +1,11 @@
 import { allSettled, fork } from 'effector'
 import { STATUS_LABEL } from '../../entities/doc-status'
-import { fxDocPorts } from '../../entities/fx-doc'
-import { rubDocPorts } from '../../entities/rub-doc'
+import { FX_TYPES, fxDocPorts } from '../../entities/fx-doc'
+import { RUB_TYPES, rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx } from '../../shared/api'
 import { fakeGrids } from './grids'
 import { makeRubDocs } from './rub-docs.data'
+import { makeRubDocDetail } from './rub-docs.detail'
 import { createFakeServer } from './server'
 
 /** Цепочка «порт → requestFx → сервер». Внутри тот же тест гоняется против своего бека: подставить свой обработчик в handlers. */
@@ -92,5 +93,72 @@ describe('контракт rub-docs', () => {
   // чтобы состояние «нет значения» LinkValue.docRef реально встречалось в данных.
   it('есть записи с пустым docRef (Р13/R15)', () => {
     expect(makeRubDocs().some((d) => d.docRef === '')).toBe(true)
+  })
+})
+
+describe('контракт детали fx-docs (спека 2a §6): порт → requestFx → фейк', () => {
+  const firstRows = async (sc: ReturnType<typeof scope>) => {
+    const page = await allSettled(fxDocPorts.searchFx, { scope: sc, params: { filter: [], sort: [], page: 0, size: 100 } })
+    if (page.status !== 'done') throw new Error('search не прошёл')
+    return page.value.rows
+  }
+  it('200: номер, сумма, статус и стороны — как в строке реестра', async () => {
+    const sc = scope()
+    const row = (await firstRows(sc))[0]!
+    const r = await allSettled(fxDocPorts.detailFx, { scope: sc, params: row.id })
+    expect(r.status).toBe('done')
+    if (r.status !== 'done') return
+    expect(r.value).toMatchObject({ id: row.id, docNumber: row.docNumber, amount: row.amount, status: row.status, type: row.type })
+    expect(r.value.fields['50']?.acc).toBe(row.f50acc)
+    expect(r.value.fields['57']?.lines).toEqual([row.f57name, row.f57])
+  })
+  it('каждый тип MT разбирается маппером; у MT202COV есть последовательность B', async () => {
+    const sc = scope()
+    const rows = await firstRows(sc)
+    for (const t of FX_TYPES) {
+      const row = rows.find((x) => x.type === t)
+      expect(row, t).toBeDefined()
+      if (!row) continue
+      const r = await allSettled(fxDocPorts.detailFx, { scope: sc, params: row.id })
+      expect(r.status, t).toBe('done')
+      if (r.status === 'done' && t === 'MT202COV') expect(r.value.fields['B.50']).toBeDefined()
+    }
+  })
+  it('404 на неизвестный id; 500 по регулятору detail', async () => {
+    const nope = await allSettled(fxDocPorts.detailFx, { scope: scope(), params: 'nope' })
+    expect(nope.status).toBe('fail')
+    expect((nope.value as ApiError).status).toBe(404)
+    const failing = fork({ handlers: [[requestFx, createFakeServer(fakeGrids, { failing: () => 'detail' })]] })
+    const sc = scope()
+    const row = (await firstRows(sc))[0]!
+    const r = await allSettled(fxDocPorts.detailFx, { scope: failing, params: row.id })
+    expect((r.value as ApiError).status).toBe(500)
+  })
+})
+
+describe('контракт детали rub-docs (спека 2a §6)', () => {
+  it('200 для каждого вида документа: номер, сумма, статус и стороны — из строки реестра', async () => {
+    const sc = scope()
+    const page = await allSettled(rubDocPorts.searchFx, { scope: sc, params: { filter: [], sort: [], page: 0, size: 100 } })
+    if (page.status !== 'done') throw new Error('search не прошёл')
+    for (const t of RUB_TYPES) {
+      const row = page.value.rows.find((x) => x.type === t)!
+      const r = await allSettled(rubDocPorts.detailFx, { scope: sc, params: row.id })
+      expect(r.status, t).toBe('done')
+      if (r.status !== 'done') continue
+      expect(r.value).toMatchObject({ docNumber: row.docNumber, amount: row.amount, status: row.status })
+      expect(r.value.party.s.acc).toBe(row.fromAcc)
+      expect(r.value.party.r.inn).toBe(row.toInn)
+    }
+  })
+  it('есть документ с бюджетными реквизитами и с посредниками', () => {
+    const rows = makeRubDocs()
+    const details = rows.map((row, i) => makeRubDocDetail(row, i))
+    expect(details.some((d) => (d.budget as { b101: string }).b101 !== '')).toBe(true)
+    expect(details.some((d) => (d.agents as unknown[]).length > 0)).toBe(true)
+  })
+  it('404 на неизвестный id', async () => {
+    const r = await allSettled(rubDocPorts.detailFx, { scope: scope(), params: 'rub-9999' })
+    expect((r.value as ApiError).status).toBe(404)
   })
 })

@@ -61,6 +61,8 @@ katran/
     superpowers/specs/, superpowers/plans/
 ```
 
+Состав пакетов по срезам — раздел 5. Срез 2a (деталка на просмотр) добавил в `@katran/ui` `Drawer`, `DrawerStack`, `FieldRow`, `ConfigForm`, `Disclosure` (`src/drawer/`, `src/form/`), проп `overflow` и вид `variant: 'segment' | 'line'` у `Tabs`, проп `marked` и помощник `gridFocusTarget` у `DataGrid`; в `@katran/effector` — `createDrawerStackModel`.
+
 Инструменты: pnpm workspaces · TypeScript strict · Vite (library mode для пакетов, app для демо) · vitest + Testing Library · eslint (`import-x/no-restricted-paths`, `@typescript-eslint/no-restricted-imports`, `jsx-a11y`) · stylelint · Playwright для замеров геометрии.
 
 ### 3.2. Правило зависимостей — проверяется, не декларируется
@@ -166,6 +168,8 @@ katran/
 ### 5.2. Срез 2 — деталка
 
 `Drawer` (стек из двух, фиксированная ширина 800, второй открывается двойным кликом по кнопке открытия), `Prompt` (`confirm({...}) → Promise<boolean>`, затемняет только свой документ), `FieldRow` (строка SWIFT-поля 23 px без заголовка, пустое поле остаётся бледной строкой ради построчного совпадения двух документов), `ConfigForm` (рендер от реестра полей + профиля типа: hero, blocks, grid парами отправитель|получатель, text, extra), `InlineEdit` (исходник слева / ввод справа, маркер изменения `warn`, валидация длины строки и набора SWIFT X), `DateInput`. Модели: `createDrawerStackModel`, `createFormModel`. Табам добавляется переполнение: фиксированный порядок, неактивные второй группой, хвост в «••• N».
+
+Срез режется на подсрезы 2a–2d (спека `2026-09-29-katran-detail-view-design.md`). **2a исполнен** (просмотр): `Drawer` и `DrawerStack` (ширина 800 — токен `drawer`, не модальные), `Tabs` с `overflow`/`variant`, `FieldRow` (строка SWIFT-поля — **27** px по замеру эталона, не 23: 23 — строка таблицы сторон рубля), `ConfigForm` (типы — спека 2a §3.1), `Disclosure`, разведение клика и двойного клика и метка открытых в `DataGrid`, `createDrawerStackModel`. `Prompt`, `InlineEdit`, `DateInput`, `createFormModel` — срез 2c.
 
 ### 5.3. Срез 3 — дашборд
 
@@ -434,7 +438,7 @@ const grid = createGridModel<Doc>({
 
 `apps/demo` — витрина компонентов: страница токенов (палитра, кегли, плотность, темы) и страница на каждый компонент с регуляторами. Боевых экранов демо больше не показывает — они переехали в `apps/pi`.
 
-`apps/pi` — прикладное приложение на Feature-Sliced Design с **боевыми экранами** на вымышленных правдоподобных данных (показываются Заказчику): «Валютные документы» и «Рублёвые документы», реестры платёжных инструкций. Устроено как переносимый образец для внутренних команд — единственный шов с бекендом (`requestFx`), порты сущностей с мапперами на контракт `vtb-filters`, фейковый сервер на том же контракте. Дизайн — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`; документы — `docs/guides/pi-usage.md` (перенос во внутреннее приложение) и `docs/reference/pi-api.md` (контракт для бекенда).
+`apps/pi` — прикладное приложение на Feature-Sliced Design с **боевыми экранами** на вымышленных правдоподобных данных (показываются Заказчику): «Валютные документы» и «Рублёвые документы», реестры платёжных инструкций, и деталка документа «Платёжная инструкция» (срез 2a — виджет `widgets/doc-detail`, открывается из обоих реестров). Демо остаётся витриной компонентов: деталка как экран — только в `apps/pi`, страниц демо для `Drawer`/`ConfigForm`/`Disclosure` пока нет (STATE §7). Устроено как переносимый образец для внутренних команд — единственный шов с бекендом (`requestFx`), порты сущностей с мапперами на контракт `vtb-filters`, фейковый сервер на том же контракте. Дизайн — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`; документы — `docs/guides/pi-usage.md` (перенос во внутреннее приложение) и `docs/reference/pi-api.md` (контракт для бекенда).
 
 Оба приложения публикуются на GitHub Pages из репозитория `ivanklimenko/katran`: репозиторий публичный (решение владельца 24.09.2026 — как у стенда `pi-constructor`), источник Pages — GitHub Actions, workflow `pages.yml` собирает демо и `apps/pi` при каждом push в `main` (`apps/pi/dist` копируется в `apps/demo/dist/pi`); адреса `https://ivanklimenko.github.io/katran/` и `https://ivanklimenko.github.io/katran/pi/`.
 
@@ -453,7 +457,8 @@ const grid = createGridModel<Doc>({
 | 1e. Реестр | `StatusLane`, `FilterPanel` simple, `BulkBar`, боевой экран в демо — дизайн `2026-09-24-katran-slice1e-registry-design.md` | сверка с эталоном, показ |
 | apps/pi | Реестры ПИ на FSD с переносимым швом данных: экран «Валютные документы» и e2e переехали из демо в `apps/pi`, добавлен рублёвый реестр по эталону `pi-constructor` — дизайн `2026-09-28-katran-pi-app-design.md` | сверка с эталоном (`registry-drift.md`, рублёвый реестр), e2e `apps/pi` 26/26, документы `pi-usage.md`/`pi-api.md` |
 | 1f. Advanced-фильтры | отдельный дизайн-заход → реализация | согласование вариантов до кода |
-| 2. Деталка | Drawer, Prompt, FieldRow, ConfigForm, InlineEdit, DateInput, модели форм | замеры drawer, два документа рядом |
+| 2a. Деталка на просмотр | `Drawer`/`DrawerStack` со стеком A/B, `Tabs` с переполнением, `FieldRow`, `ConfigForm`, `Disclosure`, жесты `DataGrid`, `createDrawerStackModel`; деталка в `apps/pi` (`widgets/doc-detail`), порт детали — предложение `GET /grids/{gridId}/documents/{id}` — дизайн `2026-09-29-katran-detail-view-design.md`, план `2026-09-29-katran-detail-view.md` (**исполнен**) | сверка с эталоном (`detail-drift.md`), e2e `apps/pi` 37/37 (drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27 ± 2), документы `pi-usage.md` §13 / `pi-api.md` §7 |
+| 2b–2d. Деталка: вкладки, правка, действия | остальные вкладки (2b); `Prompt`, `InlineEdit`, `DateInput`, модели форм, аудит поля (2c); настоящие действия лейна (2d) | сверка каждого подсреза против того же эталона `e065bfb` |
 | 3. Дашборд | Chart, StatTile, PanelLayout | график по статусам на демо-данных |
 
 План реализации среза 1 — отдельный документ в `docs/superpowers/plans/`.

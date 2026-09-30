@@ -1,0 +1,383 @@
+/* «Общие данные» деталки (спека 2a §3.1, эталон index.html:131–260) */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+/* сводка (эталон .hero) */
+.hero {
+  display: grid;
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+  background: var(--k-sunk);
+}
+
+.heroCell {
+  min-width: 0;
+  padding: var(--k-sp-1) var(--k-sp-3);
+}
+
+.heroCell + .heroCell {
+  border-left: 1px solid var(--k-line);
+}
+
+.heroCell[data-align='right'] {
+  text-align: right;
+}
+
+.heroLabel {
+  display: block;
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.heroValue {
+  font: 600 var(--k-fs-hero) / var(--k-lh-1) var(--k-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* заголовок группы полей (эталон .fh) */
+.fh {
+  display: flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+}
+
+.fhTitle {
+  margin: 0;
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-ink2);
+}
+
+.hint {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.link {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-val);
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+/* сетка пар 50–54 | 55–59 (эталон .fg) */
+.fg {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--k-sp-1) var(--k-sp-2);
+}
+
+.gap {
+  visibility: hidden;
+}
+
+/* строка поля 27 с рамкой (эталон .cell, border-box) */
+.cell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--k-field-row);
+  padding: 0 var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.cell:hover {
+  border-color: var(--k-val);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--k-field-tag) var(--k-field-opt) minmax(0, 1fr) auto var(--k-icon-m);
+  gap: 0 var(--k-field-gap);
+  align-items: center;
+  width: 100%;
+}
+
+.toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 2px;
+}
+
+.null {
+  border-style: dashed;
+}
+
+.null:hover {
+  border-color: var(--k-line);
+}
+
+.tag {
+  font: 600 var(--k-fs-1) / 1 var(--k-mono);
+  color: var(--k-ink);
+  cursor: help;
+}
+
+.opt {
+  font: 700 var(--k-fs-1) / 1 var(--k-mono);
+  color: var(--k-opt);
+  text-align: center;
+}
+
+.main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--k-val);
+}
+
+.null .main {
+  font-weight: 400;
+  color: var(--k-faint);
+}
+
+.second {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-ink2);
+  white-space: nowrap;
+}
+
+.open .second {
+  visibility: hidden;
+}
+
+.eye {
+  display: grid;
+  place-items: center;
+  color: var(--k-faint);
+}
+
+.eye svg {
+  width: var(--k-icon-m);
+  height: var(--k-icon-m);
+}
+
+.cell:hover .eye {
+  color: var(--k-val);
+}
+
+/* полный текст раскрытого поля под значением (эталон .full) */
+.full {
+  margin: 0 0 var(--k-sp-1) calc(var(--k-field-tag) + var(--k-field-opt) + 2 * var(--k-field-gap));
+  padding-top: var(--k-sp-1);
+  border-top: 1px dashed var(--k-line);
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
+  color: var(--k-val);
+  white-space: pre-wrap;
+}
+
+/* текстовые поля 70/72/79 (эталон .cell.txt) */
+.text {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--k-field-gap);
+  padding-top: var(--k-sp-1);
+  padding-bottom: var(--k-sp-1);
+}
+
+.text:hover {
+  border-color: var(--k-line);
+}
+
+.text .tag {
+  flex: none;
+  width: var(--k-field-tag);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pre {
+  display: block;
+  margin: 0;
+  min-height: calc(var(--k-lh-pre) * var(--k-show, 4));
+  overflow: hidden;
+  font: var(--k-fs-pre) / var(--k-lh-pre) var(--k-mono);
+  color: var(--k-val);
+  white-space: pre;
+}
+
+.null .pre {
+  color: var(--k-faint);
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.more {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--k-val);
+}
+
+/* короткие поля одной строкой (эталон .xrow) */
+.extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--k-sp-1) var(--k-sp-4);
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+  white-space: nowrap;
+}
+
+.extraItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--k-sp-1);
+}
+
+.extraVal {
+  color: var(--k-val);
+}
+
+.none {
+  color: var(--k-faint);
+}
+
+/* только для скринридера — как живая область провайдера */
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* сворачиваемый блок (эталон .blk/.bh/.bb) */
+.blk {
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.bh {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  min-height: var(--k-field-row);
+  padding: 0 var(--k-sp-2);
+}
+
+.bhTitle {
+  margin: 0;
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-ink2);
+}
+
+/* двойной класс (0,2,0): сброс типографики кнопок провайдера (:where(button), 0,1,0) не должен зависеть от порядка правил в бандле */
+.bhBtn.bhBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bhBtn:hover {
+  color: var(--k-val);
+}
+
+.bhBtn:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.chev {
+  margin-left: auto;
+  padding: 0 var(--k-sp-1);
+  border: 0;
+  background: none;
+  font-size: var(--k-fs-3);
+  color: var(--k-muted);
+  cursor: pointer;
+}
+
+.shut > .bh > .chev {
+  transform: rotate(180deg);
+}
+
+.bb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+  padding: 0 var(--k-sp-2) var(--k-sp-1);
+}
+
+/* display выше перебил бы атрибут hidden */
+.bb[hidden] {
+  display: none;
+}
+
+.empty {
+  border-style: dashed;
+}
+
+.empty .bhTitle {
+  color: var(--k-faint);
+}
+
+.lvBlock {
+  background: var(--k-paper);
+}
+
+.lvSub {
+  border: 0;
+  border-radius: 0;
+}
+
+.lvSub > .bh {
+  min-height: var(--k-h-field);
+  background: var(--k-sunk);
+}
+
+.lvSub .bhTitle {
+  font-size: var(--k-fs-3);
+}

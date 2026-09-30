@@ -47,13 +47,16 @@ apps/pi/src/
     rub-docs/  index.ts · model/registry.model.ts · ui/RubDocsPage.tsx
   widgets/
     doc-registry/  index.ts · lib/createRegistry.ts · ui/DocRegistry.tsx
+    doc-detail/    index.ts · lib/createDetail.ts · ui/DocDetail.tsx      # срез 2a: деталка A/B, не импортирует entities
   entities/
     doc-status/  index.ts · model/status.ts
-    fx-doc/      index.ts · model/ · api/ · ui/
-    rub-doc/     index.ts · model/ · api/ · ui/
+    fx-doc/      index.ts · model/ · api/ · ui/     # с 2a: model/detail.ts, model/swift.ts, api/detail.mapper.ts, ui/detail.tsx
+    rub-doc/     index.ts · model/ · api/ · ui/     # с 2a: model/detail.ts, model/profiles.ts, api/detail.mapper.ts, ui/detail.tsx
+    posting/     index.ts · model/ · api/ · ui/TxBlock.tsx · @x/fx-doc.ts · @x/rub-doc.ts   # проводки деталки (2a)
   shared/
     api/            request.ts · problem.ts
     lib/lifecycle/  createPageLifecycle.ts
+    lib/detail/     types.ts — DetailDomain и типы шва «сущность → виджет деталки» (2a)
 ```
 
 - **Граница переноса.** `pages`, `widgets`, `entities`, `shared` переезжают без правок. `app/` наш и выбрасывается: у команды свой `app`, куда переносятся одна строка транспорта и адаптер роутера. Для пути «remote» `app/` дополняется `bootstrap` для Module Federation — в срезе только описание в документе использования (раздел 9).
@@ -87,7 +90,8 @@ export function toApiError(status: number, body: unknown): ApiError
 | `facetsFx: Effect<FacetsQuery, Facet[], ApiError>` | `POST /grids/{gridId}/facets` | тело `{ filter: { conditions }, field }`, ответ `[{ value, count }]`. Эндпоинт — **предложение** в контракт (спека 1e, §4) |
 | `filterMetaFx: Effect<void, FilterMeta, ApiError>` | `GET /grids/{gridId}/filter-meta` | DTO §6 контракта → `FilterMeta` кита |
 
-- Сущность экспортирует порты одним объектом (`fxDocPorts`, `rubDocPorts`); мапперы наружу не отдаются.
+- Сущность экспортирует порты одним объектом (`fxDocPorts`, `rubDocPorts`); мапперы наружу не отдаются. **Исключение (срез 2a, решение контроллера R9):** мапперы детали `parseFxDocDetail`/`parseRubDocDetail`, примеры ответа `FX_DETAIL_EXAMPLE`/`RUB_DETAIL_EXAMPLE` и маппер проводок `parseTx`/`parseTxs` (`entities/posting`) экспортируются — только для тестов (мапперы, доступность деталки на реальных профилях) и примеров контракта в `pi-api.md` §7.5; рабочий код ходит через порты.
+- **Порт детали (срез 2a).** `createGridPorts({ gridId, parseRow, parseDetail })` — при `parseDetail` порты дополняются `detailFx: Effect<string, Detail, ApiError>`: `GET /grids/{gridId}/documents/{id}`, `id` кодируется в пути, ответ проверяется гардом `obj` и парсером сущности. Эндпоинт — **предложение** в контракт, как `/facets`; состав детали — `docs/reference/pi-api.md` §1.4, §7. Спека среза — `2026-09-29-katran-detail-view-design.md` §4.1.
 - **Проверка формы ответа** — рукописные гарды (`parseFxDoc`, `parseRubDoc`, разбор страницы и каталога), без zod: меньше зависимостей в закрытом контуре. Несоответствие → `ApiError` со `status: 0` и `problem.type = 'urn:katran:contract'`, `detail` называет первое неверное поле. Грид показывает состояние ошибки, приложение не падает.
 - **Имена полей строки бека неизвестны** (контракт не определяет состав `content[]`). Наш вариант — в `docs/reference/pi-api.md`; всё переименование держится в `api/*.mapper.ts`. Если бек отдаёт иначе, внутри правят только мапперы.
 - **Farfetched** (если он внутри): порты оборачиваются как есть — `createQuery({ effect: searchFx })`; пример — в документе использования.
@@ -136,7 +140,7 @@ createRegistry<Row>({
 - `pageOpened` → `grid.refresh`; `filterMetaFx` — только если каталог ещё не загружен (за сессию он не меняется). Отказ каталога не трогает грид и лейн; повтор — при следующем `pageOpened`;
 - `pageClosed` → `grid.clearSelection`. Фильтры, сортировка и страница **сохраняются**: при возврате пользователь видит тот же срез реестра, обновлённый свежим запросом. Выделение снимается: массовое действие над невидимыми записями опасно;
 - `refreshRequested` — шов внешних действий (например, аннулирование в деталке среза 2): перезапрос только пока экран открыт, гейт `lifecycle.$opened` (`effector-fsd.md`, раздел 4); закрыт — событие игнорируется, свежие данные придут при следующем `pageOpened`;
-- `openRequested` — шов деталки среза 2; сейчас страница только объявляет открытие через `announce`, как в демо.
+- `openRequested` — шов деталки среза 2; с среза 2a подключён к деталке в модели страницы: `sample({ clock: registry.openRequested, target: detail.open })`, где `detail = createDetail({ detailFx, lifecycle })` из `widgets/doc-detail` на том же `lifecycle` (спека 2a §4.4). Реестр о деталке по-прежнему не знает; экран передаёт `DocRegistry` метку открытых (`marked` из `detail.$marks`).
 
 Фабрика вызывается на верхнем уровне модуля страницы:
 
@@ -164,6 +168,10 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 | `entities/fx-doc` | `FxDoc`, `fxDocLayout`, `fxDocPorts` |
 | `entities/rub-doc` | `RubDoc`, `rubDocLayout`, `rubDocPorts` |
 | `widgets/doc-registry` | `createRegistry`, `DocRegistry`, типы `Registry`, `RegistryConfig`, `BulkAction` |
+| `widgets/doc-detail` (2a) | `createDetail`, `DocDetail`, типы `Detail`, `DetailConfig`, `DetailSlot`, `DetailSlotState`, `DocDetailProps` |
+| `entities/fx-doc`, `entities/rub-doc` — деталь (2a) | `FxDocDetail`/`RubDocDetail`, профили и вкладки (`FX_*`, `RUB_*`, `RFIELDS`, `ED107_GROUPS`, `fxSchemaOf`/`rubSchemaOf`), домен деталки `fxDocDetailDomain`/`rubDocDetailDomain`; по исключению R9 (§5.2) — `parse*DocDetail`, `*_DETAIL_EXAMPLE` |
+| `entities/posting` (2a) | `Tx`, `TX_DIRS`, `TX_STATES`, `TxBlock`; по исключению R9 — `parseTx`, `parseTxs`; соседям — `@x/fx-doc`, `@x/rub-doc` |
+| `shared/lib/detail` (2a) | типы `DetailDomain`, `DetailSummary`, `DetailTab`, `DetailAction`, `ActionIcon` |
 | `pages/fx-docs`, `pages/rub-docs` | компонент страницы, `lifecycle` |
 | `shared/api` | `requestFx`, `ApiError`, `toApiError`, `contractError`, `createGridPorts`, маппинг контракта грида, гарды формы, типы `HttpRequest`, `Problem`, `GridPorts` |
 | `shared/lib/lifecycle` | `createPageLifecycle`, тип `PageLifecycle` |
@@ -201,6 +209,7 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 | `apps/pi/README.md` | разработчик кита | Запуск, регуляторы `?slow` и `?fail`, ссылки на два документа выше |
 | `docs/guides/effector-fsd.md` | все | Примеры приводятся к реальным именам (`fx-doc`, `doc-registry`, `createPageLifecycle`), ссылка на `apps/pi` как живой образец |
 | STATE, CHANGELOG, основная спека §10–11 | мы | Экраны в `apps/pi`, срез в таблице работ, эталон рубля в §10 |
+| `docs/guides/pi-usage.md` §13, `docs/reference/pi-api.md` §1.4 и §7 | команда внутри, бекенд | Срез 2a: из чего состоит деталка, сборка на странице, что правится, если бек отдаёт деталь иначе, жесты; предложение `GET /grids/{gridId}/documents/{id}` и состав детали `fx-docs`/`rub-docs` с примерами из тестов мапперов |
 
 Для пересылки в Telegram документ использования собирается в PDF под телефон — по запросу владельца.
 

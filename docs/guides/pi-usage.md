@@ -11,10 +11,12 @@
 ```
 apps/pi/src/
   app/            только у нас: точка входа, hash-роутер, транспорт, фейковый сервер — сюда не переносится
-  pages/          fx-docs, rub-docs — экраны (модель реестра + компонент страницы)
-  widgets/        doc-registry — «грид + фильтры + лейн + жизненный цикл» как единый блок
-  entities/       fx-doc, rub-doc, doc-status — типы документов, порты (searchFx/facetsFx/filterMetaFx), раскладка колонок
-  shared/         api (транспорт requestFx, контракт grid-contract.ts, guards, problem), lib (lifecycle, test)
+  pages/          fx-docs, rub-docs — экраны (модель реестра и деталки + компонент страницы)
+  widgets/        doc-registry — «грид + фильтры + лейн + жизненный цикл» как единый блок;
+                  doc-detail — деталка документа: drawer A/B, шапка, лейн, вкладки, «Общие данные» (раздел 13)
+  entities/       fx-doc, rub-doc, doc-status, posting — типы документов, порты (searchFx/facetsFx/filterMetaFx/detailFx),
+                  раскладка колонок, профили деталки, проводки
+  shared/         api (транспорт requestFx, контракт grid-contract.ts, guards, problem), lib (lifecycle, detail, test)
 ```
 
 **Шов между нашим кодом и вашим бекендом — один эффект**, `requestFx` (`apps/pi/src/shared/api/request.ts`). Всё выше него (`entities`, `widgets`, `pages`) не знает про `fetch`/`axios`/адрес бека — оно вызывает `requestFx` и получает `unknown`, который сам же и разбирает по контракту (`shared/api/grid-contract.ts`). Всё, что нужно для переноса — подключить свой обработчик этого эффекта (раздел 4) и, если состав строки бека отличается от `docs/reference/pi-api.md`, поправить два файла мапперов (раздел 6).
@@ -31,7 +33,7 @@ apps/pi/src/
 
 Импорты в скопированном коде относительные (`../../../shared/api`, без алиасов `@/...`) — переносятся как есть, ничего не переписывать. Если в вашем проекте настроен алиас `@/`, можно (не обязательно) заменить относительные пути на алиас — это косметика, на поведение не влияет.
 
-**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/rub-doc/ui/cells.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
+**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/fx-doc/ui/detail.module.css`, `entities/rub-doc/ui/cells.module.css`, `entities/rub-doc/ui/detail.module.css`, `entities/posting/ui/posting.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, `widgets/doc-detail/ui/DocDetail.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
 
 - **CSS Modules для `*.module.css`** в сборщике. Vite включает их сам; webpack — `css-loader` с `modules: { auto: true }` (или правило на `/\.module\.css$/`). Имена классов в файлах — camelCase (`dirRow`, `srTag`), обращение в коде — `s.dirRow`, так что `localsConvention`/`exportLocalsConvention` можно не настраивать; у нас (`apps/pi/vite.config.ts`) стоят `camelCaseOnly` и `generateScopedName` вида `k-<файл>__<класс>` — это удобство отладки, не требование.
 - **Объявление типа `*.module.css` для TypeScript**, иначе `tsc` не пропустит импорт стиля. У нас — `packages/ui/src/css-modules.d.ts` (одна строка `declare module '*.module.css' { const classes: Record<string, string>; export default classes }`), подключён через `include` в `apps/pi/tsconfig.json`. У вас — такой же файл в своём `src` (или готовое объявление из `vite/client`, если вы на Vite).
@@ -146,7 +148,7 @@ requestFx.use(async ({ method, url, query, body }) => {
 
 `API_BASE`/`api` — переменные примера: подставьте адрес и способ авторизации своего бека (заголовок, cookie, интерцептор axios — где угодно внутри обработчика, до или после запроса). Важно только соблюсти правило выше: 2xx → JSON, иначе → `throw toApiError(status, body)`; сетевой сбой (ответа нет) — тоже `ApiError` (`toApiError(0, null)`), а не исходная ошибка `fetch`/axios: тип отказа `requestFx` — `ApiError`, и грид показывает сообщение именно из него.
 
-`requestFx.use(...)` вызывается один раз, синхронно, до первого рендера страницы — effector сохраняет `scope` при вызове `requestFx` изнутри обработчика (эффекты `searchFx`/`facetsFx`/`filterMetaFx` вызывают `requestFx` именно так, `apps/pi/src/shared/api/ports.ts`).
+`requestFx.use(...)` вызывается один раз, синхронно, до первого рендера страницы — effector сохраняет `scope` при вызове `requestFx` изнутри обработчика (эффекты `searchFx`/`facetsFx`/`filterMetaFx`/`detailFx` вызывают `requestFx` именно так, `apps/pi/src/shared/api/ports.ts`).
 
 ## 5. Адаптер роутера
 
@@ -180,7 +182,9 @@ function FxDocsRoute() {
 - `apps/pi/src/entities/fx-doc/api/fxDoc.mapper.ts` — `parseFxDoc(raw, path)`
 - `apps/pi/src/entities/rub-doc/api/rubDoc.mapper.ts` — `parseRubDoc(raw, path)`
 
-Маппер получает `raw: unknown` (одну строку `content[]`) и обязан вернуть строго типизированный `FxDoc`/`RubDoc` (`entities/*/model/*.ts`) — весь остальной код (порты, грид, колонки) от формы бека не зависит, он видит только `FxDoc`/`RubDoc`. Разборщики полей — все семь экспортов `apps/pi/src/shared/api/guards.ts`: `obj`, `str`, `strOrNull`, `num`, `oneOf` использует построчный разбор в мапперах (`parseFxDoc`/`parseRubDoc` — каждое поле `FxDoc`/`RubDoc` идёт через один из этих четырёх плюс `obj` для вложенных `lock`/`inactive`); `arr` и `scalar` мапперам не нужны — ими пользуется `shared/api/grid-contract.ts` при разборе всего ответа `search`/`facets` (массив `content`/массив пар `{value,count}`, `scalar` — тип значения фасета). Каждый гард бросает `contractError` с путём до поля, если форма не совпала (грид покажет ошибку, приложение не упадёт).
+Маппер получает `raw: unknown` (одну строку `content[]`) и обязан вернуть строго типизированный `FxDoc`/`RubDoc` (`entities/*/model/*.ts`) — весь остальной код (порты, грид, колонки) от формы бека не зависит, он видит только `FxDoc`/`RubDoc`. Разборщики полей — экспорты `apps/pi/src/shared/api/guards.ts` (их восемь: седьмой был `scalar`, восьмой — `strArr`, массив строк, добавлен срезом 2a для мапперов детали — `lines` SWIFT-полей, `valueDates`, `tabsOff`): `obj`, `str`, `strOrNull`, `num`, `oneOf` использует построчный разбор в мапперах (`parseFxDoc`/`parseRubDoc` — каждое поле `FxDoc`/`RubDoc` идёт через один из этих четырёх плюс `obj` для вложенных `lock`/`inactive`); `arr` и `scalar` мапперам не нужны — ими пользуется `shared/api/grid-contract.ts` при разборе всего ответа `search`/`facets` (массив `content`/массив пар `{value,count}`, `scalar` — тип значения фасета). Каждый гард бросает `contractError` с путём до поля, если форма не совпала (грид покажет ошибку, приложение не упадёт).
+
+Деталь документа (`GET /grids/{gridId}/documents/{id}`, `docs/reference/pi-api.md` §7) разбирают свои мапперы — раздел 13.3.
 
 Если у бека отличается **каталог** `filter-meta` (набор доступных полей, справочники) или тело `search`/`facets` — правится `apps/pi/src/shared/api/grid-contract.ts` (`toSearchBody`, `toFacetsBody`, `fromSearchResponse`, `fromFacetsResponse`, `fromFilterMetaResponse`) — это уже расхождение не в составе строки, а в самом контракте `vtb-filters` §5–6, и меняется на весь `apps/pi`, а не на один грид.
 
@@ -205,11 +209,13 @@ it('search: фильтр по статусу', async () => {
 })
 ```
 
+Деталь проверяется так же — блоки `describe('контракт детали fx-docs …')` и `describe('контракт детали rub-docs …')` в том же файле гоняют `fxDocPorts.detailFx`/`rubDocPorts.detailFx` по `id` строк из `searchFx`: номер, сумма и статус совпадают со строкой, каждый тип документа разбирается маппером, неизвестный `id` — `404`.
+
 Это те же порты, что использует страница — если тест зелёный, страница получит те же данные тем же путём. `requestFx` внутри `fork` не ходит в сеть по-настоящему только если ваш обработчик сам не ходит (для CI — держите отдельный smoke-тест против тестового стенда бека, не части `pnpm check`).
 
 ## 8. Farfetched
 
-Если у вас в приложении уже есть [Farfetched](https://ff.effector.dev/), порты оборачиваются как есть — переписывать `searchFx`/`facetsFx`/`filterMetaFx` не нужно, эффект остаётся эффектом:
+Если у вас в приложении уже есть [Farfetched](https://ff.effector.dev/), порты оборачиваются как есть — переписывать `searchFx`/`facetsFx`/`filterMetaFx`/`detailFx` не нужно, эффект остаётся эффектом:
 
 ```ts
 import { createQuery } from '@farfetched/core'
@@ -234,7 +240,8 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 
 - [ ] `requestFx.use(...)` подключён — страницы не показывают «Транспорт не подключён».
 - [ ] Оба экрана (`FxDocsPage`, `RubDocsPage`) загружаются и показывают данные вашего бека.
-- [ ] `?slow=N` и `?fail=search|facets|meta` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
+- [ ] Деталка открывается из обоих реестров, и `GET /grids/{gridId}/documents/{id}` вашего бека проходит контрактный тест (`apps/pi/src/app/fake/contract.test.ts`, блоки «контракт детали», раздел 7) с вашим обработчиком.
+- [ ] `?slow=N` и `?fail=search|facets|meta|detail` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
 - [ ] Контрактные тесты (раздел 7) зелёные против вашего бека.
 - [ ] eslint-границы FSD перенесены в ваш конфиг (раздел 11) — импорты вверх по слоям и между соседними слайсами одного слоя запрещены линтом, не только на словах.
 - [ ] В скопированных слайсах нет упоминаний стенда (тексты, геометрия Shell, префикс persist): пояснение `note` страниц — ваше или не передано (раздел 3); высоту реестру даёт ваш контейнер экрана — `DocRegistry` занимает `height: 100%` родителя, у нас определённую высоту задаёт `apps/pi/src/app/Shell.module.css` (`.main`/`.content`), без неё грид вырастет по содержимому; раскладка грида хранится под вашим префиксом (`RegistryConfig.persist`, раздел 3), а не под `katran-pi`.
@@ -246,8 +253,170 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 ## 12. FSD-специфика этого документа
 
 - Публичный API каждого слайса — его `index.ts` (`entities/fx-doc/index.ts`, `widgets/doc-registry/index.ts`, `pages/fx-docs/index.ts`): импортируйте оттуда, не из внутренних путей (`entities/fx-doc/model/fxDoc.ts` напрямую — не FSD).
-- `doc-status` — сущность, общая для обоих документов. Соседям она отдаёт свой API через `@x`: `entities/doc-status/@x/fx-doc.ts` (для `fx-doc`) и `entities/doc-status/@x/rub-doc.ts` (для `rub-doc`) — у каждого соседа свой файл, и линт пускает `fx-doc` только в `@x/fx-doc.ts` (правило `@x` — раздел 1 `docs/guides/effector-fsd.md`; линт — раздел 11). Не дублируйте словарь статусов на своей стороне.
+- `doc-status` — сущность, общая для обоих документов. Соседям она отдаёт свой API через `@x`: `entities/doc-status/@x/fx-doc.ts` (для `fx-doc`) и `entities/doc-status/@x/rub-doc.ts` (для `rub-doc`) — у каждого соседа свой файл, и линт пускает `fx-doc` только в `@x/fx-doc.ts` (правило `@x` — раздел 1 `docs/guides/effector-fsd.md`; линт — раздел 11). Не дублируйте словарь статусов на своей стороне. Так же устроена `posting` (проводки деталки): `entities/posting/@x/fx-doc.ts` и `entities/posting/@x/rub-doc.ts`.
 - Модели (`createFiltersModel`, `createGridModel` — из `@katran/effector`; `createRegistry` — местная фабрика `apps/pi`, не кита, раздел «Зависимости» ниже) вызываются на верхнем уровне модуля модели страницы, не в компоненте — так уже сделано в `pages/*/model/registry.model.ts`, при переносе не оборачивайте их в `useMemo`.
+
+## 13. Деталка документа
+
+Деталка «Платёжная инструкция» (срез 2a — только просмотр) открывается из обоих реестров: кнопка открытия записи — drawer A у правого края окна, двойной клик или Shift+клик — drawer B слева от A, для сравнения двух документов. Реестр под деталкой остаётся рабочим (фильтры, выделение, страница). Спека — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; эндпоинт и состав детали для бека — `docs/reference/pi-api.md` §1.4 и §7.
+
+В 2a содержимое есть только у вкладки «Общие данные»; остальные вкладки (Доп. поля, Статусы, Комплаенс, …) видны в полосе, но показывают заглушку «Вкладка «…» — будет в срезе 2b». Действия лейна — заглушки (раздел 13.5).
+
+### 13.0. Если реестры у вас уже перенесены
+
+Деталка — не только новые папки: срез 2a поменял и файлы, которые вы уже скопировали по разделу 2. Их нужно скопировать заново (или перенести изменения из `git log` ветки 2a):
+
+| Файл | Что поменялось |
+|---|---|
+| `shared/api/ports.ts` | перегрузка `createGridPorts({ gridId, parseRow, parseDetail })` — с `parseDetail` порты получают `detailFx`; типы `DetailParser`, `DetailPort`, `GridPortsConfig` |
+| `shared/api/guards.ts` | новый гард `strArr` |
+| `shared/api/index.ts` | экспорт `strArr` и новых типов портов |
+| `entities/fx-doc/api/ports.ts`, `entities/rub-doc/api/ports.ts` | передают `parseDetail: parseFxDocDetail` / `parseRubDocDetail` — у `fxDocPorts`/`rubDocPorts` появляется `detailFx` |
+| `entities/fx-doc/index.ts`, `entities/rub-doc/index.ts` | экспорт детали: типы, профили, вкладки, действия, домен `fxDocDetailDomain`/`rubDocDetailDomain`, мапперы и примеры (исключение — раздел 13.1) |
+| `widgets/doc-registry/ui/DocRegistry.tsx` | проп `marked` (метка открытых записей) |
+| `pages/*/model/registry.model.ts` | модель деталки `detail`, связка `openRequested → detail.open`, автооткрытие первой записи (раздел 13.2) |
+| `pages/*/ui/*Page.tsx` | `DocDetail` рядом с `DocRegistry`, `marked`, `rowOf`, `returnFocus` (раздел 13.2) |
+
+Новые папки — целиком: `widgets/doc-detail/`, `entities/posting/`, `shared/lib/detail/`, а в `entities/fx-doc/` и `entities/rub-doc/` — новые файлы `model/detail.ts`, `model/swift.ts` / `model/profiles.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `ui/detail.tsx`, `ui/detail.module.css`. `app/fake/*` (фейк детали) по-прежнему не переносится.
+
+**Кит нужен свежий.** Все три пакета кита по-прежнему версии `0.1.0`, а срез 2a лежит в `CHANGELOG.md` в разделе «0.1.0 — в работе»: номер версии не отличает кит с деталкой от кита без неё. Если вы ставили кит тарболами, соберите их заново из текущего кода — `examples/federation/scripts/pack-kit.sh` (собирает три пакета и кладёт `.tgz` в `.kit/`; подробности — `docs/consuming.md`, «Откуда пакеты»), и переустановите; во внутренний реестр — опубликуйте заново. Со старыми тарболами сборка упадёт на импорте `Drawer`/`createDrawerStackModel`.
+
+### 13.1. Из чего состоит
+
+| Где | Что |
+|---|---|
+| `widgets/doc-detail` | `createDetail({ detailFx, lifecycle })` (`lib/createDetail.ts`) — модель: стек A/B кита (`createDrawerStackModel` из `@katran/effector`) плюс загрузка документа по слоту и кэш по `id` на время открытого экрана; `$slots` (у каждого слота `id`, вкладка, состояние `loading`/`ready`/`error`, данные, текст ошибки), `$marks` (метки записей для грида), `open`, `close`, `closeTop`, `setTab`, `retry`. `DocDetail` (`ui/DocDetail.tsx`) — экран: `DrawerStack` кита, в слоте — шапка, лейн действий, `Tabs` с переполнением, во вкладке «Общие данные» — `ConfigForm` кита; скелетон на загрузку, ошибка с «Повторить». Виджет один на оба реестра и `entities` не импортирует |
+| `entities/fx-doc`, `entities/rub-doc` | всё доменное — объект `DetailDomain` сущности: `fxDocDetailDomain`, `rubDocDetailDomain` (`ui/detail.tsx`): заголовок, вкладки, действия лейна, реестр полей, профиль «Общих данных» по типу документа (`schemaOf`), сводка, блоки и секции. Тип детали — `FxDocDetail`/`RubDocDetail` (`model/detail.ts`), маппер — `api/detail.mapper.ts`, порт — `fxDocPorts.detailFx`/`rubDocPorts.detailFx` |
+| `entities/posting` | проводки деталки: тип `Tx`, маппер `parseTx`/`parseTxs`, блок `TxBlock`; соседям — через `@x/fx-doc.ts` и `@x/rub-doc.ts` (раздел 12) |
+| `shared/lib/detail` | типы шва «сущность → виджет»: `DetailDomain`, `DetailSummary`, `DetailTab`, `DetailAction`, `ActionIcon` |
+| `shared/api` | `createGridPorts({ gridId, parseRow, parseDetail })` — при `parseDetail` порты получают `detailFx: Effect<string, Detail, ApiError>` (`GET /grids/{gridId}/documents/{id}`, `id` кодируется в пути) |
+
+Из кита деталке нужны (`@katran/ui`): новые в 2a — `Drawer`, `DrawerStack` (тип `DrawerStackItem`), `Tabs` с `overflow` и `variant="line"`, `ConfigForm` (типы `FormSchema`, `FieldDef`, `FieldValue`, `HeroCell`, `SectionContent`, `FieldPresenter`, `FieldView`), `FieldRow`, `Disclosure`, `DataGrid` с `marked`, `gridFocusTarget`; прежние — `TabPanel`, `ErrorState`, `Skeleton`, `useLoadingGate`, `Menu`, `IconButton`, `LinkValue`, `StatusDot`, `Tag`, `useKatran`, форматтеры `formatAmount`, `formatDate`, `formatDateTimeFull`. Из `@katran/effector` — `createDrawerStackModel` (типы `DrawerEntry`, `DrawerSlot`, `DrawerStackModel`). Кит — собранный из кода со срезом 2a (раздел 13.0).
+
+**`createDetail`** (`widgets/doc-detail/lib/createDetail.ts`):
+
+```ts
+type DetailConfig<D> = {
+  detailFx: Effect<string, D, ApiError>
+  lifecycle: PageLifecycle
+  firstTab?: string | undefined          // вкладка только что открытого документа; по умолчанию 'main'
+}
+type DetailSlot<D> = { slot: 'a' | 'b'; id: string; tab: string; state: 'loading' | 'ready' | 'error'; data: D | null; error: string | null }
+type Detail<D> = {
+  stack: DrawerStackModel                                   // модель стека кита (opened, alreadyOpen, closeAll, $a, $b …)
+  $slots: Store<{ a: DetailSlot<D> | null; b: DetailSlot<D> | null }>
+  $marks: Store<Record<string, 'a' | 'b'>>                  // id документа → слот; для DataGrid marked
+  $focus: Store<Record<string, number>>                     // растёт при повторном открытии открытого — Drawer focusKey
+  open: EventCallable<{ id: string; secondary: boolean }>   // тот же payload, что у registry.openRequested
+  close: EventCallable<'a' | 'b'>
+  closeTop: EventCallable<void>
+  setTab: EventCallable<{ slot: 'a' | 'b'; tab: string }>
+  retry: EventCallable<'a' | 'b'>
+}
+```
+
+`firstTab` задавайте, только если первая вкладка вашего набора — не `'main'` (у обоих наборов `apps/pi` первая — `'main'`).
+
+**Исключение из правила «мапперы наружу не отдаются».** `entities/fx-doc` и `entities/rub-doc` экспортируют `parseFxDocDetail`/`parseRubDocDetail` и примеры ответа `FX_DETAIL_EXAMPLE`/`RUB_DETAIL_EXAMPLE`, `entities/posting` — `parseTx`/`parseTxs`. Это санкционированное исключение (спека `apps/pi` §5.2) только для тестов и примеров контракта: на примерах гоняются тесты мапперов (`api/detail.mapper.test.ts`), из них же — примеры в `pi-api.md` §7.5; мапперы нужны тесту доступности `app/details.a11y.test.tsx` (деталь фейка → тип детали для каждого типа документа). Рабочий код вызывает только порты (`detailFx`); в своих модулях мапперы напрямую не зовите.
+
+### 13.2. Сборка на странице
+
+Модель страницы создаёт реестр и деталку на одном `lifecycle` и связывает их через шов `openRequested` реестра — реестр о деталке не знает (`apps/pi/src/pages/fx-docs/model/registry.model.ts`):
+
+```ts
+import { createStore, sample } from 'effector'
+import { fxDocLayout, fxDocPorts } from '../../../entities/fx-doc'
+import { createPageLifecycle } from '../../../shared/lib/lifecycle'
+import { createDetail } from '../../../widgets/doc-detail'
+import { createRegistry } from '../../../widgets/doc-registry'
+
+export const lifecycle = createPageLifecycle()
+export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle })
+export const detail = createDetail({ detailFx: fxDocPorts.detailFx, lifecycle })
+sample({ clock: registry.openRequested, target: detail.open })
+
+// как на эталоне (решение владельца 30.09, В-Д4): первая запись первого ответа после входа на экран открывается в A;
+// quiet — открытие не пользователем: drawer не забирает фокус, он остаётся в реестре (R10)
+const $autoOpened = createStore(false).reset(lifecycle.pageClosed)
+const firstRow = sample({
+  clock: registry.grid.$rows.updates,
+  source: { done: $autoOpened, opened: lifecycle.$opened },
+  filter: ({ done, opened }, rows) => opened && !done && rows.length > 0,
+  fn: (_, rows) => rows[0]!,
+})
+$autoOpened.on(firstRow, () => true)
+sample({ clock: firstRow, fn: (row) => ({ id: fxDocLayout.rowKey(row), secondary: false, quiet: true }), target: detail.open })
+```
+
+Автооткрытие — поведение эталона, не механизм деталки: в A открывается первая запись **первого непустого** ответа реестра после входа на экран (пустой ответ пропускается, флаг сбрасывается только `pageClosed`). Открывается она с `quiet: true`: фокус в drawer не переходит и остаётся в реестре, как на эталоне (там фокусом не управляют вовсе). Открытие пользователем (кнопка, двойной клик, Shift, клавиатура) `quiet` не передаёт — фокус уходит в заголовок drawer'а. Метка «тихого» открытия (`detail.$quiet`) живёт, пока документ открыт: повторное открытие того же документа пользователем фокус в его drawer переводит. Если оно вам не нужно, удалите последний блок (четыре выражения с `$autoOpened`/`firstRow`) и заодно `createStore` из импорта `effector` — иначе он останется неиспользованным и линт упадёт; остальное от блока не зависит.
+
+Экран рендерит реестр и деталку рядом (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`, сокращено):
+
+```tsx
+import { useUnit } from 'effector-react'
+import { gridFocusTarget, useKatran } from '@katran/ui'
+import { fxDocDetailDomain, fxDocLayout } from '../../../entities/fx-doc'
+import { DocDetail } from '../../../widgets/doc-detail'
+import { DocRegistry } from '../../../widgets/doc-registry'
+import { detail, registry } from '../model/registry.model'
+
+const TITLE = 'Валютные документы'
+
+export function FxDocsPage({ note }: { note?: string | undefined }) {
+  const { announce } = useKatran() // массовые действия реестра — как раньше
+  const [rows, marks] = useUnit([registry.grid.$rows, detail.$marks])
+  return (
+    <>
+      <DocRegistry
+        registry={registry} layout={fxDocLayout} title={TITLE} /* …как раньше… */
+        openHint="Открыть деталку · двойной клик или Shift — рядом для сравнения"
+        marked={(d) => marks[fxDocLayout.rowKey(d)] ?? null}
+      />
+      <DocDetail
+        detail={detail}
+        domain={fxDocDetailDomain}
+        rowOf={(id) => rows.find((r) => fxDocLayout.rowKey(r) === id) ?? null}
+        returnFocus={(id) => gridFocusTarget(TITLE, id)}
+      />
+    </>
+  )
+}
+```
+
+- `marked` — метка записей, открытых в A и B (подсветка записи и пометка в имени кнопки открытия).
+- `rowOf` — строка реестра по `id`: шапка и лейн (номер, статус) показываются из неё, пока деталь грузится или если загрузка упала.
+- `returnFocus` — куда вернуть фокус при закрытии drawer'а: `gridFocusTarget(title, id)` кита ищет кнопку открытия этой записи в гриде с доступным именем `title` (то же, что `title` у `DocRegistry`), а если записи на странице уже нет — активную ячейку грида. Кит зовёт её, **только если фокус потерян** — был внутри закрытого drawer'а (оказался на `body`) или стоит там, куда его вернуло прошлое закрытие; если пользователь сам увёл фокус из drawer'а (в фильтр, в грид), фокус остаётся, где он. Исключение в `returnFocus` кит глушит.
+- `DocDetail` рендерит drawer'ы порталом в корень `KatranProvider` — отдельного контейнера на странице ему не нужно; ширина drawer'а — токен `--k-drawer` (800 при плотности 100 %, растёт с плотностью).
+- **Drawer занимает окно по высоте целиком:** `position: fixed; top: 0; bottom: 0`, у правого края, `z-index` — токен `--k-z-drawer` (100). Верхнюю панель хоста (шапку метаприложения) он перекроет; настройки отступа сверху в ките пока нет (техдолг, `docs/STATE.md` §7). Если шапка хоста должна оставаться видимой — сообщите нам, это правка `Drawer` кита, а не ваша.
+
+Рублёвый экран — то же самое с `rubDocPorts`, `rubDocLayout`, `rubDocDetailDomain` (`apps/pi/src/pages/rub-docs/`).
+
+### 13.3. Бек отдаёт деталь иначе
+
+- Другой адрес детали (не `GET /grids/{gridId}/documents/{id}`) — одна строка в `apps/pi/src/shared/api/ports.ts`: ``url: `${base}/documents/${encodeURIComponent(id)}` `` внутри `detailFx` (адрес общий для обоих гридов).
+- Другие имена или структура полей детали — правится только маппер: `apps/pi/src/entities/fx-doc/api/detail.mapper.ts` (`parseFxDocDetail`) и `apps/pi/src/entities/rub-doc/api/detail.mapper.ts` (`parseRubDocDetail`); проводки — `apps/pi/src/entities/posting/api/posting.mapper.ts`. Маппер обязан вернуть `FxDocDetail`/`RubDocDetail` — виджет и блоки видят только их. После правки обновите пример в `api/detail.example.ts` под форму своего бека — на нём гоняется `detail.mapper.test.ts`.
+- Новый тип SWIFT-сообщения — профиль в `FX_PROFILES` (схема `FormSchema`: сводка, блоки, сетка пар, текст, extra, при необходимости `seqB`) и недостающие поля в `FX_FIELDS` — оба в `apps/pi/src/entities/fx-doc/model/swift.ts`; тип добавляется и в `FX_TYPES` строки (`model/fxDoc.ts`).
+- Рублёвые секции и реквизиты — константы `apps/pi/src/entities/rub-doc/model/profiles.ts`: состав сторон `RUB_PARTY`, секции `RUB_SECTIONS`/`RSECTION_TITLE` и строки секций (`PURPOSE_EXTRA_ROWS`, `AGENT_COLS`, `BUDGET_ROWS`, `COLLECT_ROWS`, `ED107_HEAD`, `ED107_GROUPS`), подписи реквизитов `RFIELDS`, коды операций `RUB_OPERATION`.
+- Вкладки и действия лейна — `FX_TABS`/`FX_ACTIONS` и `RUB_TABS`/`RUB_ACTIONS` там же; ключи вкладок — те же, что в `tabsOff` ответа (`pi-api.md` §7.4).
+
+### 13.4. Жизненный цикл
+
+`pageClosed` экрана закрывает оба drawer'а и очищает кэш деталей: при возврате прежние деталки не всплывают. Ответ, пришедший после ухода, не принимается — ни в кэш, ни в ошибки, ни в состояние загрузки: у каждого запроса номер визита экрана (растёт на `pageOpened`), и запрос прежнего визита, висевший при уходе, нового визита не касается, даже если ответил уже после возврата. Автооткрытие первой записи при возврате (13.2) фокус не забирает. Адаптеру роутера (раздел 5) делать для деталки ничего дополнительно не нужно — хватает тех же `pageOpened`/`pageClosed`. Кэш по `id` живёт, пока экран открыт: переключение A↔B и повторное открытие не перезапрашивают деталь; «Повторить» в состоянии ошибки — `retry(slot)`. `refreshRequested` реестра деталь не трогает (перезапрос детали после действий — срез 2c).
+
+### 13.5. Жесты и клавиатура
+
+- Клик по кнопке открытия — A через 220 мс: `DataGrid` ждёт, не будет ли второго клика (токен `--k-t-open-delay`).
+- Двойной клик — документ в B, рядом с A (A не заменяется); если A пуст — в A.
+- Shift+клик — в B сразу; Enter/Space на кнопке — в A сразу.
+- Документ, уже открытый в A или B, повторно не открывается — фокус переходит в его drawer.
+- Esc или «×» — закрывает сначала B, потом A; фокус возвращается на кнопку открытия записи (`returnFocus`), если был в закрытом drawer'е (13.2). Закрытие A «×» при открытом B: B сдвигается в A, фокус — в заголовок оставшегося drawer'а, а не в грид (R11). Esc в поле ввода, в меню и в поповере drawer не закрывает — у них Esc свой (меню «••• N» вкладок закрывается, деталка остаётся). Видимый тултип тоже забирает Esc первым: первое нажатие прячет подсказку, второе закрывает drawer. Пока деталка открыта, Esc из интерактивного элемента внутри ячейки грида тоже закрывает drawer (без деталки он возвращает фокус в ячейку).
+- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d.
+
+### 13.6. Как проверить
+
+- **Контрактный тест детали против своего бека.** Блоки «контракт детали» лежат в `apps/pi/src/app/fake/contract.test.ts`, а `app/` не переносится — скопируйте два блока `describe('контракт детали fx-docs …')` и `describe('контракт детали rub-docs …')` в свой тестовый файл и подставьте свой обработчик в `fork({ handlers: [[requestFx, myHandler]] })` (раздел 7). Против настоящего бека держите проверки, которые требует контракт: `detailFx` по `id` строки из `searchFx` завершается `done`, номер (`docNumber`), сумма (`amount`), статус (`status`) и тип — как у строки (`pi-api.md` §7.1); каждый тип документа разбирается маппером; неизвестный `id` — `404` (подставьте заведомо несуществующий `id` своего бека). Специфичны для фейка и уберите: равенство сторон и полей строке (`fields['50'].acc === row.f50acc`, `fields['57'].lines`, `party.s.acc === row.fromAcc`, `party.r.inn === row.toInn`) — так фейк строит деталь, бек не обязан; `'nope'`/`'rub-9999'` как «несуществующий» `id`; `500` через `createFakeServer(…, { failing: () => 'detail' })`; тест «есть документ с бюджетными реквизитами и с посредниками» (`makeRubDocDetail` — данные фейка).
+- **Мапперы** — `entities/*/api/detail.mapper.test.ts` переезжают вместе со слайсом; если меняли маппер под свой бек — обновите `api/detail.example.ts`.
+- **e2e деталки** — `apps/pi/e2e/detail.spec.ts` (Playwright, `@playwright/test`, раздел «Зависимости»): как сценарий для своего e2e — геометрия против эталона ± 2 (drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27), A+B рядом, двойной клик и Shift, Esc по порядку, повторное открытие, меню «••• N», скелетон, ошибка с «Повторить», уход с экрана. Как есть он не заработает: завязан на стенд — маршруты `#/fx-docs`/`#/rub-docs`, регуляторы фейка `?slow=N`, `?fail=detail`, `?hostile`, данные фейка (запись 3 валюты заблокирована, первая запись открывается при входе), превью на порту 5186. Эти места замените своими.
 
 ## Зависимости
 
@@ -257,9 +426,9 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 |---|---|---|
 | `react`, `react-dom` | `17.0.2` | среда выполнения (раздел «Среда выполнения» выше); peer-зависимость `@katran/ui` и `@katran/effector` — `>=17` |
 | `effector` | `^23.4.4` | peer-зависимость `@katran/effector` — `>=23` |
-| `effector-react` | `^23.3.0` | `useUnit` — вызывается напрямую в `widgets/doc-registry/ui/DocRegistry.tsx` (не только внутри `@katran/effector`); peer-зависимость `@katran/effector` — `>=23` |
-| `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui` |
-| `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts` |
+| `effector-react` | `^23.3.0` | `useUnit` — вызывается напрямую в `widgets/doc-registry/ui/DocRegistry.tsx`, `widgets/doc-detail/ui/DocDetail.tsx` и в страницах (не только внутри `@katran/effector`); peer-зависимость `@katran/effector` — `>=23` |
+| `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel`, `Drawer`, `ConfigForm` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui`, `widgets/doc-detail/ui`, страницы (`gridFocusTarget`) |
+| `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts`; `createDrawerStackModel` — внутри `widgets/doc-detail/lib/createDetail.ts` |
 | `@katran/tokens` | `workspace:*` | шрифты (`@katran/tokens/fonts.css`, раздел 3); токены переезжают вместе с `@katran/ui` (см. ниже) |
 
 **Для тестов слайсов** (если оставляете `*.test.ts(x)`, раздел 2) — dev-зависимости, версии как в `apps/pi/package.json` (библиотеки тестирования — под React 17):
@@ -273,5 +442,6 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 | `@testing-library/jest-dom` | `^7.0.1` | матчеры `toBeInTheDocument` и т. п.; подключаются в setup-файле `import '@testing-library/jest-dom/vitest'` (у нас `apps/pi/vitest.setup.ts`) |
 | `@testing-library/user-event` | `^14.6.7` | клики и клавиатура в тестах компонентов |
 | `jest-axe` | `^11.0.0` | проверка доступности (`registries.a11y.test.tsx`, `DocRegistry.test.tsx`); `expect.extend(toHaveNoViolations)` — в том же setup-файле; типы — свой минимальный `packages/ui/src/test/jest-axe.d.ts` (не `@types/jest-axe`, он тянет типы Jest) |
+| `@playwright/test` | `^1.63.0` | e2e на production-сборке (`apps/pi/e2e/*.spec.ts`, в том числе сценарии деталки `detail.spec.ts`, раздел 13.6) — только если переносите e2e; не часть `pnpm test` |
 
 `createRegistry` (раздел 3 и «FSD-специфика» выше) — **не** экспорт `@katran/effector`, это местная фабрика `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts`, которая сама вызывает `createFiltersModel`/`createGridModel` кита внутри себя; переносится вместе со слайсом `widgets/doc-registry`, а не устанавливается из npm.

@@ -1,3 +1,8 @@
 export { CURRENCIES, DIRECTION_LABEL, DIRECTIONS, FX_TYPES, ROUTE_TYPES, type Direction, type FxDoc, type RouteType } from './model/fxDoc'
 export { fxDocPorts } from './api/ports'
 export { fxDocLayout } from './ui/layout'
+export type { FxDocDetail, SwiftValue } from './model/detail'
+export { FX_ACTIONS, FX_DETAIL_TITLE, FX_FIELDS, FX_OPTION_LABELS, FX_PROFILES, FX_TABS, fxSchemaOf, swiftPresent } from './model/swift'
+export { parseFxDocDetail } from './api/detail.mapper'
+export { FX_DETAIL_EXAMPLE } from './api/detail.example'
+export { fxBlock, fxDocDetailDomain, fxDocSummary, fxHero, fxRowSummary } from './ui/detail'

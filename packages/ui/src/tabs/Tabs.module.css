@@ -56,6 +56,40 @@
   text-align: left;
 }
 
+/* линия с подчёркиванием — вкладки деталки (эталон .tabs index.html:127–129, 263–283): 32 = высота полосы с подчёркиванием.
+   Нижнюю линию полосы рисует сам кит тенью inset, а не рамкой контейнера с margin-bottom: -1px: тень лежит под вкладками,
+   подчёркивание выбранной (2px) закрывает её без выхода за полосу — его не обрезает overflow: hidden полосы
+   переполнения, а голый px в отступе запрещён линтом. Потребитель свою нижнюю рамку под полосой не рисует. */
+.line {
+  gap: 0;
+  box-shadow: inset 0 -1px 0 var(--k-line);
+}
+
+.line .tab {
+  height: var(--k-tab-line);
+  padding: 0 var(--k-tab-px);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-weight: 400;
+  color: var(--k-muted);
+}
+
+/* выбранная вкладка линией — полужирная (500) и шире обычной (400): замер ведётся по ширине выбранной,
+   чтобы вкладка, ставшая выбранной, не выросла за посчитанное место и не обрезалась краем полосы */
+.measure.line .tab {
+  font-weight: 500;
+}
+
+.line .tab:hover:not(:disabled) {
+  color: var(--k-ink);
+}
+
+.line .tab[aria-selected="true"] {
+  border-bottom-color: var(--k-val);
+  font-weight: 500;
+  color: var(--k-ink);
+}
+
 .horizontal .tab:hover:not(:disabled) {
   color: var(--k-ink);
 }
@@ -74,4 +108,66 @@
   border-left-color: var(--k-val);
   background: var(--k-val-soft);
   color: var(--k-val);
+}
+
+/* переполнение: полоса + кнопка «••• N»; вкладки, не поместившиеся до первого замера, не вылезают */
+.bar {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* линия полосы продолжается под кнопкой «••• N» */
+.lineBar {
+  box-shadow: inset 0 -1px 0 var(--k-line);
+}
+
+.bar > .list {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.more {
+  flex: none;
+  margin-left: auto;
+  padding: 0 var(--k-tab-px);
+  border: 0;
+  background: none;
+  font: 600 var(--k-fs-1) / 1 var(--k-sans);
+  letter-spacing: 0.1em;
+  color: var(--k-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--k-ink);
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+/* разделитель групп: доступные | недоступные (эталон .tdiv) */
+.sep {
+  flex: none;
+  width: 0;
+  margin: var(--k-sp-2) var(--k-sp-1);
+  border-left: 1px solid var(--k-line);
+}
+
+/* скрытый ряд замеров: те же классы вкладок, вне потока, не виден и не кликается */
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
 }

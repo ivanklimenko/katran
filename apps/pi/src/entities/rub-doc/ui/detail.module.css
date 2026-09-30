@@ -1,0 +1,261 @@
+/* Блоки «Общих данных» рубля (эталон .msgs/.rp/.rph/.rpr/.rtxt/.rsec/.kvs, index.html:161–165, 343–345, 479–500) */
+.msgs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.col {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 var(--k-sp-2);
+  align-content: start;
+  min-width: 0;
+  padding: var(--k-sp-1) var(--k-sp-2);
+}
+
+.col + .col {
+  border-left: 1px solid var(--k-line);
+}
+
+.colTitle {
+  grid-column: 1 / -1;
+  font: 500 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.03em;
+  color: var(--k-muted);
+}
+
+.lbl {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.val {
+  overflow-wrap: anywhere;
+  color: var(--k-val);
+}
+
+.valMono {
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  color: var(--k-val);
+}
+
+.mono {
+  font-family: var(--k-mono);
+}
+
+.cut {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ar {
+  margin: 0 var(--k-sp-1);
+  color: var(--k-faint);
+}
+
+.links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 var(--k-sp-2);
+}
+
+.none {
+  color: var(--k-faint);
+}
+
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.heroSub {
+  font-weight: 500;
+}
+
+.prio {
+  margin-left: var(--k-sp-2);
+}
+
+.noPrio {
+  margin-left: var(--k-sp-2);
+  font-size: var(--k-fs-2);
+  font-weight: 400;
+  color: var(--k-muted);
+}
+
+.amt {
+  font: 600 var(--k-fs-sum) / 1 var(--k-sans);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ccy {
+  margin-left: var(--k-sp-1);
+  font-size: var(--k-fs-1);
+  font-weight: 600;
+  color: var(--k-val);
+}
+
+.partyWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+.fh {
+  display: flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+}
+
+.fhTitle {
+  margin: 0;
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-ink2);
+}
+
+/* таблица сторон: строка 23 (эталон .rpr), шапка прописными на sunk */
+.party,
+.agents {
+  width: 100%;
+  border: 1px solid var(--k-line);
+  border-collapse: collapse;
+  border-radius: var(--k-r-s);
+  table-layout: fixed;
+}
+
+.party th,
+.party td,
+.agents th,
+.agents td {
+  height: var(--k-party-row);
+  padding: 0 var(--k-sp-2);
+  border-bottom: 1px solid var(--k-line2);
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.party thead th,
+.agents thead th {
+  background: var(--k-sunk);
+  font: 600 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+}
+
+.agents td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agents th:first-child {
+  width: 40%;
+}
+
+.agents th:nth-child(2) {
+  width: var(--k-dt-bic);
+}
+
+.kvName {
+  font-size: var(--k-fs-2);
+  font-weight: 400;
+  color: var(--k-muted);
+}
+
+/* бледная подпись пустой строки; у заголовка строки таблицы сторон тот же класс kvName */
+.null .kvName {
+  color: var(--k-faint);
+}
+
+.rtxt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 var(--k-sp-3);
+  align-items: baseline;
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.rtxt.null {
+  border-style: dashed;
+}
+
+.rtxtLbl {
+  font: 600 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--k-ink2);
+}
+
+/* строки секции: подпись 250 (эталон .rsec .xr) */
+.kv {
+  display: flex;
+  flex-direction: column;
+}
+
+.kvRow {
+  display: grid;
+  grid-template-columns: var(--k-dt-label-l) minmax(0, 1fr);
+  gap: 0 var(--k-sp-3);
+  align-items: baseline;
+  min-height: var(--k-party-row);
+  border-bottom: 1px solid var(--k-line2);
+}
+
+.kvRow:last-child {
+  border-bottom: 0;
+}
+
+.kvSep {
+  height: var(--k-sp-2);
+  border-bottom: 1px solid var(--k-line);
+}
+
+.no {
+  margin-right: var(--k-sp-1);
+  font: 600 var(--k-fs-1) / 1 var(--k-mono);
+  color: var(--k-ink);
+  cursor: help;
+}
+
+.ed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+.kvs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--k-sp-3);
+}
+
+.kvsItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+  min-width: 0;
+}
+
+.cnt {
+  margin-left: auto;
+  font: 500 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-faint);
+}
