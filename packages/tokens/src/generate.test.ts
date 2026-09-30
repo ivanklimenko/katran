@@ -47,6 +47,13 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-tab-px: calc\(10px \* var\(--k-density\)\)/)
   })
 
+  it('«Общие данные» деталки: строка поля 27, строка сторон рубля 23, сетки блоков dt-* (спека 2a)', () => {
+    expect(css).toMatch(/--k-field-row: calc\(27px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-party-row: calc\(23px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-lh-pre: calc\(16\.3px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-dt-label-l: calc\(250px \* var\(--k-density\)\)/)
+  })
+
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {
       expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)

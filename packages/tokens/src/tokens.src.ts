@@ -74,6 +74,11 @@ export const sizes: Record<string, number> = {
   'drawer': 800, 'drawer-shift': 30, 'fs-h2': 16, 'dw-pad': 14, 'lane': 36,
   // вкладки деталки линией (эталон .tabs index.html:127–129): высота полосы с подчёркиванием, горизонтальный отступ вкладки
   'tab-line': 32, 'tab-px': 10,
+  // «Общие данные» деталки (эталон .cell/.hero/.amt/.cell.txt pre, index.html:131–260): строка SWIFT-поля 27, колонки тега/опции,
+  // зазор, моноширинный текст полей 70/72/79, кегли сводки; строка таблицы сторон рубля 23 (.rpr)
+  'field-row': 27, 'field-tag': 26, 'field-opt': 14, 'field-gap': 6, 'fs-pre': 11.5, 'lh-pre': 16.3, 'fs-hero': 13.5, 'fs-sum': 17, 'party-row': 23,
+  // сетки блоков деталки приложения: проводки (.tx), стороны и секции рубля (.rph/.rpr, .rsec .xr, RSECTIONS.agents)
+  'dt-dir': 62, 'dt-acc': 156, 'dt-sum': 150, 'dt-st': 84, 'dt-time': 104, 'dt-bic': 90, 'dt-label-s': 128, 'dt-label-m': 150, 'dt-label-l': 250,
 }
 
 export const fonts = {

@@ -101,6 +101,24 @@
   --k-lane: calc(36px * var(--k-density));
   --k-tab-line: calc(32px * var(--k-density));
   --k-tab-px: calc(10px * var(--k-density));
+  --k-field-row: calc(27px * var(--k-density));
+  --k-field-tag: calc(26px * var(--k-density));
+  --k-field-opt: calc(14px * var(--k-density));
+  --k-field-gap: calc(6px * var(--k-density));
+  --k-fs-pre: calc(11.5px * var(--k-density));
+  --k-lh-pre: calc(16.3px * var(--k-density));
+  --k-fs-hero: calc(13.5px * var(--k-density));
+  --k-fs-sum: calc(17px * var(--k-density));
+  --k-party-row: calc(23px * var(--k-density));
+  --k-dt-dir: calc(62px * var(--k-density));
+  --k-dt-acc: calc(156px * var(--k-density));
+  --k-dt-sum: calc(150px * var(--k-density));
+  --k-dt-st: calc(84px * var(--k-density));
+  --k-dt-time: calc(104px * var(--k-density));
+  --k-dt-bic: calc(90px * var(--k-density));
+  --k-dt-label-s: calc(128px * var(--k-density));
+  --k-dt-label-m: calc(150px * var(--k-density));
+  --k-dt-label-l: calc(250px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;
