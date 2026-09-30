@@ -1,6 +1,6 @@
 /** Типы состояния вида объявлены в @katran/ui (grid/types.ts) — здесь только реэкспорт, чтобы у контракта был один источник. */
 export type { Sort, Selection, ColumnsState, GridViewState } from '@katran/ui'
-export type { Scalar, Condition, Filter, FilterFieldType, FilterField, FilterMeta } from '@katran/ui'
+export type { Scalar, Condition, Filter, FilterFieldType, FilterField, FilterMeta, SuggestState } from '@katran/ui'
 import type { Sort, Filter, Scalar } from '@katran/ui'
 
 /** Счётчик значений поля по фильтру — для лейна статусов (спека 1e, §4). */
@@ -16,3 +16,6 @@ export type PersistAdapter<T> = {
   load: (key: string) => T | undefined
   save: (key: string, value: T) => void
 }
+
+/** Тело POST /grids/{gridId}/suggest (предложение в контракт): filter — применённые условия без условий по field. */
+export type SuggestQuery = { field: string; query: string; filter: Filter; limit: number }

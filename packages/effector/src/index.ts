@@ -1,6 +1,6 @@
 export * from './types'
 export { localStoragePersist, memoryPersist } from './persist'
-export { createFiltersModel, type FiltersModel, type FiltersModelConfig } from './createFiltersModel'
+export { createFiltersModel, type FiltersModel, type FiltersModelConfig, type SuggestConfig } from './createFiltersModel'
 export { createGridModel, type GridModel, type GridModelConfig, type GridPersisted } from './createGridModel'
 export { useGrid, type GridBinding } from './useGrid'
 export { useFilters, type FiltersBinding } from './useFilters'

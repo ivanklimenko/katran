@@ -20,6 +20,13 @@ export type FilterField = {
   /** Встроенный справочник для ENUM. */
   values?: { value: Scalar; label: string }[] | undefined
   group?: string | undefined
+  /** Оператор по умолчанию (defaultOperator контракта §6): у STRING и NUMBER `IN` включает ввод списка значений. */
+  defaultOp?: Condition['op'] | undefined
+  /** У поля есть подсказки с бека (предложение в контракт, спека 2026-09-30 §9). */
+  suggest?: boolean | undefined
 }
 /** Ответ GET /grids/{gridId}/filter-meta. */
 export type FilterMeta = { fields: FilterField[] }
+
+/** Подсказки поля фильтра — стор модели фильтров (спека 2026-09-30 §8). */
+export type SuggestState = { field: string; query: string; items: string[]; loading: boolean }

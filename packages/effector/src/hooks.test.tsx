@@ -71,4 +71,15 @@ describe('useFilters', () => {
     act(() => { result.current.revert() })
     expect(result.current.dirty).toBe(false)
   })
+
+  it('setField и подсказки через хук', () => {
+    const model = createFiltersModel()
+    const { result } = renderHook(() => useFilters(model))
+    act(() => { result.current.setField({ field: 'purpose', conditions: [{ field: 'purpose', op: 'CONTAINS', value: 'a' }, { field: 'purpose', op: 'CONTAINS', value: 'b' }] }) })
+    expect(result.current.draft).toHaveLength(2)
+    expect(result.current.suggest).toBeNull()
+    act(() => { result.current.onSuggest({ field: 'purpose', query: 'x' }) })
+    act(() => { result.current.onSuggestClose() })
+    expect(result.current.suggest).toBeNull()
+  })
 })
