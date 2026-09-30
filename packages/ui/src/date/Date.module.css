@@ -82,3 +82,34 @@
   color: var(--k-muted);
   cursor: default;
 }
+
+/* поле даты: обёртка для строки горячих кнопок под полем */
+.dateBox {
+  display: inline-grid;
+  gap: var(--k-sp-1);
+  min-width: 0;
+}
+
+.dateField {
+  padding-right: 0;
+}
+
+.calBtn {
+  flex: none;
+  color: var(--k-muted);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--k-sp-1);
+}
+
+.timeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-1);
+  border-top: 1px solid var(--k-line);
+}
