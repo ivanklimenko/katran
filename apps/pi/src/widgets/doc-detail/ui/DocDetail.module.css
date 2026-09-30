@@ -1,0 +1,87 @@
+/* Лейн действий 36 (эталон .lane, index.html:103): border-box — высота с рамками, как на эталоне */
+.lane {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  height: var(--k-lane);
+  padding: 0 var(--k-sp-2) 0 var(--k-dw-pad);
+  border-top: 1px solid var(--k-line);
+  border-bottom: 1px solid var(--k-line);
+  background: var(--k-sunk);
+  white-space: nowrap;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  font: 600 var(--k-fs-3) / 1 var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.kind {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--k-fs-1);
+  color: var(--k-ink2);
+}
+
+.acts {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.sep {
+  height: var(--k-icon-m);
+  margin: 0 var(--k-sp-1);
+  border-left: 1px solid var(--k-line);
+}
+
+/* двойной класс — выше наведения ghost-кнопки кита независимо от порядка правил в бандле */
+.danger.danger:hover {
+  color: var(--k-bad);
+}
+
+/* полоса вкладок: нижнюю линию рисует сам Tabs variant="line" (inset box-shadow, полоса ровно 32) — своей рамки нет */
+.tabs {
+  padding: 0 var(--k-dw-pad);
+}
+
+/* содержимое вкладки (эталон .db: 10 14 14, зазор 8) */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-2) var(--k-dw-pad) var(--k-dw-pad);
+}
+
+.body:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+.stub {
+  padding: var(--k-sp-6) var(--k-sp-3);
+  border: 1px dashed var(--k-line);
+  border-radius: var(--k-r-s);
+  text-align: center;
+  color: var(--k-muted);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
