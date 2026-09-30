@@ -1,4 +1,4 @@
-import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
 import is from '../input/Input.module.css'
@@ -37,6 +37,18 @@ export type TagInputProps = {
 /** Сколько чипов входит в описание строки ввода; дальше — «ещё N» (при 500 значениях описание не должно быть простынёй). */
 const DESCRIBED = 10
 
+type ChipProps = { id: string; value: string; index: number; bad: boolean; selected: boolean; disabled: boolean; onRemove: (index: number) => void }
+
+/** Чип под memo: при наборе текста 500 чипов не перерисовываются — пропы плоские, onRemove стабилен. */
+const Chip = memo(function Chip({ id, value, index, bad, selected, disabled, onRemove }: ChipProps) {
+  return (
+    <li className={s.tag} data-selected={selected || undefined} data-invalid={bad || undefined}>
+      <span id={id} className={s.tagText}>{value}{bad && <span className={s.sr}>, неверное значение</span>}</span>
+      {!disabled && <IconButton size="s" tabIndex={-1} label={`Убрать: ${value}`} className={s.tagX} onClick={() => onRemove(index)}><Cross /></IconButton>}
+    </li>
+  )
+})
+
 /** Несколько значений или фраз свободным вводом (спека §5): чипы, разбор вставки, подсказки с бека. */
 export function TagInput({ value, onChange, text, onTextChange, mode, validate, max, suggestions, loading, onQuery, onSuggestClose, disabled, size = 'm', id, placeholder, ...aria }: TagInputProps) {
   const limit = max ?? TAG_LIMIT[mode]
@@ -51,6 +63,8 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
   const [note, setNote] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
+  // IME: пока идёт составной ввод, разделители не делят — текст разбирается по compositionend
+  const composing = useRef(false)
 
   const withSuggest = onQuery !== undefined || suggestions !== undefined
   // Подсказки, уже стоящие чипами, и повторы в ответе не показываются; сравнение — по правилу повторов режима.
@@ -126,9 +140,14 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
     announce(`Убрано: ${value[i]!}`)
     input.current?.focus()
   }
+  // Стабильный обработчик ✕ для memo-чипов; актуальное замыкание — через ref, обновляемый в эффекте (не в рендере).
+  const removeRef = useRef(removeByClick)
+  useEffect(() => { removeRef.current = removeByClick })
+  const onRemove = useCallback((i: number) => removeRef.current(i), [])
 
-  const onInput = (raw: string) => {
+  const onInput = (raw: string, ime: boolean) => {
     setSel(null)
+    if (ime) { onTextChange(raw); return }
     setActive(-1)
     setOpen(true)
     const { tags, rest } = takeTags(raw, mode)
@@ -137,8 +156,8 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
     onTextChange(next)
     onQuery?.(next)
   }
-  // Вставка с разделителями режима разбирается целиком вместе с набранным (колонка или строка из Excel, фразы в кавычках);
-  // без разделителей — обычная вставка текстом.
+  // Вставка, которая делится на несколько чипов (колонка или строка из Excel, цепочка фраз в кавычках), разбирается
+  // целиком вместе с набранным; одно значение (в том числе `ООО «Ромашка»`) — обычная вставка текстом.
   const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
     const pasted = e.clipboardData.getData('text')
     if (!hasSeparator(pasted, mode)) return
@@ -212,15 +231,10 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
       <span ref={anchor} role="presentation" data-size={size} onMouseDown={onFrameDown} className={[is.field, size === 's' ? is.sizeS : is.sizeM, s.tagField].join(' ')}>
         {value.length > 0 && (
           <ul className={s.tags} aria-label={name}>
-            {value.map((v, i) => {
-              const bad = validate !== undefined && !validate(v)
-              return (
-                <li key={keys[i]} className={s.tag} data-selected={selected === i || undefined} data-invalid={bad || undefined}>
-                  <span id={`${chipsId}-c${i}`} className={s.tagText}>{v}{bad && <span className={s.sr}>, неверное значение</span>}</span>
-                  {!disabled && <IconButton size="s" tabIndex={-1} label={`Убрать: ${v}`} className={s.tagX} onClick={() => removeByClick(i)}><Cross /></IconButton>}
-                </li>
-              )
-            })}
+            {value.map((v, i) => (
+              <Chip key={keys[i]} id={`${chipsId}-c${i}`} value={v} index={i} bad={validate !== undefined && !validate(v)}
+                selected={selected === i} disabled={disabled === true} onRemove={onRemove} />
+            ))}
           </ul>
         )}
         <input
@@ -238,7 +252,9 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
           className={[is.input, s.tagInput].join(' ')}
           placeholder={value.length === 0 ? placeholder : undefined}
           value={text}
-          onChange={(e) => onInput(e.target.value)}
+          onChange={(e) => onInput(e.target.value, composing.current || (e.nativeEvent as Partial<InputEvent>).isComposing === true)}
+          onCompositionStart={() => { composing.current = true }}
+          onCompositionEnd={(e) => { composing.current = false; onInput(e.currentTarget.value, false) }}
           onKeyDown={onKey}
           onPaste={onPaste}
           onBlur={() => { setSel(null); closeSuggest() }}

@@ -18,13 +18,23 @@ describe('splitTags', () => {
     expect(splitTags('Оплата, НДС 20 %', 'phrases')).toEqual(['Оплата, НДС 20 %'])
     expect(splitTags('a\nb', 'phrases')).toEqual(['a', 'b'])
     expect(splitTags('"незакрытая фраза', 'phrases')).toEqual(['незакрытая фраза'])
-    expect(splitTags('до "в кавычках" после', 'phrases')).toEqual(['до', 'в кавычках', 'после'])
+    expect(splitTags('до "в кавычках" после', 'phrases')).toEqual(['до "в кавычках" после'])
   })
   it('phrases: колонка и строка из Excel — фраза на ячейку; ; и перенос внутри кавычек — часть фразы', () => {
     expect(splitTags('счёт не найден\r\nинструкция инвалидна\r\n', 'phrases')).toEqual(['счёт не найден', 'инструкция инвалидна'])
     expect(splitTags('нет покрытия\tлимит превышен', 'phrases')).toEqual(['нет покрытия', 'лимит превышен'])
-    expect(splitTags('"a; b" c', 'phrases')).toEqual(['a; b', 'c'])
+    expect(splitTags('"a; b" c', 'phrases')).toEqual(['"a; b" c'])
     expect(splitTags('«первая\nвторая»', 'phrases')).toEqual(['первая\nвторая'])
+  })
+  it('phrases: кавычки делят только цепочку фраз в кавычках через пробел; иначе сегмент — одна фраза с кавычками', () => {
+    expect(splitTags('ООО «Ромашка»', 'phrases')).toEqual(['ООО «Ромашка»'])
+    expect(splitTags('«a» «b»', 'phrases')).toEqual(['a', 'b'])
+    expect(splitTags('«a»  "b"\t«c»', 'phrases')).toEqual(['a', 'b', 'c'])
+    expect(splitTags('"a""b"', 'phrases')).toEqual(['"a""b"'])
+    expect(splitTags('«a» b', 'phrases')).toEqual(['«a» b'])
+    expect(splitTags('«a"', 'phrases')).toEqual(['a"'])
+    expect(splitTags('ООО «Ромашка»; ЗАО «Василёк»', 'phrases')).toEqual(['ООО «Ромашка»', 'ЗАО «Василёк»'])
+    expect(splitTags('"a" "b', 'phrases')).toEqual(['a', 'b'])
   })
   it('phrases: пустые кавычки и лишние разделители отбрасываются; кавычка другого вида внутри — часть фразы', () => {
     expect(splitTags('"" ; «  » ;;', 'phrases')).toEqual([])
@@ -47,7 +57,12 @@ describe('takeTags', () => {
     expect(takeTags('"a; b', 'phrases')).toEqual({ tags: [], rest: '"a; b' })
     expect(takeTags('abc de', 'phrases')).toEqual({ tags: [], rest: 'abc de' })
   })
-  it('phrases: закрытая кавычка — ; после неё делит; ; внутри кавычек — нет', () => {
+  it('phrases: кавычка посреди сегмента ; не держит', () => {
+    expect(takeTags('ООО «Ромашка; x', 'phrases')).toEqual({ tags: ['ООО «Ромашка'], rest: 'x' })
+    expect(takeTags('ООО «Ромашка»', 'phrases')).toEqual({ tags: [], rest: 'ООО «Ромашка»' })
+    expect(takeTags('a; "b; c', 'phrases')).toEqual({ tags: ['a'], rest: '"b; c' })
+  })
+  it('phrases: закрытая кавычка — ; после неё делит; ; внутри кавычек цепочки — нет', () => {
     expect(takeTags('"a; b"; c', 'phrases')).toEqual({ tags: ['a; b'], rest: 'c' })
     expect(takeTags('«a; b', 'phrases')).toEqual({ tags: [], rest: '«a; b' })
     expect(takeTags('"a" «b;', 'phrases')).toEqual({ tags: [], rest: '"a" «b;' })
@@ -55,12 +70,14 @@ describe('takeTags', () => {
 })
 
 describe('hasSeparator', () => {
-  it('по режиму: у values — пробел, запятая, ;, перенос, табуляция; у phrases — ;, перенос, табуляция и кавычки', () => {
+  it('по режиму: у values — пробел, запятая, ;, перенос, табуляция; у phrases — ;, перенос, табуляция или цепочка фраз в кавычках', () => {
     expect(hasSeparator('400 403', 'values')).toBe(true)
     expect(hasSeparator('400', 'values')).toBe(false)
     expect(hasSeparator('Оплата, НДС', 'phrases')).toBe(false)
     expect(hasSeparator('a\nb', 'phrases')).toBe(true)
-    expect(hasSeparator('«a»', 'phrases')).toBe(true)
+    expect(hasSeparator('«a» «b»', 'phrases')).toBe(true)
+    expect(hasSeparator('«a»', 'phrases')).toBe(false)
+    expect(hasSeparator('ООО «Ромашка»', 'phrases')).toBe(false)
   })
 })
 
