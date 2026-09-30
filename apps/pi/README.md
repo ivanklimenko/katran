@@ -16,7 +16,7 @@ Dev-сервер — порт **5185**. Данные — фейковый сер
 
 ```sh
 pnpm --filter pi test   # vitest — мапперы, порты, createRegistry, компоненты, доступность (axe)
-pnpm --filter pi e2e    # playwright — геометрия на production-сборке
+pnpm --filter pi e2e    # playwright — геометрия реестров и деталки на production-сборке
 ```
 
 `e2e` собирает приложение и поднимает превью на порту **5186** (`playwright.config.ts`, `webServer`) — отдельно от dev-порта 5185, чтобы не мешать друг другу при параллельном запуске.
@@ -31,13 +31,18 @@ pnpm --filter pi e2e    # playwright — геометрия на production-сб
 | `?fail=search` | `search` текущего грида отвечает `500` |
 | `?fail=facets` | `facets` текущего грида отвечает `500` |
 | `?fail=meta` | `filter-meta` текущего грида отвечает `500` |
+| `?fail=detail` | деталь документа (`GET …/documents/{id}`) отвечает `500` — ошибка внутри drawer'а с «Повторить», реестр работает |
 
 Регуляторы читаются из `location.search`, поэтому ставятся **до** `#`: `http://localhost:5185/?fail=search#/fx-docs` — реестр валютных документов показывает состояние ошибки с кнопкой «Повторить».
 
 Отдельно, вне регуляторов сервера — `?hostile` подключает `public/hostile.css` (глобальные стили «враждебного хоста») для проверки изоляции кита от окружения; используется в `e2e/isolation.spec.ts`.
 
+## Деталка
+
+Деталка «Платёжная инструкция» на просмотр (срез 2a): кнопка открытия записи — drawer A, двойной клик или Shift — drawer B рядом для сравнения, Esc закрывает верхний; как подключить к своему реестру — `docs/guides/pi-usage.md` §13.
+
 ## Документы
 
 - `docs/guides/pi-usage.md` — перенос реестров в своё приложение (два пути: копирование слайсов или `apps/pi` целиком как remote), обработчик `requestFx`, адаптер роутера, контрактные тесты против своего бека.
-- `docs/reference/pi-api.md` — эндпоинты `search`/`filter-meta`/`facets`, состав строки `content[]` для `fx-docs` и `rub-docs`, примеры запросов и ответов.
+- `docs/reference/pi-api.md` — эндпоинты `search`/`filter-meta`/`facets`/`documents/{id}`, состав строки `content[]` и детали документа для `fx-docs` и `rub-docs`, примеры запросов и ответов.
 - `docs/guides/effector-fsd.md` — общая рекомендация по устройству FSD-приложения на katran; `apps/pi` — её живой образец.

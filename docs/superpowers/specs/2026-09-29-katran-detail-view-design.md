@@ -1,6 +1,6 @@
 # Срез 2a: деталка документа на просмотр в `apps/pi`
 
-Дата: 2026-09-29. Статус: согласовано с владельцем по разделам (29.09: срез 2 режется на подсрезы 2a–2d, первым — просмотр; деталка стенда замораживается целиком; граница — механизмы в ките, домен в `apps/pi`; объём, состав кита, раскладка по слоям и поведение — приняты). Дополняет основную спеку `2026-09-23-katran-design.md` (§5.2 — инвентарь среза 2) и спеку `2026-09-28-katran-pi-app-design.md` (шов данных, FSD). Разделы 3, 10, 11 основной спеки и §4, §7, §9 спеки `apps/pi` правятся синхронно с этим документом при исполнении.
+Дата: 2026-09-29. Статус: согласовано с владельцем по разделам (29.09: срез 2 режется на подсрезы 2a–2d, первым — просмотр; деталка стенда замораживается целиком; граница — механизмы в ките, домен в `apps/pi`; объём, состав кита, раскладка по слоям и поведение — приняты). **Исполнено** планом `docs/superpowers/plans/2026-09-29-katran-detail-view.md` (13 задач, ветка `feat/detail-view`, 2026-09-30); решения владельца по вопросам сверки В-Д1…В-Д5 — 30.09, итог сверки — `docs/reference/detail-drift.md`. Дополняет основную спеку `2026-09-23-katran-design.md` (§5.2 — инвентарь среза 2) и спеку `2026-09-28-katran-pi-app-design.md` (шов данных, FSD). Разделы 3, 10, 11 основной спеки и §4, §7, §9 спеки `apps/pi` правятся синхронно с этим документом при исполнении.
 
 ## 1. Зачем и что в срезе
 
@@ -42,7 +42,7 @@
 - **`Drawer`** — панель фиксированной ширины 800 (токен), прижатая к правому краю окна; не модальная: реестр под ней остаётся рабочим, как на стенде. Роль `dialog` без `aria-modal`, доступное имя — заголовок («Платёжная инструкция № …»). При открытии фокус уходит в заголовок, при закрытии возвращается туда, откуда деталку открыли (элемент передаёт вызывающий). Esc закрывает верхний drawer, кроме случаев, когда фокус в поле ввода, меню или поповере. Геометрия, тени, отступы — токенами; анимация появления короткая и отключается при `prefers-reduced-motion`. Без `inert`, `:has`, `dialog.showModal` (Chromium 88).
 - **`DrawerStack`** — раскладка двух слотов: A у правого края, B слева от A; пустой слот не рендерится.
 - **`Tabs`: переполнение** (основная спека §5.2). Новый проп `overflow`: порядок фиксированный; `disabled`-вкладки идут второй группой тем же порядком; вкладки, не поместившиеся по ширине, уходят в меню «••• N» (`Menu` кита), выбранная вкладка всегда видима в полосе. Клавиатура — WAI-ARIA с ручной активацией, как сейчас; пункты меню — обычные пункты `Menu`. Без `overflow` `Tabs` ведёт себя как сейчас.
-- **`FieldRow`** — строка SWIFT-поля: тег, буква опции, значение; высота строки текста — эталонные 23 px (уточняется замером §2). Пустое поле остаётся бледной строкой с прочерком (для построчного совпадения двух документов рядом), доступный текст — «не заполнено». Многострочные текстовые поля (70, 72, 79 и т. п.) — по `lines`/`width` из описания поля.
+- **`FieldRow`** — строка SWIFT-поля: тег, буква опции, значение; высота строки — эталонные 27 px (замер §2; 23 — строка таблицы сторон рубля). Пустое поле остаётся бледной строкой с прочерком (для построчного совпадения двух документов рядом), доступный текст — «не заполнено». Многострочные текстовые поля (70, 72, 79 и т. п.) — по `lines`/`width` из описания поля.
 - **`ConfigForm`** — рендер формы по схеме, без знания SWIFT:
 
 ```ts
@@ -66,6 +66,39 @@ type ConfigFormProps = {
 ```
 
   Окончательные имена и поля — по сверке (§2) и профилям стенда; принцип закреплён: схема и реестр полей — данные приложения, `ConfigForm` — механизм.
+
+  **Уточнено по профилям стенда (план 2a, Task 5; решение контроллера R1).** Настоящие типы — `packages/ui/src/form/types.ts`:
+
+```ts
+type FieldDef = { label: string; kind: 'ref' | 'amount' | 'short' | 'party' | 'bank' | 'text'; opts?: string[] | undefined; lines?: number | undefined; width?: number | undefined; show?: number | undefined }
+type FieldRef = string | { tag: string; hideIfEmpty?: boolean | undefined }   // префикс «B.» — поле последовательности B
+type FieldValue = { opt?: string | undefined; acc?: string | undefined; lines: string[] }
+type FormPart = { grid?: [FieldRef | null, FieldRef | null][] | undefined; text?: FieldRef[] | undefined; extra?: FieldRef[] | undefined }
+type FormSection = { id: string; title: string; collapsed?: boolean | undefined }   // collapsed по умолчанию true
+type FormSchema = FormPart & {
+  hero?: string[] | undefined              // ключи ячеек сводки, содержимое — renderHero
+  blocks?: string[] | undefined
+  fieldsTitle?: string | undefined         // «Поля MT103»
+  fieldsHint?: string | undefined          // «50–54 слева · 55–59 справа»
+  seqB?: (FormPart & { title: string }) | undefined
+  sections?: FormSection[] | undefined
+  sectionsTitle?: string | undefined       // по умолчанию «Дополнительные блоки»
+}
+type HeroCell = { label: ReactNode; value: ReactNode; align?: 'right' | undefined; tip?: string | undefined }
+type SectionContent = { body: ReactNode; count?: number | undefined } | null   // null — секция без данных
+type ConfigFormProps = {
+  schema: FormSchema
+  fields: Record<string, FieldDef>          // ключ — тег без префикса «B.»
+  value: (tag: string) => FieldValue | null
+  present?: FieldPresenter | undefined      // (tag, v) => { main, second, full }; по умолчанию defaultPresent
+  optionLabels?: Record<string, string> | undefined
+  renderHero?: ((id: string) => HeroCell) | undefined
+  renderBlock?: ((id: string) => ReactNode) | undefined
+  renderSection?: ((id: string) => SectionContent) | undefined
+}
+```
+
+  Отличия от эскиза выше: тег — ключ реестра полей, а не поле `FieldDef`; `FieldDef.label` — название в подсказке номера, `FieldDef.show` — сколько строк текстового поля видно до раскрытия; `FieldValue.acc` — счёт у сторон (50/59); `FormSchema.fieldsTitle`/`fieldsHint`/`seqB`/`sectionsTitle` — заголовки и последовательность B MT202COV; сводка — ключами `hero` с `renderHero`, а не полями; вид значения в строке — `present` приложения (у валюты — `swiftPresent`: главное, счёт или BIC справа, полный текст в подсказке). Кит знает префикс «B.» и `seqB` (механизм последовательности B), но не SWIFT; `kind` `'party'`/`'bank'` китом пока не используется (нужен правке, 2c), `FieldDef.width` — тоже. Высота строки SWIFT-поля — 27 (замер Task 1, токен `field-row`), 23 — строка таблицы сторон рубля (токен `party-row`).
 - **`Disclosure`** — сворачиваемый блок (кнопка с `aria-expanded`, панель), для секций рубля и блока транзакций. В ките его нет — добавляется.
 - **`DataGrid`**:
   - *разведение жестов открытия*: при заданном `onOpen` обычный клик по кнопке открытия откладывается на 220 мс (эталон) и отменяется вторым кликом; двойной клик даёт одно `onOpen(row, { secondary: true })`; Shift+клик — `secondary` сразу; Enter/Space с клавиатуры — без задержки. Сейчас первый клик двойного вызывает `onOpen` без `secondary`, и двойной клик по новой записи заменил бы A ею же.
