@@ -1,10 +1,11 @@
 import { allSettled, fork } from 'effector'
 import { STATUS_LABEL } from '../../entities/doc-status'
 import { FX_TYPES, fxDocPorts } from '../../entities/fx-doc'
-import { rubDocPorts } from '../../entities/rub-doc'
+import { RUB_TYPES, rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx } from '../../shared/api'
 import { fakeGrids } from './grids'
 import { makeRubDocs } from './rub-docs.data'
+import { makeRubDocDetail } from './rub-docs.detail'
 import { createFakeServer } from './server'
 
 /** Цепочка «порт → requestFx → сервер». Внутри тот же тест гоняется против своего бека: подставить свой обработчик в handlers. */
@@ -131,5 +132,32 @@ describe('контракт детали fx-docs (спека 2a §6): порт �
     const row = (await firstRows(sc))[0]!
     const r = await allSettled(fxDocPorts.detailFx, { scope: failing, params: row.id })
     expect((r.value as ApiError).status).toBe(500)
+  })
+})
+
+describe('контракт детали rub-docs (спека 2a §6)', () => {
+  it('200 для каждого вида документа: номер, сумма, статус и стороны — из строки реестра', async () => {
+    const sc = scope()
+    const page = await allSettled(rubDocPorts.searchFx, { scope: sc, params: { filter: [], sort: [], page: 0, size: 100 } })
+    if (page.status !== 'done') throw new Error('search не прошёл')
+    for (const t of RUB_TYPES) {
+      const row = page.value.rows.find((x) => x.type === t)!
+      const r = await allSettled(rubDocPorts.detailFx, { scope: sc, params: row.id })
+      expect(r.status, t).toBe('done')
+      if (r.status !== 'done') continue
+      expect(r.value).toMatchObject({ docNumber: row.docNumber, amount: row.amount, status: row.status })
+      expect(r.value.party.s.acc).toBe(row.fromAcc)
+      expect(r.value.party.r.inn).toBe(row.toInn)
+    }
+  })
+  it('есть документ с бюджетными реквизитами и с посредниками', () => {
+    const rows = makeRubDocs()
+    const details = rows.map((row, i) => makeRubDocDetail(row, i))
+    expect(details.some((d) => (d.budget as { b101: string }).b101 !== '')).toBe(true)
+    expect(details.some((d) => (d.agents as unknown[]).length > 0)).toBe(true)
+  })
+  it('404 на неизвестный id', async () => {
+    const r = await allSettled(rubDocPorts.detailFx, { scope: scope(), params: 'rub-9999' })
+    expect((r.value as ApiError).status).toBe(404)
   })
 })
