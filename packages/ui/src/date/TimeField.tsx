@@ -11,12 +11,15 @@ export type TimeFieldProps = {
   label: string
   /** Enter в поле — поповер дат закрывается (спека §3.5). */
   onEnter?: (() => void) | undefined
+  disabled?: boolean | undefined
 }
 
 /** Время 'чч:мм' в поповере дат: неполное или невалидное — наружу ''. */
-export function TimeField({ value, onChange, label, onEnter }: TimeFieldProps) {
+export function TimeField({ value, onChange, label, onEnter, disabled }: TimeFieldProps) {
   const { inputRef, edit } = useMaskCaret()
   const [typed, setTyped] = useState<{ text: string; snap: string } | null>(null)
+  // как у MaskedDateField: значение ушло от снимка — снимок сбрасывается и не воскресает
+  if (typed !== null && typed.snap !== value) setTyped(null)
   const text = typed !== null && typed.snap === value ? typed.text : value
   return (
     <Input
@@ -25,6 +28,7 @@ export function TimeField({ value, onChange, label, onEnter }: TimeFieldProps) {
       aria-label={label}
       placeholder="чч:мм"
       inputMode="numeric"
+      disabled={disabled}
       invalid={text.length === 5 && !valid(text)}
       value={text}
       onChange={(e) => {

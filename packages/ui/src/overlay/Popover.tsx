@@ -9,6 +9,8 @@ export type PopoverProps = {
   anchor: RefObject<HTMLElement | null>
   onClose: () => void
   placement?: Placement | undefined
+  /** id панели — для aria-controls кнопки, которая её открывает. */
+  id?: string | undefined
   /** Доступное имя панели. */
   label?: string | undefined
   /** presentation — всплывающий список комбобокса: роль несёт сам `listbox` внутри. */
@@ -23,7 +25,7 @@ export type PopoverProps = {
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
-export function Popover({ open, anchor, onClose, placement = 'bottom-start', label, role = 'dialog', children, className, manualFocus, returnFocus }: PopoverProps) {
+export function Popover({ open, anchor, onClose, placement = 'bottom-start', id, label, role = 'dialog', children, className, manualFocus, returnFocus }: PopoverProps) {
   const { portalRoot } = useKatran()
   const box = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -70,7 +72,7 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', lab
 
   if (!open || !portalRoot) return null
   return createPortal(
-    <div ref={box} role={role} aria-label={role === 'presentation' ? undefined : label} className={[s.pop, className].filter(Boolean).join(' ')}>{children}</div>,
+    <div ref={box} id={id} role={role} aria-label={role === 'presentation' ? undefined : label} className={[s.pop, className].filter(Boolean).join(' ')}>{children}</div>,
     portalRoot,
   )
 }

@@ -1,9 +1,20 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react'
-import { dayOf, formatDateText, isComplete, maskDateText, parseDateText, type DateFormat, type DateValue, type IsoDay } from './dateStr'
+import { dayOf, formatDateText, isComplete, maskDateText, parseDateText, withTime, type DateFormat, type DateValue, type IsoDay } from './dateStr'
 
 /** Подсказка формата: 'DD.MM.YYYY HH:mm' → 'дд.мм.гггг чч:мм'. */
 export const placeholderOf = (format: DateFormat): string =>
   format.replace(/YYYY|DD|MM|HH|mm/g, (t) => ({ YYYY: 'гггг', DD: 'дд', MM: 'мм', HH: 'чч', mm: 'мм' })[t]!)
+
+const ISO_PASTE = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?$/
+
+/** Вставка ISO-дня или ISO-минуты ('2026-09-23', '2026-09-23T09:30', '2026-09-23 09:30') → текст по шаблону поля;
+ * у шаблона без времени время отбрасывается. Прочий текст — null: работает обычный поток цифр маски. */
+export function isoPasteText(pasted: string, format: DateFormat): string | null {
+  const m = ISO_PASTE.exec(pasted.trim())
+  if (m === null) return null
+  const time = format.includes('HH') && m[2] !== undefined
+  return formatDateText(time ? `${m[1]!}T${m[2]!}` : m[1]!, withTime(format, time))
+}
 
 /** Правка текста с маской. Курсор встаёт после той же по счёту цифры, что и до маски; стёртый Backspace/Delete
  * одиночный разделитель тянет за собой соседнюю цифру — иначе маска вернула бы разделитель и клавиша «не работала бы». */
@@ -60,6 +71,9 @@ export const MaskedDateField = forwardRef<HTMLInputElement, MaskedDateFieldProps
   { value, onChange, format, min, max, onInvalidChange, id, placeholder, disabled, className, ...aria }, ref,
 ) {
   const [typed, setTyped] = useState<{ text: string; snap: DateValue } | null>(null)
+  // значение ушло от снимка (пресет, календарь, сброс снаружи) — снимок больше не нужен: иначе при возврате
+  // значения к снимку воскрес бы старый набор. Смена состояния в рендере — паттерн React «adjusting state».
+  if (typed !== null && typed.snap !== value) setTyped(null)
   const text = typed !== null && typed.snap === value ? typed.text : value ? formatDateText(value, format) : ''
   const inRange = (v: string) => (min === undefined || dayOf(v) >= min) && (max === undefined || dayOf(v) <= max)
   const parsed = parseDateText(text, format)
@@ -67,6 +81,13 @@ export const MaskedDateField = forwardRef<HTMLInputElement, MaskedDateFieldProps
 
   const { inputRef, edit } = useMaskCaret()
   useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
+
+  const commit = (masked: string) => {
+    const p = parseDateText(masked, format)
+    const next: DateValue = p !== null && inRange(p) ? p : ''
+    setTyped({ text: masked, snap: next })
+    if (next !== value) onChange(next)
+  }
 
   const report = useRef(onInvalidChange)
   useEffect(() => { report.current = onInvalidChange })
@@ -84,12 +105,12 @@ export const MaskedDateField = forwardRef<HTMLInputElement, MaskedDateFieldProps
       disabled={disabled}
       className={className}
       value={text}
-      onChange={(e) => {
-        const masked = edit(e, text, format)
-        const p = parseDateText(masked, format)
-        const next: DateValue = p !== null && inRange(p) ? p : ''
-        setTyped({ text: masked, snap: next })
-        if (next !== value) onChange(next)
+      onChange={(e) => commit(edit(e, text, format))}
+      onPaste={(e) => {
+        const iso = isoPasteText(e.clipboardData.getData('text/plain'), format)
+        if (iso === null) return
+        e.preventDefault()
+        commit(iso)
       }}
     />
   )
