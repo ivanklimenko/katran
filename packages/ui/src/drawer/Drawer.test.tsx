@@ -1,9 +1,10 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { Menu } from '../overlay'
+import { Tooltip } from '../tooltip'
 import { Drawer } from './Drawer'
 import { DrawerStack, type DrawerStackItem } from './DrawerStack'
 
@@ -117,6 +118,24 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
     expect(names()).toEqual(['Документ d1'])
     await userEvent.keyboard('{Escape}')
     expect(names()).toEqual([])
+  })
+
+  it('Esc при видимом тултипе прячет тултип, а не drawer; второй Esc закрывает drawer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderK(<Host start={{ a: 'd1', b: null }} extra={<Tooltip content="Скопировать uuid"><button>uuid</button></Tooltip>} />)
+      act(() => { screen.getByRole('button', { name: 'uuid' }).focus() })
+      act(() => { vi.advanceTimersByTime(250) })
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Скопировать uuid')
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      expect(names()).toEqual(['Документ d1'])
+      await user.keyboard('{Escape}')
+      expect(names()).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('focusKey возвращает фокус в заголовок (повторное открытие открытого)', async () => {
