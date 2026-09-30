@@ -11,7 +11,8 @@ export const detail = createDetail({ detailFx: rubDocPorts.detailFx, lifecycle }
 // реестр о деталке не знает: открытие — через шов openRequested (спека apps/pi §7, спека 2a §4.4)
 sample({ clock: registry.openRequested, target: detail.open })
 
-// В-Д4: при первом ответе реестра после входа на экран первая запись открывается в A (эталон grid.html:2192)
+// В-Д4: при первом ответе реестра после входа на экран первая запись открывается в A (эталон grid.html:2192);
+// quiet — открытие не пользователем: фокус остаётся в реестре (R10)
 const $autoOpened = createStore(false).reset(lifecycle.pageClosed)
 const firstRow = sample({
   clock: registry.grid.$rows.updates,
@@ -20,4 +21,4 @@ const firstRow = sample({
   fn: (_, rows) => rows[0]!,
 })
 $autoOpened.on(firstRow, () => true)
-sample({ clock: firstRow, fn: (row) => ({ id: rubDocLayout.rowKey(row), secondary: false }), target: detail.open })
+sample({ clock: firstRow, fn: (row) => ({ id: rubDocLayout.rowKey(row), secondary: false, quiet: true }), target: detail.open })

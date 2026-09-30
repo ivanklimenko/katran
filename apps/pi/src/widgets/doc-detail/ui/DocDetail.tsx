@@ -101,9 +101,9 @@ function Body<D, Row>({ view, domain, skeleton, tabLabel, first, onRetry }: Body
   )
 }
 
-type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number }
+type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey, quiet }: PaneProps<D, Row>) {
   const [close, setTab, retry] = useUnit([detail.close, detail.setTab, detail.retry])
   const { announce } = useKatran()
   const skeleton = useLoadingGate(view.state === 'loading')
@@ -123,6 +123,8 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
       onClose={() => close(view.slot)}
       returnFocus={returnFocus ? () => returnFocus(view.id) : undefined}
       focusKey={focusKey}
+      // R10: автооткрытие (quiet) фокус не забирает — он остаётся в реестре, как на стенде
+      initialFocus={!quiet}
     >
       <Lane summary={summary} actions={domain.actions} onAction={onAction} />
       <div className={s.tabs} data-part="tabs">
@@ -147,7 +149,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
 
 /** Деталка документа (спека 2a §4.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением, «Общие данные» по схеме. */
 export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDetailProps<D, Row>) {
-  const [slots, focus, closeTop] = useUnit([detail.$slots, detail.$focus, detail.closeTop])
+  const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
     const view = slots[slot]
@@ -155,7 +157,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDet
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} focusKey={focus[view.id] ?? 0} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
       })
     }
   }

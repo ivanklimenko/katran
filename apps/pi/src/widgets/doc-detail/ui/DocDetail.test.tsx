@@ -44,7 +44,7 @@ function setup(handler: (id: string) => Promise<Doc> = async (id) => rows.find((
     </>,
   )
   act(() => { lifecycle.pageOpened() })
-  const open = (id: string, secondary = false) => act(() => { detail.open({ id, secondary }) })
+  const open = (id: string, secondary = false, quiet?: boolean) => act(() => { detail.open(quiet ? { id, secondary, quiet } : { id, secondary }) })
   return { ...utils, open }
 }
 const names = () => screen.queryAllByRole('dialog').map((d) => d.getAttribute('aria-label'))
@@ -138,6 +138,31 @@ describe('DocDetail (спека 2a §4.3, §5)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
     expect(names()).toEqual([])
     expect(screen.getByText('Кнопка открытия')).toHaveFocus()
+  })
+
+  it('R10: открытие не пользователем (quiet) фокус не забирает; открытие пользователем — забирает', async () => {
+    const { open } = setup()
+    screen.getByText('Кнопка открытия').focus()
+    open('d1', false, true)
+    await screen.findByText('Блок b1')
+    expect(names()).toEqual(['Платёжная инструкция № 417'])
+    expect(screen.getByText('Кнопка открытия')).toHaveFocus()
+    open('d2')
+    expect(names()).toEqual(['Платёжная инструкция № 418'])
+    expect(screen.getByRole('heading', { name: 'Платёжная инструкция' })).toHaveFocus()
+  })
+
+  it('R11: «Закрыть» у A при открытом B — фокус в заголовок оставшегося drawer (он теперь A)', async () => {
+    const { open } = setup()
+    open('d1')
+    open('d2', true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    await userEvent.click(within(a).getByRole('button', { name: 'Закрыть' }))
+    expect(names()).toEqual(['Платёжная инструкция № 418'])
+    const left = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
+    expect(within(left).getByRole('heading', { name: 'Платёжная инструкция' })).toHaveFocus()
+    expect(within(left).getByText('A')).toBeInTheDocument()
   })
 
   it('без нарушений axe', async () => {

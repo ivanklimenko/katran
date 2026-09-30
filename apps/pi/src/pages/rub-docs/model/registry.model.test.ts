@@ -32,6 +32,8 @@ describe('страница rub-docs: реестр → деталка (спека
     })
     await allSettled(lifecycle.pageOpened, { scope })
     expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'first', state: 'ready' })
+    // открытие не пользователем (R10): drawer фокус не забирает
+    expect(scope.getState(detail.$quiet)).toEqual({ first: true })
     await allSettled(detail.closeTop, { scope })
     await allSettled(registry.refreshRequested, { scope })
     expect(scope.getState(detail.$slots).a).toBeNull()

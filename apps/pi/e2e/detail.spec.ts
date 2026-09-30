@@ -115,6 +115,34 @@ test('повторное открытие открытого — второго 
   await expect(dialogs(page).first().getByRole('heading', { name: 'Платёжная инструкция' })).toBeFocused()
 })
 
+for (const route of ['fx-docs', 'rub-docs'] as const) {
+  test(`R10: автооткрытие первой записи фокус в drawer не переводит; открытие пользователем — в заголовок (${route})`, async ({ page }) => {
+    await page.goto(`/?slow=0#/${route}`)
+    await page.locator('tbody[data-key]').first().waitFor()
+    await expect(dialogs(page)).toHaveCount(1)
+    await ready(page)
+    expect(await page.evaluate(() => document.activeElement?.closest('[data-k-drawer]') != null)).toBe(false)
+    await openBtn(page, 2).click()
+    await ready(page)
+    await expect(dialogs(page).first().getByRole('heading', { name: 'Платёжная инструкция' })).toBeFocused()
+  })
+}
+
+test('R11: «Закрыть» у A при открытом B — фокус в заголовок оставшегося drawer (он теперь A)', async ({ page }) => {
+  await start(page, 'fx-docs')
+  await openBtn(page, 1).click()
+  await ready(page)
+  const nameA = await dialogs(page).first().getAttribute('aria-label')
+  await openBtn(page, 2).dblclick()
+  await expect(dialogs(page)).toHaveCount(2)
+  const nameB = await dialogs(page).first().getAttribute('aria-label')
+  await page.getByRole('dialog', { name: nameA ?? '' }).getByRole('button', { name: 'Закрыть' }).click()
+  await expect(dialogs(page)).toHaveCount(1)
+  const left = dialogs(page).first()
+  await expect(left).toHaveAttribute('aria-label', nameB ?? '')
+  await expect(left.getByRole('heading', { name: 'Платёжная инструкция' })).toBeFocused()
+})
+
 test('вкладки: в полосе 800 px не помещаются все — «••• N»; Esc закрывает меню, а не drawer', async ({ page }) => {
   await start(page, 'fx-docs')
   await openWith(page, 'MT103')
