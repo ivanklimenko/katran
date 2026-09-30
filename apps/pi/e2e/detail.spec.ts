@@ -149,17 +149,36 @@ test('?fail=detail — ошибка внутри drawer с «Повторить�
   await expect(page.locator('tbody[data-key]').first()).toBeVisible()
 })
 
-test('уход с экрана закрывает деталку; при возврате она не всплывает', async ({ page }) => {
+test('уход с экрана закрывает деталку; при возврате открыта только первая запись (В-Д4)', async ({ page }) => {
   await start(page, 'fx-docs')
+  // имя деталки первой записи — то, что откроет авто-открытие при возврате
   await openBtn(page, 1).click()
   await ready(page)
-  await page.getByRole('link', { name: 'Рублёвые документы' }).click()
+  const nameFirst = await dialogs(page).first().getAttribute('aria-label')
+  await page.keyboard.press('Escape')
+  await expect(dialogs(page)).toHaveCount(0)
+  // перед уходом открыты другие записи в A и B: авто-открытие заменило бы уцелевшую A первой записью,
+  // поэтому утечку через pageClosed выдаёт и уцелевшая B (второй drawer), и имя A
+  await openBtn(page, 2).click()
+  await ready(page)
+  const nameLeft = await dialogs(page).first().getAttribute('aria-label')
+  expect(nameLeft).not.toBe(nameFirst)
+  await openBtn(page, 4).click({ modifiers: ['Shift'] })
+  await expect(dialogs(page)).toHaveCount(2)
+  // B (x 0–800) закрывает навигацию оболочки — уход тем же маршрутом, что у ссылки «Рублёвые документы»
+  await page.evaluate(() => { location.hash = '#/rub-docs' })
   await page.locator('tbody[data-key]').first().waitFor()
   await expect(dialogs(page)).toHaveCount(AUTO_OPEN ? 1 : 0)
+  if (AUTO_OPEN) await expect(dialogs(page).first()).not.toHaveAttribute('aria-label', nameLeft ?? '')
   while (await dialogs(page).count() > 0) await page.keyboard.press('Escape')
   await page.getByRole('link', { name: 'Валютные документы' }).click()
   await page.locator('tbody[data-key]').first().waitFor()
   await expect(dialogs(page)).toHaveCount(AUTO_OPEN ? 1 : 0)
+  if (AUTO_OPEN) {
+    await ready(page)
+    await expect(dialogs(page)).toHaveCount(1)
+    await expect(dialogs(page).first()).toHaveAttribute('aria-label', nameFirst ?? '')
+  }
 })
 
 test('враждебный хост (?hostile): ширина drawer и строка поля те же', async ({ page }) => {
