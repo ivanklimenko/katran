@@ -6,7 +6,7 @@ import { Input } from '../input'
 import { MultiSelect } from '../select/MultiSelect'
 import { SearchSelect } from '../select/SearchSelect'
 import { TagInput } from '../tag/TagInput'
-import { conditionsFrom, draftOf, fieldControl, fieldMax, isNumberText, rangeToDisabled, type FieldRaw } from './fieldOps'
+import { conditionsFrom, draftOf, fieldControl, fieldMax, foreignOf, isNumberText, rangeToDisabled, type FieldRaw } from './fieldOps'
 import type { Condition, Filter, FilterField as Field, SuggestState } from './types'
 import s from './Filters.module.css'
 
@@ -41,7 +41,8 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
   useEffect(() => { pending.current = null })
   const set = (next: FieldRaw) => {
     pending.current = next
-    const cs = conditionsFrom(field, next)
+    // условия поля, которых контрол не выражает (NE, NOT_IN, GT по числу…), правка поля не трогает
+    const cs = [...foreignOf(field, draft), ...conditionsFrom(field, next)]
     setTyped({ raw: next, snap: JSON.stringify(cs), epoch })
     onSet(field.id, cs)
   }

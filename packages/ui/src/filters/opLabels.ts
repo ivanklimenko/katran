@@ -72,38 +72,70 @@ function chipDate(v: Scalar, type: string, edge: 'from' | 'to' | 'eq', fmt: Date
 /** После стольких значений списка в чипе — «и ещё N». */
 const LIST_SHOWN = 3
 
-/** Чип поля по всем его условиям; один чип на поле. Для одного условия не-даты `full` совпадает с describeCondition. */
+const DATE_OPS: ReadonlySet<Condition['op']> = new Set<Condition['op']>(['EQ', 'BETWEEN', 'GTE', 'LTE', 'GT', 'LT'])
+/** Часть чипа: оператор, значение (в чипе) и полный текст без имени поля (в тултипе). */
+type Piece = { op: string; value: string; full: string }
+const piece = (op: string, value: string, fullValue = value): Piece => ({ op, value, full: [op, fullValue].filter(Boolean).join(' ') })
+
+/** Период поля из условий: EQ, «с», «по», «с … по»; null — условий периода нет. */
+function datePiece(conditions: Condition[], type: string, format: DateFormat): Piece | null {
+  let from = ''
+  let to = ''
+  let eq = ''
+  for (const c of conditions) {
+    if (c.op === 'BETWEEN') { from = chipDate(c.from, type, 'from', format); to = chipDate(c.to, type, 'to', format) }
+    else if (c.op === 'EQ') eq = chipDate(c.value, type, 'eq', format)
+    else if (c.op === 'GTE' || c.op === 'GT') from = chipDate(c.value, type, 'from', format)
+    else if (c.op === 'LTE' || c.op === 'LT') to = chipDate(c.value, type, 'to', format)
+  }
+  if (eq) return piece(OP_LABEL.EQ, eq)
+  if (from && to) return piece('с', `${from} по ${to}`)
+  if (from) return piece('с', from)
+  if (to) return piece('по', to)
+  return null
+}
+
+/** Одно не-датное условие: части — как conditionParts (список длиннее трёх сокращается), полный текст — как describeCondition. */
+function conditionPiece(c: Condition, meta?: FilterMeta | null): Piece {
+  const field = meta?.fields.find((f) => f.id === c.field)
+  if ((c.op === 'IN' || c.op === 'NOT_IN') && c.values.length > LIST_SHOWN) {
+    const all = c.values.map((v) => showValue(v, field))
+    return piece(OP_LABEL[c.op], `${all.slice(0, LIST_SHOWN).join(', ')} и ещё ${all.length - LIST_SHOWN}`, all.join(', '))
+  }
+  const name = field?.label ?? c.field
+  const p = conditionParts(c, meta)
+  return { op: p.op, value: p.value, full: describeCondition(c, meta).slice(name.length + 1) }
+}
+
+/** Чип поля по всем его условиям; один чип на поле. Для одного условия не-даты `full` совпадает с describeCondition.
+ * Условия с одним оператором (фразы: CONTAINS, а при сужении метой — STARTS_WITH или EQ) идут одной частью через «и»;
+ * разнородные (в том числе «чужие» для панели: NE, GT…) — частями через «и», чтобы ничего не терялось. */
 export function fieldChip(fieldId: string, conditions: Condition[], meta?: FilterMeta | null, format: DateFormat = 'DD.MM.YYYY'): FieldChip {
   const field = meta?.fields.find((f) => f.id === fieldId)
   const name = field?.label ?? fieldId
-  const chip = (op: string, value: string, fullValue = value): FieldChip => ({ field: name, op, value, full: [name, op, fullValue].filter(Boolean).join(' ') })
+  const pieces: Piece[] = []
+  let rest = conditions
   if (field && (field.type === 'DATE' || field.type === 'DATETIME')) {
-    let from = ''
-    let to = ''
-    let eq = ''
-    for (const c of conditions) {
-      if (c.op === 'BETWEEN') { from = chipDate(c.from, field.type, 'from', format); to = chipDate(c.to, field.type, 'to', format) }
-      else if (c.op === 'EQ') eq = chipDate(c.value, field.type, 'eq', format)
-      else if (c.op === 'GTE' || c.op === 'GT') from = chipDate(c.value, field.type, 'from', format)
-      else if (c.op === 'LTE' || c.op === 'LT') to = chipDate(c.value, field.type, 'to', format)
-    }
-    if (eq) return chip(OP_LABEL.EQ, eq)
-    if (from && to) return chip('с', `${from} по ${to}`)
-    if (from) return chip('с', from)
-    if (to) return chip('по', to)
+    const d = datePiece(conditions.filter((c) => DATE_OPS.has(c.op)), field.type, format)
+    if (d) { pieces.push(d); rest = conditions.filter((c) => !DATE_OPS.has(c.op)) }
   }
-  const c = conditions[0]
-  if (c === undefined) return chip('', '')
-  // фразы: несколько условий с одним оператором (CONTAINS, а при сужении метой — STARTS_WITH или EQ) — одна строка через «и»
-  if (conditions.length > 1 && conditions.every((x) => x.op === c.op && 'value' in x)) {
-    const v = conditions.map((x) => `„${'value' in x ? String(x.value) : ''}“`).join(' и ')
-    return chip(OP_LABEL[c.op], v)
+  const first = rest[0]
+  if (first !== undefined && rest.length > 1 && rest.every((x) => x.op === first.op && 'value' in x)) {
+    const v = rest.map((x) => ('value' in x ? showValue(x.value, field) : '')).join(' и ')
+    pieces.push(piece(OP_LABEL[first.op], v))
+  } else {
+    for (const c of rest) pieces.push(conditionPiece(c, meta))
   }
-  if ((c.op === 'IN' || c.op === 'NOT_IN') && c.values.length > LIST_SHOWN) {
-    const all = c.values.map((v) => showValue(v, field))
-    return chip(OP_LABEL[c.op], `${all.slice(0, LIST_SHOWN).join(', ')} и ещё ${all.length - LIST_SHOWN}`, all.join(', '))
+  const head = pieces[0]
+  if (head === undefined) return { field: name, op: '', value: '', full: name }
+  const text = (p: Piece) => [p.op, p.value].filter(Boolean).join(' ')
+  const tail = pieces.slice(1)
+  return {
+    field: name,
+    op: head.op,
+    value: head.value + tail.map((p) => ` и ${text(p)}`).join(''),
+    full: `${name} ${head.full}${tail.map((p) => ` и ${p.full}`).join('')}`,
   }
-  return { ...conditionParts(c, meta), full: describeCondition(c, meta) }
 }
 
 /** Полный текст чипа поля — для тултипа и доступного имени ✕. */

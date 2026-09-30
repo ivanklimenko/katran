@@ -280,6 +280,22 @@ describe('FilterPanel: контролы по типам', () => {
     await u.click(screen.getByRole('button', { name: 'Применить' }))
     expect(applied()).toEqual(['Статус в списке Ошибка, Отказ'])
   })
+  it('чужой оператор поля (внешний NE по справочнику) не читается контролом и переживает правку поля', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial={[{ field: 'status', op: 'NE', value: 'ERROR' }]} />)
+    expect(screen.getByRole('button', { name: 'Статус: Не выбрано' })).toBeInTheDocument()
+    await u.click(screen.getByRole('button', { name: 'Статус: Не выбрано' }))
+    await u.click(screen.getByRole('option', { name: 'Отказ' }))
+    await u.keyboard('{Escape}')
+    await u.click(screen.getByRole('button', { name: 'Применить' }))
+    expect(applied()).toEqual(['Статус ≠ Ошибка и = Отказ'])
+    // снятие выбора оставляет чужое условие
+    await u.click(screen.getByRole('button', { name: /^Статус: выбрано/ }))
+    await u.click(screen.getByRole('option', { name: 'Отказ' }))
+    await u.keyboard('{Escape}')
+    await u.click(screen.getByRole('button', { name: 'Применить' }))
+    expect(applied()).toEqual(['Статус ≠ Ошибка'])
+  })
   it('внешняя смена черновика (лейн) показывается в мультиселекте', () => {
     const { rerender } = renderK(<FilterPanel meta={META} conditions={[]} draft={[]} dirty={false} open onOpenChange={() => {}} onEdit={() => {}} onDiscard={() => {}} onApply={() => {}} onRevert={() => {}} onReset={() => {}} onRemove={() => {}} />)
     rerender(<FilterPanel meta={META} conditions={[]} draft={[{ field: 'status', op: 'EQ', value: 'DONE' }]} dirty open onOpenChange={() => {}} onEdit={() => {}} onDiscard={() => {}} onApply={() => {}} onRevert={() => {}} onReset={() => {}} onRemove={() => {}} />)

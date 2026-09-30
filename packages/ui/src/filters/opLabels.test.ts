@@ -109,6 +109,24 @@ describe('fieldChip', () => {
     const c = { field: 'purpose', op: 'CONTAINS', value: 'x' } as const
     expect(fieldChip('purpose', [c], FMETA).full).toBe(describeCondition(c, FMETA))
   })
+  it('фразы: подписи справочника, числа и логические без кавычек', () => {
+    const meta: FilterMeta = { fields: [
+      { id: 'st', label: 'Статус', type: 'ENUM', ops: [], values: [{ value: 'A', label: 'Ошибка' }, { value: 'B', label: 'Отказ' }] },
+      { id: 'n', label: 'Сумма', type: 'NUMBER', ops: [] },
+    ] }
+    expect(fieldChip('st', [{ field: 'st', op: 'NE', value: 'A' }, { field: 'st', op: 'NE', value: 'B' }], meta).full).toBe('Статус ≠ Ошибка и Отказ')
+    expect(fieldChip('n', [{ field: 'n', op: 'EQ', value: 1 }, { field: 'n', op: 'EQ', value: 2 }], meta).value).toBe('1 и 2')
+  })
+  it('разнородные условия поля — через «и», и в value, и в full', () => {
+    const c = fieldChip('status', [{ field: 'status', op: 'NE', value: 'ERROR' }, { field: 'status', op: 'EQ', value: 'REJECTED' }], FMETA)
+    expect(c).toMatchObject({ field: 'Статус', op: '≠', value: 'Ошибка и = Отказ', full: 'Статус ≠ Ошибка и = Отказ' })
+    const d = fieldChip('created', [{ field: 'created', op: 'GTE', value: '2026-09-01' }, { field: 'created', op: 'NE', value: '2026-09-05' }], FMETA)
+    expect(d.full).toBe('Дата документа с 01.09.2026 и ≠ 05.09.2026')
+    const l = fieldChip('docNumber', [{ field: 'docNumber', op: 'IN', values: [1, 2, 3, 4, 5] }, { field: 'docNumber', op: 'NE', value: 9 }], FMETA)
+    expect(l.value).toBe('1, 2, 3 и ещё 2 и ≠ 9')
+    expect(l.full).toBe('Номер документа в списке 1, 2, 3, 4, 5 и ≠ 9')
+    expect(fieldChip('docNumber', [{ field: 'docNumber', op: 'BETWEEN', from: 1, to: 5 }, { field: 'docNumber', op: 'NE', value: 3 }], FMETA).full).toBe('Номер документа от 1 до 5 и ≠ 3')
+  })
   it('describeField — полный текст чипа', () => {
     expect(describeField('created', [{ field: 'created', op: 'GTE', value: '2026-09-01' }], FMETA, 'YYYY-MM-DD')).toBe('Дата документа с 2026-09-01')
   })

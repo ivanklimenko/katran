@@ -1,4 +1,4 @@
-import { conditionsFrom, draftOf, fieldControl, fieldMax, isNumberText, rangeToDisabled } from './fieldOps'
+import { conditionsFrom, draftOf, fieldControl, fieldMax, foreignOf, isNumberText, rangeToDisabled } from './fieldOps'
 import type { FieldRaw } from './fieldOps'
 import type { Condition, FilterField } from './types'
 
@@ -31,6 +31,17 @@ describe('fieldControl', () => {
     expect(rangeToDisabled(F('DATE', { ops: ['EQ', 'GTE'] }))).toBe(true)
     expect(rangeToDisabled(F('DATE'))).toBe(false)
   })
+  it('предел: фразы — без предела (кроме одного EQ), списки и справочники — без IN одно', () => {
+    expect(fieldMax(F('STRING'))).toBeUndefined()
+    expect(fieldMax(F('STRING', { ops: ['CONTAINS'] }))).toBeUndefined()
+    expect(fieldMax(F('STRING', { ops: ['STARTS_WITH'] }))).toBeUndefined()
+    expect(fieldMax(F('STRING', { ops: ['EQ'] }))).toBe(1)
+    expect(fieldMax(F('STRING', { defaultOp: 'IN' }))).toBeUndefined()
+    expect(fieldMax(F('STRING', { defaultOp: 'IN', ops: ['EQ'] }))).toBe(1)
+    expect(fieldMax(F('NUMBER', { defaultOp: 'IN', ops: ['IN', 'EQ'] }))).toBeUndefined()
+    expect(fieldMax(F('ENUM', { ops: ['IN'] }))).toBeUndefined()
+    expect(fieldMax(F('NUMBER'))).toBeUndefined()
+  })
   it('поле без подходящего оператора не показывается', () => {
     expect(fieldControl(F('STRING', { defaultOp: 'IN', ops: ['CONTAINS'] }))).toBeNull()
     expect(fieldControl(F('NUMBER', { ops: ['GT'] }))).toBeNull()
@@ -49,6 +60,15 @@ describe('isNumberText', () => {
     expect(isNumberText('.')).toBe(false)
     expect(isNumberText('')).toBe(false)
     expect(isNumberText('abc')).toBe(false)
+  })
+  it('только десятичная запись, конечная', () => {
+    expect(isNumberText('1,')).toBe(true)
+    expect(isNumberText(',5')).toBe(true)
+    expect(isNumberText('0x10')).toBe(false)
+    expect(isNumberText('1e3')).toBe(false)
+    expect(isNumberText('Infinity')).toBe(false)
+    expect(isNumberText('9'.repeat(400))).toBe(false)
+    expect(isNumberText('1.2.3')).toBe(false)
   })
 })
 
@@ -71,6 +91,18 @@ describe('conditionsFrom', () => {
     expect(conditionsFrom(F('STRING', { defaultOp: 'IN', ops: ['IN'] }), { kind: 'tags', value: ['1'], text: '' })).toEqual([{ field: 'x', op: 'IN', values: ['1'] }])
     expect(conditionsFrom(S, { kind: 'tags', value: [], text: ' ' })).toEqual([])
     expect(conditionsFrom(N, { kind: 'tags', value: ['abc'], text: '' })).toEqual([])
+  })
+  it('предел: IN не больше 500 (контракт), фразы не больше 20, без IN — одно', () => {
+    const many = Array.from({ length: 600 }, (_, i) => String(i + 1))
+    const [inCond] = conditionsFrom(F('STRING', { defaultOp: 'IN' }), { kind: 'tags', value: many.slice(0, 500), text: '501 502' })
+    expect(inCond && inCond.op === 'IN' ? inCond.values.length : -1).toBe(500)
+    const ns = conditionsFrom(F('NUMBER', { defaultOp: 'IN' }), { kind: 'tags', value: ['abc', ...many], text: '' })
+    expect(ns[0] && ns[0].op === 'IN' ? ns[0].values.length : -1).toBe(500)
+    const phrases = Array.from({ length: 19 }, (_, i) => `фраза ${i}`)
+    expect(conditionsFrom(F('STRING'), { kind: 'tags', value: phrases, text: 'ещё; и ещё; и третья' })).toHaveLength(20)
+    expect(conditionsFrom(F('STRING', { ops: ['EQ'] }), { kind: 'tags', value: ['a'], text: 'b' })).toEqual([{ field: 'x', op: 'EQ', value: 'a' }])
+    expect(conditionsFrom(F('STRING', { ops: ['CONTAINS'] }), { kind: 'tags', value: ['a', 'b', 'c'], text: '' })).toHaveLength(3)
+    expect(conditionsFrom(F('ENUM'), { kind: 'enum', value: many })).toMatchObject([{ op: 'IN' }])
   })
   it('DATE: равные — EQ, разные — BETWEEN, одна граница — GTE/LTE, без GTE — день', () => {
     const D = F('DATE')
@@ -131,9 +163,45 @@ describe('draftOf', () => {
     expect(draftOf([{ field: 'y', op: 'EQ', value: 1 }], F('NUMBER'))).toEqual({ kind: 'text', value: '' })
     expect(draftOf([{ field: 'x', op: 'EQ', value: true }], F('BOOLEAN'))).toEqual({ kind: 'text', value: 'true' })
   })
+  it('читает только операторы, которые выражает контрол', () => {
+    const e = F('ENUM')
+    expect(draftOf([{ field: 'x', op: 'NE', value: 'ERROR' }], e)).toEqual({ kind: 'enum', value: [] })
+    expect(draftOf([{ field: 'x', op: 'NOT_IN', values: ['ERROR'] }, { field: 'x', op: 'EQ', value: 'DONE' }], e)).toEqual({ kind: 'enum', value: ['DONE'] })
+    expect(draftOf([{ field: 'x', op: 'STARTS_WITH', value: 'a' }, { field: 'x', op: 'IN', values: ['b'] }], F('STRING'))).toEqual({ kind: 'tags', value: ['a'], text: '' })
+    expect(draftOf([{ field: 'x', op: 'NE', value: 'a' }], F('STRING', { defaultOp: 'IN' }))).toEqual({ kind: 'tags', value: [], text: '' })
+    expect(draftOf([{ field: 'x', op: 'GT', value: 10 }], F('NUMBER'))).toEqual({ kind: 'text', value: '' })
+    expect(draftOf([{ field: 'x', op: 'NE', value: true }], F('BOOLEAN'))).toEqual({ kind: 'text', value: '' })
+    expect(draftOf([{ field: 'x', op: 'NE', value: '2026-09-01' }, { field: 'x', op: 'GTE', value: '2026-09-02' }], F('DATE'))).toEqual({ kind: 'range', value: { from: '2026-09-02', to: '' } })
+  })
+  it('строгие GT/LT читаются как границы, секунды отбрасываются', () => {
+    expect(draftOf([{ field: 'x', op: 'GT', value: '2026-09-01' }, { field: 'x', op: 'LT', value: '2026-09-13' }], F('DATE'))).toEqual({ kind: 'range', value: { from: '2026-09-01', to: '2026-09-13' } })
+    expect(draftOf([{ field: 'x', op: 'GTE', value: '2026-09-01T09:30:45+03:00' }], F('DATETIME'))).toEqual({ kind: 'range', value: { from: '2026-09-01T09:30', to: '' } })
+  })
   it('EQ по DATE — обе границы; EQ по DATETIME со временем — минута', () => {
     expect(draftOf([{ field: 'x', op: 'EQ', value: '2026-09-01' }], F('DATE'))).toEqual({ kind: 'range', value: { from: '2026-09-01', to: '2026-09-01' } })
     expect(draftOf([{ field: 'x', op: 'LTE', value: '2026-09-13T10:05:59+03:00' }], F('DATETIME'))).toEqual({ kind: 'range', value: { from: '', to: '2026-09-13T10:05' } })
+  })
+})
+
+describe('foreignOf', () => {
+  it('условия своего поля, которых контрол не выражает', () => {
+    const cs: Condition[] = [
+      { field: 'x', op: 'NE', value: 'ERROR' }, { field: 'x', op: 'EQ', value: 'DONE' }, { field: 'x', op: 'NOT_IN', values: ['A'] }, { field: 'y', op: 'NE', value: 1 },
+    ]
+    expect(foreignOf(F('ENUM'), cs)).toEqual([{ field: 'x', op: 'NE', value: 'ERROR' }, { field: 'x', op: 'NOT_IN', values: ['A'] }])
+    expect(foreignOf(F('NUMBER'), [{ field: 'x', op: 'GT', value: 1 }, { field: 'x', op: 'EQ', value: 2 }])).toEqual([{ field: 'x', op: 'GT', value: 1 }])
+    expect(foreignOf(F('STRING'), [{ field: 'x', op: 'ENDS_WITH', value: 'a' }, { field: 'x', op: 'CONTAINS', value: 'b' }])).toEqual([{ field: 'x', op: 'ENDS_WITH', value: 'a' }])
+    expect(foreignOf(F('DATE'), [{ field: 'x', op: 'IS_EMPTY' }, { field: 'x', op: 'GTE', value: '2026-09-01' }])).toEqual([{ field: 'x', op: 'IS_EMPTY' }])
+    expect(foreignOf(F('ENUM'), [])).toEqual([])
+  })
+  it('draftOf и foreignOf делят условия поля без остатка', () => {
+    const f = F('ENUM')
+    const cs: Condition[] = [{ field: 'x', op: 'NE', value: 'ERROR' }, { field: 'x', op: 'IN', values: ['A', 'B'] }]
+    expect(foreignOf(f, cs)).toHaveLength(1)
+    expect(draftOf(cs, f)).toEqual({ kind: 'enum', value: ['A', 'B'] })
+  })
+  it('поле без контрола — всё чужое', () => {
+    expect(foreignOf(F('STRING', { ops: ['IS_EMPTY'] }), [{ field: 'x', op: 'CONTAINS', value: 'a' }])).toHaveLength(1)
   })
 })
 
@@ -158,6 +226,11 @@ describe('draftOf(conditionsFrom(x)) == x', () => {
       { from: '2026-09-01T09:30', to: '' }, { from: '', to: '2026-09-02T18:30' }, { from: '2026-09-01', to: '2026-09-02' },
     ]
     for (const value of dts) expect(round(F('DATETIME'), { kind: 'range', value })).toEqual({ kind: 'range', value })
+  })
+  it('границы T00:00 у «с» и T23:59 у «по» возвращаются днём — то же условие для бека (осознанное сужение)', () => {
+    expect(round(F('DATETIME'), { kind: 'range', value: { from: '2026-09-01T00:00', to: '2026-09-02T23:59' } })).toEqual({ kind: 'range', value: { from: '2026-09-01', to: '2026-09-02' } })
+    // «с» T23:59 и «по» T00:00 — не границы дня, сохраняются минутой
+    expect(round(F('DATETIME'), { kind: 'range', value: { from: '2026-09-01T23:59', to: '2026-09-02T00:00' } })).toEqual({ kind: 'range', value: { from: '2026-09-01T23:59', to: '2026-09-02T00:00' } })
   })
   it('справочник, число, логическое', () => {
     for (const value of [['ERROR'], ['ERROR', 'DONE']]) expect(round(F('ENUM'), { kind: 'enum', value })).toEqual({ kind: 'enum', value })
