@@ -145,6 +145,109 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
     expect(screen.getByRole('heading', { name: 'Платёжная инструкция' })).toHaveFocus()
   })
 
+  it('initialFocus={false}: при открытии фокус остаётся, где был; focusKey всё равно переводит в заголовок', async () => {
+    function Quiet() {
+      const [open, setOpen] = useState(false)
+      const [tick, setTick] = useState(0)
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>Открыть тихо</button>
+          <button onClick={() => setTick((t) => t + 1)}>Фокус</button>
+          {open && <Drawer label="Документ" title="Платёжная инструкция" onClose={() => setOpen(false)} initialFocus={false} focusKey={tick} />}
+        </>
+      )
+    }
+    renderK(<Quiet />)
+    await userEvent.click(screen.getByText('Открыть тихо'))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Открыть тихо')).toHaveFocus()
+    await userEvent.click(screen.getByText('Фокус'))
+    expect(screen.getByRole('heading', { name: 'Платёжная инструкция' })).toHaveFocus()
+  })
+
+  it('фокус вне drawer при закрытии не трогается (возврат — только если фокус потерян)', async () => {
+    renderK(<Host />)
+    await userEvent.click(screen.getByText('Открыть d1'))
+    screen.getByText('Ячейка').focus()
+    await userEvent.keyboard('{Escape}')
+    expect(names()).toEqual([])
+    expect(screen.getByText('Ячейка')).toHaveFocus()
+  })
+
+  it('Esc по B, затем по A: фокус, поставленный китом на кнопку B, не считается чужим — A возвращает на свою кнопку', async () => {
+    function Two() {
+      const [open, setOpen] = useState<Open>({ a: null, b: null })
+      const ra = useRef<HTMLButtonElement>(null)
+      const rb = useRef<HTMLButtonElement>(null)
+      const pane = (slot: 'a' | 'b', id: string) => {
+        const opener = slot === 'a' ? ra : rb
+        return <Drawer label={`Документ ${id}`} title="Платёжная инструкция" onClose={() => {}} returnFocus={() => opener.current} />
+      }
+      const items: DrawerStackItem[] = []
+      if (open.a) items.push({ key: open.a, slot: 'a', node: pane('a', open.a) })
+      if (open.b) items.push({ key: open.b, slot: 'b', node: pane('b', open.b) })
+      return (
+        <>
+          <button ref={ra} onClick={() => setOpen((o) => ({ ...o, a: 'd1' }))}>Открыть d1</button>
+          <button ref={rb} onClick={() => setOpen((o) => ({ ...o, b: 'd2' }))}>Открыть d2</button>
+          <DrawerStack items={items} onEscape={() => setOpen((o) => (o.b ? { a: o.a, b: null } : { a: null, b: null }))} />
+        </>
+      )
+    }
+    renderK(<Two />)
+    await userEvent.click(screen.getByText('Открыть d1'))
+    await userEvent.click(screen.getByText('Открыть d2'))
+    await userEvent.keyboard('{Escape}')
+    expect(names()).toEqual(['Документ d1'])
+    expect(screen.getByText('Открыть d2')).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(names()).toEqual([])
+    expect(screen.getByText('Открыть d1')).toHaveFocus()
+  })
+
+  describe('returnFocus при закрытии', () => {
+    function One({ target }: { target: () => HTMLElement | null }) {
+      const [open, setOpen] = useState(true)
+      return (
+        <>
+          <button>Снаружи</button>
+          {open && <Drawer label="Документ" title="Платёжная инструкция" onClose={() => setOpen(false)} returnFocus={target} />}
+        </>
+      )
+    }
+    it('снятый со страницы элемент — фокус не трогается', async () => {
+      const gone = document.createElement('button')
+      renderK(<One target={() => gone} />)
+      await userEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(document.activeElement === null || document.activeElement === document.body).toBe(true)
+    })
+    it('null — фокус не трогается', async () => {
+      renderK(<One target={() => null} />)
+      await userEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(document.activeElement === null || document.activeElement === document.body).toBe(true)
+    })
+    it('исключение в returnFocus не роняет дерево и не всплывает', async () => {
+      // брошенное из очистки эффекта React 17 передаёт в обработку ошибок корня — ловим, что до неё не дошло
+      const errors: unknown[] = []
+      const onError = (e: ErrorEvent) => { errors.push(e.error); e.preventDefault() }
+      window.addEventListener('error', onError)
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        renderK(<One target={() => { throw new Error('нет элемента') }} />)
+        await userEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(screen.getByText('Снаружи')).toBeInTheDocument()
+        expect(errors).toEqual([])
+        expect(log).not.toHaveBeenCalled()
+      } finally {
+        window.removeEventListener('error', onError)
+        log.mockRestore()
+      }
+    })
+  })
+
   it('без нарушений axe (A и B)', async () => {
     const { container } = renderK(<Host start={{ a: 'd1', b: 'd2' }} />)
     expect(await axe(container)).toHaveNoViolations()

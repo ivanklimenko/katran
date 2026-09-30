@@ -52,8 +52,12 @@ export function TooltipLayer({ root }: Props) {
       if (to && t.contains(to)) return
       hide()
     }
-    // Видимый тултип забирает Esc себе: preventDefault — сигнал слоям ниже (DrawerStack), что Esc уже обработан;
-    // без видимого тултипа событие не трогаем. Всплытие не гасим — поповеру и полям Esc по-прежнему приходит.
+    /**
+     * Видимый тултип забирает Esc себе: preventDefault — сигнал слоям ниже (DrawerStack), что Esc уже обработан;
+     * без видимого тултипа событие не трогаем. Всплытие не гасим — поповеру и полям Esc по-прежнему приходит.
+     * Цена: preventDefault на захвате window отменяет и действие Esc по умолчанию, пока тултип виден, — например,
+     * очистку input[type=search]. Первый Esc прячет тултип, второй делает своё (CHANGELOG, TooltipLayer).
+     */
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (shown.current) e.preventDefault()

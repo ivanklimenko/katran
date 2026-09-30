@@ -126,4 +126,13 @@ describe('createDrawerStackModel (спека 2a §3.2)', () => {
     await open('d1')
     expect(scope.getState(m.$a)).toEqual({ id: 'd1', tab: 'general' })
   })
+
+  it('quiet (открытие не пользователем) проходит в opened и alreadyOpen; без него поля нет', async () => {
+    const { m, scope, opened, already } = setup()
+    await allSettled(m.open, { scope, params: { id: 'd1', secondary: false, quiet: true } })
+    await allSettled(m.open, { scope, params: { id: 'd1', secondary: false, quiet: true } })
+    await allSettled(m.open, { scope, params: { id: 'd2', secondary: true } })
+    expect(opened()).toStrictEqual([{ id: 'd1', slot: 'a', quiet: true }, { id: 'd2', slot: 'b' }])
+    expect(already()).toStrictEqual([{ id: 'd1', slot: 'a', quiet: true }])
+  })
 })

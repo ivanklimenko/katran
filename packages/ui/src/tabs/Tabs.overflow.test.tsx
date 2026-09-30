@@ -59,6 +59,8 @@ describe('Tabs: переполнение (спека 2a §3.1)', () => {
     renderK(<Host />)
     expect(names()).toEqual(['Общие данные', 'Доп. поля', 'Статусы', 'Комплаенс', 'Связанные документы', 'Задачи', 'Исходный текст', 'Аудит', 'Нотификации'])
     expect(screen.getByRole('tab', { name: 'Нотификации' })).toBeDisabled()
+    // подсказки на недоступной вкладке полосы нет: disabled не получает событий указателя (R12) — «Нет данных» только в меню
+    expect(screen.getByRole('tab', { name: 'Нотификации' })).not.toHaveAttribute('data-k-tip')
     const more = screen.getByRole('button', { name: 'Ещё вкладки: 2' })
     expect(more).toHaveTextContent('••• 2')
     await userEvent.click(more)

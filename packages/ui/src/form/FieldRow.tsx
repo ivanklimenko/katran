@@ -29,12 +29,15 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
   const base = tag.replace(/^B\./, '')
   const tip = def ? `${base} · ${def.label}` : base
   const empty = value === null || isEmptyValue(value)
-  const tagEl = <span className={s.tag} data-k-tip={tip}>{base}</span>
+  // Название поля — не только тултипом (его не видят клавиатура и скринридер): скрытым текстом рядом с тегом.
+  // Сосед, а не потомок тега: абсолютно позиционированный, он не занимает ячейку сетки строки и не меняет текст тега.
+  const tagEl = <><span className={s.tag} data-k-tip={tip}>{base}</span>{def && <span className={s.sr}>{def.label}</span>}</>
 
   if (def?.kind === 'text') {
     const lines = value?.lines ?? []
     const show = Math.min(def.show ?? def.lines ?? 4, def.lines ?? 4)
     const more = lines.length - show
+    const moreText = open ? 'свернуть' : `ещё ${more} стр.`
     return (
       <div className={[s.cell, s.text, empty ? s.null : '', wide ? s.wide : ''].filter(Boolean).join(' ')} data-field={tag} data-empty={empty ? '' : undefined} style={{ '--k-show': String(show) } as CSSProperties}>
         {tagEl}
@@ -43,8 +46,8 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
             ? <><span className={s.pre} aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></>
             : <pre id={panel} className={s.pre}>{(open ? lines : lines.slice(0, show)).join('\n')}</pre>}
           {more > 0 && (
-            <button type="button" className={s.more} aria-expanded={open} aria-controls={panel} onClick={onToggle}>
-              {open ? 'свернуть' : `ещё ${more} стр.`}
+            <button type="button" className={s.more} aria-expanded={open} aria-controls={panel} aria-label={`${moreText} — ${tip}`} onClick={onToggle}>
+              {moreText}
             </button>
           )}
         </div>

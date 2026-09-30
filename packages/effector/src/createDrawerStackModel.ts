@@ -4,6 +4,10 @@ import { createEvent, createStore, sample, type Event, type EventCallable, type 
 export type DrawerSlot = 'a' | 'b'
 export type DrawerEntry = { id: string; tab: string }
 export type DrawerStackState = { a: DrawerEntry | null; b: DrawerEntry | null }
+/** Запрос открытия. quiet — открытие не пользователем (автооткрытие): модель его не толкует, только передаёт в opened/alreadyOpen. */
+export type DrawerOpen = { id: string; secondary: boolean; quiet?: boolean | undefined }
+/** Куда лёг (или где уже открыт) документ; quiet — из запроса, только если он был true. */
+export type DrawerHit = { id: string; slot: DrawerSlot; quiet?: boolean | undefined }
 
 export type DrawerStackConfig = {
   /** Вкладка только что открытого документа; по умолчанию 'main' («Общие данные»). */
@@ -16,19 +20,21 @@ export type DrawerStackModel = {
   $b: Store<DrawerEntry | null>
   /** Слот, который закроет closeTop (и Esc): b, если открыт, иначе a; null — оба пусты. */
   $top: Store<DrawerSlot | null>
-  open: EventCallable<{ id: string; secondary: boolean }>
+  open: EventCallable<DrawerOpen>
   close: EventCallable<DrawerSlot>
   closeTop: EventCallable<void>
   /** Закрыть оба слота — уход с экрана. */
   closeAll: EventCallable<void>
   setTab: EventCallable<{ slot: DrawerSlot; tab: string }>
   /** Документ впервые положен в слот — сигнал загрузки для потребителя (модель данных не знает). */
-  opened: Event<{ id: string; slot: DrawerSlot }>
+  opened: Event<DrawerHit>
   /** Документ уже открыт: стек не меняется, слот сообщается для фокуса. */
-  alreadyOpen: Event<{ id: string; slot: DrawerSlot }>
+  alreadyOpen: Event<DrawerHit>
 }
 
 const EMPTY: DrawerStackState = { a: null, b: null }
+
+const hit = (id: string, slot: DrawerSlot, quiet: boolean | undefined): DrawerHit => (quiet ? { id, slot, quiet: true } : { id, slot })
 
 const slotOf = (s: DrawerStackState, id: string): DrawerSlot | null => (s.a?.id === id ? 'a' : s.b?.id === id ? 'b' : null)
 
@@ -47,13 +53,13 @@ function remove(s: DrawerStackState, slot: DrawerSlot): DrawerStackState {
 /** Стек двух drawer'ов деталки: что где открыто и на какой вкладке. Загрузку данных модель не знает. */
 export function createDrawerStackModel(cfg: DrawerStackConfig = {}): DrawerStackModel {
   const firstTab = cfg.firstTab ?? 'main'
-  const open = createEvent<{ id: string; secondary: boolean }>()
+  const open = createEvent<DrawerOpen>()
   const close = createEvent<DrawerSlot>()
   const closeTop = createEvent<void>()
   const closeAll = createEvent<void>()
   const setTab = createEvent<{ slot: DrawerSlot; tab: string }>()
-  const opened = createEvent<{ id: string; slot: DrawerSlot }>()
-  const alreadyOpen = createEvent<{ id: string; slot: DrawerSlot }>()
+  const opened = createEvent<DrawerHit>()
+  const alreadyOpen = createEvent<DrawerHit>()
 
   const $stack = createStore<DrawerStackState>(EMPTY)
   const $a = $stack.map((s) => s.a)
@@ -64,17 +70,17 @@ export function createDrawerStackModel(cfg: DrawerStackConfig = {}): DrawerStack
     clock: open,
     source: $stack,
     filter: (s, p) => slotOf(s, p.id) !== null,
-    fn: (s, p) => ({ id: p.id, slot: slotOf(s, p.id) ?? 'a' }),
+    fn: (s, p) => hit(p.id, slotOf(s, p.id) ?? 'a', p.quiet),
     target: alreadyOpen,
   })
   const placed = sample({
     clock: open,
     source: $stack,
     filter: (s, p) => slotOf(s, p.id) === null,
-    fn: (s, p) => ({ next: place(s, p.id, p.secondary, firstTab), id: p.id }),
+    fn: (s, p) => ({ next: place(s, p.id, p.secondary, firstTab), id: p.id, quiet: p.quiet }),
   })
   $stack.on(placed, (_, x) => x.next)
-  sample({ clock: placed, fn: ({ next, id }) => ({ id, slot: slotOf(next, id) ?? 'a' }), target: opened })
+  sample({ clock: placed, fn: ({ next, id, quiet }) => hit(id, slotOf(next, id) ?? 'a', quiet), target: opened })
 
   $stack.on(close, (s, slot) => remove(s, slot))
   sample({ clock: closeTop, source: $top, filter: (top: DrawerSlot | null): top is DrawerSlot => top !== null, target: close })

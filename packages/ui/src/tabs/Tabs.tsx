@@ -9,7 +9,10 @@ export type TabItem = {
   label: string
   count?: number | undefined
   disabled?: boolean | undefined
-  /** Подсказка вкладки; недоступная в меню переполнения показывает её вместо «нет данных». */
+  /**
+   * Подсказка вкладки (тултип). У недоступной в полосе не выводится — disabled-кнопка не получает событий указателя
+   * и фокуса, тултип был бы мёртвым; в меню переполнения недоступная показывает её вместо «нет данных».
+   */
   hint?: string | undefined
 }
 export type TabsProps = {
@@ -117,7 +120,7 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
               disabled={it.disabled}
               tabIndex={it.id === stopId ? 0 : -1}
               className={s.tab}
-              data-k-tip={it.hint}
+              data-k-tip={it.disabled ? undefined : it.hint}
               onClick={() => !it.disabled && onChange(it.id)}
               onKeyDown={(e) => onKey(e, it)}
             >

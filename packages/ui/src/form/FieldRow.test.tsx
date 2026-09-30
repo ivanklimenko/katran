@@ -26,6 +26,8 @@ describe('FieldRow (спека 2a §3.1)', () => {
     expect(screen.getByText('не заполнено')).toBeInTheDocument()
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.getByText('55')).toHaveAttribute('data-k-tip', '55 · Третье возмещающее учреждение')
+    // название поля доступно не только тултипом: скрытым текстом рядом с тегом
+    expect(screen.getByText('Третье возмещающее учреждение')).toHaveClass('sr')
   })
 
   it('null — тоже пустая строка', () => {
@@ -36,6 +38,8 @@ describe('FieldRow (спека 2a §3.1)', () => {
   it('заполненное: тег, буква опции с подсказкой, первая строка и счёт; клик раскрывает полный текст', async () => {
     renderK(<Toggle tag="50" def={party} value={v50} />)
     const btn = screen.getByRole('button', { name: /LAVRENTIEV/ })
+    // клавиатура и скринридер слышат название поля, а не только номер тега
+    expect(btn).toHaveAccessibleName(/Приказодатель/)
     expect(btn).toHaveAttribute('aria-expanded', 'false')
     expect(btn).toHaveTextContent('50')
     expect(btn).toHaveTextContent('40817840500010042371')
@@ -56,9 +60,12 @@ describe('FieldRow (спека 2a §3.1)', () => {
     const row = document.querySelector('[data-field="72"]')!
     expect(row).toHaveTextContent('/INS/ NRDIRUMMXXX')
     expect(row).not.toHaveTextContent('//CHARGES OUR')
-    await userEvent.click(screen.getByRole('button', { name: 'ещё 2 стр.' }))
+    // кнопка с контекстом: какое поле раскрывается; видимый текст — начало доступного имени
+    const more = screen.getByRole('button', { name: 'ещё 2 стр. — 72 · Информация отправителя получателю' })
+    expect(more).toHaveTextContent(/^ещё 2 стр\.$/)
+    await userEvent.click(more)
     expect(row).toHaveTextContent('//CHARGES OUR')
-    expect(screen.getByRole('button', { name: 'свернуть' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'свернуть — 72 · Информация отправителя получателю' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('пустое текстовое — «не заполнено»', () => {
