@@ -76,6 +76,11 @@
   font-weight: 500;
 }
 
+.opt[aria-disabled="true"] {
+  color: var(--k-faint);
+  cursor: default;
+}
+
 .optLabel {
   flex: 1;
   min-width: 0;
@@ -139,9 +144,9 @@
 
 .chip {
   display: inline-flex;
-  flex: none;
+  flex: 0 1 auto;
   align-items: center;
-  max-width: 50%;
+  min-width: 0;
   height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
   padding-left: var(--k-sp-1);
   border-radius: var(--k-r-s);
@@ -181,4 +186,22 @@
   border-top: 1px solid var(--k-line);
   font-size: var(--k-fs-2);
   color: var(--k-ink2);
+}
+
+.chips {
+  display: inline-flex;
+  flex: 0 1 auto;
+  gap: var(--k-sp-1);
+  align-items: center;
+  min-width: 0;
+}
+
+/* только для скринридера: «ещё N» у «+N» */
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

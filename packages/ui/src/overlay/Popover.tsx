@@ -50,7 +50,13 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', id,
     if (!open || !box.current || role === 'presentation') return
     const returnTo = (returnFocus ?? anchor).current
     if (!manualFocus) (box.current.querySelector(FOCUSABLE) as HTMLElement | null)?.focus()
-    return () => { returnTo?.focus() }
+    // Возврат — только если фокус был внутри снятой панели (тогда activeElement — body/null). Если фокус уже ушёл
+    // в другой элемент (Tab с края панели, клик по соседней кнопке), отнимать его нельзя: эффект очистки в React 17
+    // срабатывает уже после перехода по Tab.
+    return () => {
+      const at = document.activeElement
+      if (at === null || at === document.body) returnTo?.focus()
+    }
   }, [open, anchor, returnFocus, role, manualFocus])
 
   // Escape и клик вне

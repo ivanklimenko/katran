@@ -5,6 +5,7 @@ import type { Scalar } from '../filters/types'
 import { Input } from '../input'
 import is from '../input/Input.module.css'
 import { Popover } from '../overlay'
+import { useKatran } from '../provider/useKatran'
 import { Chevron, Cross, Listbox, optionId } from './Listbox'
 import { filterOptions, sameScalar, type Option } from './options'
 import s from './Select.module.css'
@@ -29,6 +30,8 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
   const name = aria['aria-label'] ?? 'Выбор'
   const listId = useStableId()
   const popId = useStableId()
+  const chipsId = useStableId()
+  const { announce } = useKatran()
   const anchor = useRef<HTMLSpanElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const search = useRef<HTMLInputElement>(null)
@@ -45,16 +48,28 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
   ]
   // Значения может не быть среди вариантов (справочник подгрузится позже) — тогда чип показывает само значение и снимается.
   const chips = ordered(value).map((v) => ({ value: v, label: options.find((o) => sameScalar(o.value, v))?.label ?? String(v) }))
-  const remove = (v: Scalar) => onChange(value.filter((x) => !sameScalar(x, v)))
+  const shownChips = chips.slice(0, maxChips)
+  // Закрытое поле читается не только числом: описание — подписи видимых чипов и «ещё N» (кнопки ✕ в описание не входят).
+  const describedBy = [...shownChips.map((_, i) => `${chipsId}-c${i}`), ...(chips.length > maxChips ? [`${chipsId}-more`] : [])].join(' ') || undefined
+  const labelOf = (v: Scalar) => chips.find((c) => sameScalar(c.value, v))?.label ?? String(v)
+  const remove = (v: Scalar) => { announce(`Убрано: ${labelOf(v)}`); onChange(value.filter((x) => !sameScalar(x, v))) }
   const removeLast = () => { const last = chips[chips.length - 1]; if (last) remove(last.value) }
-  const toggle = (o: Option) => {
-    if (max === 1) { onChange(has(o.value) ? [] : [o.value]); return }
-    if (has(o.value)) { remove(o.value); return }
-    if (max !== undefined && value.length >= max) return
-    onChange(ordered([...value, o.value]))
-  }
+  // Предел достигнут: невыбранные пункты недоступны. При max = 1 выбор заменяет выбранный, предела «достигнуто» нет.
+  const full = max !== undefined && max > 1 && value.length >= max
   const openList = () => { setOpen(true); setActive(0) }
   const close = () => { setOpen(false); setQuery(''); setActive(0) }
+  const toggle = (o: Option) => {
+    if (max === 1) {
+      // одиночный выбор: сделан — поповер закрывается, фокус возвращается на поле
+      if (has(o.value)) announce(`Убрано: ${o.label}`)
+      onChange(has(o.value) ? [] : [o.value])
+      close()
+      return
+    }
+    if (has(o.value)) { remove(o.value); return }
+    if (full) return
+    onChange(ordered([...value, o.value]))
+  }
   const pickActive = () => { const o = shown[active]; if (o) toggle(o) }
 
   // Клик по рамке вне кнопок (подпись чипа, «+N», отступ) — как клик по полю; ✕ чипа и само поле — свои обработчики.
@@ -66,7 +81,7 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
   }
   const onTriggerKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'ArrowDown' && !open) { e.preventDefault(); openList() }
-    else if ((e.key === 'Backspace' || e.key === 'Delete') && !open && !disabled && value.length > 0) { e.preventDefault(); removeLast() }
+    else if (e.key === 'Backspace' && !open && !disabled && value.length > 0) { e.preventDefault(); removeLast() }
   }
   const onSearchKey = (e: KeyboardEvent<HTMLInputElement>) => {
     const last = shown.length - 1
@@ -79,32 +94,38 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
     else if (e.key === ' ' && query === '') { e.preventDefault(); pickActive() }
     else if (e.key === 'Backspace' && query === '' && value.length > 0) { e.preventDefault(); removeLast() }
   }
-  // Фокус в поповере ходит по кругу: портал лежит в конце документа, и Tab с края увёл бы фокус из поля за пределы страницы.
-  // Закрытие по Tab здесь не годится: возврат фокуса Popover в React 17 срабатывает уже после перехода по Tab и забрал бы его у следующего поля.
-  // Выход — Escape (фокус возвращается на поле) или клик вне.
+  // Tab с края поповера — на поле, и дальше браузер идёт от него к следующему полю (preventDefault не нужен); сам поповер закрывается.
+  // Портал лежит в конце документа: без этого Tab увёл бы фокус за пределы страницы.
   const onPopKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'Tab') return
     const stops = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('input, button:not([disabled])'))
-    const first = stops[0], last = stops[stops.length - 1]
-    if (e.shiftKey && e.target === first) { e.preventDefault(); last?.focus() }
-    else if (!e.shiftKey && e.target === last) { e.preventDefault(); first?.focus() }
+    if (e.target !== (e.shiftKey ? stops[0] : stops[stops.length - 1])) return
+    trigger.current?.focus()
+    close()
   }
 
   return (
     <>
       {/* role=presentation: рамка лишь ловит всплывший mousedown, сама не интерактивна (jsx-a11y) */}
       <span ref={anchor} role="presentation" onMouseDown={onFrameDown} className={[is.field, size === 's' ? is.sizeS : is.sizeM, s.multiField].join(' ')}>
-        {chips.slice(0, maxChips).map((c) => (
-          <span key={`${typeof c.value}:${String(c.value)}`} className={s.chip}>
-            <span className={s.chipText}>{c.label}</span>
-            {!disabled && (
-              <IconButton size="s" tabIndex={-1} label={`Убрать: ${c.label}`} className={s.chipX} onClick={() => { remove(c.value); trigger.current?.focus() }}>
-                <Cross />
-              </IconButton>
-            )}
-          </span>
-        ))}
-        {chips.length > maxChips && <span className={s.more}>+{chips.length - maxChips}</span>}
+        <span className={s.chips}>
+          {shownChips.map((c, i) => (
+            <span key={`${typeof c.value}:${String(c.value)}`} className={s.chip}>
+              <span id={`${chipsId}-c${i}`} className={s.chipText}>{c.label}</span>
+              {!disabled && (
+                <IconButton size="s" tabIndex={-1} label={`Убрать: ${c.label}`} className={s.chipX} onClick={() => { remove(c.value); (open ? search : trigger).current?.focus() }}>
+                  <Cross />
+                </IconButton>
+              )}
+            </span>
+          ))}
+          {chips.length > maxChips && (
+            <>
+              <span aria-hidden="true" className={s.more}>{`+${chips.length - maxChips}`}</span>
+              <span id={`${chipsId}-more`} className={s.sr}>{`ещё ${chips.length - maxChips}`}</span>
+            </>
+          )}
+        </span>
         <button
           ref={trigger}
           id={id}
@@ -112,6 +133,7 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? popId : undefined}
+          aria-describedby={describedBy}
           aria-label={`${name}: ${value.length > 0 ? `выбрано ${value.length}` : placeholder}`}
           disabled={disabled}
           className={s.multiBtn}
@@ -139,7 +161,7 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
             onChange={(e) => { setQuery(e.target.value); setActive(0) }}
             onKeyDown={onSearchKey}
           />
-          <Listbox id={listId} label={name} options={shown} active={active} isSelected={(o) => has(o.value)} multi onPick={toggle} onActive={setActive} />
+          <Listbox id={listId} label={`Варианты: ${name}`} options={shown} active={active} isSelected={(o) => has(o.value)} isDisabled={(o) => full && !has(o.value)} multi onPick={toggle} onActive={setActive} />
           <div className={s.foot}>
             <span aria-live="polite">{`Выбрано ${value.length}${max !== undefined && max > 1 ? ` из ${max}` : ''}`}</span>
             <Button size="s" disabled={value.length === 0} onClick={() => { onChange([]); search.current?.focus() }}>Очистить</Button>

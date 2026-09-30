@@ -85,6 +85,18 @@ describe('Popover', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByLabelText('Поле-якорь')).toHaveFocus()
   })
+  it('закрытие не отнимает фокус, если он уже ушёл в другой элемент; с Escape фокус возвращается', async () => {
+    const u = userEvent.setup()
+    renderK(<PopoverHost />)
+    await u.click(screen.getByText('Открыть'))
+    screen.getByText('Снаружи').focus()
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Снаружи')).toHaveFocus()
+    await u.click(screen.getByText('Открыть'))
+    await u.keyboard('{Escape}')
+    expect(screen.getByText('Открыть')).toHaveFocus()
+  })
   it('role="presentation": без роли dialog и имени, фокус не переносится и не возвращается', async () => {
     const { rerender } = renderK(<PresentationHost open={false} />)
     const outside = screen.getByText('Снаружи')

@@ -14,6 +14,8 @@ export type ListboxProps = {
   /** Активный пункт (aria-activedescendant у поля); -1 — нет. */
   active: number
   isSelected: (o: Option) => boolean
+  /** Пункт недоступен (aria-disabled): не выбирается кликом; выбор с клавиатуры — у поля, оно проверяет само. */
+  isDisabled?: ((o: Option) => boolean) | undefined
   multi?: boolean | undefined
   onPick: (o: Option, index: number) => void
   onActive: (index: number) => void
@@ -30,7 +32,7 @@ function mark(text: string, q: string): ReactNode {
 }
 
 /** Список вариантов role=listbox: фокус остаётся в поле (aria-activedescendant), мышь не уводит его (mousedown отменён); клавиатура — у поля. */
-export function Listbox({ id, label, options, active, isSelected, multi, onPick, onActive, emptyText = 'Ничего не найдено', highlight }: ListboxProps) {
+export function Listbox({ id, label, options, active, isSelected, isDisabled, multi, onPick, onActive, emptyText = 'Ничего не найдено', highlight }: ListboxProps) {
   // Прокрутка к активному — только когда его сменила клавиатура: наведение мышью список не дёргает.
   const byMouse = useRef(false)
   // Выбор — по click, делегированным нативным слушателем на ul: click приходит и без событий мыши
@@ -44,7 +46,8 @@ export function Listbox({ id, label, options, active, isSelected, multi, onPick,
     const el = ul.current
     if (!el) return
     const onClick = (e: MouseEvent) => {
-      const li = (e.target as Element).closest('[role="option"]')
+      if (!(e.target instanceof Element)) return
+      const li = e.target.closest('[role="option"]')
       if (!li || !el.contains(li) || li.getAttribute('aria-disabled') === 'true') return
       const { options: opts, onPick: pick } = latest.current
       const i = opts.findIndex((_, k) => optionId(id, k) === li.id)
@@ -63,12 +66,14 @@ export function Listbox({ id, label, options, active, isSelected, multi, onPick,
       {options.length === 0 && <li role="option" aria-disabled="true" aria-selected={false} className={s.empty}>{emptyText}</li>}
       {options.map((o, i) => {
         const sel = isSelected(o)
+        const off = isDisabled?.(o) === true
         return (
           <li
             key={`${typeof o.value}:${String(o.value)}`}
             id={optionId(id, i)}
             role="option"
             aria-selected={sel}
+            aria-disabled={off || undefined}
             tabIndex={-1}
             data-active={i === active || undefined}
             className={s.opt}
