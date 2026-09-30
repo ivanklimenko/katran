@@ -99,6 +99,8 @@
   --k-fs-h2: calc(16px * var(--k-density));
   --k-dw-pad: calc(14px * var(--k-density));
   --k-lane: calc(36px * var(--k-density));
+  --k-tab-line: calc(32px * var(--k-density));
+  --k-tab-px: calc(10px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

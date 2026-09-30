@@ -118,6 +118,8 @@ export const sizes = {
   'fs-h2': 16,
   'dw-pad': 14,
   'lane': 36,
+  'tab-line': 32,
+  'tab-px': 10,
 } as const
 
 export const fonts = {
