@@ -25,7 +25,8 @@ export type DateRangeProps = {
   max?: IsoDay | undefined
   today?: IsoDay | undefined
   disabled?: boolean | undefined
-  /** Поле «по» недоступно — у поля нет BETWEEN (спека §6.2): календарь ставит только «с», многодневные пресеты недоступны. */
+  /** Поле «по» недоступно — у поля нет BETWEEN (спека §6.2): наружу всегда `to: ''`, календарь ставит только «с»,
+   * многодневные пресеты недоступны, однодневные ставят «с». */
   toDisabled?: boolean | undefined
   size?: 's' | 'm' | undefined
   /** Имя группы — название поля; поля получают «…, с» и «…, по». */
@@ -36,7 +37,9 @@ const EMPTY: DateRangeValue = { from: '', to: '' }
 const withDay = (v: DateValue, tm: string): DateValue => (v ? (tm ? `${dayOf(v)}T${tm}` : dayOf(v)) : v)
 
 /** Период «с — по» (спека §3.6): поля по маске, календарь двумя кликами, пресеты, горячие кнопки под полем. */
-export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY', quick = QUICK_PRESETS, presets = DEFAULT_PRESETS, min, max, today, disabled, toDisabled, size = 'm', label }: DateRangeProps) {
+export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM.YYYY', quick = QUICK_PRESETS, presets = DEFAULT_PRESETS, min, max, today, disabled, toDisabled, size = 'm', label }: DateRangeProps) {
+  // без «по» скрытая граница не должна жить в значении: иначе она всплывёт условием GTE/LTE/EQ, которого не видно
+  const onChange = (v: DateRangeValue) => emit(toDisabled ? { from: v.from, to: '' } : v)
   const fmt = withTime(format, time)
   const t = today ?? todayLocal()
   const anchor = useRef<HTMLSpanElement>(null)
@@ -62,7 +65,8 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
   // время «с» переживает выбор дней, как у DateInput: новый день ставится под прежние часы
   const fromTime = value.from ? timeOf(value.from) : ''
   const pick = (d: IsoDay) => {
-    if (toDisabled) { onChange({ from: withDay(d, fromTime), to: '' }); close(); return }
+    // один клик — «с»; со временем поповер остаётся открытым, как в обычном режиме со временем: дописать часы
+    if (toDisabled) { onChange({ from: withDay(d, fromTime), to: '' }); if (!time) close(); return }
     if (pending === null) { setPending(d); onChange({ from: withDay(d, fromTime), to: '' }); return }
     const [a, b] = d < pending ? [d, pending] : [pending, d]
     setPending(null)
@@ -76,7 +80,12 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
     return (min !== undefined && r.from < min) || (max !== undefined && r.to > max) || (toDisabled === true && r.from !== r.to)
   }
   // отметка — по дням: время границ пресет не задаёт
-  const matches = (p: DatePreset) => presetMatches(p, t, { from: fromDay, to: toDay })
+  // без «по» однодневный пресет отмечен по одному «с»
+  const matches = (p: DatePreset) => {
+    if (!toDisabled) return presetMatches(p, t, { from: fromDay, to: toDay })
+    const r = p.range(t)
+    return r.from === r.to && fromDay === r.from
+  }
   const applyPreset = (p: DatePreset) => {
     const r = p.range(t)
     onChange(r)

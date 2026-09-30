@@ -16,6 +16,8 @@ export type FilterFieldProps = {
   /** Счётчик внешних смен черновика (FilterPanel): сменился — набранное в поле больше не действует. */
   epoch: number
   onSet: (field: string, conditions: Condition[]) => void
+  /** Совместимый режим панели (без onSetField): поле отдаёт не больше одного условия — своё, фразы ограничены одной. */
+  compat: boolean
   dateFormat: DateFormat
   suggest?: SuggestState | null | undefined
   onSuggest?: ((p: { field: string; query: string }) => void) | undefined
@@ -30,7 +32,7 @@ const BOOL = [{ value: true, label: 'да' }, { value: false, label: 'нет' }]
  * черновик не менялся мимо полей (epoch тот же) и условия поля в черновике — те, что поле само отдало. Иначе (Отменить,
  * Сбросить, ✕ у чипа, лейн) — значение из черновика. Сырое значение нужно, потому что черновик нормализован:
  * «1,» → 1, «-» → без условия, набираемый текст TagInput — уже условие. */
-export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, onSuggest, onSuggestClose }: FilterFieldProps) {
+export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, suggest, onSuggest, onSuggestClose }: FilterFieldProps) {
   const id = useStableId()
   const [typed, setTyped] = useState<{ raw: FieldRaw; snap: string; epoch: number } | null>(null)
   const current = JSON.stringify(draft.filter((x) => x.field === field.id))
@@ -41,8 +43,9 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
   useEffect(() => { pending.current = null })
   const set = (next: FieldRaw) => {
     pending.current = next
-    // условия поля, которых контрол не выражает (NE, NOT_IN, GT по числу…), правка поля не трогает
-    const cs = [...foreignOf(field, draft), ...conditionsFrom(field, next)]
+    // условия поля, которых контрол не выражает (NE, NOT_IN, GT по числу…), правка поля не трогает; в совместимом
+    // режиме владелец держит одно условие на поле — отдаём только своё условие контрола, чужое не подменяет правку
+    const cs = compat ? conditionsFrom(field, next).slice(0, 1) : [...foreignOf(field, draft), ...conditionsFrom(field, next)]
     setTyped({ raw: next, snap: JSON.stringify(cs), epoch })
     onSet(field.id, cs)
   }
@@ -68,7 +71,7 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
             onChange={(v) => set({ ...base(), value: v })}
             onTextChange={(t) => set({ ...base(), text: t })}
             validate={field.type === 'NUMBER' ? isNumberText : undefined}
-            max={fieldMax(field)}
+            max={compat && control === 'phrases' ? 1 : fieldMax(field)}
             suggestions={ask ? (mine?.items ?? []).filter((x) => !r.value.includes(x)) : undefined}
             loading={ask ? mine?.loading ?? false : undefined}
             onQuery={ask ? (q) => ask({ field: field.id, query: q }) : undefined}
@@ -102,12 +105,17 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
             onChange={(v) => set({ kind: 'text', value: v === null ? '' : String(v) })} />
         </div>
       )
-    default:
+    case 'number':
       return (
         <div className={s.fieldBox}>
           <label htmlFor={id} className={s.fieldLabel}>{field.label}</label>
           <Input id={id} size="s" inputMode="decimal" value={raw.kind === 'text' ? raw.value : ''} onChange={(e) => set({ kind: 'text', value: e.target.value })} />
         </div>
       )
+    default: {
+      // новый вид контрола в FieldControl без ветки здесь — ошибка компиляции
+      const missing: never = control
+      return missing
+    }
   }
 }

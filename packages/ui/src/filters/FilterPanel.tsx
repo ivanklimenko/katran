@@ -57,7 +57,7 @@ export function FilterPanel({
     setSeen((v) => ({ ...v, own: true }))
     if (onSetField) onSetField({ field, conditions: cs })
     else if (cs.length === 0) onDiscard(field)
-    else onEdit(cs[0]!) // совместимость: без onSetField поле держит одно условие
+    else onEdit(cs[0]!) // совместимость: без onSetField поле отдаёт одно своё условие (FilterField, compat)
   }
   // Условия по полю — в порядке первого появления поля: чип и счёт «Фильтры N» — по полю, не по условию.
   const groups: { field: string; conditions: Condition[] }[] = []
@@ -105,7 +105,7 @@ export function FilterPanel({
       <form id={bodyId} hidden={!open} className={s.body} onSubmit={submit}>
         <div className={s.fields}>
           {meta.fields.map((f) => (
-            <FilterField key={f.id} field={f} draft={draft} epoch={seen.epoch} onSet={setField} dateFormat={dateFormat}
+            <FilterField key={f.id} field={f} draft={draft} epoch={seen.epoch} onSet={setField} compat={onSetField === undefined} dateFormat={dateFormat}
               suggest={suggest} onSuggest={onSuggest} onSuggestClose={onSuggestClose} />
           ))}
         </div>

@@ -126,16 +126,16 @@ export function fieldChip(fieldId: string, conditions: Condition[], meta?: Filte
   } else {
     for (const c of rest) pieces.push(conditionPiece(c, meta))
   }
-  const head = pieces[0]
+  // Части без значения (IS_EMPTY, IS_NOT_EMPTY) — после частей со значением: иначе value чипа начиналось бы с «и …».
+  const ordered = [...pieces.filter((p) => p.value !== ''), ...pieces.filter((p) => p.value === '')]
+  const head = ordered[0]
   if (head === undefined) return { field: name, op: '', value: '', full: name }
   const text = (p: Piece) => [p.op, p.value].filter(Boolean).join(' ')
-  const tail = pieces.slice(1)
-  return {
-    field: name,
-    op: head.op,
-    value: head.value + tail.map((p) => ` и ${text(p)}`).join(''),
-    full: `${name} ${head.full}${tail.map((p) => ` и ${p.full}`).join('')}`,
-  }
+  const tail = ordered.slice(1)
+  const full = `${name} ${ordered.map((p) => p.full).join(' и ')}`
+  // все части без значения: оператор первой в value, чтобы «и» стояло между частями, а не в начале
+  if (head.value === '' && tail.length > 0) return { field: name, op: '', value: ordered.map(text).join(' и '), full }
+  return { field: name, op: head.op, value: [head.value, ...tail.map(text)].join(' и '), full }
 }
 
 /** Полный текст чипа поля — для тултипа и доступного имени ✕. */

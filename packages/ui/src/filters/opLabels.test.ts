@@ -127,6 +127,14 @@ describe('fieldChip', () => {
     expect(l.full).toBe('Номер документа в списке 1, 2, 3, 4, 5 и ≠ 9')
     expect(fieldChip('docNumber', [{ field: 'docNumber', op: 'BETWEEN', from: 1, to: 5 }, { field: 'docNumber', op: 'NE', value: 3 }], FMETA).full).toBe('Номер документа от 1 до 5 и ≠ 3')
   })
+  it('условие без значения (IS_EMPTY) не открывает value союзом «и»: части со значением — первыми', () => {
+    const c = fieldChip('status', [{ field: 'status', op: 'IS_EMPTY' }, { field: 'status', op: 'NE', value: 'ERROR' }], FMETA)
+    expect(c).toMatchObject({ field: 'Статус', op: '≠', value: 'Ошибка и пусто', full: 'Статус ≠ Ошибка и пусто' })
+    const e = fieldChip('status', [{ field: 'status', op: 'IS_EMPTY' }, { field: 'status', op: 'IS_NOT_EMPTY' }], FMETA)
+    expect(e.value).not.toMatch(/^и /)
+    expect(e).toMatchObject({ op: '', value: 'пусто и не пусто', full: 'Статус пусто и не пусто' })
+    expect(fieldChip('status', [{ field: 'status', op: 'IS_EMPTY' }], FMETA)).toMatchObject({ op: 'пусто', value: '', full: 'Статус пусто' })
+  })
   it('describeField — полный текст чипа', () => {
     expect(describeField('created', [{ field: 'created', op: 'GTE', value: '2026-09-01' }], FMETA, 'YYYY-MM-DD')).toBe('Дата документа с 2026-09-01')
   })

@@ -346,11 +346,56 @@ describe('FilterPanel: контролы по типам', () => {
     await u.type(screen.getByRole('combobox', { name: 'Назначение' }), 'оп')
     expect(screen.queryByRole('option')).toBeNull()
   })
+  it('подсказки: загрузка видна у поля из suggest.field; Escape закрывает список и зовёт onSuggestClose', async () => {
+    const u = userEvent.setup()
+    const onSuggestClose = vi.fn()
+    const s: SuggestState = { field: 'purpose', query: 'о', items: [], loading: true }
+    renderK(<Host onSuggest={() => {}} suggest={s} onSuggestClose={onSuggestClose} />)
+    await u.type(screen.getByRole('combobox', { name: 'Назначение' }), 'о')
+    expect(screen.getByRole('listbox', { name: 'Подсказки: Назначение' })).toHaveTextContent('Ищу…')
+    await u.keyboard('{Escape}')
+    expect(onSuggestClose).toHaveBeenCalled()
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
   it('без onSetField — совместимость: первое условие поля через onEdit', async () => {
     const u = userEvent.setup()
     const onEdit = vi.fn()
     renderK(<FilterPanel meta={META} conditions={[]} draft={[]} dirty={false} open onOpenChange={() => {}} onEdit={onEdit} onDiscard={() => {}} onApply={() => {}} onRevert={() => {}} onReset={() => {}} onRemove={() => {}} />)
     await u.type(screen.getByRole('textbox', { name: 'Сумма' }), '5')
     expect(onEdit).toHaveBeenLastCalledWith({ field: 'amount', op: 'EQ', value: 5 })
+  })
+})
+
+/** Хост старого API: без onSetField, черновик правит только onEdit/onDiscard. */
+function CompatHost({ initial = [], onEditSpy = () => {} }: { initial?: Filter; onEditSpy?: (c: Condition) => void }) {
+  const [draft, setDraft] = useState<Filter>(initial)
+  return (
+    <FilterPanel meta={META} conditions={initial} draft={draft} dirty={JSON.stringify(initial) !== JSON.stringify(draft)} open onOpenChange={() => {}}
+      onEdit={(c) => { onEditSpy(c); setDraft((d) => replaceField(d, c.field, [c])) }}
+      onDiscard={(f) => setDraft((d) => d.filter((x) => x.field !== f))}
+      onApply={() => {}} onRevert={() => {}} onReset={() => {}} onRemove={() => {}} />
+  )
+}
+
+describe('FilterPanel: совместимый режим (без onSetField)', () => {
+  it('фразы ограничены одной: вторая не добавляется, видна строка о пределе; наружу — одно условие', async () => {
+    const u = userEvent.setup()
+    const onEdit = vi.fn()
+    renderK(<CompatHost onEditSpy={onEdit} />)
+    const input = screen.getByRole('textbox', { name: 'Назначение' })
+    await u.type(input, 'счёт{Enter}')
+    await u.type(input, 'инструкция{Enter}')
+    expect(screen.getByText('Не добавлено: предел 1')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Назначение' })).getAllByRole('listitem')).toHaveLength(1)
+    expect(input).toHaveValue('инструкция')
+    expect(onEdit).toHaveBeenLastCalledWith({ field: 'purpose', op: 'CONTAINS', value: 'счёт' })
+  })
+  it('чужое условие поля (внешний NE) не уходит вместо правки поля', async () => {
+    const u = userEvent.setup()
+    const onEdit = vi.fn()
+    renderK(<CompatHost onEditSpy={onEdit} initial={[{ field: 'purpose', op: 'NE', value: 'x' }]} />)
+    await u.type(screen.getByRole('textbox', { name: 'Назначение' }), 'В')
+    expect(onEdit).toHaveBeenLastCalledWith({ field: 'purpose', op: 'CONTAINS', value: 'В' })
+    expect(screen.getByRole('textbox', { name: 'Назначение' })).toHaveValue('В')
   })
 })
