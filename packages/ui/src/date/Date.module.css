@@ -53,6 +53,13 @@
   background: var(--k-hover);
 }
 
+/* недоступный день: гасим наведение и текст, но раньше отметок диапазона — заливка краёв остаётся */
+.day[aria-disabled="true"] {
+  background: none;
+  color: var(--k-muted);
+  cursor: default;
+}
+
 .day:focus-visible {
   outline: 2px solid var(--k-val);
   outline-offset: -2px;
@@ -77,10 +84,9 @@
   color: var(--k-paper);
 }
 
-.day[aria-disabled="true"] {
-  background: none;
-  color: var(--k-muted);
-  cursor: default;
+/* кольцо на залитом краю — цветом бумаги: val на val невидим */
+.day[data-edge]:focus-visible {
+  outline-color: var(--k-paper);
 }
 
 /* поле даты: обёртка для строки горячих кнопок под полем */

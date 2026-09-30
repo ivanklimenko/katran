@@ -40,23 +40,32 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
   const off = (d: IsoDay) => (min !== undefined && d < min) || (max !== undefined && d > max)
   const anchor = value || range?.from || t
   const [focused, setFocused] = useState<IsoDay>(anchor)
+  // значение сменили снаружи (ввод в поле даты) — таб-стоп переезжает на него; фокус при этом не трогаем
+  const [seenAnchor, setSeenAnchor] = useState<IsoDay>(anchor)
+  if (seenAnchor !== anchor) {
+    setSeenAnchor(anchor)
+    setFocused(anchor)
+  }
   // активный день всегда в показанном месяце: после листания кнопками — выбранный, иначе 1-е число
   const active = inMonth(focused) ? focused : inMonth(anchor) ? anchor : first
   const grid = useRef<HTMLTableElement>(null)
   const wantFocus = useRef(autoFocus === true)
 
+  // без списка зависимостей: флаг живёт до ближайшего коммита и гасится там, даже если родитель отклонил смену месяца
   useEffect(() => {
     if (!wantFocus.current) return
     wantFocus.current = false
     grid.current?.querySelector<HTMLButtonElement>(`[data-day="${active}"]`)?.focus()
-  }, [active])
+  })
 
   const moveTo = (d: IsoDay) => {
+    if (d === active) return
     wantFocus.current = true
     setFocused(d)
     if (!inMonth(d)) onMonthChange(startOfMonth(d))
   }
   const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return
     const w = weekday(active)
     const step: Record<string, IsoDay | undefined> = {
       ArrowLeft: addDays(active, -1), ArrowRight: addDays(active, 1), ArrowUp: addDays(active, -7), ArrowDown: addDays(active, 7),
