@@ -118,6 +118,8 @@
   gap: var(--k-sp-2) var(--k-sp-3);
 }
 
+/* Ячейка поля: контролы (корни TagInput/DateRange — inline-grid, поля SearchSelect/MultiSelect — inline-flex)
+   становятся элементами сетки и растягиваются на ширину колонки — своей ширины у них нет. */
 .fieldBox {
   display: grid;
   gap: var(--k-sp-1);
@@ -131,12 +133,6 @@
   padding: 0;
   font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
   color: var(--k-muted);
-}
-
-.range {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--k-sp-1);
 }
 
 .actions {
