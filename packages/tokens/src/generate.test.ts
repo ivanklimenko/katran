@@ -36,6 +36,12 @@ describe('renderCss', () => {
     expect(css).toContain('--k-dot-l:')
   })
 
+  it('деталка: ширина drawer и длительность появления (спека 2a)', () => {
+    expect(css).toMatch(/--k-drawer: calc\(800px \* var\(--k-density\)\)/)
+    expect(css).toContain('--k-t-drawer: 180ms')
+    expect(css).toMatch(/--k-lane: calc\(36px \* var\(--k-density\)\)/)
+  })
+
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {
       expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)

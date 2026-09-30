@@ -1,0 +1,100 @@
+/* Слой деталки: у правого края окна на всю высоту, клики мимо панелей проходят в реестр (спека 2a §3.1, эталон #pair grid.html:720) */
+.stack {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--k-z-drawer);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+/* Ширина — полная, с рамкой: под корнем провайдера content-box, эталон сверяется по внешней ширине */
+.drawer {
+  box-sizing: border-box;
+  position: relative;
+  flex: none;
+  width: var(--k-drawer);
+  height: 100%;
+  overflow: hidden auto;
+  background: var(--k-paper);
+  border-left: 1px solid var(--k-line);
+  box-shadow: var(--k-shadow);
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink);
+  pointer-events: auto;
+  animation: k-drawer-in var(--k-t-drawer) ease-out both;
+}
+
+@keyframes k-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--k-drawer-shift));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
+}
+
+/* Метка слота (эталон .slotlbl): прилипает к верху при прокрутке. B — warn-soft/ink2: paper на warn ниже 4.5 для мелкого текста */
+.badge {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  float: right;
+  padding: 0 var(--k-sp-1);
+  border-radius: 0 0 0 var(--k-r-s);
+  font: 600 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.06em;
+}
+
+.badge[data-tone='a'] {
+  background: var(--k-val);
+  color: var(--k-paper);
+}
+
+.badge[data-tone='b'] {
+  background: var(--k-warn-soft);
+  color: var(--k-ink2);
+}
+
+/* Шапка 44 = sp-2 + кнопка h-ctl-m 28 + sp-2 (эталон .dh: 10 + 26 + 8) */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-2) var(--k-dw-pad);
+}
+
+.title {
+  margin: 0;
+  font: 700 var(--k-fs-h2) / var(--k-lh-1) var(--k-sans);
+  white-space: nowrap;
+}
+
+.title:focus {
+  outline: none;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 2px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  min-width: 0;
+  color: var(--k-muted);
+  font-size: var(--k-fs-2);
+}
+
+.close {
+  margin-left: auto;
+  flex: none;
+}

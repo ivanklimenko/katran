@@ -69,6 +69,9 @@ export const sizes: Record<string, number> = {
   // промежуток между строкой колонок и сквозной строкой, эталон
   'grid-gap': 3,
   'hatch': 10, // шаг штриховки неактивной записи (эталон: 9 + 1)
+  // деталка (спека 2a §3.1, эталон .dw/.dh/.lane index.html:77–110): ширина drawer, сдвиг анимации появления,
+  // кегль заголовка шапки, горизонтальный отступ содержимого, высота лейна действий
+  'drawer': 800, 'drawer-shift': 30, 'fs-h2': 16, 'dw-pad': 14, 'lane': 36,
 }
 
 export const fonts = {
@@ -78,7 +81,7 @@ export const fonts = {
 
 export const z = { sticky: 10, drawer: 100, menu: 200, tooltip: 300 }
 
-export const durations = { fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400 }
+export const durations = { fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180 }
 
 export const densities = [1, 1.1, 1.25] as const
 export type Density = (typeof densities)[number]
