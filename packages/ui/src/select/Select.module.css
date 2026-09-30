@@ -111,3 +111,74 @@
   background: var(--k-val);
   box-shadow: inset 0 0 0 2px var(--k-paper);
 }
+
+.multiField {
+  gap: var(--k-sp-1);
+  padding-right: var(--k-sp-1);
+  overflow: hidden;
+}
+
+.multiBtn {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  min-width: var(--k-sp-6);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.multiBtn:focus-visible {
+  outline: 0;
+}
+
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  max-width: 50%;
+  height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
+  padding-left: var(--k-sp-1);
+  border-radius: var(--k-r-s);
+  background: var(--k-val-soft);
+  color: var(--k-ink);
+  font-size: var(--k-fs-2);
+}
+
+.chipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipX {
+  flex: none;
+  color: var(--k-muted);
+}
+
+.more {
+  flex: none;
+  font-size: var(--k-fs-2);
+  color: var(--k-ink2);
+}
+
+.multiPop {
+  display: grid;
+  gap: var(--k-sp-1);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-1) var(--k-sp-1) 0;
+  border-top: 1px solid var(--k-line);
+  font-size: var(--k-fs-2);
+  color: var(--k-ink2);
+}
