@@ -1,6 +1,6 @@
 import { allSettled, fork } from 'effector'
 import { obj, str } from './guards'
-import { ApiError, toApiError } from './problem'
+import { ApiError, contractError, toApiError } from './problem'
 import { createGridPorts } from './ports'
 import { requestFx, type HttpRequest } from './request'
 
@@ -26,5 +26,29 @@ describe('createGridPorts', () => {
     const r = await allSettled(ports.searchFx, { scope, params: { filter: [], sort: [], page: 0, size: 20 } })
     expect(r.status).toBe('fail')
     expect((r.value as ApiError).status).toBe(400)
+  })
+  const withDetail = createGridPorts({
+    gridId: 'docs',
+    parseRow: (raw, path) => ({ id: str(obj(raw, path), 'id', path) }),
+    parseDetail: (raw, path) => ({ id: str(obj(raw, path), 'id', path), note: str(obj(raw, path), 'note', path) }),
+  })
+  it('detailFx: GET /grids/docs/documents/{id}, id кодируется; ответ — парсером детали', async () => {
+    const seen: HttpRequest[] = []
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { seen.push(r); return { id: 'a/1', note: 'ок' } }]] })
+    const r = await allSettled(withDetail.detailFx, { scope, params: 'a/1' })
+    expect(r).toEqual({ status: 'done', value: { id: 'a/1', note: 'ок' } })
+    expect(seen).toEqual([{ method: 'GET', url: '/grids/docs/documents/a%2F1' }])
+  })
+  it('detailFx: ответ не объект или без поля — contractError; отказ транспорта — ApiError со статусом', async () => {
+    const notObj = await allSettled(withDetail.detailFx, { scope: fork({ handlers: [[requestFx, async () => [1, 2]]] }), params: 'x' })
+    expect(notObj.status).toBe('fail')
+    expect((notObj.value as ApiError).message).toBe(contractError('ответ: ожидался объект').message)
+    const noField = await allSettled(withDetail.detailFx, { scope: fork({ handlers: [[requestFx, async () => ({ id: 'x' })]] }), params: 'x' })
+    expect((noField.value as ApiError).message).toContain('ответ.note: ожидалась строка')
+    const gone = await allSettled(withDetail.detailFx, { scope: fork({ handlers: [[requestFx, async () => { throw toApiError(404, { type: 't', title: 'Документ не найден' }) }]] }), params: 'x' })
+    expect((gone.value as ApiError).status).toBe(404)
+  })
+  it('без parseDetail порта детали нет', () => {
+    expect('detailFx' in ports).toBe(false)
   })
 })

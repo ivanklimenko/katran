@@ -12,6 +12,12 @@ export function arr(v: unknown, path: string): unknown[] {
   if (!Array.isArray(v)) throw contractError(`${path}: ожидался массив`)
   return v
 }
+export function strArr(v: unknown, path: string): string[] {
+  return arr(v, path).map((x, i) => {
+    if (typeof x !== 'string') throw contractError(`${path}[${i}]: ожидалась строка`)
+    return x
+  })
+}
 export function str(o: Obj, k: string, path: string): string {
   const v = o[k]
   if (typeof v !== 'string') throw contractError(`${path}.${k}: ожидалась строка`)
