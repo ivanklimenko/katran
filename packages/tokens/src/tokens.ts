@@ -158,6 +158,7 @@ export const durations = {
   'sk-show': 200,
   'sk-min': 400,
   'drawer': 180,
+  'open-delay': 220,
 } as const
 
 export const densities = [1, 1.1, 1.25] as const

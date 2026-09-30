@@ -88,7 +88,7 @@ export const fonts = {
 
 export const z = { sticky: 10, drawer: 100, menu: 200, tooltip: 300 }
 
-export const durations = { fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180 }
+export const durations = { fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180, 'open-delay': 220 }
 
 export const densities = [1, 1.1, 1.25] as const
 export type Density = (typeof densities)[number]

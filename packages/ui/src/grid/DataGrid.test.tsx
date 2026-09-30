@@ -85,16 +85,14 @@ describe('DataGrid', () => {
     expect(p.onSelectPage).toHaveBeenCalledWith({ ids: ['d1', 'd2'], on: true })
   })
 
-  it('открытие: кнопка, запись не кликабельна; второй клик — secondary', async () => {
+  it('открытие: кнопка, запись не кликабельна; клавиатурный клик — сразу, Shift — рядом (задержка — DataGrid.open.test)', async () => {
     const p = base({ onOpen: vi.fn() })
     renderK(<DataGrid {...p} />)
     await userEvent.click(screen.getAllByRole('row')[1]!)
     expect(p.onOpen).not.toHaveBeenCalled()
     const btn = screen.getByRole('button', { name: 'Открыть запись 1' })
-    fireEvent.click(btn, { detail: 1 })
+    fireEvent.click(btn)
     expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: false, state: null })
-    fireEvent.click(btn, { detail: 2 })
-    expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
     fireEvent.click(btn, { detail: 1, shiftKey: true })
     expect(p.onOpen).toHaveBeenLastCalledWith(docs[0], { secondary: true, state: null })
   })
@@ -107,7 +105,7 @@ describe('DataGrid', () => {
       r.id === 'a' ? { kind: 'locked', who: 'Иванова М. П.', since: '2026-09-23T09:13:00' } : r.id === 'b' ? { kind: 'inactive', why: 'Документ в архиве' } : null
     renderK(<DataGrid {...base({ rows, total: 3, selection: { mode: 'ids', ids: [] }, onSelect: () => {}, onSelectPage, onOpen, rowState, openHint: 'Открыть деталку' })} />)
     const lock = screen.getByRole('button', { name: 'Заблокирована: Иванова М. П., с 23.09.2026 09:13 · открыть только для просмотра' })
-    await userEvent.click(lock)
+    fireEvent.click(lock)
     expect(onOpen).toHaveBeenCalledWith(rows[0], { secondary: false, state: rowState(rows[0]!) })
     // причина неактивности — и в доступном имени (скринридер), и в тултипе
     const inactiveBox = screen.getByRole('checkbox', { name: 'Выбрать запись 2 — Документ в архиве' })

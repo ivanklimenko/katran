@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { sizes } from '@katran/tokens'
+import { useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { durations, sizes } from '@katran/tokens'
 import { IconButton } from '../button'
 import { formatDateTimeMinutes } from '../format'
 import { Checkbox } from '../input'
 import { Pagination } from '../pagination'
 import { EmptyState, ErrorState, ProgressBar, useLoadingGate } from '../state'
+import { useUnmountGuard } from '../value/useUnmountGuard'
 import { ColumnHeader } from './ColumnHeader'
 import { ColumnsMenu } from './ColumnsMenu'
 import { GridRecord, type CellProps, type SpanCell } from './GridRecord'
@@ -49,7 +50,11 @@ export type DataGridProps<Row> = {
   /** Пояснение под заголовком пустого состояния. */
   emptyText?: string | undefined
   emptyAction?: { label: string; onClick: () => void } | undefined
-  /** Второй клик по кнопке (e.detail ≥ 2) или Shift+клик — secondary: второй drawer рядом; state — RowState записи (спека 5a §6). */
+  /**
+   * Открытие записи (спека 2a §3.1, эталон grid.html:2165–2172): клик мышью — через 220 мс (токен open-delay), второй клик
+   * отменяет его и даёт одно открытие с secondary (второй drawer рядом); Shift+клик — secondary сразу; клавиатура
+   * (Enter на ячейке, Enter/Space на кнопке — клик с detail 0) — сразу. state — RowState записи (спека 5a §6).
+   */
   onOpen?: ((row: Row, opts: { secondary: boolean; state: RowState }) => void) | undefined
   skeletonRows?: number | undefined
   /** Слот над пагинацией в футере — полоса массовых действий экрана. */
@@ -58,11 +63,15 @@ export type DataGridProps<Row> = {
   rowState?: ((row: Row) => RowState) | undefined
   /** Подсказка кнопки открытия для обычной (не locked/inactive) записи. */
   openHint?: string | undefined
+  /** Открытые в деталке записи (спека 2a §3.1, эталон selA/selB grid.html:651–654): 'a' — основная, 'b' — сравнение. */
+  marked?: ((row: Row) => 'a' | 'b' | null) | undefined
 }
 
 const DEFAULT_WIDTH = 120
 // ширина служебной колонки — из токена grid-lead (тот же, что --k-grid-lead в CSS): JS считает по ней ширину таблицы
 const LEAD_WIDTH = sizes['grid-lead']
+// задержка одиночного клика по кнопке открытия: ждём, не будет ли второго (эталон grid.html:2172)
+const OPEN_DELAY = durations['open-delay']
 
 const Cols = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="12" height="10" rx="1" /><path d="M6 3v10M10 3v10" /></svg>
 const Open = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" /><path d="M6 8h4M8 6v4" /></svg>
@@ -94,6 +103,18 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
 
   const [colsOpen, setColsOpen] = useState(false)
   const colsBtn = useRef<HTMLButtonElement>(null)
+  const openTimer = useRef<number | undefined>(undefined)
+  useUnmountGuard(openTimer)
+  const openClick = (row: Row, st: RowState) => (e: ReactMouseEvent<HTMLButtonElement>) => {
+    const onOpen = p.onOpen
+    if (!onOpen) return
+    // любой клик по кнопке открытия отменяет ожидающий одиночный — выигрывает последний жест
+    window.clearTimeout(openTimer.current)
+    if (e.detail === 0 || e.shiftKey) { onOpen(row, { secondary: e.shiftKey, state: st }); return }
+    if (e.detail === 2) { onOpen(row, { secondary: true, state: st }); return }
+    if (e.detail > 2) return
+    openTimer.current = window.setTimeout(() => onOpen(row, { secondary: false, state: st }), OPEN_DELAY)
+  }
 
   const stateOf = (row: Row): RowState => p.rowState?.(row) ?? null
   // Неактивные записи не выделяются: ни чекбоксом строки, ни чекбоксом «на странице».
@@ -161,10 +182,13 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             const localIndex = 2 + i * perRecord
             const rowIndex = 2 + (ord - 1) * perRecord   // абсолютный: 2 + ((page − 1) × pageSize + i) × perRecord
             const st = stateOf(row)
+            const mark = p.marked?.(row) ?? null
             // неактивная не показывается выбранной даже в режиме «все» или при своём id в списке (спека 5a §6)
             const sel = selection ? isSelected(selection, id) && st?.kind !== 'inactive' : undefined
-            const openLabel = st?.kind === 'locked' ? `Заблокирована: ${st.who}, с ${formatDateTimeMinutes(st.since)} · открыть только для просмотра` : `Открыть запись ${ord}`
-            const openTip = st?.kind === 'locked' ? openLabel : st?.kind === 'inactive' ? `${st.why} · открыть` : p.openHint
+            const markNote = mark === 'a' ? ' · открыта в деталке' : mark === 'b' ? ' · открыта для сравнения' : ''
+            const lockText = st?.kind === 'locked' ? `Заблокирована: ${st.who}, с ${formatDateTimeMinutes(st.since)} · открыть только для просмотра` : null
+            const openLabel = (lockText ?? `Открыть запись ${ord}`) + markNote
+            const openTip = lockText ?? (st?.kind === 'inactive' ? `${st.why} · открыть` : p.openHint)
             const lead = (
               <>
                 {selection && p.onSelect && (
@@ -174,7 +198,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                 )}
                 {p.onOpen && (
                   <IconButton tabIndex={-1} size="s" className={st?.kind === 'locked' ? s.openLocked : undefined} label={openLabel} data-k-tip={openTip}
-                    onClick={(e) => p.onOpen!(row, { secondary: e.detail >= 2 || e.shiftKey, state: st })}>
+                    data-k-open={id} onClick={openClick(row, st)}>
                     {st?.kind === 'locked' ? <Lock /> : <Open />}
                   </IconButton>
                 )}
@@ -183,7 +207,7 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
             )
             return (
               <GridRecord key={id} row={row} rowKey={id} visible={visible} spanRows={spanRows} lead={lead}
-                selected={sel} rowIndex={rowIndex} cellProps={cp(localIndex)} state={st} />
+                selected={sel} rowIndex={rowIndex} cellProps={cp(localIndex)} state={st} mark={mark} />
             )
           })}
 
