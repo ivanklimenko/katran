@@ -33,16 +33,33 @@ function mark(text: string, q: string): ReactNode {
 export function Listbox({ id, label, options, active, isSelected, multi, onPick, onActive, emptyText = 'Ничего не найдено', highlight }: ListboxProps) {
   // Прокрутка к активному — только когда его сменила клавиатура: наведение мышью список не дёргает.
   const byMouse = useRef(false)
-  // Выбор мышью — mouseup на том же пункте, где был mousedown (семантика клика). onClick у li потребовал бы
-  // пустого обработчика клавиш (jsx-a11y/click-events-have-key-events), а клавиатура у списка — у поля.
-  const pressed = useRef(-1)
+  // Выбор — по click, делегированным нативным слушателем на ul: click приходит и без событий мыши
+  // (режим обзора экранного диктора, голосовое управление, el.click()). JSX onClick у li потребовал бы пустого
+  // обработчика клавиш (jsx-a11y/click-events-have-key-events), а клавиатура у списка — у поля.
+  // Нажали на одном пункте, отпустили на другом — click приходит на ul, пункта нет, выбора нет.
+  const ul = useRef<HTMLUListElement>(null)
+  const latest = useRef({ options, onPick })
+  useEffect(() => { latest.current = { options, onPick } })
+  useEffect(() => {
+    const el = ul.current
+    if (!el) return
+    const onClick = (e: MouseEvent) => {
+      const li = (e.target as Element).closest('[role="option"]')
+      if (!li || !el.contains(li) || li.getAttribute('aria-disabled') === 'true') return
+      const { options: opts, onPick: pick } = latest.current
+      const i = opts.findIndex((_, k) => optionId(id, k) === li.id)
+      if (i >= 0) pick(opts[i]!, i)
+    }
+    el.addEventListener('click', onClick)
+    return () => el.removeEventListener('click', onClick)
+  }, [id])
   useEffect(() => {
     if (byMouse.current) { byMouse.current = false; return }
     const el = document.getElementById(optionId(id, active))
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' })
   }, [id, active])
   return (
-    <ul id={id} role="listbox" aria-label={label} aria-multiselectable={multi || undefined} className={s.list}>
+    <ul ref={ul} id={id} role="listbox" aria-label={label} aria-multiselectable={multi || undefined} className={s.list}>
       {options.length === 0 && <li role="option" aria-disabled="true" aria-selected={false} className={s.empty}>{emptyText}</li>}
       {options.map((o, i) => {
         const sel = isSelected(o)
@@ -55,8 +72,7 @@ export function Listbox({ id, label, options, active, isSelected, multi, onPick,
             tabIndex={-1}
             data-active={i === active || undefined}
             className={s.opt}
-            onMouseDown={(e) => { e.preventDefault(); pressed.current = e.button === 0 ? i : -1 }}
-            onMouseUp={() => { const hit = pressed.current === i; pressed.current = -1; if (hit) onPick(o, i) }}
+            onMouseDown={(e) => e.preventDefault()}
             onMouseMove={() => { if (i !== active) { byMouse.current = true; onActive(i) } }}
           >
             {multi && <span className={s.box} data-on={sel || undefined} aria-hidden="true" />}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -206,4 +206,16 @@ describe('MultiSelect', () => {
     expect(container).toContainElement(screen.getByRole('dialog', { name: 'Статус' }))
     expect(await axe(container)).toHaveNoViolations()
   })
+  it('синтетический click без событий мыши переключает пункт (вспомогательные технологии)', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.click(screen.getByRole('button', { name: 'Статус: Не выбрано' }))
+    const dialog = screen.getByRole('dialog', { name: 'Статус' })
+    fireEvent.click(within(dialog).getByRole('option', { name: 'Отказ' }))
+    expect(onValue).toHaveBeenLastCalledWith(['REJECTED'])
+    fireEvent.click(within(dialog).getByRole('option', { name: 'Отказ' }))
+    expect(onValue).toHaveBeenLastCalledWith([])
+  })
 })
+

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -139,7 +139,7 @@ describe('SearchSelect', () => {
     expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveFocus()
     expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveTextContent('Не выбрано')
   })
-  it('клик по рамке поля (шеврон, отступ) фокусирует поле и открывает список', async () => {
+  it('клик по рамке поля (шеврон, отступ) фокусирует поле и открывает список, повторный — закрывает', async () => {
     const u = userEvent.setup()
     renderK(<Host />)
     const box = screen.getByRole('combobox', { name: 'Статус' })
@@ -147,6 +147,16 @@ describe('SearchSelect', () => {
     await u.click(frame.querySelector('[aria-hidden="true"]')!)
     expect(box).toHaveFocus()
     expect(screen.getByRole('listbox', { name: 'Статус' })).toBeInTheDocument()
+    await u.click(frame.querySelector('[aria-hidden="true"]')!)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(box).toHaveFocus()
+  })
+  it('клик по «Очистить» список не открывает', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial="S3" />)
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveAttribute('aria-expanded', 'false')
   })
   it('typeahead: к первому пункту на букву, повтор — к следующему по кругу; модификаторы не срабатывают', async () => {
     const u = userEvent.setup()
@@ -241,5 +251,22 @@ describe('SearchSelect', () => {
       else proto.scrollIntoView = had
     }
   })
+  it('синтетический click без событий мыши выбирает (режим обзора экранного диктора, голосовое управление)', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.click(screen.getByRole('combobox', { name: 'Статус' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Отказ' }))
+    expect(onValue).toHaveBeenLastCalledWith('S7')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+  it('пункт «Ничего не найдено» не выбирается', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.type(screen.getByRole('combobox', { name: 'Статус' }), 'яяя')
+    fireEvent.click(screen.getByRole('option', { name: 'Ничего не найдено' }))
+    expect(onValue).not.toHaveBeenCalled()
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
 })
-
