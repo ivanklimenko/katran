@@ -25,10 +25,10 @@ describe('«Общие данные» валюты (PROFILES стенда)', () 
     expect(hero()).toHaveTextContent(/1\s500\.50USD/)
   })
 
-  it('сообщения: S → R входящего и исходящего, 20 исх — «нет значения», счета группами', () => {
+  it('сообщения: S → R входящего и исходящего, 20 исх — «не заполнено», счета группами', () => {
     renderMain()
     expect(screen.getByText('Входящее SWIFT').parentElement).toHaveTextContent('NRDIRUMMXXX→VKRBRU8KXXX')
-    expect(screen.getByText('Исходящее SWIFT').parentElement).toHaveTextContent('нет значения')
+    expect(screen.getByText('Исходящее SWIFT').parentElement).toHaveTextContent('не заполнено')
     expect(screen.getByText('30110 840 7 0000 0001842')).toBeInTheDocument()
   })
 

@@ -117,6 +117,7 @@ describe('контракт детали fx-docs (спека 2a §6): порт �
     const rows = await firstRows(sc)
     for (const t of FX_TYPES) {
       const row = rows.find((x) => x.type === t)
+      expect(row, t).toBeDefined()
       if (!row) continue
       const r = await allSettled(fxDocPorts.detailFx, { scope: sc, params: row.id })
       expect(r.status, t).toBe('done')

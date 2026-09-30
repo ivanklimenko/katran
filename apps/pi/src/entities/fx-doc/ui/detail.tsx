@@ -14,7 +14,7 @@ const groupAccount = (a: string) => (a.length === 20 ? `${a.slice(0, 5)} ${a.sli
 function Mono({ v }: { v: string | null }) {
   return v
     ? <span className={[s.mono, s.cut].join(' ')}>{v}</span>
-    : <span className={s.none}><span aria-hidden="true">—</span><span className={s.sr}>нет значения</span></span>
+    : <span className={s.none}><span aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></span>
 }
 function Pair({ from, to }: { from: string | null; to: string | null }) {
   if (!from || !to) return <Mono v={null} />
