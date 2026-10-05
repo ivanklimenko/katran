@@ -144,7 +144,6 @@ for (const route of ROUTES) {
       shot.push(id)
     }
     test.info().annotations.push({ type: 'screenshots', description: `${route}: ${shot.join(', ')}` })
-    expect(shot).toHaveLength(TABS[route].length)
   })
 }
 

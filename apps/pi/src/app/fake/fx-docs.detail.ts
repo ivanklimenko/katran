@@ -1,6 +1,6 @@
 import type { FxDoc } from '../../entities/fx-doc'
 import { FX_TRAIL_TABS, fxDocTrail, fxTxId } from './fx-docs.trail'
-import { tabsOffOf } from './trail.data'
+import { by35, swiftAmount, tabsOffOf } from './trail.data'
 
 // Словари — со стенда pi-constructor (index.html:742–757, grid.html:1747–1783), обезличен; данные вымышленные.
 const ROUTE_BY_TYPE: Record<FxDoc['routeType'], { desc: string; text: string }> = {
@@ -18,9 +18,6 @@ const T72 = ['/INS/ NRDIRUMMXXX', '/ACC/ PLEASE CREDIT WITHOUT DELAY', '/REC/ RE
 const T79 = ['RE YOUR MT103 FX2609220000417 DD 22.09.2026', 'AMOUNT USD 1250000,00', 'PLS BE ADVISED THAT BENEFICIARY ACCOUNT', '40817840100050017762 IS CLOSED.', 'KINDLY AUTHORIZE US TO RETURN THE FUNDS', 'LESS OUR CHARGES USD 35,00', 'OR PROVIDE AMENDED BENEFICIARY DETAILS.', 'BEST REGARDS', 'PAYMENTS DEPT, VOSTOCHNY KREDIT BANK']
 const CHARGES = ['OUR', 'SHA', 'BEN']
 const EMPTY = { lines: [] as string[] }
-/** Строки по 35 знаков по границе слова — формат поля 70 (эталон grid.html:1783). */
-const by35 = (s: string) => (s.match(/.{1,35}(?=\s|$)|.{1,35}/g) ?? []).map((x) => x.trim()).filter(Boolean)
-const swiftAmount = (n: number) => n.toFixed(2).replace('.', ',')
 
 /**
  * Деталь валютного документа (спека 2a §4.4): строка реестра как есть (номер, сумма, статус совпадают с реестром)

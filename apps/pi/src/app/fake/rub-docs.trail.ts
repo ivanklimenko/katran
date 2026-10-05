@@ -1,5 +1,5 @@
 import { RUB_OPERATION, type RubDoc } from '../../entities/rub-doc'
-import { RBANKS } from './rub-docs.data'
+import { corrOf } from './rub-docs.data'
 import { complianceOf, ddmmyyyy, decimal, hexOf, lt, pad, stamp, stampS, statusEvents, swiftAmount, uuidOf, WHO, type Step } from './trail.data'
 
 /** Нелокальные вкладки рублёвого реестра — набор GET …/tabs/{tab} (RUB_TABS без main, спека 2b §3.1). */
@@ -16,7 +16,6 @@ const OUR_SWBIC = 'XEANRURA'
 const RECEIVERS = ['KDHCRU2F', 'REFNRUAM', 'TEMGRU4U']
 
 const finished = (row: RubDoc) => row.status === 'DONE' || row.status === 'EXPORTED'
-const corrOf = (bic: string) => RBANKS.find((x) => x[1] === bic)?.[2] ?? ''
 const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const clientAcc = (row: RubDoc) => (row.direction === 'IN' ? row.toAcc : row.fromAcc)
 

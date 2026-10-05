@@ -1,7 +1,7 @@
 import { RUB_OPERATION, TYPE_NAME, type RubDoc } from '../../entities/rub-doc'
-import { RBANKS } from './rub-docs.data'
+import { corrOf } from './rub-docs.data'
 import { RUB_TRAIL_TABS, rubCorrAcc, rubDocTrail, rubScenario } from './rub-docs.trail'
-import { tabsOffOf } from './trail.data'
+import { pad, tabsOffOf } from './trail.data'
 
 // Словари — со стенда pi-constructor (первый и второй рублёвые документы, index.html:895–921), обезличен; данные вымышленные.
 const ADDR = ['740828, Г. ЛЫСУЛА, УЛ. НИФЕМЯ, Д. 133, ПОМ. 520', '057617, Г. СОЛОКЫ, УЛ. МЕСОБО, Д. 83, КВ. 143']
@@ -29,8 +29,6 @@ const ED107_SHORT: Record<string, string> = {
 // даты реквизитов документа — текстом, как в платёжном документе (эталон collect)
 const COLLECT = { c48: '23.09.2026', cLimit: '93997231', c70: 'Вабудя ферави тефе сы саси', c38: '85', c39: '54', c40: '350658401', c41: '06.09.2026' }
 const NO_COLLECT = { c48: '', cLimit: '', c70: '', c38: '', c39: '', c40: '', c41: '' }
-const pad = (n: number, w: number) => String(n).padStart(w, '0')
-const corrOf = (bic: string) => RBANKS.find((b) => b[1] === bic)?.[2] ?? ''
 
 /**
  * Деталь рублёвого документа (спека 2a §4.4): строка реестра как есть (номер, сумма, статус — из реестра),
