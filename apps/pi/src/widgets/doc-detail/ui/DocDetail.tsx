@@ -1,17 +1,17 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUnit } from 'effector-react'
 import {
   ConfigForm, Drawer, DrawerStack, ErrorState, IconButton, LinkValue, Menu, Skeleton, StatusDot, TabPanel, Tabs, Tag,
   useKatran, useLoadingGate, type DrawerStackItem,
 } from '@katran/ui'
-import type { DetailAction, DetailDomain, DetailSummary } from '../../../shared/lib/detail'
-import type { Detail, DetailSlot } from '../lib/createDetail'
+import type { DetailAction, DetailDomain, DetailSummary, RemoteTabView, TabContext } from '../../../shared/lib/detail'
+import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
 import s from './DocDetail.module.css'
 
 export type DocDetailProps<D, Row> = {
   detail: Detail<D>
-  /** Всё доменное — схема, поля, вкладки, действия, блоки (спека 2a §4.3): виджет не импортирует сущности. */
+  /** Всё доменное — схема, поля, вкладки и их виды, действия, блоки (спека 2a §4.3, 2b §3.3): виджет не импортирует сущности. */
   domain: DetailDomain<D, Row>
   /** Строка реестра по id — шапка и лейн до загрузки и при ошибке (номер, статус). */
   rowOf?: ((id: string) => Row | null) | undefined
@@ -77,15 +77,60 @@ function FormSkeleton() {
   )
 }
 
-type BodyProps<D, Row> = { view: DetailSlot<D>; domain: DetailDomain<D, Row>; skeleton: boolean; tabLabel: string; first: boolean; onRetry: () => void }
+/** Скелетон нелокальной вкладки (эталон skeleton.js): полоса шапки таблицы и rows строк (у вида — skeletonRows, по умолчанию 4). */
+function TabSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className={s.skeleton} data-part="tab-skeleton" data-rows={rows} aria-busy="true">
+      <span className={s.sr}>Загрузка вкладки</span>
+      <Skeleton.Block height={22} />
+      {Array.from({ length: rows }, (_, i) => <Skeleton.Block key={i} height={24} />)}
+    </div>
+  )
+}
 
-function Body<D, Row>({ view, domain, skeleton, tabLabel, first, onRetry }: BodyProps<D, Row>) {
+/** Вкладка без вида в домене: для fx/rub недостижимо (полноту tabViews проверяет страница), виджет — общий. */
+function Stub({ label }: { label: string }) {
+  return <div className={s.stub}>Вкладка «{label}» не подключена</div>
+}
+
+/**
+ * Нелокальная вкладка (спека 2b §3.3): свои скелетон (порог и минимум — ворота кита, как у грида: не короче 400 мс),
+ * ошибка с текстом ApiError и «Повторить», вид домена на готовых данных. Детали не касается.
+ */
+function RemoteBody({ tab, view, ctx, onRetry }: { tab: TabSlot; view: RemoteTabView; ctx: TabContext; onRetry: () => void }) {
+  const skeleton = useLoadingGate(tab.state === 'loading')
+  if (skeleton) return <TabSkeleton rows={view.skeletonRows ?? 4} />
+  if (tab.state === 'error') return <ErrorState title="Не удалось загрузить вкладку" text={tab.error ?? undefined} retry={onRetry} />
+  if (tab.state === 'loading') return null
+  return <>{view.render(tab.data, ctx)}</>
+}
+
+type BodyProps<D, Row> = {
+  view: DetailSlot<D>
+  domain: DetailDomain<D, Row>
+  tabId: string
+  tabLabel: string
+  skeleton: boolean
+  ctx: TabContext
+  mainExpanded: string[] | undefined
+  onMainExpanded: (keys: string[]) => void
+  onRetry: () => void
+  onRetryTab: () => void
+}
+
+/** Содержимое панели. Монтируется только у активной вкладки (TabPanel), поэтому view.tabView — её состояние. */
+function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpanded, onMainExpanded, onRetry, onRetryTab }: BodyProps<D, Row>) {
+  const first = tabId === domain.tabs[0]?.id
+  const tv = first ? undefined : domain.tabViews?.[tabId]
+  // нелокальная вкладка не зависит от загрузки детали: свой запрос, свои скелетон и ошибка
+  if (tv?.kind === 'remote') return view.tabView ? <RemoteBody tab={view.tabView} view={tv} ctx={ctx} onRetry={onRetryTab} /> : <Stub label={tabLabel} />
   // ворота скелетона держат его минимум sk-min (400 мс, как у грида) — данные и ошибка до этого не показываются
   if (skeleton) return <FormSkeleton />
   if (view.state === 'error') return <ErrorState title="Не удалось загрузить документ" text={view.error ?? undefined} retry={onRetry} />
   const d = view.data
   if (d === null) return null
-  if (!first) return <div className={s.stub}>Вкладка «{tabLabel}» — будет в срезе 2b</div>
+  if (tv?.kind === 'local') return <>{tv.render(d, ctx)}</>
+  if (!first) return <Stub label={tabLabel} />
   const renderSection = domain.renderSection
   return (
     <ConfigForm
@@ -97,6 +142,9 @@ function Body<D, Row>({ view, domain, skeleton, tabLabel, first, onRetry }: Body
       renderHero={(id) => domain.renderHero(d, id)}
       renderBlock={(id) => domain.renderBlock(d, id)}
       renderSection={renderSection ? (id) => renderSection(d, id) : undefined}
+      // M-g: раскрытое — в модели по `${id}:main`; до первого изменения undefined — форма берёт свои умолчания
+      expanded={mainExpanded}
+      onExpandedChange={onMainExpanded}
     />
   )
 }
@@ -104,7 +152,9 @@ function Body<D, Row>({ view, domain, skeleton, tabLabel, first, onRetry }: Body
 type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
 function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey, quiet }: PaneProps<D, Row>) {
-  const [close, setTab, retry] = useUnit([detail.close, detail.setTab, detail.retry])
+  const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
+    detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
+  ])
   const { announce } = useKatran()
   const skeleton = useLoadingGate(view.state === 'loading')
   const row = view.data === null && rowOf ? rowOf(view.id) : null
@@ -113,7 +163,22 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
   const off = summary?.tabsOff ?? []
   const tabsId = `doc-detail-${view.slot}`
   const onAction: OnAction = (a, form) => announce(form ? `${a.label}: ${form} · ${label}` : `${a.label} · ${label}`)
-  const tabLabel = domain.tabs.find((t) => t.id === view.tab)?.label ?? view.tab
+  const firstTab = domain.tabs[0]?.id ?? 'main'
+  // M-f: вкладка, выбранная до загрузки (tabsOff строки реестра пуст), оказалась без данных — слот возвращается на первую.
+  // Здесь, а не в модели: tabsOff — знание домена (summary), модель деталки домена не получает (решение Task 11, п. 5)
+  const offActive = view.data !== null && off.includes(view.tab)
+  useEffect(() => {
+    if (offActive) setTab({ slot: view.slot, tab: firstTab })
+  }, [offActive, view.slot, firstTab, setTab])
+  const keyOf = (tab: string) => `${view.id}:${tab}`
+  const ctxOf = (tab: string): TabContext => ({
+    docId: view.id,
+    // связанный документ — в B; уже открытый в любом слоте повторно не открывается, фокус в его drawer (правило 2a)
+    openDocument: (id) => open({ id, secondary: true }),
+    announce,
+    expanded: expanded[keyOf(tab)] ?? null,
+    setExpanded: (keys) => setExpanded({ id: view.id, tab, keys }),
+  })
   return (
     <Drawer
       label={label}
@@ -140,14 +205,25 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
       </div>
       {domain.tabs.map((t) => (
         <TabPanel key={t.id} tabsId={tabsId} tabId={t.id} active={t.id === view.tab} className={s.body}>
-          <Body view={view} domain={domain} skeleton={skeleton} tabLabel={tabLabel} first={t.id === domain.tabs[0]?.id} onRetry={() => retry(view.slot)} />
+          <Body
+            view={view}
+            domain={domain}
+            tabId={t.id}
+            tabLabel={t.label}
+            skeleton={skeleton}
+            ctx={ctxOf(t.id)}
+            mainExpanded={expanded[keyOf(t.id)]}
+            onMainExpanded={(keys) => setExpanded({ id: view.id, tab: t.id, keys })}
+            onRetry={() => retry(view.slot)}
+            onRetryTab={() => retryTab(view.slot)}
+          />
         </TabPanel>
       ))}
     </Drawer>
   )
 }
 
-/** Деталка документа (спека 2a §4.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением, «Общие данные» по схеме. */
+/** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
 export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []

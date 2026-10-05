@@ -1,5 +1,5 @@
 import { allSettled, createEffect, fork } from 'effector'
-import { ApiError } from '../../../shared/api'
+import { ApiError, type TabQuery } from '../../../shared/api'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { createDetail } from './createDetail'
 
@@ -220,5 +220,228 @@ describe('createDetail: гонки запросов (I3)', () => {
     calls[1]!.ok()
     await tick()
     expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 2 } })
+  })
+})
+
+/** Деталь отвечает сразу (или висит), вкладки — ручным ответом на каждый вызов: гонки вкладок в явном порядке (спека 2b §3.3). */
+function setupTabs(opts: { localTabs?: string[]; holdDetail?: boolean } = {}) {
+  const tabCalls: { id: string; tab: string; ok: (data?: unknown) => void; fail: (message?: string) => void }[] = []
+  const detailFx = createEffect<string, Doc, ApiError>((id) => (opts.holdDetail ? new Promise<Doc>(() => {}) : Promise.resolve({ id, n: 0 })))
+  const tabFx = createEffect<TabQuery, unknown, ApiError>((q) => new Promise<unknown>((res, rej) => {
+    tabCalls.push({
+      id: q.id,
+      tab: q.tab,
+      ok: (data: unknown = { rows: [] }) => res(data),
+      fail: (message = 'Сбой сервера: вкладка') => rej(new ApiError(500, null, message)),
+    })
+  }))
+  const lifecycle = createPageLifecycle()
+  const d = createDetail({ detailFx, tabFx, lifecycle, ...(opts.localTabs ? { localTabs: opts.localTabs } : {}) })
+  const scope = fork()
+  // allSettled ждёт все эффекты скоупа — с висящими запросами не дожидаемся: события применяются синхронно
+  const open = (id: string, secondary = false) => { void allSettled(d.open, { scope, params: { id, secondary } }) }
+  const tab = (slot: 'a' | 'b', t: string) => { void allSettled(d.setTab, { scope, params: { slot, tab: t } }) }
+  const a = () => scope.getState(d.$slots).a
+  const calls = () => tabCalls.map((c) => `${c.id}:${c.tab}`)
+  const tick = () => new Promise<void>((r) => setTimeout(r, 0))
+  return { d, lifecycle, scope, tabCalls, calls, open, tab, a, tick }
+}
+
+describe('createDetail: ленивые вкладки (спека 2b §3.3)', () => {
+  it('локальная вкладка не запрашивается; нелокальная — при активации: loading → ready', async () => {
+    const { scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    await tick()
+    expect(a()).toMatchObject({ tab: 'main', state: 'ready', tabView: null })
+    expect(calls()).toEqual([])
+    tab('a', 'statuses')
+    expect(calls()).toEqual(['d1:statuses'])
+    expect(a()).toMatchObject({ tab: 'statuses', state: 'ready', tabView: { state: 'loading', data: null, error: null } })
+    tabCalls[0]!.ok({ rows: ['s1'] })
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'ready', data: { rows: ['s1'] }, error: null })
+  })
+
+  it('localTabs: перечисленные вкладки — из детали, без запроса; по умолчанию локальна только main', async () => {
+    const own = setupTabs({ localTabs: ['main', 'extra'] })
+    await allSettled(own.lifecycle.pageOpened, { scope: own.scope })
+    own.open('d1')
+    own.tab('a', 'extra')
+    expect(own.calls()).toEqual([])
+    expect(own.a()).toMatchObject({ tab: 'extra', tabView: null })
+    const def = setupTabs()
+    await allSettled(def.lifecycle.pageOpened, { scope: def.scope })
+    def.open('d1')
+    def.tab('a', 'extra')
+    expect(def.calls()).toEqual(['d1:extra'])
+  })
+
+  it('без tabFx вкладки не грузятся: tabView — null', async () => {
+    const { d, scope, lifecycle, open } = setup()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('d1')
+    await allSettled(d.setTab, { scope, params: { slot: 'a', tab: 'statuses' } })
+    expect(scope.getState(d.$slots).a).toMatchObject({ tab: 'statuses', state: 'ready', tabView: null })
+  })
+
+  it('кэш id:tab — возврат на вкладку, B, сдвиг B в A и повторное открытие не перезапрашивают', async () => {
+    const { d, scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    tabCalls[0]!.ok()
+    tab('a', 'audit')
+    tabCalls[1]!.ok()
+    await tick()
+    tab('a', 'statuses')
+    expect(a()?.tabView?.state).toBe('ready')
+    open('d2', true)
+    tab('b', 'statuses')
+    tabCalls[2]!.ok()
+    await tick()
+    expect(calls()).toEqual(['d1:statuses', 'd1:audit', 'd2:statuses'])
+    // закрытие A сдвигает B (d2 на «Статусах») в A — из кэша
+    void allSettled(d.close, { scope, params: 'a' })
+    expect(a()).toMatchObject({ id: 'd2', tab: 'statuses', tabView: { state: 'ready' } })
+    // d1 снова открыт — на «Общих»; его «Аудит» — из кэша
+    open('d1')
+    tab('a', 'audit')
+    expect(a()).toMatchObject({ id: 'd1', tab: 'audit', tabView: { state: 'ready' } })
+    expect(calls()).toHaveLength(3)
+  })
+
+  it('гонка: быстрое переключение — слот показывает активную вкладку; ответ другой вкладки ложится в её кэш', async () => {
+    const { scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    tab('a', 'audit')
+    tab('a', 'statuses')
+    // «Статусы» уже грузятся — второй запрос поверх висящего не уходит
+    expect(calls()).toEqual(['d1:statuses', 'd1:audit'])
+    tabCalls[1]!.ok({ rows: ['audit'] })
+    await tick()
+    expect(a()).toMatchObject({ tab: 'statuses', tabView: { state: 'loading', data: null } })
+    tabCalls[0]!.ok({ rows: ['statuses'] })
+    await tick()
+    expect(a()).toMatchObject({ tab: 'statuses', tabView: { state: 'ready', data: { rows: ['statuses'] } } })
+    tab('a', 'audit')
+    expect(a()).toMatchObject({ tab: 'audit', tabView: { state: 'ready', data: { rows: ['audit'] } } })
+    expect(calls()).toHaveLength(2)
+  })
+
+  it('счётчик визитов: отказ, висевший при уходе с экрана, новый визит не трогает; его finally не снимает новую загрузку', async () => {
+    const { d, scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    void allSettled(lifecycle.pageClosed, { scope })
+    void allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    expect(calls()).toEqual(['d1:statuses', 'd1:statuses'])
+    tabCalls[0]!.fail()
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'loading', data: null, error: null })
+    void allSettled(d.retryTab, { scope, params: 'a' })
+    expect(calls()).toHaveLength(2)
+    tabCalls[1]!.ok({ rows: ['new'] })
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'ready', data: { rows: ['new'] }, error: null })
+  })
+
+  it('счётчик визитов: успешный ответ прошлого визита в кэш нового не кладётся', async () => {
+    const { scope, lifecycle, tabCalls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    void allSettled(lifecycle.pageClosed, { scope })
+    void allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    tabCalls[0]!.ok({ rows: ['old'] })
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'loading', data: null, error: null })
+    tabCalls[1]!.ok({ rows: ['new'] })
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'ready', data: { rows: ['new'] }, error: null })
+  })
+
+  it('ошибка вкладки — своё состояние с текстом, деталь не тронута; retryTab — новый запрос', async () => {
+    const { d, scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    await tick()
+    tab('a', 'audit')
+    tabCalls[0]!.fail('Сбой сервера: Регулятор ?fail=tab:audit')
+    await tick()
+    expect(a()).toMatchObject({
+      state: 'ready', data: { id: 'd1' }, error: null,
+      tabView: { state: 'error', data: null, error: 'Сбой сервера: Регулятор ?fail=tab:audit' },
+    })
+    void allSettled(d.retryTab, { scope, params: 'a' })
+    expect(a()?.tabView).toEqual({ state: 'loading', data: null, error: null })
+    tabCalls[1]!.ok({ rows: [] })
+    await tick()
+    expect(a()?.tabView).toEqual({ state: 'ready', data: { rows: [] }, error: null })
+    // готовая вкладка, пустой слот и локальная вкладка — без запроса
+    void allSettled(d.retryTab, { scope, params: 'a' })
+    void allSettled(d.retryTab, { scope, params: 'b' })
+    tab('a', 'main')
+    void allSettled(d.retryTab, { scope, params: 'a' })
+    expect(calls()).toEqual(['d1:audit', 'd1:audit'])
+  })
+
+  it('возврат на вкладку с ошибкой — новый запрос (как повторное открытие детали после ошибки)', async () => {
+    const { scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    tabCalls[0]!.fail()
+    await tick()
+    expect(a()?.tabView?.state).toBe('error')
+    tab('a', 'main')
+    tab('a', 'statuses')
+    expect(calls()).toEqual(['d1:statuses', 'd1:statuses'])
+    expect(a()?.tabView).toEqual({ state: 'loading', data: null, error: null })
+  })
+
+  it('вкладка не ждёт детали: деталь ещё грузится — вкладка запрошена и готова', async () => {
+    const { scope, lifecycle, tabCalls, calls, open, tab, a, tick } = setupTabs({ holdDetail: true })
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    expect(calls()).toEqual(['d1:statuses'])
+    tabCalls[0]!.ok({ rows: ['s'] })
+    await tick()
+    expect(a()).toMatchObject({ state: 'loading', data: null, tabView: { state: 'ready', data: { rows: ['s'] } } })
+  })
+
+  it('$expanded: ключ id:tab; переживает переключение вкладки и закрытие drawer; pageClosed очищает', async () => {
+    const { d, scope, lifecycle, open, tab } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    void allSettled(d.setExpanded, { scope, params: { id: 'd1', tab: 'linked', keys: ['L2'] } })
+    void allSettled(d.setExpanded, { scope, params: { id: 'd1', tab: 'main', keys: ['50'] } })
+    tab('a', 'statuses')
+    void allSettled(d.close, { scope, params: 'a' })
+    expect(scope.getState(d.$expanded)).toEqual({ 'd1:linked': ['L2'], 'd1:main': ['50'] })
+    void allSettled(lifecycle.pageClosed, { scope })
+    expect(scope.getState(d.$expanded)).toEqual({})
+  })
+
+  it('pageClosed чистит кэш вкладок: при возврате — новый запрос', async () => {
+    const { scope, lifecycle, tabCalls, calls, open, tab, tick } = setupTabs()
+    await allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    tabCalls[0]!.ok()
+    await tick()
+    void allSettled(lifecycle.pageClosed, { scope })
+    void allSettled(lifecycle.pageOpened, { scope })
+    open('d1')
+    tab('a', 'statuses')
+    expect(calls()).toEqual(['d1:statuses', 'd1:statuses'])
   })
 })
