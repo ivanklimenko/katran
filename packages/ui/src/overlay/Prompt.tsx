@@ -45,7 +45,7 @@ export function Prompt({
   }, [open, tone])
 
   if (!open) return null
-  const hasNote = note !== undefined && note !== null
+  const hasNote = note !== undefined && note !== null && note !== ''
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
@@ -58,9 +58,9 @@ export function Prompt({
       ;(document.activeElement === cancel.current ? ok : cancel).current?.focus()
     }
   }
-  // только по самой подложке: mousedown внутри коробки сюда приходит с другим target
+  // только левой кнопкой и по самой подложке: mousedown внутри коробки сюда приходит с другим target
   const onScrimDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onResult(false)
+    if (e.button === 0 && e.target === e.currentTarget) onResult(false)
   }
 
   return (
@@ -71,6 +71,8 @@ export function Prompt({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={hasNote ? noteId : undefined}
+        // клик по тексту коробки фокусирует её, а не body: Esc и ловушка Tab продолжают работать
+        tabIndex={-1}
         className={s.box}
       >
         <h4 id={titleId} className={s.title}>{title}</h4>

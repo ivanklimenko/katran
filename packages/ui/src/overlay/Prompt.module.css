@@ -29,6 +29,11 @@
   animation: k-prompt-up var(--k-t-fast) ease-out;
 }
 
+/* фокус на коробке — только от клика по её тексту (tabIndex -1, с клавиатуры недостижима): без обводки */
+.box:focus {
+  outline: none;
+}
+
 @keyframes k-prompt-up {
   from {
     opacity: 0;

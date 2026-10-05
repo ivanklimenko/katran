@@ -96,6 +96,56 @@ describe('Prompt (спека 2c §2.1, эталон prompt.js)', () => {
     expect(screen.getByRole('button', { name: 'Сохранить' })).toHaveFocus()
   })
 
+  it('клик по тексту коробки фокусирует коробку: Tab ведёт на кнопку, Esc — отказ без всплытия', async () => {
+    const onResult = vi.fn()
+    const parent = vi.fn()
+    renderK(<div role="presentation" onKeyDown={parent}><Prompt open okLabel="Утвердить" onResult={onResult} /></div>)
+    const box = screen.getByRole('alertdialog')
+    box.focus()
+    expect(box).toHaveFocus()
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Отмена' })).toHaveFocus()
+    box.focus()
+    parent.mockClear() // Tab всплывает — по контракту гасится только Esc
+    await userEvent.keyboard('{Escape}')
+    expect(onResult).toHaveBeenCalledWith(false)
+    expect(parent).not.toHaveBeenCalled()
+  })
+
+  it('mousedown по подложке не левой кнопкой — без отказа', () => {
+    const onResult = vi.fn()
+    const { container } = renderK(<Prompt open onResult={onResult} />)
+    const scrim = container.querySelector('[data-k-prompt]') as Element
+    fireEvent.mouseDown(scrim, { button: 2 })
+    fireEvent.mouseDown(scrim, { button: 1 })
+    expect(onResult).not.toHaveBeenCalled()
+  })
+
+  it('note="" — как без note: нет описания и пустого блока', () => {
+    renderK(<Prompt open note="" onResult={vi.fn()} />)
+    const d = screen.getByRole('alertdialog')
+    expect(d).not.toHaveAttribute('aria-describedby')
+    expect(d.querySelector('[id]:not(h4)')).toBeNull()
+  })
+
+  it('размонтирование открытого окна возвращает фокус туда, где он был до открытия', async () => {
+    function Host() {
+      const [shown, setShown] = useState(false)
+      return (
+        <>
+          <button onClick={() => setShown(true)}>Сохранить</button>
+          {shown && <Prompt open onResult={() => setShown(false)} />}
+        </>
+      )
+    }
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByRole('button', { name: 'Подтвердить' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Сохранить' })).toHaveFocus()
+  })
+
   it('PromptChange: было → стало; axe без нарушений', async () => {
     const { container } = renderK(<Prompt open note={<PromptChange was="23.09.2026" now="24.09.2026" />} onResult={vi.fn()} />)
     expect(screen.getByRole('alertdialog')).toHaveAccessibleDescription('23.09.2026 → 24.09.2026')
