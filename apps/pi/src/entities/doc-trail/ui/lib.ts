@@ -25,3 +25,18 @@ export function keysLabel(n: number): string {
 
 /** Язык исходника (эталон sourceHtml): начинается с «<» — XML, иначе SWIFT. */
 export const codeLanguage = (text: string): CodeLanguage => (/^\s*</.test(text) ? 'xml' : 'swift')
+
+/** Подпись длины исходника в заголовке аккордеона (эталон .au .ah .lbl): «N симв.». */
+export const charsLabel = (text: string): string => `${text.length} симв.`
+
+/** Пропсы управляемого Disclosure для ключа раскрытия. */
+export type AccordionProps = { open: boolean; onOpenChange: (open: boolean) => void }
+
+/**
+ * Аккордеоны вкладки с раскрытием в контексте деталки: пока пользователь не трогал (ctx.expanded === null) — умолчание вида;
+ * открыть — ключ в конец, закрыть — убрать (toggleKey). Общее для MPU, Аудита и Исходного текста.
+ */
+export function accordionOf(ctx: TabContext, defaults: string[]): (key: string) => AccordionProps {
+  const keys = ctx.expanded ?? defaults
+  return (key) => ({ open: keys.includes(key), onOpenChange: (open) => ctx.setExpanded(toggleKey(keys, key, open)) })
+}

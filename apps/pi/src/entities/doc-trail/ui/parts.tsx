@@ -27,3 +27,8 @@ export function LinkButton({ children, onClick, label, mono }: LinkButtonProps) 
 export function TrailEmpty({ text }: { text: string }) {
   return <div className={s.box}><p className={s.empty}>{text}</p></div>
 }
+
+/** Сводка в заголовке аккордеона справа (эталон .au .ah .lbl): длина исходника, число ключей секции. */
+export function HeadNote({ children }: { children: ReactNode }) {
+  return <span className={s.len}>{children}</span>
+}

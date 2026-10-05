@@ -151,3 +151,56 @@
 .closed {
   color: var(--k-val);
 }
+
+/* Связанные (эталон .ld/.ldb/.kvs/.two-t, index.html:325–333) и MPU (карточка .ldb + .ah swiftText) */
+.date {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.lbl {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.val {
+  color: var(--k-val);
+}
+
+.monoVal {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-val);
+}
+
+.idLine {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+  min-width: 0;
+}
+
+.linkedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+.twoT {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--k-sp-2);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+/* длина исходника и число ключей в заголовке аккордеона (эталон .au .ah .lbl) */
+.len {
+  margin-left: auto;
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  color: var(--k-muted);
+  white-space: nowrap;
+}
