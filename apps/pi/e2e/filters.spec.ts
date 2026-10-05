@@ -43,6 +43,24 @@ test('период календарём: два клика, поповер в п
   await expect(chips(page)).toContainText('с 22.09.2026 по 23.09.2026')
 })
 
+test('Tab проходит поле периода: с краёв поповера фокус выходит к соседним полям, поповер закрывается', async ({ page }) => {
+  await openFilters(page)
+  const group = page.getByRole('group', { name: 'Дата документа', exact: true })
+  const quick = page.getByRole('group', { name: 'Дата документа: быстрый период' })
+  const pop = page.getByRole('dialog', { name: 'Дата документа: выбор периода' })
+  await group.getByRole('button', { name: 'Выбрать период' }).click()
+  // фокус на дне календаря — последней остановке поповера без времени; портал в конце документа, но Tab не уходит за страницу
+  await expect(pop.getByRole('gridcell').getByRole('button').and(page.locator(':focus'))).toHaveCount(1)
+  await page.keyboard.press('Tab')
+  await expect(pop).toBeHidden()
+  await expect(quick.getByRole('button', { name: 'Сегодня' })).toBeFocused()
+  await group.getByRole('button', { name: 'Выбрать период' }).click()
+  await pop.getByRole('button', { name: 'Сегодня' }).focus()
+  await page.keyboard.press('Shift+Tab')
+  await expect(pop).toBeHidden()
+  await expect(page.getByRole('textbox', { name: 'Дата документа, по' })).toBeFocused()
+})
+
 test('список номеров вставкой — IN, в гриде ровно эти документы', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await openFilters(page)

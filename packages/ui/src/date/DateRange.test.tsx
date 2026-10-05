@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
@@ -164,6 +164,43 @@ describe('DateRange', () => {
     expect(dialog).not.toBeInTheDocument()
     expect(btn).not.toHaveAttribute('aria-controls')
     expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Дата документа, с' }))
+  })
+  it('Tab с «Готово» закрывает поповер: фокус на кнопке периода, браузер идёт от неё дальше', async () => {
+    const u = userEvent.setup()
+    renderK(<><Host time quick={[]} initial={{ from: '2026-09-10T09:00', to: '2026-09-15T18:00' }} /><button type="button">после</button></>)
+    const calBtn = screen.getByRole('button', { name: 'Выбрать период' })
+    await u.click(calBtn)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Готово' }), { key: 'Tab' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calBtn).toHaveFocus()
+    await u.click(calBtn)
+    await u.tab()
+    await u.tab()
+    await u.tab()
+    expect(screen.getByRole('button', { name: 'Готово' })).toHaveFocus()
+    await u.tab()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'после' })).toHaveFocus()
+  })
+  it('Shift+Tab с первого пресета закрывает поповер, фокус идёт к полю перед кнопкой периода; без пресетов первая остановка — «Предыдущий месяц»', async () => {
+    const u = userEvent.setup()
+    const { unmount } = renderK(<Host quick={[]} initial={{ from: '2026-09-10', to: '2026-09-15' }} />)
+    const calBtn = screen.getByRole('button', { name: 'Выбрать период' })
+    await u.click(calBtn)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Сегодня' }), { key: 'Tab', shiftKey: true })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calBtn).toHaveFocus()
+    await u.click(calBtn)
+    screen.getByRole('button', { name: 'Сегодня' }).focus()
+    await u.tab({ shift: true })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Дата документа, по' })).toHaveFocus()
+    unmount()
+    renderK(<Host quick={[]} presets={[]} initial={{ from: '2026-09-10', to: '2026-09-15' }} />)
+    await u.click(screen.getByRole('button', { name: 'Выбрать период' }))
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Предыдущий месяц' }), { key: 'Tab', shiftKey: true })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Выбрать период' })).toHaveFocus()
   })
   it('Escape посреди выбора сбрасывает ожидание второго дня', async () => {
     const u = userEvent.setup()

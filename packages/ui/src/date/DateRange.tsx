@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
 import { Popover } from '../overlay'
+import { exitOnEdgeTab } from '../overlay/edgeTab'
 import is from '../input/Input.module.css'
 import { Calendar } from './Calendar'
 import { CalIcon } from './DateInput'
@@ -44,6 +45,7 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
   const t = today ?? todayLocal()
   const anchor = useRef<HTMLSpanElement>(null)
   const fromInput = useRef<HTMLInputElement>(null)
+  const calBtn = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [month, setMonth] = useState<IsoDay>(value.from ? dayOf(value.from) : t)
   // первый клик календаря уже сделан, второго ещё нет
@@ -111,7 +113,7 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
         <MaskedDateField ref={fromInput} aria-label={`${label}, с`} value={value.from} onChange={setFrom} format={fmt} min={min} max={max} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvFrom} />
         <span className={s.dash} aria-hidden="true">–</span>
         <MaskedDateField aria-label={`${label}, по`} value={value.to} onChange={(v) => onChange({ ...value, to: v })} format={fmt} min={toMin} max={max} notBefore={value.from} disabled={disabled || toDisabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvTo} />
-        <IconButton size="s" label="Выбрать период" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
+        <IconButton ref={calBtn} size="s" label="Выбрать период" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
       </span>
       {quick.length > 0 && (
         <span role="group" aria-label={`${label}: быстрый период`} className={s.quick}>
@@ -122,7 +124,8 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
         </span>
       )}
       <Popover id={panelId} open={open} anchor={anchor} returnFocus={fromInput} onClose={close} label={`${label}: выбор периода`} manualFocus>
-        <div className={s.rangePop}>
+        {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на кнопку периода (jsx-a11y) */}
+        <div role="presentation" className={s.rangePop} onKeyDown={(e) => exitOnEdgeTab(e, calBtn, close)}>
           {presets.length > 0 && (
             <ul className={s.presets} aria-label="Пресеты периода">
               {presets.map((p) => (

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
 import { Popover } from '../overlay'
+import { exitOnEdgeTab } from '../overlay/edgeTab'
 import is from '../input/Input.module.css'
 import { Calendar } from './Calendar'
 import { dayOf, timeOf, todayLocal, withTime, type DateFormat, type DateValue, type IsoDay } from './dateStr'
@@ -37,6 +38,7 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
   const t = today ?? todayLocal()
   const anchor = useRef<HTMLSpanElement>(null)
   const input = useRef<HTMLInputElement>(null)
+  const calBtn = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [month, setMonth] = useState<IsoDay>(value ? dayOf(value) : t)
   const [invalid, setInvalid] = useState(false)
@@ -60,7 +62,7 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
           ref={input} id={id} aria-label={aria['aria-label']} value={value} onChange={onChange} format={fmt}
           min={min} max={max} placeholder={placeholder} disabled={disabled} className={is.input} onInvalidChange={setInvalid}
         />
-        <IconButton size="s" label="Выбрать дату" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
+        <IconButton ref={calBtn} size="s" label="Выбрать дату" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
       </span>
       {quick && quick.length > 0 && (
         <span role="group" aria-label="Быстрый выбор" className={s.quick}>
@@ -74,13 +76,16 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
         </span>
       )}
       <Popover id={panelId} open={open} anchor={anchor} returnFocus={input} onClose={() => setOpen(false)} label="Выбор даты" manualFocus>
-        <Calendar month={month} onMonthChange={setMonth} value={value ? dayOf(value) : ''} onPick={pickDay} min={min} max={max} today={t} autoFocus />
-        {time && (
-          <div className={s.timeRow}>
-            <TimeField label="Время" disabled={!value} value={value ? timeOf(value) : ''} onChange={setTime} onEnter={() => setOpen(false)} />
-            <Button size="s" variant="primary" onClick={() => setOpen(false)}>Готово</Button>
-          </div>
-        )}
+        {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на кнопку календаря (jsx-a11y) */}
+        <div role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, calBtn, () => setOpen(false))}>
+          <Calendar month={month} onMonthChange={setMonth} value={value ? dayOf(value) : ''} onPick={pickDay} min={min} max={max} today={t} autoFocus />
+          {time && (
+            <div className={s.timeRow}>
+              <TimeField label="Время" disabled={!value} value={value ? timeOf(value) : ''} onChange={setTime} onEnter={() => setOpen(false)} />
+              <Button size="s" variant="primary" onClick={() => setOpen(false)}>Готово</Button>
+            </div>
+          )}
+        </div>
       </Popover>
     </span>
   )

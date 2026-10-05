@@ -5,6 +5,7 @@ import type { Scalar } from '../filters/types'
 import { Input } from '../input'
 import is from '../input/Input.module.css'
 import { Popover } from '../overlay'
+import { exitOnEdgeTab } from '../overlay/edgeTab'
 import { useKatran } from '../provider/useKatran'
 import { Chevron, Cross, Listbox, optionId } from './Listbox'
 import { filterOptions, sameScalar, type Option } from './options'
@@ -94,15 +95,6 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
     else if (e.key === ' ' && query === '') { e.preventDefault(); pickActive() }
     else if (e.key === 'Backspace' && query === '' && value.length > 0) { e.preventDefault(); removeLast() }
   }
-  // Tab с края поповера — на поле, и дальше браузер идёт от него к следующему полю (preventDefault не нужен); сам поповер закрывается.
-  // Портал лежит в конце документа: без этого Tab увёл бы фокус за пределы страницы.
-  const onPopKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'Tab') return
-    const stops = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('input, button:not([disabled])'))
-    if (e.target !== (e.shiftKey ? stops[0] : stops[stops.length - 1])) return
-    trigger.current?.focus()
-    close()
-  }
 
   return (
     <>
@@ -145,8 +137,8 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
         </button>
       </span>
       <Popover open={open} anchor={anchor} returnFocus={trigger} onClose={close} id={popId} label={name} className={s.pop}>
-        {/* role=presentation: обработчик лишь замыкает Tab в поповере (jsx-a11y) */}
-        <div role="presentation" className={s.multiPop} onKeyDown={onPopKey}>
+        {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на поле (jsx-a11y) */}
+        <div role="presentation" className={s.multiPop} onKeyDown={(e) => exitOnEdgeTab(e, trigger, close)}>
           <Input
             ref={search}
             size="s"
