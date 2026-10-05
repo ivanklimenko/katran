@@ -1,5 +1,8 @@
 import type { ColumnDef } from '@katran/ui'
 import { ApiError, type HttpRequest } from '../../shared/api'
+import { createFxEditStore } from './edits'
+import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
+import { makeFxDocDetail } from './fx-docs.detail'
 import { fakeGrid } from './grid'
 import { field, inline } from './meta'
 import { createFakeServer } from './server'
@@ -104,5 +107,91 @@ describe('фейковый сервер', () => {
   it('деталь получает весь набор строк третьим аргументом (Task 7: tabsOff по данным вкладок)', async () => {
     const s = createFakeServer({ docs: fakeGrid(rows, columns, meta, { detail: (r, i, all) => ({ id: r.id, i, n: all.length }) }) })
     expect(await s(get('/grids/docs/documents/3'))).toEqual({ id: '3', i: 2, n: 3 })
+  })
+})
+
+describe('фейковый сервер: правка детали (план 2c)', () => {
+  // fx-подобная деталь: [0] MT199 USD, [1] MT202 CNY, [2] MT103 RUB; у каждого сервера — своё хранилище правок
+  const fxRows = makeFxDocs(3)
+  const doc = fxRows[2]!
+  const edited = (opts: Parameters<typeof createFakeServer>[1] = {}) =>
+    createFakeServer({ fx: fakeGrid(fxRows, [], fxDocsMeta, { detail: makeFxDocDetail, edits: createFxEditStore({ seedId: null }) }) }, { now: () => '2026-10-06T12:30:00', ...opts })
+  const editUrl = (id: string) => `/grids/fx/documents/${encodeURIComponent(id)}/edits`
+  const bank57 = { opt: 'A', lines: [doc.f57name, doc.f57] }
+  const next57 = { opt: 'A', lines: [doc.f57name, 'VKRBRU8K2KD'] }
+  type Detail = { fields: Record<string, unknown>; edits: Record<string, { now: unknown; hist: Record<string, unknown>[] }> }
+
+  it('POST edits: 200 — деталь с правкой и записью pending; GET detail после — та же правка', async () => {
+    const s = edited()
+    const before = (await s(get(`/grids/fx/documents/${doc.id}`))) as Detail
+    expect(before.edits).toEqual({})
+    const after = (await s(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: next57 }))) as Detail
+    expect(after.fields['57']).toEqual(next57)
+    expect(after.edits['field:57']).toEqual({ now: next57, hist: [{ who: 'Вы', when: '2026-10-06T12:30:00', was: bank57, now: next57, status: 'pending' }] })
+    expect(await s(get(`/grids/fx/documents/${doc.id}`))).toEqual(after)
+    // «стало» = текущее — 200 без новой записи
+    const same = (await s(post(editUrl(doc.id), { target: 'field:57', was: next57, now: next57 }))) as Detail
+    expect(same.edits['field:57']?.hist).toHaveLength(1)
+    // правки не трогают реестр (спека §3.6)
+    const page = (await s(post('/grids/fx/search', search()))) as { content: { id: string; f57: string }[] }
+    expect(page.content.find((r) => r.id === doc.id)?.f57).toBe(doc.f57)
+  })
+  it('409: was не совпал; ?conflict=edit — 409 всегда', async () => {
+    const s = edited()
+    const stale = s(post(editUrl(doc.id), { target: 'field:57', was: next57, now: bank57 }))
+    await expect(stale).rejects.toMatchObject({ status: 409, problem: { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 } })
+    // после правки прежнее «было» тоже устарело
+    await s(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: next57 }))
+    await expect(s(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: { opt: 'D', lines: ['X'] } }))).rejects.toMatchObject({ status: 409 })
+    const conflicting = edited({ conflicting: () => 'edit' })
+    await expect(conflicting(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: next57 }))).rejects.toMatchObject({ status: 409 })
+    // регулятор правки не трогает деталь: правка не записана
+    expect(((await conflicting(get(`/grids/fx/documents/${doc.id}`))) as Detail).edits).toEqual({})
+  })
+  it('400: цель не из профиля, тело без target, значение не той формы', async () => {
+    const s = edited()
+    const bad = async (body: unknown, id = doc.id) => (await s(post(editUrl(id), body)).catch((e: unknown) => e)) as ApiError
+    const notInProfile = await bad({ target: 'field:53', was: { lines: [] }, now: { lines: ['X'] } })
+    expect(notInProfile).toBeInstanceOf(ApiError)
+    expect(notInProfile.status).toBe(400)
+    expect(notInProfile.problem?.errors?.[0]).toMatchObject({ path: 'target', code: 'VALIDATION' })
+    // 79 — поле MT199, у MT103 его нет; дата валютирования MT199 не правится
+    expect((await bad({ target: 'field:79', was: { lines: [] }, now: { lines: ['X'] } })).status).toBe(400)
+    expect((await bad({ target: 'valueDate', was: '2026-09-23', now: '2026-09-24' }, fxRows[0]!.id)).status).toBe(400)
+    const noTarget = await bad({ was: 'A', now: 'B' })
+    expect(noTarget.status).toBe(400)
+    expect(noTarget.problem?.errors?.[0]).toMatchObject({ path: 'target', code: 'VALIDATION' })
+    expect((await bad({ target: 'refOut', was: 'A' })).problem?.errors?.[0]).toMatchObject({ path: 'now', code: 'VALIDATION' })
+    expect((await bad({ target: 'refOut', was: doc.refOut ?? '', now: { lines: ['X'] } })).problem?.errors?.[0]).toMatchObject({ path: 'now' })
+    expect((await bad({ target: 'field:57', was: bank57, now: 'X' })).problem?.errors?.[0]).toMatchObject({ path: 'now' })
+    expect((await bad('x')).status).toBe(400)
+    // счёт не из списка — текст эталона (документ в RUB, счёт клиента в USD)
+    const accKt = ((await s(get(`/grids/fx/documents/${doc.id}`))) as { accKt: string }).accKt
+    expect((await bad({ target: 'accKt', was: accKt, now: '40817840100050017762' })).problem?.errors?.[0])
+      .toEqual({ path: 'now', code: 'VALIDATION', message: 'Счёт не из карточки клиента — выберите из списка' })
+    await expect(s(post(editUrl('nope'), { target: 'refOut', was: '', now: 'A' }))).rejects.toMatchObject({ status: 404 })
+  })
+  it('?fail=edit и ?fail=accounts — 500 только у своего маршрута', async () => {
+    const accUrl = `/grids/fx/documents/${doc.id}/accounts`
+    const body = { target: 'field:57', was: bank57, now: next57 }
+    const failEdit = edited({ failing: () => 'edit' })
+    await expect(failEdit(post(editUrl(doc.id), body))).rejects.toMatchObject({ status: 500, problem: { detail: 'Регулятор ?fail=edit' } })
+    await expect(failEdit({ method: 'GET', url: accUrl, query: { side: 'kt' } })).resolves.toBeDefined()
+    await expect(failEdit(get(`/grids/fx/documents/${doc.id}`))).resolves.toBeDefined()
+    const failAcc = edited({ failing: () => 'accounts' })
+    await expect(failAcc({ method: 'GET', url: accUrl, query: { side: 'kt' } })).rejects.toMatchObject({ status: 500, problem: { detail: 'Регулятор ?fail=accounts' } })
+    await expect(failAcc(post(editUrl(doc.id), body))).resolves.toBeDefined()
+    // ?fail=detail правку и счета не трогает
+    const failDetail = edited({ failing: () => 'detail' })
+    await expect(failDetail(post(editUrl(doc.id), body))).resolves.toBeDefined()
+  })
+  it('маршруты правки: edits — только POST, accounts — только GET; грид без правки — 404', async () => {
+    const s = edited()
+    await expect(s(get(editUrl(doc.id)))).rejects.toMatchObject({ status: 404 })
+    await expect(s(post(`/grids/fx/documents/${doc.id}/accounts`, {}))).rejects.toMatchObject({ status: 404 })
+    await expect(s({ method: 'GET', url: `/grids/fx/documents/${doc.id}/accounts`, query: { side: 'x' } })).rejects.toMatchObject({ status: 400 })
+    const plain = createFakeServer({ docs: fakeGrid(rows, columns, meta, { detail: (r) => r }) })
+    await expect(plain(post('/grids/docs/documents/1/edits', { target: 'refOut', was: '', now: 'A' }))).rejects.toMatchObject({ status: 404 })
+    await expect(plain({ method: 'GET', url: '/grids/docs/documents/1/accounts', query: { side: 'kt' } })).rejects.toMatchObject({ status: 404 })
   })
 })

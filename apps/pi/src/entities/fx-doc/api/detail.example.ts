@@ -43,4 +43,22 @@ export const FX_DETAIL_EXAMPLE = {
     { dir: 'CREDIT', st: 'PENDING', acc: '47422840500000000311', reg: '00030_FxConversion', time: null, amount: 1500.5, currency: 'USD' },
   ],
   tabsOff: ['mpu'],
+  // правка поля 57 (план 2c §3.1): две записи, как у сида фейка; now последней — текущее значение fields['57']
+  edits: {
+    'field:57': {
+      now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK BR', 'VKRBRU8KXXX'] },
+      hist: [
+        {
+          who: 'Кузнецов Д. А.', when: '2026-09-23T09:15:00',
+          was: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK', 'VKRBRU8KXXX'] }, now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK', 'VKRBRU8KXXX'] },
+          note: 'Наименование филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-23T09:40:00',
+        },
+        {
+          who: 'Иванова М. П.', when: '2026-09-23T10:42:00',
+          was: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK', 'VKRBRU8KXXX'] }, now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK BR', 'VKRBRU8KXXX'] },
+          note: 'Полное наименование филиала', status: 'pending', by: null, at: null,
+        },
+      ],
+    },
+  },
 }

@@ -2,11 +2,26 @@ import type { Filter } from '@katran/effector'
 import { toApiError, type FacetsBody, type FilterMetaDto, type HttpRequest, type Problem, type ProblemError, type SearchBody, type SuggestBody } from '../../shared/api'
 import type { FakeGrid } from './grid'
 
-export type FakeServerOptions = { delayMs?: (() => number) | undefined; failing?: (() => string | null) | undefined }
+export type FakeServerOptions = {
+  delayMs?: (() => number) | undefined
+  failing?: (() => string | null) | undefined
+  /** ?conflict=edit — 409 на любой правке (план 2c). */
+  conflicting?: (() => string | null) | undefined
+  /** Время правки: ISO без зоны до минут; по умолчанию — локальное «сейчас». */
+  now?: (() => string) | undefined
+}
 
 const ROUTE = /^\/grids\/([^/]+)\/(search|facets|suggest|filter-meta)$/
 const DOCUMENT = /^\/grids\/([^/]+)\/documents\/([^/]+)$/
 const TAB = /^\/grids\/([^/]+)\/documents\/([^/]+)\/tabs\/([^/]+)$/
+const EDITS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits$/
+const ACCOUNTS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/accounts$/
+const pad2 = (n: number) => String(n).padStart(2, '0')
+/** Локальное «сейчас» до минут: «ГГГГ-ММ-ДДTчч:мм:00». */
+const localMinute = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`
+}
 const fail = (status: number, title: string, detail: string): never => {
   const p: Problem = { type: 'urn:katran:fake', title, status, detail }
   throw toApiError(status, p)
@@ -41,6 +56,32 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
       const failing = opts.failing?.() ?? null
       if (failing === 'tab' || failing === `tab:${tab}`) return fail(500, 'Сбой сервера', `Регулятор ?fail=${failing}`)
       const body = grid.tabs.get(id, tab)
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const editRoute = EDITS.exec(req.url)
+    if (editRoute) {
+      const [, gridId = '', raw = ''] = editRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'POST' || !grid.edit) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'edit') return fail(500, 'Сбой сервера', 'Регулятор ?fail=edit')
+      // ?conflict=edit — документ «изменили»: 409 до сверки was, тот же Problem, что у хранилища правок
+      if (opts.conflicting?.() === 'edit') throw toApiError(409, { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 })
+      const id = decodeURIComponent(raw)
+      const body = grid.edit(id, req.body, opts.now?.() ?? localMinute())
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const accRoute = ACCOUNTS.exec(req.url)
+    if (accRoute) {
+      const [, gridId = '', raw = ''] = accRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'GET' || !grid.accounts) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'accounts') return fail(500, 'Сбой сервера', 'Регулятор ?fail=accounts')
+      const id = decodeURIComponent(raw)
+      const body = grid.accounts(id, req.query?.side)
       if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
       return body
     }

@@ -1,6 +1,7 @@
 import type { Sort } from '@katran/effector'
 import { sortRows, type ColumnDef } from '@katran/ui'
 import type { FacetsBody, FilterMetaDto, SearchBody, SortDto, SuggestBody } from '../../shared/api'
+import type { FakeEditStore } from './edits'
 import { applyFilter } from './filter'
 
 /** Один грид фейкового сервера: данные, колонки (ключи сортировки) и каталог. Наружу — только JSON контракта. */
@@ -14,6 +15,10 @@ export type FakeGrid = {
   detail?: ((id: string) => unknown) | undefined
   /** Вкладки деталки (спека 2b §3.5): набор id вкладок грида и данные вкладки документа; null — документа нет (404). */
   tabs?: { ids: readonly string[]; get: (id: string, tab: string) => unknown } | undefined
+  /** Правка документа (план 2c): деталь после правки; null — документа нет (404). Нет поля — у грида нет правки. */
+  edit?: ((id: string, body: unknown, when: string) => unknown) | undefined
+  /** Справочник счетов стороны документа; null — документа нет (404). */
+  accounts?: ((id: string, side: unknown) => unknown) | undefined
 }
 
 /** Опции фейкового грида. sortLabels — как у createFakeBackend демо (сверка S3): перечисленные ключи сортируются по подписи, а не по коду. */
@@ -23,6 +28,8 @@ export type FakeGridOptions<Row> = {
   detail?: ((row: Row, index: number, rows: Row[]) => unknown) | undefined
   /** Вкладки: ids — набор грида (вкладка не из набора — 404), data — ответы всех вкладок документа по id вкладки. */
   tabs?: { ids: readonly string[]; data: (row: Row, index: number, rows: Row[]) => Record<string, unknown> } | undefined
+  /** Память правок (план 2c): деталь — overlay поверх detail(…); edit и accounts — через хранилище. Нужна detail. */
+  edits?: FakeEditStore | undefined
 }
 
 const fromSortDto = (dto: SortDto[]): Sort => dto.map((s) => ({ key: s.field, dir: s.direction === 'ASC' ? 'asc' : 'desc' }))
@@ -63,9 +70,24 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
   }
   const toDetail = opts.detail
   if (toDetail) {
-    grid.detail = (id) => {
+    const base = (id: string): Record<string, unknown> | null => {
       const i = rows.findIndex((r) => r.id === id)
-      return i < 0 ? null : toDetail(rows[i]!, i, rows)
+      return i < 0 ? null : (toDetail(rows[i]!, i, rows) as Record<string, unknown>)
+    }
+    const store = opts.edits
+    grid.detail = (id) => {
+      const d = base(id)
+      return d && store ? store.overlay(id, d) : d
+    }
+    if (store) {
+      grid.edit = (id, body, when) => {
+        const d = base(id)
+        return d && store.save(id, d, body, when)
+      }
+      grid.accounts = (id, side) => {
+        const d = base(id)
+        return d && store.accounts(d, side)
+      }
     }
   }
   const toTabs = opts.tabs

@@ -1,10 +1,11 @@
 import { allSettled, fork, type Effect } from 'effector'
 import { STATUS_LABEL } from '../../entities/doc-status'
 import { TRAIL_EXAMPLES, TRAIL_PARSERS, trailViewsFor, type TrailTabId } from '../../entities/doc-trail'
-import { FX_TABS, FX_TYPES, fxDocPorts, parseFxDocDetail } from '../../entities/fx-doc'
+import { FX_TABS, FX_TYPES, currentOf, fxDocPorts, fxEditPorts, isChanged, originalOf, parseFxDocDetail, type FxDocDetail } from '../../entities/fx-doc'
 import { RUB_TABS, RUB_TYPES, parseRubDocDetail, rubDocPorts } from '../../entities/rub-doc'
-import { ApiError, createGridPorts, requestFx, type TabQuery } from '../../shared/api'
-import { fakeGrids } from './grids'
+import { ApiError, createGridPorts, requestFx, type EditValue, type TabQuery } from '../../shared/api'
+import { BANK_ACCOUNTS, CLIENT_ACCOUNTS, ROUTES } from './edits.data'
+import { createFakeGrids, fakeGrids } from './grids'
 import { makeFxDocs } from './fx-docs.data'
 import { FX_TRAIL_TABS, fxDocTrail } from './fx-docs.trail'
 import { makeRubDocs } from './rub-docs.data'
@@ -340,3 +341,135 @@ describe('контракт вкладок: порты сущностей (fxDocP
     })
   }
 })
+
+describe('контракт правки fx-docs (план 2c): порт → requestFx → фейк с памятью', () => {
+  // у каждого теста — свои гриды и своя память правок: тесты не зависят от порядка (preflight D8)
+  const WHEN = '2026-10-06T12:30:00'
+  const fresh = () => fork({ handlers: [[requestFx, createFakeServer(createFakeGrids(), { now: () => WHEN })]] })
+  const rows = makeFxDocs()
+  const detail = async (sc: ReturnType<typeof fresh>, id: string): Promise<FxDocDetail> => {
+    const r = await allSettled(fxDocPorts.detailFx, { scope: sc, params: id })
+    if (r.status !== 'done') throw r.value
+    return r.value
+  }
+  const save = async (sc: ReturnType<typeof fresh>, id: string, target: string, was: EditValue, now: EditValue): Promise<FxDocDetail> => {
+    const r = await allSettled(fxEditPorts.saveEditFx, { scope: sc, params: { id, target, was, now } })
+    if (r.status !== 'done') throw r.value
+    return r.value
+  }
+  const routeOf = (d: FxDocDetail) => `${d.routeType} ${d.routeAcc} → ${d.routeRecv}`
+  // документ USD с блоком маршрута (у MT199 его нет)
+  const usd = rows.find((r) => r.currency === 'USD' && r.type !== 'MT199')!
+
+  it('правка fx-docs: порт → requestFx → фейк; сид поля 57 у первого документа реестра с полем 57 — 2 записи, confirmed и pending', async () => {
+    const sc = fresh()
+    // первый документ реестра — MT199 без поля 57, сид — на первом с полем 57 (Ruling: makeFxDocs()[1])
+    expect(rows[0]!.type).toBe('MT199')
+    const row = rows.find((r) => r.type !== 'MT199')!
+    expect(row.id).toBe('0f3c0001-7b1d-4c8e-9f0a-286655677016')
+    const d = await detail(sc, row.id)
+    const day = row.created.slice(0, 10)
+    const was = { opt: 'A', lines: [row.f57name, row.f57] }
+    const bic = { opt: 'A', lines: [row.f57name, `${row.f57.slice(0, 8)}2KD`] }
+    const full = { opt: 'A', lines: [`${row.f57name} BRANCH`.slice(0, 35), `${row.f57.slice(0, 8)}2KD`] }
+    expect(d.edits['field:57']).toEqual({
+      now: full,
+      hist: [
+        { who: 'Кузнецов Д. А.', when: `${day}T09:15:00`, was, now: bic, note: 'BIC филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: `${day}T09:40:00` },
+        { who: 'Иванова М. П.', when: `${day}T10:42:00`, was: bic, now: full, note: 'Полное наименование филиала', status: 'pending', by: null, at: null },
+      ],
+    })
+    expect(d.fields['57']).toEqual(full)
+    expect(originalOf(d, 'field:57')).toEqual(was)
+    expect(isChanged(d, 'field:57')).toBe(true)
+    // остальные документы — без правок
+    expect((await detail(sc, rows[0]!.id)).edits).toEqual({})
+    expect((await detail(sc, rows[2]!.id)).edits).toEqual({})
+    // правка поверх сида: третья запись — «Вы», pending
+    const next = { opt: 'A', lines: [row.f57name, row.f57] }
+    const after = await save(sc, row.id, 'field:57', currentOf(d, 'field:57'), next)
+    expect(after.edits['field:57']?.hist.map((h) => [h.who, h.status])).toEqual([['Кузнецов Д. А.', 'confirmed'], ['Иванова М. П.', 'pending'], ['Вы', 'pending']])
+    expect(after.edits['field:57']?.hist[2]).toEqual({ who: 'Вы', when: WHEN, was: full, now: next, note: null, status: 'pending', by: null, at: null })
+    // откат к исходному: маркера нет, история сохранена
+    expect(isChanged(after, 'field:57')).toBe(false)
+    expect(await detail(sc, row.id)).toEqual(after)
+  })
+  it('accKt из карточки клиента — маршрут сменился, запись route от «система»; ↺ accKt — маршрут исходный, история сохранена', async () => {
+    const sc = fresh()
+    const d0 = await detail(sc, usd.id)
+    const items = CLIENT_ACCOUNTS.filter((a) => a.ccy === 'USD' && a.acc !== d0.accKt)
+    // смена Кт: маршрут — следующий по кругу в пуле за текущим (нет в пуле — первый)
+    const d1 = await save(sc, usd.id, 'accKt', d0.accKt, items[0]!.acc)
+    expect(d1.accKt).toBe(items[0]!.acc)
+    const at0 = ROUTES.findIndex((r) => r.acc === d0.routeAcc)
+    const r1 = ROUTES[at0 < 0 ? 0 : (at0 + 1) % ROUTES.length]!
+    expect(d1).toMatchObject({ routeType: r1.type, routeAcc: r1.acc, routeRecv: r1.recv, routeDesc: r1.desc, routeText: r1.text })
+    expect(d1.edits.accKt?.hist).toEqual([{ who: 'Вы', when: WHEN, was: d0.accKt, now: items[0]!.acc, note: null, status: 'pending', by: null, at: null }])
+    expect(d1.edits.route).toEqual({ now: null, hist: [{ who: 'система', when: WHEN, was: routeOf(d0), now: routeOf(d1), note: null, status: 'confirmed', by: 'система', at: WHEN }] })
+    // вторая смена Кт — снова следующий по кругу
+    const d2 = await save(sc, usd.id, 'accKt', d1.accKt, items[1]!.acc)
+    const r2 = ROUTES[(ROUTES.indexOf(r1) + 1) % ROUTES.length]!
+    expect(d2.routeAcc).toBe(r2.acc)
+    // ↺ Кт: «стало = исходное» принимается, даже если исходного счёта нет в карточке клиента
+    const d3 = await save(sc, usd.id, 'accKt', d2.accKt, originalOf(d2, 'accKt'))
+    expect(d3.accKt).toBe(d0.accKt)
+    expect(isChanged(d3, 'accKt')).toBe(false)
+    expect(d3).toMatchObject({ routeType: d0.routeType, routeAcc: d0.routeAcc, routeRecv: d0.routeRecv, routeDesc: d0.routeDesc, routeText: d0.routeText })
+    expect(d3.edits.accKt?.hist).toHaveLength(3)
+    expect(d3.edits.route?.hist.map((h) => [h.was, h.now])).toEqual([[routeOf(d0), routeOf(d1)], [routeOf(d1), routeOf(d2)], [routeOf(d2), routeOf(d0)]])
+  })
+  it('accDt: только счета банка по валюте; исходный счёт — всегда; маршрут не меняется', async () => {
+    const sc = fresh()
+    const d0 = await detail(sc, usd.id)
+    const bank = BANK_ACCOUNTS.find((a) => a.ccy === 'USD' && a.acc !== d0.accDt)!
+    const client = await allSettled(fxEditPorts.saveEditFx, { scope: sc, params: { id: usd.id, target: 'accDt', was: d0.accDt, now: CLIENT_ACCOUNTS[0]!.acc } })
+    expect(client.status).toBe('fail')
+    expect((client.value as ApiError).problem?.errors?.[0]).toEqual({ path: 'now', code: 'VALIDATION', message: 'Счёт не из списка счетов банка — выберите из списка' })
+    const d1 = await save(sc, usd.id, 'accDt', d0.accDt, bank.acc)
+    expect(d1.accDt).toBe(bank.acc)
+    expect(d1.routeAcc).toBe(d0.routeAcc)
+    expect(d1.edits.route).toBeUndefined()
+    expect((await save(sc, usd.id, 'accDt', d1.accDt, d0.accDt)).accDt).toBe(d0.accDt)
+  })
+  it('valueDate — запись сразу confirmed, by = who; меняется только valueDates[0]', async () => {
+    const sc = fresh()
+    const d0 = await detail(sc, usd.id)
+    const d1 = await save(sc, usd.id, 'valueDate', d0.valueDates[0], '2026-09-25')
+    expect(d1.valueDates).toEqual(['2026-09-25', d0.valueDates[1], d0.valueDates[2], d0.valueDates[3]])
+    const [h] = d1.edits.valueDate!.hist
+    expect(h).toEqual({ who: 'Вы', when: WHEN, was: d0.valueDates[0], now: '2026-09-25', note: null, status: 'confirmed', by: 'Вы', at: WHEN })
+    expect(h!.by).toBe(h!.who)
+    // 20 исх: обычная запись pending
+    const d2 = await save(sc, usd.id, 'refOut', d1.refOut ?? '', 'OUT0000001')
+    expect(d2.refOut).toBe('OUT0000001')
+    expect(d2.edits.refOut?.hist[0]?.status).toBe('pending')
+  })
+  it('accounts kt — CLIENT_ACCOUNTS по валюте документа; dt — BANK_ACCOUNTS; side=x — 400', async () => {
+    const sc = fresh()
+    const kt = await allSettled(fxEditPorts.accountsFx, { scope: sc, params: { id: usd.id, side: 'kt' } })
+    const asItems = (xs: typeof CLIENT_ACCOUNTS) => xs.map((a) => ({ account: a.acc, ccy: a.ccy, kind: a.kind }))
+    expect(kt).toEqual({ status: 'done', value: asItems(CLIENT_ACCOUNTS.filter((a) => a.ccy === 'USD')) })
+    expect(kt.status === 'done' && kt.value).toHaveLength(6)
+    const dt = await allSettled(fxEditPorts.accountsFx, { scope: sc, params: { id: usd.id, side: 'dt' } })
+    expect(dt).toEqual({ status: 'done', value: asItems(BANK_ACCOUNTS.filter((a) => a.ccy === 'USD')) })
+    // сид — CNY: один счёт клиента, счетов банка нет
+    const cny = rows[1]!
+    expect(cny.currency).toBe('CNY')
+    const cnyKt = await allSettled(fxEditPorts.accountsFx, { scope: sc, params: { id: cny.id, side: 'kt' } })
+    expect(cnyKt.status === 'done' && cnyKt.value.map((a) => a.account)).toEqual(['40817156900050017774'])
+    const cnyDt = await allSettled(fxEditPorts.accountsFx, { scope: sc, params: { id: cny.id, side: 'dt' } })
+    expect(cnyDt).toEqual({ status: 'done', value: [] })
+    const handle = createFakeServer(createFakeGrids())
+    await expect(handle({ method: 'GET', url: `/grids/fx-docs/documents/${usd.id}/accounts`, query: { side: 'x' } })).rejects.toMatchObject({ status: 400 })
+    await expect(handle({ method: 'GET', url: `/grids/fx-docs/documents/${usd.id}/accounts` })).rejects.toMatchObject({ status: 400 })
+    await expect(handle({ method: 'GET', url: '/grids/fx-docs/documents/nope/accounts', query: { side: 'kt' } })).rejects.toMatchObject({ status: 404 })
+  })
+  it('рубль правки не поддерживает: edits и accounts — 404; деталь рубля без edits', async () => {
+    const handle = createFakeServer(createFakeGrids())
+    const id = makeRubDocs()[0]!.id
+    await expect(handle({ method: 'POST', url: `/grids/rub-docs/documents/${id}/edits`, body: { target: 'refOut', was: '', now: 'A' } })).rejects.toMatchObject({ status: 404 })
+    await expect(handle({ method: 'GET', url: `/grids/rub-docs/documents/${id}/accounts`, query: { side: 'kt' } })).rejects.toMatchObject({ status: 404 })
+    expect(await handle({ method: 'GET', url: `/grids/rub-docs/documents/${id}` })).not.toHaveProperty('edits')
+  })
+})
+
