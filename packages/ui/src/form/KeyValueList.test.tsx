@@ -74,6 +74,17 @@ describe('KeyValueList (спека 2b §2)', () => {
     expect(dl.parentElement).toHaveClass('kvPlain')
   })
 
+  it('wide: в две колонки — dd с data-wide (значение до конца строки); в одну колонку не влияет', () => {
+    const items: KeyValueItem[] = [{ ...refs[2]!, wide: true }, refs[0]!]
+    const { unmount } = renderK(<KeyValueList columns={2} items={items} />)
+    const dds = document.querySelectorAll('dd')
+    expect(dds[0]).toHaveAttribute('data-wide', '')
+    expect(dds[1]).not.toHaveAttribute('data-wide')
+    unmount()
+    renderK(<KeyValueList items={items} />)
+    expect(document.querySelector('dd')).not.toHaveAttribute('data-wide')
+  })
+
   it('подпись — ReactNode (номер поля элементом)', () => {
     renderK(<KeyValueList labelWidth={40} items={[{ key: '32A', label: <b>32A</b>, value: '260922' }]} />)
     expect(screen.getByText('32A').closest('dt')).not.toBeNull()

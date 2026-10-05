@@ -11,6 +11,8 @@ export type KeyValueItem = {
   aside?: ReactNode | undefined
   /** Тултип подписи (название SWIFT-поля); дублируется скрытым текстом — тултип не видят клавиатура и скринридер. */
   hint?: string | undefined
+  /** В две колонки — значение до конца строки (эталон .kvs .span3); в одну колонку не влияет. */
+  wide?: boolean | undefined
 }
 
 export type KeyValueListProps = {
@@ -33,6 +35,7 @@ export function KeyValueList({ items, title, labelWidth, columns = 1 }: KeyValue
   const width = labelWidth ?? (columns === 1 ? 150 : undefined)
   const style = width === undefined ? undefined : ({ '--k-kv-label': `calc(${width}px * var(--k-density))` } as CSSProperties)
   const pair = (it: KeyValueItem) => {
+    const wide = columns === 2 && it.wide === true
     const empty = isEmpty(it.value)
     // подсказка — название поля; без неё обрезанная подпись показывает себя целиком тултипом
     const tip = it.hint ?? (typeof it.label === 'string' ? it.label : undefined)
@@ -42,7 +45,7 @@ export function KeyValueList({ items, title, labelWidth, columns = 1 }: KeyValue
           {it.label}
           {it.hint !== undefined && <span className={s.sr}>{` · ${it.hint}`}</span>}
         </dt>
-        <dd className={s.kvValue} data-empty={empty ? '' : undefined}>
+        <dd className={s.kvValue} data-empty={empty ? '' : undefined} data-wide={wide ? '' : undefined}>
           {empty
             ? <><span className={s.kvNone} aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></>
             : <span className={it.mono ? s.kvMono : undefined}>{it.value}</span>}

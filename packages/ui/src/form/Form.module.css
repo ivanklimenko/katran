@@ -434,6 +434,11 @@
   font-size: var(--k-fs-kvs);
 }
 
+/* значение до конца строки (эталон .kvs .span3) */
+.kvs > [data-wide] {
+  grid-column: 2 / -1;
+}
+
 .kvLabel {
   min-width: 0;
   overflow: hidden;

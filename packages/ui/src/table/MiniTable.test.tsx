@@ -49,6 +49,12 @@ describe('MiniTable', () => {
       .toBe('var(--k-tt-num) calc(118px * var(--k-density)) calc(150px * var(--k-density)) minmax(0, 1fr) calc(50px * var(--k-density))')
   })
 
+  it("ширина 'auto' — трек auto: колонка по содержимому своей строки (таблицы без шапки, как .ld/.tk эталона)", () => {
+    const cols: MiniColumn<Ev>[] = [{ ...COLS[0]!, header: '', width: 'auto' }, { ...COLS[2]!, header: '' }]
+    renderK(<MiniTable label="Задачи" columns={cols} rows={EVENTS} rowKey={byCode} empty="Задач нет" />)
+    expect(screen.getByRole('table').style.getPropertyValue('--k-cols')).toBe('auto minmax(0, 1fr)')
+  })
+
   it('numbered — колонка «№» (для скринридера) с номерами строк с единицы', () => {
     renderK(<MiniTable label="Статусы" columns={COLS} rows={EVENTS} rowKey={byCode} empty="Статусов нет" numbered />)
     expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent('№')

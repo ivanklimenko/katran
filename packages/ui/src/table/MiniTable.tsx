@@ -6,8 +6,12 @@ export type MiniColumn<T> = {
   id: string
   /** '' — колонка без заголовка (служебная): в строке шапки — пустая ячейка, не columnheader. */
   header: string
-  /** Ширина в px при плотности 1; нет — minmax(0, 1fr). */
-  width?: number | undefined
+  /**
+   * Ширина в px при плотности 1; нет — minmax(0, 1fr).
+   * 'auto' — по содержимому своей строки: строки — отдельные сетки, между строками колонки не выравниваются;
+   * для таблиц без шапки, как .ld/.tk эталона.
+   */
+  width?: number | 'auto' | undefined
   render: (row: T, index: number) => ReactNode
   mono?: boolean | undefined
   align?: 'start' | 'end' | undefined
@@ -35,7 +39,8 @@ export type MiniTableProps<T> = {
   toolbar?: ReactNode | undefined
 }
 
-const track = (width: number | undefined) => (width === undefined ? 'minmax(0, 1fr)' : `calc(${width}px * var(--k-density))`)
+const track = (width: number | 'auto' | undefined) =>
+  width === undefined ? 'minmax(0, 1fr)' : width === 'auto' ? 'auto' : `calc(${width}px * var(--k-density))`
 
 // Клик по интерактивному внутри строки (ссылка, кнопка, поле) строку не раскрывает — у него своё действие
 const INTERACTIVE = 'a[href], button, input, select, textarea, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])'
