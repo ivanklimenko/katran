@@ -18,6 +18,11 @@ const meta = { fields: [field('status', 'Статус', 'ENUM', 'st'), field('am
 const server = createFakeServer({ docs: fakeGrid(rows, columns, meta) })
 const post = (url: string, body: unknown): HttpRequest => ({ method: 'POST', url, body })
 const search = (over: object = {}) => ({ filter: { conditions: [] }, sort: [], page: { number: 0, size: 20 }, includeTotal: true, ...over })
+const get = (url: string): HttpRequest => ({ method: 'GET', url })
+const tabbed = (failing?: string) => createFakeServer(
+  { docs: fakeGrid(rows, columns, meta, { detail: (r) => r, tabs: { ids: ['notes', 'a/b'], data: (r, i) => ({ notes: { items: [r.name, i] }, 'a/b': { id: r.id } }) } }) },
+  failing ? { failing: () => failing } : {},
+)
 
 describe('фейковый сервер', () => {
   it('search: фильтр, сортировка по уровню, страница — ответ по контракту §5.2', async () => {
@@ -71,5 +76,33 @@ describe('фейковый сервер', () => {
     const odd: Row[] = [{ id: 'a/1', status: 'DONE', amount: 1, name: 'Д' }]
     const s = createFakeServer({ docs: fakeGrid(odd, columns, meta, { detail: (r) => r }) })
     expect(await s({ method: 'GET', url: '/grids/docs/documents/a%2F1' })).toEqual(odd[0])
+  })
+  it('GET documents/{id}/tabs/{tab}: данные вкладки документа; id и tab декодируются', async () => {
+    const s = tabbed()
+    expect(await s(get('/grids/docs/documents/2/tabs/notes'))).toEqual({ items: ['Бета', 1] })
+    expect(await s(get('/grids/docs/documents/1/tabs/a%2Fb'))).toEqual({ id: '1' })
+  })
+  it('вкладки: 404 — неизвестный грид, документ, вкладка не из набора; грид без вкладок', async () => {
+    const s = tabbed()
+    await expect(s(get('/grids/nope/documents/1/tabs/notes'))).rejects.toMatchObject({ status: 404, problem: { title: 'Неизвестный грид' } })
+    await expect(s(get('/grids/docs/documents/nope/tabs/notes'))).rejects.toMatchObject({ status: 404, problem: { title: 'Документ не найден' } })
+    await expect(s(get('/grids/docs/documents/1/tabs/audit'))).rejects.toMatchObject({ status: 404, problem: { title: 'Неизвестная вкладка' } })
+    await expect(server(get('/grids/docs/documents/1/tabs/notes'))).rejects.toMatchObject({ status: 404, problem: { title: 'Неизвестная вкладка' } })
+  })
+  it('?fail=tab — 500 на любой вкладке; ?fail=tab:<id> — только на ней; регуляторы детали и вкладок не пересекаются', async () => {
+    const any = tabbed('tab')
+    await expect(any(get('/grids/docs/documents/1/tabs/notes'))).rejects.toMatchObject({ status: 500 })
+    await expect(any(get('/grids/docs/documents/1/tabs/a%2Fb'))).rejects.toMatchObject({ status: 500 })
+    await expect(any(get('/grids/docs/documents/1'))).resolves.toEqual(rows[0])
+    const one = tabbed('tab:notes')
+    await expect(one(get('/grids/docs/documents/1/tabs/notes'))).rejects.toMatchObject({ status: 500, problem: { detail: 'Регулятор ?fail=tab:notes' } })
+    await expect(one(get('/grids/docs/documents/1/tabs/a%2Fb'))).resolves.toEqual({ id: '1' })
+    const detail = tabbed('detail')
+    await expect(detail(get('/grids/docs/documents/1'))).rejects.toMatchObject({ status: 500 })
+    await expect(detail(get('/grids/docs/documents/1/tabs/notes'))).resolves.toEqual({ items: ['Альфа', 0] })
+  })
+  it('деталь получает весь набор строк третьим аргументом (Task 7: tabsOff по данным вкладок)', async () => {
+    const s = createFakeServer({ docs: fakeGrid(rows, columns, meta, { detail: (r, i, all) => ({ id: r.id, i, n: all.length }) }) })
+    expect(await s(get('/grids/docs/documents/3'))).toEqual({ id: '3', i: 2, n: 3 })
   })
 })

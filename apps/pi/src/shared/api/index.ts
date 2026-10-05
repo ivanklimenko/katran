@@ -5,4 +5,4 @@ export {
   FIELD_TYPES, OPERATORS, fromFacetsResponse, fromFilterMetaResponse, fromSearchResponse, fromSuggestResponse, toFacetsBody, toSearchBody, toSuggestBody,
   type FacetsBody, type FieldDto, type FilterMetaDto, type RowParser, type SearchBody, type SortDto, type SuggestBody,
 } from './grid-contract'
-export { createGridPorts, type DetailParser, type DetailPort, type GridPorts, type GridPortsConfig } from './ports'
+export { createGridPorts, type DetailParser, type DetailPort, type GridPorts, type GridPortsConfig, type TabParser, type TabPort, type TabQuery } from './ports'
