@@ -49,8 +49,30 @@ describe('Disclosure', () => {
     expect(screen.getByRole('heading', { level: 4, name: 'Информация о банке-плательщике' })).toBeInTheDocument()
   })
 
+  it('mono — класс моноширинного заголовка; без него заголовок прежний', () => {
+    renderK(<><Disclosure title="commonSection" mono aside={<span>12 ключей</span>}><p>{'{}'}</p></Disclosure><Disclosure title="Транзакции"><p>x</p></Disclosure></>)
+    const monoBtn = screen.getByRole('button', { name: 'commonSection' })
+    expect(monoBtn.closest('.blk')).toHaveClass('mono')
+    expect(screen.getByText('12 ключей')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Транзакции' }).closest('.blk')).not.toHaveClass('mono')
+  })
+
+  it('emptyText — текст пустого блока вместо «нет данных»; aside у пустого не показывается; mono действует и на пустой', () => {
+    renderK(<Disclosure title="ED244" empty emptyText="нет" mono aside={<span>0 симв.</span>} />)
+    expect(screen.getByText('нет')).toBeInTheDocument()
+    expect(screen.queryByText('нет данных')).toBeNull()
+    expect(screen.queryByText('0 симв.')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'ED244' }).closest('.blk')).toHaveClass('mono')
+  })
+
+  it('без emptyText пустой блок — по-прежнему «нет данных»', () => {
+    renderK(<Disclosure title="Посредник" empty mono />)
+    expect(screen.getByText('нет данных')).toBeInTheDocument()
+  })
+
   it('без нарушений axe', async () => {
-    const { container } = renderK(<><Disclosure title="Транзакции" count={2}><p>x</p></Disclosure><Disclosure title="Посредник" empty /></>)
+    const { container } = renderK(<><Disclosure title="Транзакции" count={2}><p>x</p></Disclosure><Disclosure title="Посредник" empty /><Disclosure title="audit" mono defaultOpen><p>y</p></Disclosure><Disclosure title="ED244" mono empty emptyText="нет" /></>)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

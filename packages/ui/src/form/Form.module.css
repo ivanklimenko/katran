@@ -381,3 +381,107 @@
 .lvSub .bhTitle {
   font-size: var(--k-fs-3);
 }
+
+/* список «ключ–значение» вкладок деталки (спека 2b §2, эталон .xg/.xr/.kvs, index.html:281–291, 343–345) */
+.kv {
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.kvPlain {
+  border: 0;
+  border-radius: 0;
+}
+
+.kvTitle {
+  margin: 0;
+  padding: var(--k-sp-1) var(--k-kv-px);
+  border-bottom: 1px solid var(--k-line2);
+  background: var(--k-sunk);
+  font: 600 var(--k-fs-kv) / var(--k-lh-1) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-ink2);
+}
+
+.kvList,
+.kvs {
+  margin: 0;
+}
+
+/* строка 24 с рамкой снизу (эталон .xr, border-box) */
+.kvRow {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--k-kv-label) minmax(0, 1fr);
+  gap: 0 var(--k-kv-px);
+  align-items: center;
+  min-height: var(--k-kv-row);
+  padding: 0 var(--k-kv-px);
+  border-bottom: 1px solid var(--k-line2);
+}
+
+.kvRow:last-child {
+  border-bottom: 0;
+}
+
+/* две пары в строке (эталон .kvs): подпись — по содержимому, если ширину не задали */
+.kvs {
+  display: grid;
+  grid-template-columns: var(--k-kv-label, auto) minmax(0, 1fr) var(--k-kv-label, auto) minmax(0, 1fr);
+  gap: var(--k-kvs-gap) var(--k-kv-px);
+  align-items: baseline;
+  font-size: var(--k-fs-kvs);
+}
+
+.kvLabel {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--k-fs-kv);
+  color: var(--k-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kvValue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--k-kv-gap);
+  align-items: baseline;
+  min-width: 0;
+  margin: 0;
+  color: var(--k-val);
+}
+
+.kvMono {
+  font-family: var(--k-mono);
+  font-size: var(--k-fs-kvs);
+  letter-spacing: -0.01em;
+}
+
+.kvNone {
+  color: var(--k-faint);
+}
+
+.kvAside {
+  margin-left: auto;
+  font-size: var(--k-fs-3);
+  color: var(--k-faint);
+}
+
+/* моноширинный заголовок блока (эталон .au .ah, index.html:329–333): 500 12 моно, строка 25, без капители; правила ниже .bhBtn.bhBtn и .lvSub */
+.mono > .bh {
+  min-height: var(--k-ah-row);
+}
+
+.mono .bhTitle {
+  font: 500 var(--k-fs-kvs) / var(--k-lh-1) var(--k-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--k-ink);
+}
+
+.mono .bhBtn.bhBtn {
+  letter-spacing: 0;
+  text-transform: none;
+}

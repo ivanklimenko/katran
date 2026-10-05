@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
@@ -121,6 +122,84 @@ describe('ConfigForm (спека 2a §3.1)', () => {
 
   it('без нарушений axe', async () => {
     const { container } = renderForm()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe('ConfigForm — управляемое раскрытие (спека 2b §3.3, техдолг M-g)', () => {
+  const btn = (tag: string) => within(row(tag) as HTMLElement).getByRole('button')
+  const form = (p: { expanded?: string[] | undefined; onExpandedChange?: ((keys: string[]) => void) | undefined; schema?: FormSchema | undefined }) => (
+    <ConfigForm schema={p.schema ?? schema} fields={fields} value={(t) => values[t] ?? null} renderSection={section}
+      expanded={p.expanded} onExpandedChange={p.onExpandedChange} />
+  )
+
+  // хозяин держит набор вне формы — как модель деталки держит $expanded по документу
+  function Host({ controlled }: { controlled: boolean }) {
+    const [keys, setKeys] = useState<string[] | null>(null)
+    const [shown, setShown] = useState(true)
+    return (
+      <>
+        <button type="button" onClick={() => setShown((v) => !v)}>Вкладка</button>
+        {shown && (controlled ? form({ expanded: keys ?? undefined, onExpandedChange: setKeys }) : form({}))}
+      </>
+    )
+  }
+
+  it('expanded задаёт раскрытые поля и секции', () => {
+    renderK(form({ expanded: ['50', 'budget'] }))
+    expect(btn('50')).toHaveAttribute('aria-expanded', 'true')
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Бюджетные реквизиты' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Свернуть все' })).toBeInTheDocument()
+  })
+
+  it('управляемый режим: действие отдаёт полный новый набор, а показ меняет только хозяин', async () => {
+    const onExpandedChange = vi.fn()
+    renderK(form({ expanded: ['50', 'budget'], onExpandedChange }))
+    await userEvent.click(btn('52'))
+    expect(onExpandedChange).toHaveBeenLastCalledWith(['50', 'budget', '52', '57'])
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(screen.getByRole('button', { name: 'Бюджетные реквизиты' }))
+    expect(onExpandedChange).toHaveBeenLastCalledWith(['50'])
+    await userEvent.click(screen.getByRole('button', { name: 'Развернуть поля' }))
+    expect(onExpandedChange).toHaveBeenLastCalledWith(['budget', '50', '52', '57', '59', '70', '72', 'B.50'])
+    await userEvent.click(screen.getByRole('button', { name: 'Свернуть все' }))
+    expect(onExpandedChange).toHaveBeenLastCalledWith(['50'])
+  })
+
+  it('без expanded форма раскрывает сама, onExpandedChange получает набор с умолчаниями секций', async () => {
+    const onExpandedChange = vi.fn()
+    const open: FormSchema = { ...schema, sections: [{ id: 'budget', title: 'Бюджетные реквизиты', collapsed: false }] }
+    renderK(form({ schema: open, onExpandedChange }))
+    expect(screen.getByRole('button', { name: 'Бюджетные реквизиты' })).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(btn('52'))
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'true')
+    expect(onExpandedChange).toHaveBeenLastCalledWith(['budget', '52', '57'])
+  })
+
+  it('раскрытое, хранимое снаружи, переживает размонтирование формы', async () => {
+    renderK(<Host controlled />)
+    await userEvent.click(btn('52'))
+    await userEvent.click(screen.getByRole('button', { name: 'Развернуть все' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Вкладка' }))
+    expect(row('52')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Вкладка' }))
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'true')
+    expect(btn('57')).toHaveAttribute('aria-expanded', 'true')
+    expect(btn('50')).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Бюджетные реквизиты' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('без хозяина раскрытое теряется при размонтировании — поведение 2a, ради которого и нужен управляемый режим', async () => {
+    renderK(<Host controlled={false} />)
+    await userEvent.click(btn('52'))
+    await userEvent.click(screen.getByRole('button', { name: 'Вкладка' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Вкладка' }))
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('без нарушений axe в управляемом режиме', async () => {
+    const { container } = renderK(form({ expanded: ['50', '59', 'budget'] }))
     expect(await axe(container)).toHaveNoViolations()
   })
 })

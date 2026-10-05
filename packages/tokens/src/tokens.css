@@ -137,6 +137,13 @@
   --k-tt-gap: calc(10px * var(--k-density));
   --k-tt-empty: calc(14px * var(--k-density));
   --k-tt-panel-pt: calc(6px * var(--k-density));
+  --k-kv-row: calc(24px * var(--k-density));
+  --k-kv-px: calc(10px * var(--k-density));
+  --k-kv-gap: calc(14px * var(--k-density));
+  --k-kvs-gap: calc(1px * var(--k-density));
+  --k-fs-kv: calc(11.5px * var(--k-density));
+  --k-fs-kvs: calc(12px * var(--k-density));
+  --k-ah-row: calc(25px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

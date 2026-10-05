@@ -155,6 +155,13 @@ export const sizes = {
   'tt-gap': 10,
   'tt-empty': 14,
   'tt-panel-pt': 6,
+  'kv-row': 24,
+  'kv-px': 10,
+  'kv-gap': 14,
+  'kvs-gap': 1,
+  'fs-kv': 11.5,
+  'fs-kvs': 12,
+  'ah-row': 25,
 } as const
 
 export const fonts = {
