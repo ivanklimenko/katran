@@ -10,7 +10,7 @@ export type FieldEditorProps = {
   name: string
   /** «Как есть» — исходное значение с бека. */
   original: FieldValue
-  /** Черновик. */
+  /** Черновик. Строк меньше lines — поля дополняются ''; больше — не обрезаются (все поля видны): держать ≤ lines — дело модели. */
   value: FieldValue
   onChange: (next: FieldValue) => void
   /** Строк в поле и знаков в строке. */
@@ -47,6 +47,7 @@ export function FieldEditor({
 }: FieldEditorProps) {
   const errId = useStableId()
   const first = useRef<HTMLInputElement>(null)
+  const root = useRef<HTMLElement>(null)
   const max = n * w
   const draft = padTo(value.lines, n)
   const was = padTo(original.lines, n)
@@ -57,6 +58,12 @@ export function FieldEditor({
 
   // фокус при открытии: «Счёт» у стороны, иначе «Строка 1» (эталон :1456)
   useEffect(() => { first.current?.focus() }, [])
+  // сохранение началось с фокусом на кнопке редактора: кнопка станет disabled и фокус уйдёт в body — Esc пройдёт мимо
+  // редактора и закроет деталку. Переводим фокус в первое поле (поля при busy доступны).
+  useEffect(() => {
+    const active = document.activeElement
+    if (busy && active instanceof HTMLButtonElement && root.current?.contains(active)) first.current?.focus()
+  }, [busy])
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'Escape' || e.defaultPrevented) return
@@ -71,7 +78,7 @@ export function FieldEditor({
   }
 
   return (
-    <section className={s.fe} data-k-edit="" aria-label={title}>
+    <section ref={root} className={s.fe} data-k-edit="" aria-label={title}>
       {/* Esc — на обёртке (role="presentation", как подложка Prompt): всплывает с полей и кнопок редактора */}
       <div role="presentation" onKeyDown={onKeyDown}>
         <h6 className={s.feTitle}>{title}</h6>
@@ -80,7 +87,11 @@ export function FieldEditor({
             <div className={s.feCap}><span>Как есть</span><span>{total(original.lines)}/{max}</span></div>
             {opts && (
               <div className={s.feOpts}>
-                {opts.map((o) => <span key={o} className={s.feOpt} data-on={o === (original.opt ?? '') ? '' : undefined}>{optLabel(o)}</span>)}
+                {/* исходная выделена цветом — для скринридера она названа текстом, чипы скрыты */}
+                <span className={s.feSr}>{optName(original.opt ?? '')}</span>
+                {opts.map((o) => (
+                  <span key={o} className={s.feOpt} aria-hidden="true" data-on={o === (original.opt ?? '') ? '' : undefined}>{optLabel(o)}</span>
+                ))}
               </div>
             )}
             {account && (

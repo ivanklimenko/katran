@@ -30,8 +30,12 @@ const setup = (p: Partial<FieldEditorProps> = {}) => {
     onSave,
     ...p,
   }
-  return renderK(<FieldEditor {...props} />)
+  const r = renderK(<FieldEditor {...props} />)
+  return { ...r, props }
 }
+
+/** Колонка редактора по её подписи: «Как есть» | «Редактирование». */
+const column = (cap: string) => screen.getByText(cap).parentElement!.parentElement!
 
 describe('FieldEditor', () => {
   it('заголовок, две колонки, счётчики «Как есть» и живой', () => {
@@ -63,6 +67,36 @@ describe('FieldEditor', () => {
     expect(screen.getByRole('region', { name: 'Поле 57 · Банк получателя — правка' })).toBeInTheDocument()
   })
 
+  it('«Как есть»: исходная опция сообщается текстом, не только цветом', () => {
+    setup({ opts: ['', 'A', 'F'], original: { opt: 'F', lines: [] }, value: { opt: 'A', lines: [] } })
+    const was = column('Как есть')
+    expect(within(was).getByText('Опция F')).toBeInTheDocument()
+    expect(within(was).getByText('F').closest('[aria-hidden="true"]')).not.toBeNull()
+    setup({ opts: ['', 'A'], original: { lines: [] }, value: { lines: [] } })
+    expect(within(screen.getAllByText('Как есть')[1]!.parentElement!.parentElement!).getByText('Без буквы')).toBeInTheDocument()
+  })
+
+  it('busy после клика «Сохранить» — фокус остаётся в редакторе (первое поле), Esc глотается', async () => {
+    const { rerender, props } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+    rerender(<FieldEditor {...props} busy />)
+    expect(screen.getByRole('textbox', { name: 'Строка 1' })).toHaveFocus()
+    const outer = vi.fn()
+    document.addEventListener('keydown', outer)
+    await userEvent.keyboard('{Escape}')
+    document.removeEventListener('keydown', outer)
+    expect(outer).not.toHaveBeenCalled()
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('busy при фокусе в поле — фокус не трогается', async () => {
+    const { rerender, props } = setup()
+    screen.getByRole('textbox', { name: 'Строка 3' }).focus()
+    rerender(<FieldEditor {...props} busy />)
+    expect(screen.getByRole('textbox', { name: 'Строка 3' })).toHaveFocus()
+  })
+
   it('опции — кнопки aria-pressed, «—» с именем «Без буквы»; выбор зовёт onChange', async () => {
     setup({ opts: ['', 'A', 'F'], value: { lines: [] } })
     const none = screen.getByRole('button', { name: 'Без буквы' })
@@ -91,8 +125,11 @@ describe('FieldEditor', () => {
     const acc = screen.getByRole('textbox', { name: 'Счёт' })
     expect(acc).toHaveFocus()
     expect(acc).toHaveValue('40702810')
-    expect(screen.getAllByText('Счёт / IBAN')).toHaveLength(2)
-    expect(screen.getAllByText('Наименование / адрес')).toHaveLength(2)
+    for (const cap of ['Как есть', 'Редактирование']) {
+      expect(within(column(cap)).getByText('Счёт / IBAN')).toBeInTheDocument()
+      expect(within(column(cap)).getByText('Наименование / адрес')).toBeInTheDocument()
+    }
+    expect(within(column('Как есть')).getByText('40702810', { selector: 'pre' })).toBeInTheDocument()
     await userEvent.type(acc, '9')
     expect(onChange).toHaveBeenLastCalledWith({ opt: 'A', acc: '407028109', lines: ['OOO ROMASHKA'] })
   })

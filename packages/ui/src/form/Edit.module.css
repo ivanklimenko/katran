@@ -279,3 +279,13 @@ button.feOpt:focus-visible {
   font-size: var(--k-fs-2);
   color: var(--k-muted);
 }
+
+/* только для скринридера (как .sr в Form.module.css): исходная опция «Как есть» */
+.feSr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
