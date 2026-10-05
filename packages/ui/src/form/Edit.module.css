@@ -1,0 +1,128 @@
+/* аудит правок поля (эталон .hs/.hl, index.html:222–240); место в раскрытой строке задаёт вызывающий */
+
+/* сводка: отделена пунктиром, зазор 8, кнопка «История» прижата вправо */
+.hs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--k-sp-2);
+  margin: var(--k-grid-gap) 0 var(--k-sp-1);
+  padding-top: var(--k-sp-1);
+  border-top: 1px dashed var(--k-line);
+}
+
+.hsCount {
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.hsWho {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.hsToggle {
+  margin-left: auto;
+  padding: 0 calc(var(--k-sp-1) / 2);
+  border: 0;
+  border-radius: var(--k-r-s);
+  background: none;
+  font: 500 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-val);
+  cursor: pointer;
+}
+
+.hsToggle:hover {
+  text-decoration: underline;
+}
+
+.hsToggle:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 0;
+}
+
+/* таймлайн: линия слева 2, точка записи 8 с кольцом paper 2 — ok, у ожидающей — warn */
+.hl {
+  margin: 0 0 var(--k-field-gap);
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--k-line);
+}
+
+.hl[hidden] {
+  display: none;
+}
+
+.hlItem {
+  position: relative;
+  padding: var(--k-grid-gap) 0 var(--k-badge-gap) var(--k-sp-3);
+}
+
+/* сдвиг как у эталона: влево 5 (0.625 точки), сверху 9 (1.125 точки) — масштабируется с плотностью */
+.hlItem::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--k-edit-dot) * 1.125);
+  left: calc(var(--k-edit-dot) * -0.625);
+  width: var(--k-edit-dot);
+  height: var(--k-edit-dot);
+  border: 2px solid var(--k-paper);
+  border-radius: 50%;
+  background: var(--k-ok);
+}
+
+.hlItem[data-status="pending"]::before {
+  background: var(--k-warn);
+}
+
+.hlHead {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  font-size: var(--k-fs-pre);
+}
+
+.hlWho {
+  font-weight: 600;
+  color: var(--k-ink);
+}
+
+.hlTime {
+  font: var(--k-fs-2) var(--k-mono);
+  color: var(--k-muted);
+}
+
+.hlBadge {
+  margin-left: auto;
+}
+
+.hlNote {
+  margin-top: var(--k-kvs-gap);
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.hlDiff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-kvs-gap);
+  margin-top: calc(var(--k-sp-1) / 2);
+  font: var(--k-fs-pre) var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.hlDiff s {
+  color: var(--k-muted);
+  text-decoration-color: var(--k-faint);
+}
+
+.hlDiff b {
+  font-weight: 600;
+  color: var(--k-warn);
+}
+
+.hlNone {
+  font-family: var(--k-sans);
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}

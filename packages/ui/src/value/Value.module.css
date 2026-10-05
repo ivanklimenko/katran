@@ -316,3 +316,35 @@
 .badge[data-badge="neutral"] .badgeDot {
   background: var(--k-st-grey);
 }
+
+/* маркер «изменено» (эталон .hero .vd .mark, index.html:149–153): точка 6 цвета warn, под ней с зазором 1 галочка 700 8 / 8;
+   у ожидающей правки галочка держит место невидимой, у утверждённой — видима, цвет ok; отступ от значения 5 */
+.mark {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--k-kvs-gap);
+  margin-left: var(--k-badge-gap);
+  vertical-align: middle;
+  cursor: help;
+}
+
+.markDot {
+  display: block;
+  width: var(--k-mark-dot);
+  height: var(--k-mark-dot);
+  border-radius: 50%;
+  background: var(--k-warn);
+}
+
+.markOk {
+  display: block;
+  font: 700 var(--k-fs-mark) / var(--k-fs-mark) var(--k-sans);
+  color: var(--k-faint);
+  visibility: hidden;
+}
+
+.mark[data-status="confirmed"] .markOk {
+  visibility: visible;
+  color: var(--k-ok);
+}
