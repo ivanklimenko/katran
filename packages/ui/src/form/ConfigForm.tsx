@@ -53,8 +53,11 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
   const [sections, setSections] = useState<Record<string, boolean>>({})
   const parts: FormPart[] = [schema, ...(schema.seqB ? [schema.seqB] : [])]
   const filled = (tag: string) => !isEmptyValue(value(tag))
+  const edited = (tag: string) => (edit?.state(tag) ?? null) !== null
+  // Раскрывается заполненное поле и поле с правками — у пустого после правки «в пусто» в раскрытии «Было / Стало» и аудит
+  const expandable = (tag: string) => filled(tag) || edited(tag)
   const groups = mateGroups(parts)
-  const allTags = parts.flatMap((p) => [...(p.grid ?? []).flatMap((row) => refsOfRow(row).map(tagOf)), ...(p.text ?? []).map(tagOf)]).filter(filled)
+  const allTags = parts.flatMap((p) => [...(p.grid ?? []).flatMap((row) => refsOfRow(row).map(tagOf)), ...(p.text ?? []).map(tagOf)]).filter(expandable)
   const hasGrid = (schema.grid?.length ?? 0) > 0 || schema.seqB !== undefined
   const hasFields = hasGrid || (schema.text?.length ?? 0) > 0 || (schema.extra?.length ?? 0) > 0
   const secs = (schema.sections ?? []).map((sec) => ({ sec, content: renderSection ? renderSection(sec.id) : null }))
@@ -75,7 +78,7 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     const mates = groups.find((g) => g.includes(tag)) ?? [tag]
     const flip = (cur: string[]) => (cur.includes(tag)
       ? cur.filter((t) => !mates.includes(t))
-      : [...cur.filter((t) => !mates.includes(t)), ...mates.filter(filled)])
+      : [...cur.filter((t) => !mates.includes(t)), ...mates.filter(expandable)])
     commit(flip(keys), () => setOpen(flip))
   }
   const toggleFields = () => commit(
@@ -100,12 +103,12 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     )
   }
   const editor = (tags: string[]) => (edit && edit.editing !== null && tags.includes(edit.editing)
-    ? <div key="editor" className={s.editor} data-part="editor">{edit.renderEditor(edit.editing)}</div>
+    ? <div key={`editor:${edit.editing}`} className={s.editor} data-part="editor">{edit.renderEditor(edit.editing)}</div>
     : null)
   const grid = (part: FormPart) => (
     <div className={s.fg}>
       {(part.grid ?? []).map((row, i) => {
-        const hide = row.map((r) => r === null || (typeof r !== 'string' && r.hideIfEmpty === true && !filled(r.tag)))
+        const hide = row.map((r) => r === null || (typeof r !== 'string' && r.hideIfEmpty === true && !expandable(r.tag)))
         if (hide.every(Boolean)) return null
         return (
           <Fragment key={i}>

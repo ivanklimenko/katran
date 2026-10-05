@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
@@ -267,6 +267,53 @@ describe('ConfigForm — правка (спека 2c §2.1)', () => {
     renderK(<ConfigForm {...base} edit={{ ...edit, state }} />)
     expect(row('57')).toHaveAttribute('data-edited')
     expect(row('59')).not.toHaveAttribute('data-edited')
+  })
+
+  it('пустое поле с правкой раскрывается по клику, аудит виден', async () => {
+    const state = (tag: string) => (tag === '55' ? { changed: true, was: { lines: ['OLD BANK'] }, tip: 'Изменено: Петрова А. С., 22.09.2026 10:42', audit: <div data-testid="audit-55">1 изменение</div> } : null)
+    renderK(<ConfigForm {...base} edit={{ ...edit, can: () => true, state }} />)
+    const btn55 = screen.getByRole('button', { name: /не заполнено/ })
+    expect(row('55')).toContainElement(btn55)
+    await userEvent.click(btn55)
+    expect(btn55).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByTestId('audit-55')).toBeVisible()
+  })
+
+  it('«Развернуть поля» раскрывает и пустое поле с правкой', async () => {
+    const state = (tag: string) => (tag === '55' ? { changed: false, was: { lines: [] }, tip: 'т', audit: <div data-testid="audit-55">1 изменение</div> } : null)
+    renderK(<ConfigForm {...base} edit={{ ...edit, state }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Развернуть поля' }))
+    expect(screen.getByTestId('audit-55')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Свернуть поля' })).toBeInTheDocument()
+  })
+
+  it('скрываемое пустое (hideIfEmpty) остаётся, пока у него есть правка', () => {
+    const hid: FormSchema = { grid: [['52', { tag: '56', hideIfEmpty: true }]] }
+    const { rerender } = renderK(<ConfigForm {...base} schema={hid} edit={edit} />)
+    expect(row('56')).toBeNull()
+    const state = (tag: string) => (tag === '56' ? { changed: true, was: { lines: ['OLD BANK'] }, tip: 'т' } : null)
+    rerender(<ConfigForm {...base} schema={hid} edit={{ ...edit, state }} />)
+    expect(row('56')).not.toBeNull()
+    expect(row('56')).toHaveAttribute('data-edited')
+  })
+
+  it('переход редактора между полями одной строки монтирует новый редактор', () => {
+    function Editor({ tag }: { tag: string }) {
+      const ref = useRef<HTMLInputElement>(null)
+      useEffect(() => { ref.current?.focus() }, [])
+      return <input ref={ref} aria-label={`Строка 1 поля ${tag}`} />
+    }
+    const view = (editing: string) => (
+      <>
+        <ConfigForm {...base} edit={{ ...edit, can: () => true, editing, renderEditor: (tag) => <Editor tag={tag} /> }} />
+        <button type="button">Другое</button>
+      </>
+    )
+    const { rerender } = renderK(view('52'))
+    expect(screen.getByRole('textbox', { name: 'Строка 1 поля 52' })).toHaveFocus()
+    screen.getByRole('button', { name: 'Другое' }).focus()
+    rerender(view('56'))
+    expect(screen.getByRole('textbox', { name: 'Строка 1 поля 56' })).toHaveFocus()
   })
 
   it('без edit — ни карандашей, ни редактора (вид 2a/2b)', () => {

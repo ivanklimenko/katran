@@ -552,20 +552,23 @@
   color: var(--k-val);
 }
 
-/* изменённое поле: фон warn-row, рамка и главное значение warn, точка 8 в углу со сдвигом −3 */
+/* изменённое поле: фон warn-row, рамка, главное значение и текст 70/72 — warn, точка 8 в углу со сдвигом −3 */
 .cell[data-edited],
 .cell[data-edited]:hover {
   border-color: var(--k-warn);
   background: var(--k-warn-row);
 }
 
-.cell[data-edited] .main {
+.cell[data-edited] .main,
+.cell[data-edited] .pre {
   color: var(--k-warn);
 }
 
 .cell[data-edited]::after {
   content: '';
   position: absolute;
+
+  /* сдвиг эталона −3 при точке 8 — в долях точки, чтобы масштабироваться с плотностью вместе с ней */
   top: calc(var(--k-edit-dot) * -3 / 8);
   right: calc(var(--k-edit-dot) * -3 / 8);
   width: var(--k-edit-dot);

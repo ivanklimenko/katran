@@ -59,7 +59,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
   // Название поля — не только тултипом (его не видят клавиатура и скринридер): скрытым текстом рядом с тегом.
   // Сосед, а не потомок тега: абсолютно позиционированный, он не занимает ячейку сетки строки и не меняет текст тега.
   const tagEl = <><span className={s.tag} data-k-tip={tip}>{base}</span>{def && <span className={s.sr}>{def.label}</span>}</>
-  const editedSr = changed && <span className={s.sr}>изменено: {edit.tip}</span>
+  const editedSr = changed && <span className={s.sr}>{edit.tip}</span>
   const pen = editable && (
     <IconButton ref={penRef} size="s" className={s.pen} label={`Редактировать поле ${tag}`} data-k-tip="Редактировать" onClick={onEdit}>
       <Pen />
@@ -75,7 +75,8 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
   const fullText = (v: FieldValue | null) => (v === null || isEmptyValue(v) ? ['—'] : present(tag, v).full)
   // раскрытие поля сетки и панель текстового поля: «Было / Стало» (если changed), аудит, «✎ Изменить»
   const wasNow = changed && <div className={s.full}>{['Было:', ...fullText(edit.was), 'Стало:', ...fullText(value)].join('\n')}</div>
-  const editBtn = editable && (
+  // «✎ Изменить» — только у поля с правками (эталон: f.edit); первая правка — карандашом
+  const editBtn = editable && edit && (
     <button type="button" className={s.ed} aria-label={`Изменить поле ${tag}`} onClick={onEdit}>
       <span aria-hidden="true">✎</span> Изменить
     </button>
@@ -124,7 +125,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
   // Правка в пустое остаётся раскрываемой строкой: «Было / Стало» и аудит доступны (preflight Task 6, п. 3)
   const view = empty ? { main: '', second: '', full: [] } : present(tag, value)
   return (
-    <div className={[s.cell, open ? s.open : '', editable ? s.editable : ''].filter(Boolean).join(' ')} {...cellAttrs}>
+    <div className={[s.cell, empty ? s.null : '', open ? s.open : '', editable ? s.editable : ''].filter(Boolean).join(' ')} {...cellAttrs} data-empty={empty ? '' : undefined}>
       <button type="button" className={[s.row, s.toggle].join(' ')} aria-expanded={open} aria-controls={panel} onClick={onToggle}>
         {tagEl}
         <span className={s.opt} data-k-tip={value?.opt ? optionLabels?.[value.opt] : undefined}>{value?.opt ?? ''}</span>

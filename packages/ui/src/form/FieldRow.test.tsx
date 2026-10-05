@@ -118,15 +118,15 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     expect(screen.queryByRole('button', { name: /Редактировать/ })).toBeNull()
   })
 
-  it('edit.changed: ячейка data-edited, тултип, скрытый текст «изменено»; раскрытие — «Было:» / «Стало:», аудит, «✎ Изменить»', async () => {
+  it('edit.changed: ячейка data-edited, тултип, скрытый текст — tip; раскрытие — «Было:» / «Стало:», аудит, «✎ Изменить»', async () => {
     const onEdit = vi.fn()
     renderK(<Row value={now57} edit={changed} onEdit={onEdit} />)
     const cell = cellOf('57')
     expect(cell).toHaveAttribute('data-edited')
     expect(cell).toHaveAttribute('data-k-tip', tip)
     const row = screen.getByRole('button', { name: /SBERBANK MOSCOW/ })
-    expect(row).toHaveAccessibleName(new RegExp(`изменено: ${tip}`))
-    expect(screen.getByText(`изменено: ${tip}`)).toHaveClass('sr')
+    expect(row).toHaveAccessibleName(new RegExp(tip))
+    expect(screen.getByText(tip)).toHaveClass('sr')
     expect(screen.queryByText(/Было:/)).not.toBeVisible()
     await userEvent.click(row)
     const full = screen.getByText(/Было:/)
@@ -147,7 +147,7 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     const cell = cellOf('57')
     expect(cell).not.toHaveAttribute('data-edited')
     expect(cell).not.toHaveAttribute('data-k-tip')
-    expect(screen.queryByText(/изменено:/)).toBeNull()
+    expect(screen.queryByText(tip)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /VOSTOCHNY/ }))
     expect(screen.queryByText(/Было:/)).toBeNull()
     expect(screen.getByText('VOSTOCHNY KREDIT BANK KHABAROVSK BR VKRBRU8KXXX')).toBeVisible()
@@ -163,6 +163,25 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     await userEvent.click(row)
     expect(screen.getByText(/Было:/).textContent).toBe('Было:\nVOSTOCHNY KREDIT BANK KHABAROVSK BR\nVKRBRU8KXXX\nСтало:\n—')
     expect(screen.getByTestId('audit')).toBeVisible()
+  })
+
+  it('откат в пустое с историей: строка пустая (data-empty), но раскрывается — аудит и «✎ Изменить»', async () => {
+    renderK(<Row value={{ lines: [] }} edit={{ ...changed, changed: false }} />)
+    const cell = cellOf('57')
+    expect(cell).toHaveAttribute('data-empty')
+    expect(cell).toHaveClass('null')
+    expect(cell).not.toHaveAttribute('data-edited')
+    await userEvent.click(screen.getByRole('button', { name: /не заполнено/ }))
+    expect(screen.getByTestId('audit')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Изменить поле 57' })).toBeVisible()
+  })
+
+  it('правимое поле без правок: в раскрытии нет «✎ Изменить» (как на эталоне) — только карандаш', async () => {
+    renderK(<Row value={was57} edit={null} />)
+    await userEvent.click(screen.getByRole('button', { name: /VOSTOCHNY/ }))
+    expect(screen.getByText('VOSTOCHNY KREDIT BANK KHABAROVSK BR VKRBRU8KXXX')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Изменить поле 57' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Редактировать поле 57' })).toBeInTheDocument()
   })
 
   it('ячейка с открытым редактором — data-editing', () => {
@@ -207,7 +226,7 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     const cell = cellOf('70')
     expect(cell).toHaveAttribute('data-edited')
     expect(cell).toHaveAttribute('data-k-tip', tip)
-    expect(screen.getByText(`изменено: ${tip}`)).toHaveClass('sr')
+    expect(screen.getByText(tip)).toHaveClass('sr')
     expect(screen.getByRole('button', { name: 'Редактировать поле 70' }).parentElement).toBe(cell)
     // раскрытия у 70 нет (show = lines = 4) — панель видна сразу
     expect(screen.getByText(/Было:/).textContent).toBe('Было:\n/INV/ 2026-0417 DD 15.09.2026\nСтало:\n/INV/ 2026-0418')
