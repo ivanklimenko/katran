@@ -88,6 +88,9 @@ export const sizes: Record<string, number> = {
   'dt-dir': 62, 'dt-acc': 156, 'dt-sum': 150, 'dt-st': 84, 'dt-time': 104, 'dt-bic': 90, 'dt-label-s': 128, 'dt-label-m': 150, 'dt-label-l': 250,
   // бейдж статуса вкладок деталки (эталон .st, index.html:105–107): точка 6, отступы 2 × 7, зазор точки 5, радиус пилюли 10
   'badge-dot': 6, 'badge-py': 2, 'badge-px': 7, 'badge-gap': 5, 'r-badge': 10,
+  // таблица вкладок деталки MiniTable (эталон .tt/.ld/.tk, index.html:299–342): строка 24, шапка 22, раскрываемая строка 26,
+  // колонка «№» 22, шеврон 14, зазор и боковой отступ 10, отступ пустого состояния 14, верхний отступ панели раскрытой строки 6
+  'tt-row': 24, 'tt-head': 22, 'tt-row-x': 26, 'tt-num': 22, 'tt-chev': 14, 'tt-gap': 10, 'tt-empty': 14, 'tt-panel-pt': 6,
 }
 
 export const fonts = {

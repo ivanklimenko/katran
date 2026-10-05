@@ -147,6 +147,14 @@ export const sizes = {
   'badge-px': 7,
   'badge-gap': 5,
   'r-badge': 10,
+  'tt-row': 24,
+  'tt-head': 22,
+  'tt-row-x': 26,
+  'tt-num': 22,
+  'tt-chev': 14,
+  'tt-gap': 10,
+  'tt-empty': 14,
+  'tt-panel-pt': 6,
 } as const
 
 export const fonts = {

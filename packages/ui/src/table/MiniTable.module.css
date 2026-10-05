@@ -1,0 +1,138 @@
+/* компактная таблица вкладок деталки (эталон .tt/.tbar/.ld/.tk, index.html:299–342) */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+  min-width: 0;
+}
+
+/* полоса над таблицей (.tbar): первый элемент — подпись-счётчик, остальное прижато вправо */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--k-tt-gap);
+  min-height: var(--k-tt-row-x);
+}
+
+.bar > :first-child {
+  margin-right: auto;
+}
+
+.frame {
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+  background: var(--k-paper);
+  overflow: hidden;
+}
+
+.table {
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink);
+}
+
+.row {
+  display: grid;
+  box-sizing: border-box;
+  grid-template-columns: var(--k-cols);
+  gap: 0 var(--k-tt-gap);
+  align-items: center;
+  min-height: var(--k-tt-row);
+  padding: 0 var(--k-tt-gap);
+  border-bottom: 1px solid var(--k-line2);
+}
+
+.head {
+  min-height: var(--k-tt-head);
+  background: var(--k-sunk);
+  font: 600 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+}
+
+.body > .row:hover {
+  background: var(--k-hover);
+}
+
+.xrow {
+  min-height: var(--k-tt-row-x);
+  cursor: pointer;
+}
+
+.cell {
+  min-width: 0;
+}
+
+.cell[data-align="end"] {
+  text-align: end;
+}
+
+.mono {
+  font-family: var(--k-mono);
+}
+
+.num {
+  min-width: 0;
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-faint);
+  text-align: end;
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--k-r-s);
+  background: none;
+  color: var(--k-faint);
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 0;
+}
+
+.chev {
+  display: inline-block;
+}
+
+.open .chev {
+  transform: rotate(180deg);
+}
+
+/* панель раскрытой строки (эталон .ldb): на всю ширину, подложка sunk */
+.panel {
+  padding: var(--k-tt-panel-pt) var(--k-tt-gap) var(--k-sp-2);
+  border-bottom: 1px solid var(--k-line2);
+  background: var(--k-sunk);
+}
+
+/* у последней строки нижней границы нет — её даёт рамка таблицы (эталон .tt .tr:last-child, .au>*:last-child);
+   у раскрываемых последний элемент тела — строка панели: свёрнутая строка перед ней — последняя видимая */
+.body > .row:last-child,
+.body > .xrow:nth-last-child(2):not(.open),
+.body > :last-child > .panel {
+  border-bottom: 0;
+}
+
+.empty {
+  margin: 0;
+  padding: var(--k-tt-empty) var(--k-tt-gap);
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-muted);
+  text-align: center;
+}
+
+/* только для скринридера — как .sr форм */
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

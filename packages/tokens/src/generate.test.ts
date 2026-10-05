@@ -57,6 +57,11 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-badge-dot: calc\(6px \* var\(--k-density\)\)/)
     expect(css).toMatch(/--k-r-badge: calc\(10px \* var\(--k-density\)\)/)
   })
+  it('таблица вкладок деталки MiniTable: строка 24, шапка 22, раскрываемая строка 26 (спека 2b)', () => {
+    expect(css).toMatch(/--k-tt-row: calc\(24px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-tt-head: calc\(22px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-tt-row-x: calc\(26px \* var\(--k-density\)\)/)
+  })
 
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {

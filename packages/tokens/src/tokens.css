@@ -129,6 +129,14 @@
   --k-badge-px: calc(7px * var(--k-density));
   --k-badge-gap: calc(5px * var(--k-density));
   --k-r-badge: calc(10px * var(--k-density));
+  --k-tt-row: calc(24px * var(--k-density));
+  --k-tt-head: calc(22px * var(--k-density));
+  --k-tt-row-x: calc(26px * var(--k-density));
+  --k-tt-num: calc(22px * var(--k-density));
+  --k-tt-chev: calc(14px * var(--k-density));
+  --k-tt-gap: calc(10px * var(--k-density));
+  --k-tt-empty: calc(14px * var(--k-density));
+  --k-tt-panel-pt: calc(6px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;
