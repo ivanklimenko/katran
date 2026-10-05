@@ -385,7 +385,7 @@ describe('FilterPanel: совместимый режим (без onSetField)', (
     const input = screen.getByRole('textbox', { name: 'Назначение' })
     await u.type(input, 'счёт{Enter}')
     await u.type(input, 'инструкция{Enter}')
-    expect(screen.getByText('Не добавлено: предел 1')).toBeInTheDocument()
+    expect(screen.getByText('Не добавлено: предел 1', { selector: 'span' })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Назначение' })).getAllByRole('listitem')).toHaveLength(1)
     expect(input).toHaveValue('инструкция')
     expect(onEdit).toHaveBeenLastCalledWith({ field: 'purpose', op: 'CONTAINS', value: 'счёт' })
