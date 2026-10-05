@@ -126,3 +126,156 @@
   font-size: var(--k-fs-2);
   color: var(--k-muted);
 }
+
+/* редактор поля FieldEditor (эталон .fe/.box/.opts/.btn, index.html:202–211, 427–443):
+   рамка val, радиус 5, отступы 7 / 9 / 8, фон sunk; блоки, чья высота сверяется с эталоном, — border-box */
+.fe {
+  box-sizing: border-box;
+  border: 1px solid var(--k-val);
+  border-radius: calc(var(--k-r-s) * 1.25);
+  padding: var(--k-fe-pt) var(--k-fe-px) var(--k-fe-pb);
+  background: var(--k-sunk);
+}
+
+/* заголовок 600 11, отступ снизу 5 */
+.feTitle {
+  margin: 0 0 calc(var(--k-sp-1) * 1.25);
+  font: 600 var(--k-fs-2) var(--k-sans);
+  color: var(--k-ink2);
+}
+
+/* «Как есть» | «Редактирование»: две равные колонки, зазор 10 */
+.feTwo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--k-fe-gap);
+}
+
+/* коробка колонки: 5 / 7, радиус 4; «Как есть» — без фона */
+.feBox {
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+  padding: var(--k-fe-box-py) var(--k-fe-box-px);
+  background: var(--k-paper);
+}
+
+.feBox[data-ro] {
+  background: none;
+}
+
+/* подпись колонки и счётчик: 500 10.5, отступ снизу 3 */
+.feCap {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: calc(var(--k-sp-1) * 0.75);
+  font: 500 var(--k-fs-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.feCap [data-bad] {
+  font-weight: 600;
+  color: var(--k-bad);
+}
+
+/* опции: зазор 2, отступ снизу 4; кнопка и чип 18 × 22+, моно 600 10.5, радиус 3 */
+.feOpts {
+  display: flex;
+  gap: calc(var(--k-sp-1) / 2);
+  margin-bottom: var(--k-sp-1);
+}
+
+.feOpt {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--k-opt-min);
+  height: var(--k-opt-btn);
+  padding: 0 var(--k-sp-1);
+  border: 1px solid var(--k-line);
+  border-radius: calc(var(--k-r-s) * 0.75);
+  background: var(--k-paper);
+  font: 600 var(--k-fs-3) / 1 var(--k-mono);
+  color: var(--k-muted);
+}
+
+button.feOpt {
+  cursor: pointer;
+}
+
+button.feOpt:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 0;
+}
+
+.feOpt[aria-pressed="true"],
+.feOpt[data-on] {
+  border-color: transparent;
+  background: var(--k-opt-soft);
+  color: var(--k-opt);
+}
+
+.feLbl {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+/* поле строки: 21, моно 12, отступ 2, рамка только снизу; фокус — val и hover; ошибка — bad */
+.feInput {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: var(--k-fe-line);
+  padding: calc(var(--k-sp-1) / 2);
+  border: 0;
+  border-bottom: 1px solid var(--k-line2);
+  border-radius: 0;
+  background: var(--k-paper);
+  font: var(--k-fs-edit) var(--k-mono);
+  letter-spacing: -0.01em;
+  color: var(--k-ink);
+}
+
+.feInput:focus {
+  outline: none;
+  border-bottom-color: var(--k-val);
+  background: var(--k-hover);
+}
+
+.feInput[aria-invalid="true"] {
+  border-bottom-color: var(--k-bad);
+  background: var(--k-bad-soft);
+}
+
+/* «Как есть»: строки 21 (блок из 4 — 84), моно 12, muted */
+.fePre {
+  margin: 0;
+  overflow: hidden;
+  font: var(--k-fs-edit) / var(--k-fe-line) var(--k-mono);
+  white-space: pre;
+  color: var(--k-muted);
+}
+
+/* строка ошибки: 11 / 1.3, min-height 14, отступ сверху 4 */
+.feErr {
+  min-height: var(--k-lh-2);
+  margin-top: var(--k-sp-1);
+  font: var(--k-fs-2) / 1.3 var(--k-sans);
+  color: var(--k-bad);
+}
+
+/* подвал: правило слева, кнопки справа; отступ сверху 7, зазор 8 */
+.feRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--k-sp-2);
+  margin-top: var(--k-fe-pt);
+}
+
+.feRule {
+  margin-right: auto;
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
