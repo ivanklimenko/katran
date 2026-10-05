@@ -241,7 +241,8 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 - [ ] `requestFx.use(...)` подключён — страницы не показывают «Транспорт не подключён».
 - [ ] Оба экрана (`FxDocsPage`, `RubDocsPage`) загружаются и показывают данные вашего бека.
 - [ ] Деталка открывается из обоих реестров, и `GET /grids/{gridId}/documents/{id}` вашего бека проходит контрактный тест (`apps/pi/src/app/fake/contract.test.ts`, блоки «контракт детали», раздел 7) с вашим обработчиком.
-- [ ] `?slow=N` и `?fail=search|facets|meta|detail` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
+- [ ] Вкладки деталки открываются, `GET …/documents/{id}/tabs/{tab}` вашего бека проходит контрактный тест; `tabsOff` детали совпадает с пустотой вкладок.
+- [ ] `?slow=N` и `?fail=search|facets|suggest|meta|detail|tab|tab:<id>` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
 - [ ] Контрактные тесты (раздел 7) зелёные против вашего бека.
 - [ ] eslint-границы FSD перенесены в ваш конфиг (раздел 11) — импорты вверх по слоям и между соседними слайсами одного слоя запрещены линтом, не только на словах.
 - [ ] В скопированных слайсах нет упоминаний стенда (тексты, геометрия Shell, префикс persist): пояснение `note` страниц — ваше или не передано (раздел 3); высоту реестру даёт ваш контейнер экрана — `DocRegistry` занимает `height: 100%` родителя, у нас определённую высоту задаёт `apps/pi/src/app/Shell.module.css` (`.main`/`.content`), без неё грид вырастет по содержимому; раскладка грида хранится под вашим префиксом (`RegistryConfig.persist`, раздел 3), а не под `katran-pi`.
@@ -258,13 +259,13 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 
 ## 13. Деталка документа
 
-Деталка «Платёжная инструкция» (срез 2a — только просмотр) открывается из обоих реестров: кнопка открытия записи — drawer A у правого края окна, двойной клик или Shift+клик — drawer B слева от A, для сравнения двух документов. Реестр под деталкой остаётся рабочим (фильтры, выделение, страница). Спека — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; эндпоинт и состав детали для бека — `docs/reference/pi-api.md` §1.4 и §7.
+Деталка «Платёжная инструкция» (срезы 2a и 2b — только просмотр) открывается из обоих реестров: кнопка открытия записи — drawer A у правого края окна, двойной клик или Shift+клик — drawer B слева от A, для сравнения двух документов. Реестр под деталкой остаётся рабочим (фильтры, выделение, страница). Спека — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; 2b — `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md`; эндпоинт и состав детали для бека — `docs/reference/pi-api.md` §1.4 и §7, вкладок — §1.6 и §8.
 
-В 2a содержимое есть только у вкладки «Общие данные»; остальные вкладки (Доп. поля, Статусы, Комплаенс, …) видны в полосе, но показывают заглушку «Вкладка «…» — будет в срезе 2b». Действия лейна — заглушки (раздел 13.5).
+С среза 2b все вкладки показывают содержимое: «Общие данные» и «Доп. поля» (валюта) — из детали, остальные грузятся лениво отдельным запросом (`GET …/documents/{id}/tabs/{tab}`, `pi-api.md` §1.6 и §8). Связанный документ открывается по клику на его ID в drawer B. Кнопки вкладок и действия лейна — заглушки до 2d (раздел 13.5).
 
 ### 13.0. Если реестры у вас уже перенесены
 
-Деталка — не только новые папки: срез 2a поменял и файлы, которые вы уже скопировали по разделу 2. Их нужно скопировать заново (или перенести изменения из `git log` ветки 2a):
+Деталка — не только новые папки: срезы 2a и 2b поменяли и файлы, которые вы уже скопировали по разделу 2. Их нужно скопировать заново (или перенести изменения из `git log` веток 2a и 2b):
 
 | Файл | Что поменялось |
 |---|---|
@@ -276,42 +277,60 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 | `widgets/doc-registry/ui/DocRegistry.tsx` | проп `marked` (метка открытых записей) |
 | `pages/*/model/registry.model.ts` | модель деталки `detail`, связка `openRequested → detail.open`, автооткрытие первой записи (раздел 13.2) |
 | `pages/*/ui/*Page.tsx` | `DocDetail` рядом с `DocRegistry`, `marked`, `rowOf`, `returnFocus` (раздел 13.2) |
+| `shared/api/ports.ts` (2b) | `parseTab` в `createGridPorts` — с ним порты получают `tabFx`; типы `TabQuery`, `TabParser`, `TabPort` |
+| `shared/lib/detail/*` (2b) | `TabContext`, `TabView`, `LocalTabView`, `RemoteTabView`, `remoteTab`, `DetailDomain.tabViews` |
+| `entities/fx-doc/api/ports.ts`, `entities/rub-doc/api/ports.ts` (2b) | `parseTab: trailParsersFor(FX_TABS)` / `trailParsersFor(RUB_TABS)` — парсеры `TRAIL_PARSERS` сущности `doc-trail` по набору вкладок реестра (через `@x`) |
+| `entities/fx-doc` (2b) | «Доп. поля»: `ExtraTab`, `fxExtraView`, `fxExtraGroups` (`model/extra.ts`, `ui/ExtraTab.tsx`); тип детали не менялся |
+| `widgets/doc-detail/*` (2b) | `tabFx`, `localTabs`, `tabView` слота, `retryTab`, `$expanded`, `setExpanded`; скелетон, ошибка и «Повторить» вкладки (раздел 13.1) |
+| `pages/*/model/registry.model.ts` (2b) | `FX_LOCAL_TABS` / `RUB_LOCAL_TABS`, `tabFx` и `localTabs` в `createDetail` (раздел 13.2) |
+| `pages/*/ui/detailDomain.ts` (2b, новый), `pages/*/ui/*Page.tsx` | домен деталки с `tabViews` — `fxDetailDomain` / `rubDetailDomain` вместо домена сущности (раздел 13.2) |
 
-Новые папки — целиком: `widgets/doc-detail/`, `entities/posting/`, `shared/lib/detail/`, а в `entities/fx-doc/` и `entities/rub-doc/` — новые файлы `model/detail.ts`, `model/swift.ts` / `model/profiles.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `ui/detail.tsx`, `ui/detail.module.css`. `app/fake/*` (фейк детали) по-прежнему не переносится.
+Новые папки — целиком: `widgets/doc-detail/`, `entities/posting/`, `shared/lib/detail/`, `entities/doc-trail/` (2b, вместе с `@x/fx-doc.ts` и `@x/rub-doc.ts`), а в `entities/fx-doc/` и `entities/rub-doc/` — новые файлы `model/detail.ts`, `model/swift.ts` / `model/profiles.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `ui/detail.tsx`, `ui/detail.module.css`. `app/fake/*` (фейк детали) по-прежнему не переносится.
 
-**Кит нужен свежий.** Все три пакета кита по-прежнему версии `0.1.0`, а срез 2a лежит в `CHANGELOG.md` в разделе «0.1.0 — в работе»: номер версии не отличает кит с деталкой от кита без неё. Если вы ставили кит тарболами, соберите их заново из текущего кода — `examples/federation/scripts/pack-kit.sh` (собирает три пакета и кладёт `.tgz` в `.kit/`; подробности — `docs/consuming.md`, «Откуда пакеты»), и переустановите; во внутренний реестр — опубликуйте заново. Со старыми тарболами сборка упадёт на импорте `Drawer`/`createDrawerStackModel`.
+**Кит нужен свежий.** Все три пакета кита по-прежнему версии `0.1.0`, а срез 2a лежит в `CHANGELOG.md` в разделе «0.1.0 — в работе»: номер версии не отличает кит с деталкой от кита без неё. Если вы ставили кит тарболами, соберите их заново из текущего кода — `examples/federation/scripts/pack-kit.sh` (собирает три пакета и кладёт `.tgz` в `.kit/`; подробности — `docs/consuming.md`, «Откуда пакеты»), и переустановите; во внутренний реестр — опубликуйте заново. Со старыми тарболами сборка упадёт на импорте `Drawer`/`createDrawerStackModel`. Срез 2b добавил в кит (тот же раздел `CHANGELOG.md`): `MiniTable`, `StatusBadge`, `Timestamp`, `KeyValueList`, `CodeView`, форматтеры `formatTimestamp`, `formatDuration`, `timestampDiff`, `Disclosure` с `mono`/`emptyText`, `ConfigForm` с управляемым раскрытием `expanded`/`onExpandedChange`; тег-метка `Tag tone="mt"` — прежний.
 
 ### 13.1. Из чего состоит
 
 | Где | Что |
 |---|---|
-| `widgets/doc-detail` | `createDetail({ detailFx, lifecycle })` (`lib/createDetail.ts`) — модель: стек A/B кита (`createDrawerStackModel` из `@katran/effector`) плюс загрузка документа по слоту и кэш по `id` на время открытого экрана; `$slots` (у каждого слота `id`, вкладка, состояние `loading`/`ready`/`error`, данные, текст ошибки), `$marks` (метки записей для грида), `open`, `close`, `closeTop`, `setTab`, `retry`. `DocDetail` (`ui/DocDetail.tsx`) — экран: `DrawerStack` кита, в слоте — шапка, лейн действий, `Tabs` с переполнением, во вкладке «Общие данные» — `ConfigForm` кита; скелетон на загрузку, ошибка с «Повторить». Виджет один на оба реестра и `entities` не импортирует |
-| `entities/fx-doc`, `entities/rub-doc` | всё доменное — объект `DetailDomain` сущности: `fxDocDetailDomain`, `rubDocDetailDomain` (`ui/detail.tsx`): заголовок, вкладки, действия лейна, реестр полей, профиль «Общих данных» по типу документа (`schemaOf`), сводка, блоки и секции. Тип детали — `FxDocDetail`/`RubDocDetail` (`model/detail.ts`), маппер — `api/detail.mapper.ts`, порт — `fxDocPorts.detailFx`/`rubDocPorts.detailFx` |
+| `widgets/doc-detail` | `createDetail({ detailFx, lifecycle })` (`lib/createDetail.ts`) — модель: стек A/B кита (`createDrawerStackModel` из `@katran/effector`) плюс загрузка документа по слоту и кэш по `id` на время открытого экрана; `$slots` (у каждого слота `id`, вкладка, состояние `loading`/`ready`/`error`, данные, текст ошибки), `$marks` (метки записей для грида), `open`, `close`, `closeTop`, `setTab`, `retry`. `DocDetail` (`ui/DocDetail.tsx`) — экран: `DrawerStack` кита, в слоте — шапка, лейн действий, `Tabs` с переполнением, во вкладке «Общие данные» — `ConfigForm` кита; скелетон на загрузку, ошибка с «Повторить». С 2b — ленивые вкладки: `createDetail({ detailFx, tabFx, localTabs, lifecycle })` грузит нелокальную вкладку при выборе, кэш по `id:tab` до ухода с экрана, у вкладки свои скелетон (не меньше 400 мс), ошибка «Не удалось загрузить вкладку» и «Повторить» (`retryTab(slot)`); раскрытое во вкладках (строки, аккордеоны, поля «Общих») — в модели, `$expanded` по ключу `id:tab`, переживает переключение вкладок и закрытие drawer'а. Виды вкладок виджет получает из домена (`tabViews`). Виджет один на оба реестра и `entities` не импортирует |
+| `entities/fx-doc`, `entities/rub-doc` | всё доменное — объект `DetailDomain` сущности: `fxDocDetailDomain`, `rubDocDetailDomain` (`ui/detail.tsx`): заголовок, вкладки, действия лейна, реестр полей, профиль «Общих данных» по типу документа (`schemaOf`), сводка, блоки и секции. Тип детали — `FxDocDetail`/`RubDocDetail` (`model/detail.ts`), маппер — `api/detail.mapper.ts`, порт — `fxDocPorts.detailFx`/`rubDocPorts.detailFx` (с 2b — и `tabFx`). Виды вкладок в домен сущности не входят — их добавляет страница (`tabViews`, раздел 13.2) |
 | `entities/posting` | проводки деталки: тип `Tx`, маппер `parseTx`/`parseTxs`, блок `TxBlock`; соседям — через `@x/fx-doc.ts` и `@x/rub-doc.ts` (раздел 12) |
-| `shared/lib/detail` | типы шва «сущность → виджет»: `DetailDomain`, `DetailSummary`, `DetailTab`, `DetailAction`, `ActionIcon` |
-| `shared/api` | `createGridPorts({ gridId, parseRow, parseDetail })` — при `parseDetail` порты получают `detailFx: Effect<string, Detail, ApiError>` (`GET /grids/{gridId}/documents/{id}`, `id` кодируется в пути) |
+| `entities/doc-trail` (2b) | история обработки документа, общая для обоих реестров: типы вкладок (`model/types.ts`), `toneOf`, мапперы `TRAIL_PARSERS` (`api/trail.mapper.ts`), примеры `TRAIL_EXAMPLES` (`api/trail.example.ts`), виды `TRAIL_VIEWS` (`ui/views.ts`: Статусы, Комплаенс, Связанные, Задачи, Нотификации, Исходный текст / ED244, Стриминг, MPU, Аудит); соседям — `TRAIL_PARSERS` и `trailParsersFor` через `@x/fx-doc.ts`, `@x/rub-doc.ts` |
+| `shared/lib/detail` | типы шва «сущность → виджет»: `DetailDomain` (с 2b — `tabViews`), `DetailSummary`, `DetailTab`, `DetailAction`, `ActionIcon`; вкладки (2b) — `TabContext`, `TabView` (`LocalTabView` / `RemoteTabView`), `remoteTab` |
+| `shared/api` | `createGridPorts({ gridId, parseRow, parseDetail, parseTab })` — при `parseDetail` порты получают `detailFx: Effect<string, Detail, ApiError>` (`GET /grids/{gridId}/documents/{id}`, `id` кодируется в пути), при `parseTab` (2b) — `tabFx: Effect<TabQuery, unknown, ApiError>` (`GET …/documents/{id}/tabs/{tab}`; вкладка без парсера — `contractError` до запроса, битая форма ответа — после) |
 
-Из кита деталке нужны (`@katran/ui`): новые в 2a — `Drawer`, `DrawerStack` (тип `DrawerStackItem`), `Tabs` с `overflow` и `variant="line"`, `ConfigForm` (типы `FormSchema`, `FieldDef`, `FieldValue`, `HeroCell`, `SectionContent`, `FieldPresenter`, `FieldView`), `FieldRow`, `Disclosure`, `DataGrid` с `marked`, `gridFocusTarget`; прежние — `TabPanel`, `ErrorState`, `Skeleton`, `useLoadingGate`, `Menu`, `IconButton`, `LinkValue`, `StatusDot`, `Tag`, `useKatran`, форматтеры `formatAmount`, `formatDate`, `formatDateTimeFull`. Из `@katran/effector` — `createDrawerStackModel` (типы `DrawerEntry`, `DrawerSlot`, `DrawerStackModel`). Кит — собранный из кода со срезом 2a (раздел 13.0).
+Из кита деталке нужны (`@katran/ui`): новые в 2a — `Drawer`, `DrawerStack` (тип `DrawerStackItem`), `Tabs` с `overflow` и `variant="line"`, `ConfigForm` (типы `FormSchema`, `FieldDef`, `FieldValue`, `HeroCell`, `SectionContent`, `FieldPresenter`, `FieldView`), `FieldRow`, `Disclosure`, `DataGrid` с `marked`, `gridFocusTarget`; прежние — `TabPanel`, `ErrorState`, `Skeleton`, `useLoadingGate`, `Menu`, `IconButton`, `LinkValue`, `StatusDot`, `Tag`, `useKatran`, форматтеры `formatAmount`, `formatDate`, `formatDateTimeFull`; новые в 2b (вкладки) — `MiniTable` (тип `MiniColumn`), `StatusBadge` (`BadgeTone`), `Timestamp`, `KeyValueList` (`KeyValueItem`), `CodeView`, `formatTimestamp`, `formatDuration`, `timestampDiff`, `Disclosure` с `mono`/`emptyText`, `ConfigForm` с `expanded`/`onExpandedChange`, прежние `CopyValue`, `EmptyState`, `Button`, `Tag tone="mt"`. Из `@katran/effector` — `createDrawerStackModel` (типы `DrawerEntry`, `DrawerSlot`, `DrawerStackModel`). Кит — собранный из кода со срезами 2a и 2b (раздел 13.0).
 
 **`createDetail`** (`widgets/doc-detail/lib/createDetail.ts`):
 
 ```ts
 type DetailConfig<D> = {
   detailFx: Effect<string, D, ApiError>
+  tabFx?: Effect<TabQuery, unknown, ApiError> | undefined   // порт вкладок (2b); нет — нелокальные вкладки не грузятся
+  localTabs?: string[] | undefined       // вкладки с данными в детали, без своего запроса; по умолчанию ['main']
   lifecycle: PageLifecycle
   firstTab?: string | undefined          // вкладка только что открытого документа; по умолчанию 'main'
 }
-type DetailSlot<D> = { slot: 'a' | 'b'; id: string; tab: string; state: 'loading' | 'ready' | 'error'; data: D | null; error: string | null }
+type TabSlot = { state: 'loading' | 'ready' | 'error'; data: unknown; error: string | null }
+type DetailSlot<D> = {
+  slot: 'a' | 'b'; id: string; tab: string; state: 'loading' | 'ready' | 'error'; data: D | null; error: string | null
+  tabView: TabSlot | null                // активная нелокальная вкладка; null — локальная или порта вкладок нет
+}
 type Detail<D> = {
   stack: DrawerStackModel                                   // модель стека кита (opened, alreadyOpen, closeAll, $a, $b …)
   $slots: Store<{ a: DetailSlot<D> | null; b: DetailSlot<D> | null }>
   $marks: Store<Record<string, 'a' | 'b'>>                  // id документа → слот; для DataGrid marked
   $focus: Store<Record<string, number>>                     // растёт при повторном открытии открытого — Drawer focusKey
-  open: EventCallable<{ id: string; secondary: boolean }>   // тот же payload, что у registry.openRequested
+  $quiet: Store<Record<string, true>>                       // открытые не пользователем (quiet): drawer не забирает фокус
+  open: EventCallable<DrawerOpen>                           // { id, secondary, quiet? } — тот же payload, что у registry.openRequested
   close: EventCallable<'a' | 'b'>
   closeTop: EventCallable<void>
   setTab: EventCallable<{ slot: 'a' | 'b'; tab: string }>
   retry: EventCallable<'a' | 'b'>
+  retryTab: EventCallable<'a' | 'b'>                        // повтор активной нелокальной вкладки слота (2b)
+  $expanded: Store<Record<string, string[]>>                // раскрытое во вкладках по ключу `${id}:${tab}` до pageClosed (2b)
+  setExpanded: EventCallable<{ id: string; tab: string; keys: string[] }>
 }
 ```
 
@@ -332,11 +351,18 @@ import { createRegistry } from '../../../widgets/doc-registry'
 
 export const lifecycle = createPageLifecycle()
 export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle })
-export const detail = createDetail({ detailFx: fxDocPorts.detailFx, lifecycle })
+/** Вкладки валюты с данными в детали — без своего запроса (спека 2b §3.1): «Общие данные» и «Доп. поля». */
+export const FX_LOCAL_TABS = ['main', 'extra']
+/**
+ * Деталка экрана — на том же жизненном цикле: уход с экрана закрывает оба drawer'а, чистит кэш детали и вкладок
+ * и раскрытое (спека 2a §5, 2b §3.3). Остальные вкладки — лениво через tabFx.
+ */
+export const detail = createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle })
+// реестр о деталке не знает: открытие — через шов openRequested (спека apps/pi §7, спека 2a §4.4)
 sample({ clock: registry.openRequested, target: detail.open })
 
-// как на эталоне (решение владельца 30.09, В-Д4): первая запись первого ответа после входа на экран открывается в A;
-// quiet — открытие не пользователем: drawer не забирает фокус, он остаётся в реестре (R10)
+// В-Д4: при первом ответе реестра после входа на экран первая запись открывается в A (эталон grid.html:2192);
+// quiet — открытие не пользователем: фокус остаётся в реестре (R10)
 const $autoOpened = createStore(false).reset(lifecycle.pageClosed)
 const firstRow = sample({
   clock: registry.grid.$rows.updates,
@@ -350,31 +376,64 @@ sample({ clock: firstRow, fn: (row) => ({ id: fxDocLayout.rowKey(row), secondary
 
 Автооткрытие — поведение эталона, не механизм деталки: в A открывается первая запись **первого непустого** ответа реестра после входа на экран (пустой ответ пропускается, флаг сбрасывается только `pageClosed`). Открывается она с `quiet: true`: фокус в drawer не переходит и остаётся в реестре, как на эталоне (там фокусом не управляют вовсе). Открытие пользователем (кнопка, двойной клик, Shift, клавиатура) `quiet` не передаёт — фокус уходит в заголовок drawer'а. Метка «тихого» открытия (`detail.$quiet`) живёт, пока документ открыт: повторное открытие того же документа пользователем фокус в его drawer переводит. Если оно вам не нужно, удалите последний блок (четыре выражения с `$autoOpened`/`firstRow`) и заодно `createStore` из импорта `effector` — иначе он останется неиспользованным и линт упадёт; остальное от блока не зависит.
 
-Экран рендерит реестр и деталку рядом (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`, сокращено):
+`FX_LOCAL_TABS` — вкладки, чьи данные приходят в детали («Общие данные» и «Доп. поля»): для них `tabFx` не вызывается. У рубля — `RUB_LOCAL_TABS = ['main']`. Каждая вкладка вида `local` обязана быть в этом списке — тесты страницы (`model/registry.model.test.ts`) это проверяют.
+
+Виды вкладок собирает страница: она видит и `fx-doc`, и `doc-trail` (`apps/pi/src/pages/fx-docs/ui/detailDomain.ts`):
+
+```ts
+import { TRAIL_VIEWS, type TrailTabId } from '../../../entities/doc-trail'
+import { FX_TABS, fxDocDetailDomain, fxExtraView, type FxDoc, type FxDocDetail } from '../../../entities/fx-doc'
+import type { DetailDomain, TabView } from '../../../shared/lib/detail'
+
+const isTrail = (id: string): id is TrailTabId => id in TRAIL_VIEWS
+
+/**
+ * Виды вкладок валюты (спека 2b §3.4): «Доп. поля» — локальная, из детали (fx-doc); общие вкладки истории обработки —
+ * виды doc-trail по набору FX_TABS (у валюты «Исходный текст» — source, ED244 нет). «Общие данные» рисует ConfigForm виджета.
+ * Собирается здесь: соседние сущности друг друга не видят (FSD), а страница видит обе через index.ts.
+ */
+const tabViews: Record<string, TabView<FxDocDetail>> = { extra: fxExtraView }
+for (const t of FX_TABS) if (isTrail(t.id)) tabViews[t.id] = TRAIL_VIEWS[t.id]
+
+export const fxDetailDomain: DetailDomain<FxDocDetail, FxDoc> = { ...fxDocDetailDomain, tabViews }
+```
+
+Экран рендерит реестр и деталку рядом (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`):
 
 ```tsx
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { fxDocDetailDomain, fxDocLayout } from '../../../entities/fx-doc'
+import { fxDocLayout } from '../../../entities/fx-doc'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { detail, registry } from '../model/registry.model'
+import { fxDetailDomain } from './detailDomain'
 
 const TITLE = 'Валютные документы'
 
+/** note — пояснение над реестром; текст задаёт приложение (у стенда — про фейковый сервер), слайс его не знает. */
 export function FxDocsPage({ note }: { note?: string | undefined }) {
-  const { announce } = useKatran() // массовые действия реестра — как раньше
+  const { announce } = useKatran()
   const [rows, marks] = useUnit([registry.grid.$rows, detail.$marks])
   return (
     <>
       <DocRegistry
-        registry={registry} layout={fxDocLayout} title={TITLE} /* …как раньше… */
+        registry={registry}
+        layout={fxDocLayout}
+        title={TITLE}
+        describe={(d) => `документ ${d.docNumber}`}
+        note={note}
+        bulkActions={[
+          { label: 'Экспортировать', onClick: (n) => announce(`Экспорт: выбрано ${n}`) },
+          { label: 'Отложить', onClick: (n) => announce(`Отложить: выбрано ${n}`) },
+        ]}
+        rowState={(d) => (d.lock ? { kind: 'locked', ...d.lock } : d.inactive ? { kind: 'inactive', ...d.inactive } : null)}
         openHint="Открыть деталку · двойной клик или Shift — рядом для сравнения"
         marked={(d) => marks[fxDocLayout.rowKey(d)] ?? null}
       />
       <DocDetail
         detail={detail}
-        domain={fxDocDetailDomain}
+        domain={fxDetailDomain}
         rowOf={(id) => rows.find((r) => fxDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
       />
@@ -389,7 +448,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
 - `DocDetail` рендерит drawer'ы порталом в корень `KatranProvider` — отдельного контейнера на странице ему не нужно; ширина drawer'а — токен `--k-drawer` (800 при плотности 100 %, растёт с плотностью).
 - **Drawer занимает окно по высоте целиком:** `position: fixed; top: 0; bottom: 0`, у правого края, `z-index` — токен `--k-z-drawer` (100). Верхнюю панель хоста (шапку метаприложения) он перекроет; настройки отступа сверху в ките пока нет (техдолг, `docs/STATE.md` §7). Если шапка хоста должна оставаться видимой — сообщите нам, это правка `Drawer` кита, а не ваша.
 
-Рублёвый экран — то же самое с `rubDocPorts`, `rubDocLayout`, `rubDocDetailDomain` (`apps/pi/src/pages/rub-docs/`).
+Рублёвый экран — то же самое с `rubDocPorts`, `rubDocLayout`, `RUB_LOCAL_TABS` и доменом `rubDetailDomain` (`apps/pi/src/pages/rub-docs/`; в `ui/detailDomain.ts` — только виды `doc-trail` по `RUB_TABS`).
 
 ### 13.3. Бек отдаёт деталь иначе
 
@@ -398,10 +457,11 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
 - Новый тип SWIFT-сообщения — профиль в `FX_PROFILES` (схема `FormSchema`: сводка, блоки, сетка пар, текст, extra, при необходимости `seqB`) и недостающие поля в `FX_FIELDS` — оба в `apps/pi/src/entities/fx-doc/model/swift.ts`; тип добавляется и в `FX_TYPES` строки (`model/fxDoc.ts`).
 - Рублёвые секции и реквизиты — константы `apps/pi/src/entities/rub-doc/model/profiles.ts`: состав сторон `RUB_PARTY`, секции `RUB_SECTIONS`/`RSECTION_TITLE` и строки секций (`PURPOSE_EXTRA_ROWS`, `AGENT_COLS`, `BUDGET_ROWS`, `COLLECT_ROWS`, `ED107_HEAD`, `ED107_GROUPS`), подписи реквизитов `RFIELDS`, коды операций `RUB_OPERATION`.
 - Вкладки и действия лейна — `FX_TABS`/`FX_ACTIONS` и `RUB_TABS`/`RUB_ACTIONS` там же; ключи вкладок — те же, что в `tabsOff` ответа (`pi-api.md` §7.4).
+- **Бек отдаёт вкладку иначе** (другие имена полей, другая вложенность ответа `GET …/tabs/{tab}`) — правится только маппер вкладки в `apps/pi/src/entities/doc-trail/api/trail.mapper.ts` (`parseStatuses`, `parseTasks`, … — таблица `TRAIL_PARSERS`): он обязан вернуть тип из `model/types.ts`, виды вкладок видят только его. После правки замените пример вкладки в `api/trail.example.ts` (`TRAIL_EXAMPLES`) ответом своего бека — на нём гоняется `api/trail.mapper.test.ts`. Другой адрес вкладки — одна строка `url` внутри `tabFx` в `apps/pi/src/shared/api/ports.ts`. Ответ — всегда объект, пустая вкладка — объект с пустым списком и ключ в `tabsOff` детали (`pi-api.md` §1.6, §8).
 
 ### 13.4. Жизненный цикл
 
-`pageClosed` экрана закрывает оба drawer'а и очищает кэш деталей: при возврате прежние деталки не всплывают. Ответ, пришедший после ухода, не принимается — ни в кэш, ни в ошибки, ни в состояние загрузки: у каждого запроса номер визита экрана (растёт на `pageOpened`), и запрос прежнего визита, висевший при уходе, нового визита не касается, даже если ответил уже после возврата. Автооткрытие первой записи при возврате (13.2) фокус не забирает. Адаптеру роутера (раздел 5) делать для деталки ничего дополнительно не нужно — хватает тех же `pageOpened`/`pageClosed`. Кэш по `id` живёт, пока экран открыт: переключение A↔B и повторное открытие не перезапрашивают деталь; «Повторить» в состоянии ошибки — `retry(slot)`. `refreshRequested` реестра деталь не трогает (перезапрос детали после действий — срез 2c).
+`pageClosed` экрана закрывает оба drawer'а и очищает кэш деталей: при возврате прежние деталки не всплывают. Ответ, пришедший после ухода, не принимается — ни в кэш, ни в ошибки, ни в состояние загрузки: у каждого запроса номер визита экрана (растёт на `pageOpened`), и запрос прежнего визита, висевший при уходе, нового визита не касается, даже если ответил уже после возврата. Автооткрытие первой записи при возврате (13.2) фокус не забирает. Адаптеру роутера (раздел 5) делать для деталки ничего дополнительно не нужно — хватает тех же `pageOpened`/`pageClosed`. Кэш по `id` живёт, пока экран открыт: переключение A↔B и повторное открытие не перезапрашивают деталь; «Повторить» в состоянии ошибки — `retry(slot)`. `refreshRequested` реестра деталь не трогает (перезапрос детали после действий — срез 2c). Вкладки (2b) живут так же: кэш по `id:tab`, раскрытое (`$expanded`) и ошибки вкладок очищает `pageClosed`; ответ вкладки прежнего визита не принимается; «Повторить» во вкладке — `retryTab(slot)`, повторный выбор вкладки с ошибкой — тоже новый запрос.
 
 ### 13.5. Жесты и клавиатура
 
@@ -410,13 +470,34 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
 - Shift+клик — в B сразу; Enter/Space на кнопке — в A сразу.
 - Документ, уже открытый в A или B, повторно не открывается — фокус переходит в его drawer.
 - Esc или «×» — закрывает сначала B, потом A; фокус возвращается на кнопку открытия записи (`returnFocus`), если был в закрытом drawer'е (13.2). Закрытие A «×» при открытом B: B сдвигается в A, фокус — в заголовок оставшегося drawer'а, а не в грид (R11). Esc в поле ввода, в меню и в поповере drawer не закрывает — у них Esc свой (меню «••• N» вкладок закрывается, деталка остаётся). Видимый тултип тоже забирает Esc первым: первое нажатие прячет подсказку, второе закрывает drawer. Пока деталка открыта, Esc из интерактивного элемента внутри ячейки грида тоже закрывает drawer (без деталки он возвращает фокус в ячейку).
-- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d.
+- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d. Кнопки вкладок 2b («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — тоже заглушки: `announce` «Действие будет в 2d».
+- Раскрываемые строки вкладок («Связанные», «Задачи») — мышью и Enter/Space на шевроне, `aria-expanded`; клик по ссылке или кнопке внутри строки её не раскрывает. ID связанного документа — ссылка-кнопка «Открыть … в соседней панели»: документ открывается в B (уже открытый — фокус в его drawer). Esc внутри `CodeView` и раскрытых строк не перехватывается — работает, как в остальной деталке.
 
 ### 13.6. Как проверить
 
 - **Контрактный тест детали против своего бека.** Блоки «контракт детали» лежат в `apps/pi/src/app/fake/contract.test.ts`, а `app/` не переносится — скопируйте два блока `describe('контракт детали fx-docs …')` и `describe('контракт детали rub-docs …')` в свой тестовый файл и подставьте свой обработчик в `fork({ handlers: [[requestFx, myHandler]] })` (раздел 7). Против настоящего бека держите проверки, которые требует контракт: `detailFx` по `id` строки из `searchFx` завершается `done`, номер (`docNumber`), сумма (`amount`), статус (`status`) и тип — как у строки (`pi-api.md` §7.1); каждый тип документа разбирается маппером; неизвестный `id` — `404` (подставьте заведомо несуществующий `id` своего бека). Специфичны для фейка и уберите: равенство сторон и полей строке (`fields['50'].acc === row.f50acc`, `fields['57'].lines`, `party.s.acc === row.fromAcc`, `party.r.inn === row.toInn`) — так фейк строит деталь, бек не обязан; `'nope'`/`'rub-9999'` как «несуществующий» `id`; `500` через `createFakeServer(…, { failing: () => 'detail' })`; тест «есть документ с бюджетными реквизитами и с посредниками» (`makeRubDocDetail` — данные фейка).
 - **Мапперы** — `entities/*/api/detail.mapper.test.ts` переезжают вместе со слайсом; если меняли маппер под свой бек — обновите `api/detail.example.ts`.
-- **e2e деталки** — `apps/pi/e2e/detail.spec.ts` (Playwright, `@playwright/test`, раздел «Зависимости»): как сценарий для своего e2e — геометрия против эталона ± 2 (drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27), A+B рядом, двойной клик и Shift, Esc по порядку, повторное открытие, меню «••• N», скелетон, ошибка с «Повторить», уход с экрана. Как есть он не заработает: завязан на стенд — маршруты `#/fx-docs`/`#/rub-docs`, регуляторы фейка `?slow=N`, `?fail=detail`, `?hostile`, данные фейка (запись 3 валюты заблокирована, первая запись открывается при входе), превью на порту 5186. Эти места замените своими.
+- **Контрактный тест вкладок.** Блоки вкладок в том же `contract.test.ts` гоняют `fxDocPorts.tabFx`/`rubDocPorts.tabFx` (`…/tabs/{tab}`): каждая вкладка набора отвечает `200` и разбирается маппером, `tabsOff` детали совпадает с пустотой вкладок; `404` на вкладку не из набора и `500` по `?fail=tab:<id>` — там же; подробнее `404` (неизвестный грид, документ, вкладка) и `500` по `?fail=tab` проверяет `apps/pi/src/app/fake/server.test.ts`. Против своего бека оставьте `200`, разбор, совпадение `tabsOff` и `404`; `500` через регулятор и тест «данные разнообразны» — специфика фейка, уберите.
+- **Мапперы вкладок** — `entities/doc-trail/api/trail.mapper.test.ts` (на `TRAIL_EXAMPLES`, включая битые формы) переезжает вместе со слайсом.
+- **e2e деталки** — `apps/pi/e2e/detail.spec.ts` (Playwright, `@playwright/test`, раздел «Зависимости»): как сценарий для своего e2e — геометрия против эталона ± 2 (drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27), A+B рядом, двойной клик и Shift, Esc по порядку, повторное открытие, меню «••• N», скелетон, ошибка с «Повторить», уход с экрана. Как есть он не заработает: завязан на стенд — маршруты `#/fx-docs`/`#/rub-docs`, регуляторы фейка `?slow=N`, `?fail=detail`, `?hostile`, данные фейка (запись 3 валюты заблокирована, первая запись открывается при входе), превью на порту 5186. Эти места замените своими. Вкладки — `apps/pi/e2e/detail-tabs.spec.ts`: высоты строк вкладок против эталона ± 2 (таблица 24, шапка 22, «ключ–значение» 24, раскрываемая строка 26), «Связанный» → B, ошибка вкладки и «Повторить» (`?fail=tab:audit`), кэш вкладок (взведённый `?fail=tab` не срабатывает на уже загруженной вкладке), `?hostile`; завязан на те же данные фейка.
+
+### 13.7. Как добавить вкладку
+
+1. **Данные.** Общая для обоих реестров (история обработки) — в `entities/doc-trail`: тип в `model/types.ts`, маппер в `api/trail.mapper.ts` и ключ в `TRAIL_PARSERS`, пример ответа в `api/trail.example.ts` (`TRAIL_EXAMPLES`) и тест маппера на нём. Своя для одного реестра — те же три файла в его сущности. Локальная вкладка (данные в детали) — поля в типе детали и её маппере, парсер вкладки не нужен.
+2. **Вид.** Нелокальная — `remoteTab<T>({ render: (data, ctx) => …, skeletonRows })` (`shared/lib/detail`): `data` — уже разобранный маппером ответ, `ctx` — `docId`, `openDocument(id)` (открыть в B), `announce(text)`, `expanded`/`setExpanded` (раскрытое переживает переключение вкладок; `null` — ещё не трогали, берите свои умолчания). Локальная — `{ kind: 'local', render: (detail, ctx) => … }`. Блоки — из кита: `MiniTable`, `KeyValueList`, `CodeView`, `StatusBadge`, `Timestamp`, `Disclosure`, `EmptyState`.
+3. **Набор вкладок.** Ключ и подпись — в `FX_TABS` / `RUB_TABS` (порядок полосы фиксированный); ключ — в `tabsOff` детали, когда данных нет.
+4. **Подключение.** Парсер — в `parseTab` порта сущности (`entities/*/api/ports.ts`; общие вкладки `doc-trail` попадают туда сами через `trailParsersFor(FX_TABS)`, если ключ есть и в наборе, и в `TRAIL_PARSERS`); вид — в `tabViews` домена страницы (`pages/*/ui/detailDomain.ts`; вид `doc-trail` — ключом в `TRAIL_VIEWS`); локальная — ещё и в `FX_LOCAL_TABS` / `RUB_LOCAL_TABS` модели страницы. Тесты страницы (`pages/*/model/registry.model.test.ts`) проверяют, что у каждой вкладки набора есть вид нужного вида и парсер в порту.
+5. **Проверка.** Тест маппера на примере; `app/details.a11y.test.tsx` сам проходит новую вкладку под axe; контрактный тест `…/tabs/{tab}` своего бека — по образцу блоков вкладок в `apps/pi/src/app/fake/contract.test.ts`.
+
+```ts
+// entities/doc-trail/ui/views.ts — так устроены готовые виды
+export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
+  statuses: remoteTab<StatusEvent[]>({ render: (data, ctx) => createElement(StatusesTab, { data, ctx }) }),
+  // …
+}
+```
+
+Файл `views.ts` — без JSX, поэтому `createElement`; в `.tsx` то же самое пишется `render: (data, ctx) => <StatusesTab data={data} ctx={ctx} />`.
 
 ## Зависимости
 

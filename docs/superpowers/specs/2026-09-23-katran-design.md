@@ -61,7 +61,7 @@ katran/
     superpowers/specs/, superpowers/plans/
 ```
 
-Состав пакетов по срезам — раздел 5. Срез 2a (деталка на просмотр) добавил в `@katran/ui` `Drawer`, `DrawerStack`, `FieldRow`, `ConfigForm`, `Disclosure` (`src/drawer/`, `src/form/`), проп `overflow` и вид `variant: 'segment' | 'line'` у `Tabs`, проп `marked` и помощник `gridFocusTarget` у `DataGrid`; в `@katran/effector` — `createDrawerStackModel`.
+Состав пакетов по срезам — раздел 5. Срез 2a (деталка на просмотр) добавил в `@katran/ui` `Drawer`, `DrawerStack`, `FieldRow`, `ConfigForm`, `Disclosure` (`src/drawer/`, `src/form/`), проп `overflow` и вид `variant: 'segment' | 'line'` у `Tabs`, проп `marked` и помощник `gridFocusTarget` у `DataGrid`; в `@katran/effector` — `createDrawerStackModel`. Срез 2b (вкладки деталки) добавил модули `table` (`MiniTable`) и `code` (`CodeView`, `src/table/`, `src/code/`); в `value` — `StatusBadge`, `Timestamp` (`Tag mono` спеки 2b — существующий `Tag tone="mt"`, нового варианта нет); в `form` — `KeyValueList`, `ConfigForm` с управляемым раскрытием (`expanded`/`onExpandedChange`), `Disclosure` с `mono`/`emptyText`; в `format` — `formatTimestamp`, `formatDuration`, `timestampDiff`.
 
 Инструменты: pnpm workspaces · TypeScript strict · Vite (library mode для пакетов, app для демо) · vitest + Testing Library · eslint (`import-x/no-restricted-paths`, `@typescript-eslint/no-restricted-imports`, `jsx-a11y`) · stylelint · Playwright для замеров геометрии.
 
@@ -171,6 +171,8 @@ katran/
 `Drawer` (стек из двух, фиксированная ширина 800, второй открывается двойным кликом по кнопке открытия), `Prompt` (`confirm({...}) → Promise<boolean>`, затемняет только свой документ), `FieldRow` (строка SWIFT-поля 23 px без заголовка, пустое поле остаётся бледной строкой ради построчного совпадения двух документов), `ConfigForm` (рендер от реестра полей + профиля типа: hero, blocks, grid парами отправитель|получатель, text, extra), `InlineEdit` (исходник слева / ввод справа, маркер изменения `warn`, валидация длины строки и набора SWIFT X), `DateInput`. Модели: `createDrawerStackModel`, `createFormModel`. Табам добавляется переполнение: фиксированный порядок, неактивные второй группой, хвост в «••• N».
 
 Срез режется на подсрезы 2a–2d (спека `2026-09-29-katran-detail-view-design.md`). **2a исполнен** (просмотр): `Drawer` и `DrawerStack` (ширина 800 — токен `drawer`, не модальные), `Tabs` с `overflow`/`variant`, `FieldRow` (строка SWIFT-поля — **27** px по замеру эталона, не 23: 23 — строка таблицы сторон рубля), `ConfigForm` (типы — спека 2a §3.1), `Disclosure`, разведение клика и двойного клика и метка открытых в `DataGrid`, `createDrawerStackModel`. `Prompt`, `InlineEdit`, `DateInput`, `createFormModel` — срез 2c.
+
+**2b исполнен** (вкладки; спека `2026-09-30-katran-detail-tabs-design.md`): `MiniTable` (строка 24, шапка 22, раскрываемая 26), `StatusBadge`, `Timestamp`, `KeyValueList` (строка 24), `CodeView` (JSON, SWIFT, XML — подсветка React-элементами, без `innerHTML`), форматтеры времени; в `apps/pi` — сущность `doc-trail`, ленивый эндпоинт вкладок (предложение). `DateInput` уже есть — план 7 (поля ввода фильтров); в 2c он подключается к правке.
 
 ### 5.3. Срез 3 — дашборд
 
@@ -461,7 +463,7 @@ const grid = createGridModel<Doc>({
 | apps/pi | Реестры ПИ на FSD с переносимым швом данных: экран «Валютные документы» и e2e переехали из демо в `apps/pi`, добавлен рублёвый реестр по эталону `pi-constructor` — дизайн `2026-09-28-katran-pi-app-design.md` | сверка с эталоном (`registry-drift.md`, рублёвый реестр), e2e `apps/pi` 26/26, документы `pi-usage.md`/`pi-api.md` |
 | 1f. Advanced-фильтры | отдельный дизайн-заход → реализация | согласование вариантов до кода |
 | 2a. Деталка на просмотр | `Drawer`/`DrawerStack` со стеком A/B, `Tabs` с переполнением, `FieldRow`, `ConfigForm`, `Disclosure`, жесты `DataGrid`, `createDrawerStackModel`; деталка в `apps/pi` (`widgets/doc-detail`), порт детали — предложение `GET /grids/{gridId}/documents/{id}` — дизайн `2026-09-29-katran-detail-view-design.md`, план `2026-09-29-katran-detail-view.md` (**исполнен**) | сверка с эталоном (`detail-drift.md`), e2e `apps/pi` 37/37 (drawer 800, шапка 44, лейн 36, вкладки 32, строка поля 27 ± 2), документы `pi-usage.md` §13 / `pi-api.md` §7 |
-| 2b–2d. Деталка: вкладки, правка, действия | остальные вкладки (2b); `Prompt`, `InlineEdit`, `DateInput`, модели форм, аудит поля (2c); настоящие действия лейна (2d) | сверка каждого подсреза против того же эталона `e065bfb` |
+| 2b–2d. Деталка: вкладки, правка, действия | остальные вкладки (2b); `Prompt`, `InlineEdit`, `DateInput`, модели форм, аудит поля (2c); настоящие действия лейна (2d). 2b — исполнен (спека `2026-09-30-katran-detail-tabs-design.md`, план `2026-09-30-katran-detail-tabs.md`); 2c, 2d — впереди | сверка каждого подсреза против того же эталона `e065bfb`; 2b — `detail-drift.md` раздел «2b», e2e `apps/pi` 59/59 (высоты вкладок 22 / 24 / 24 / 26 — точно по эталону) |
 | 3. Дашборд | Chart, StatTile, PanelLayout | график по статусам на демо-данных |
 
 План реализации среза 1 — отдельный документ в `docs/superpowers/plans/`.
