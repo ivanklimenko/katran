@@ -29,3 +29,13 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
   mpu: remoteTab<MpuMessage[]>({ render: (data, ctx) => createElement(MpuTab, { data, ctx }) }),
   audit: remoteTab<AuditSections>({ render: (data, ctx) => createElement(AuditTab, { data, ctx }) }),
 }
+
+/**
+ * Виды для деталки реестра (DetailDomain.tabViews): ровно вкладки набора, у которых есть вид doc-trail, — зеркально
+ * trailParsersFor портов. Локальные (main, extra) и чужие (ed244 у валюты, source у рубля) не попадают; ключи прототипа не видны.
+ */
+export function trailViewsFor(tabs: readonly { id: string }[]): Record<string, RemoteTabView> {
+  const out: Record<string, RemoteTabView> = {}
+  for (const { id } of tabs) if (Object.prototype.hasOwnProperty.call(TRAIL_VIEWS, id)) out[id] = TRAIL_VIEWS[id as TrailTabId]
+  return out
+}

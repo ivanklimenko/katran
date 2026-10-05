@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { formatAmount } from '@katran/ui'
 import { TRAIL_EXAMPLES } from '../api/trail.example'
-import { TRAIL_PARSERS } from '../api/trail.mapper'
+import { TRAIL_PARSERS, trailParsersFor } from '../api/trail.mapper'
 import type { AuditSections, LinkedDoc, MpuMessage, SourceTexts, TrailTabId } from '../model/types'
 import { AuditTab } from './AuditTab'
 import { LinkedTab } from './LinkedTab'
 import { MpuTab } from './MpuTab'
 import { SourceTab } from './SourceTab'
 import { renderTab, shown, toggles } from './testing'
-import { TRAIL_VIEWS } from './views'
+import { TRAIL_VIEWS, trailViewsFor } from './views'
 
 // Данные — со стенда (index.html:767–871, обезличен), в доменных типах Task 7
 const ID1 = 'a18d3c05-b393-4252-a3c1-c93791937ccc'
@@ -209,6 +209,17 @@ describe('TRAIL_VIEWS — контракт с TRAIL_PARSERS', () => {
     expect(Object.keys(TRAIL_VIEWS).sort()).toEqual([...ids].sort())
     for (const id of ids) expect(TRAIL_VIEWS[id].kind, id).toBe('remote')
     expect(TRAIL_VIEWS.tasks.skeletonRows).toBe(5)
+  })
+  it('trailViewsFor: ровно вкладки набора с видом doc-trail — те же ключи, что trailParsersFor; ключи прототипа не видны', () => {
+    // наборы — по форме FX_TABS и RUB_TABS (соседние сущности тест не видит, FSD); сами наборы — в contract.test.ts
+    const fx = ['main', 'extra', 'statuses', 'compliance', 'linked', 'tasks', 'notif', 'source', 'stream', 'mpu', 'audit'].map((id) => ({ id }))
+    const odd = [{ id: 'main' }, { id: 'ed244' }, { id: 'toString' }, { id: 'constructor' }, { id: '__proto__' }]
+    for (const tabs of [fx, odd]) {
+      const views = trailViewsFor(tabs)
+      expect(Object.keys(views).sort()).toEqual(Object.keys(trailParsersFor(tabs)).sort())
+      for (const id of Object.keys(views)) expect(views[id], id).toBe(TRAIL_VIEWS[id as TrailTabId])
+    }
+    expect(Object.keys(trailViewsFor(odd))).toEqual(['ed244'])
   })
   it('каждый вид рисует пример своей вкладки после своего парсера — без нарушений axe', async () => {
     for (const id of ids) {

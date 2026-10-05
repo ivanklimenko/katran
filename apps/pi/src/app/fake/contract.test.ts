@@ -1,6 +1,6 @@
 import { allSettled, fork, type Effect } from 'effector'
 import { STATUS_LABEL } from '../../entities/doc-status'
-import { TRAIL_EXAMPLES, TRAIL_PARSERS, type TrailTabId } from '../../entities/doc-trail'
+import { TRAIL_EXAMPLES, TRAIL_PARSERS, trailViewsFor, type TrailTabId } from '../../entities/doc-trail'
 import { FX_TABS, FX_TYPES, fxDocPorts, parseFxDocDetail } from '../../entities/fx-doc'
 import { RUB_TABS, RUB_TYPES, parseRubDocDetail, rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx, type TabQuery } from '../../shared/api'
@@ -243,6 +243,10 @@ describe('контракт вкладок (спека 2b §3.1, §3.5): порт
     expect(keys).toEqual([...new Set([...fx, ...rub])].sort())
     expect([...FX_TRAIL_TABS]).toEqual(fx)
     expect([...RUB_TRAIL_TABS]).toEqual(rub)
+  })
+  it('виды вкладок страниц (trailViewsFor) — ровно нелокальные вкладки реестра, как парсеры портов (trailParsersFor)', () => {
+    expect(Object.keys(trailViewsFor(FX_TABS))).toEqual(remoteOf(FX_TABS, ['main', 'extra']))
+    expect(Object.keys(trailViewsFor(RUB_TABS))).toEqual(remoteOf(RUB_TABS, ['main']))
   })
   it('TRAIL_EXAMPLES (форма pi-api.md) разбираются TRAIL_PARSERS', () => {
     expect(Object.keys(TRAIL_EXAMPLES).sort()).toEqual(Object.keys(TRAIL_PARSERS).sort())
