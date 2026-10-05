@@ -53,6 +53,10 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-lh-pre: calc\(16\.3px \* var\(--k-density\)\)/)
     expect(css).toMatch(/--k-dt-label-l: calc\(250px \* var\(--k-density\)\)/)
   })
+  it('бейдж статуса вкладок деталки: точка 6, радиус 10 (спека 2b)', () => {
+    expect(css).toMatch(/--k-badge-dot: calc\(6px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-r-badge: calc\(10px \* var\(--k-density\)\)/)
+  })
 
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {

@@ -86,6 +86,8 @@ export const sizes: Record<string, number> = {
   'field-row': 27, 'field-tag': 26, 'field-opt': 14, 'field-gap': 6, 'fs-pre': 11.5, 'lh-pre': 16.3, 'fs-hero': 13.5, 'fs-sum': 17, 'party-row': 23,
   // сетки блоков деталки приложения: проводки (.tx), стороны и секции рубля (.rph/.rpr, .rsec .xr, RSECTIONS.agents)
   'dt-dir': 62, 'dt-acc': 156, 'dt-sum': 150, 'dt-st': 84, 'dt-time': 104, 'dt-bic': 90, 'dt-label-s': 128, 'dt-label-m': 150, 'dt-label-l': 250,
+  // бейдж статуса вкладок деталки (эталон .st, index.html:105–107): точка 6, отступы 2 × 7, зазор точки 5, радиус пилюли 10
+  'badge-dot': 6, 'badge-py': 2, 'badge-px': 7, 'badge-gap': 5, 'r-badge': 10,
 }
 
 export const fonts = {

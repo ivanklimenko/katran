@@ -142,6 +142,11 @@ export const sizes = {
   'dt-label-s': 128,
   'dt-label-m': 150,
   'dt-label-l': 250,
+  'badge-dot': 6,
+  'badge-py': 2,
+  'badge-px': 7,
+  'badge-gap': 5,
+  'r-badge': 10,
 } as const
 
 export const fonts = {

@@ -124,6 +124,11 @@
   --k-dt-label-s: calc(128px * var(--k-density));
   --k-dt-label-m: calc(150px * var(--k-density));
   --k-dt-label-l: calc(250px * var(--k-density));
+  --k-badge-dot: calc(6px * var(--k-density));
+  --k-badge-py: calc(2px * var(--k-density));
+  --k-badge-px: calc(7px * var(--k-density));
+  --k-badge-gap: calc(5px * var(--k-density));
+  --k-r-badge: calc(10px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

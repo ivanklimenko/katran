@@ -245,3 +245,74 @@
 .none {
   color: var(--k-faint);
 }
+
+/* метка времени события (эталон .tt .tm, index.html:305–306): моно 11.5, дата ink2, время ink, доли секунды faint */
+.tm {
+  font: var(--k-fs-pre) / var(--k-lh-1) var(--k-mono);
+  color: var(--k-ink2);
+  white-space: nowrap;
+}
+
+.tmTime {
+  font-weight: 500;
+  color: var(--k-ink);
+}
+
+.tmMs {
+  color: var(--k-faint);
+}
+
+/* бейдж статуса (эталон .st, index.html:105–107): 600 10.5 / 14 + 2 × 2 — высота 18, как замер эталона; пилюля, точка 6;
+   текст ink2 на всех тонах — ok/warn на своих -soft ниже 4.5 (правило контраста; класс C в detail-drift) */
+.badge {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--k-badge-gap);
+  padding: var(--k-badge-py) var(--k-badge-px);
+  border-radius: var(--k-r-badge);
+  font: 600 var(--k-fs-3) / var(--k-lh-2) var(--k-sans);
+  letter-spacing: 0.02em;
+  color: var(--k-ink2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.badgeDot {
+  flex: none;
+  width: var(--k-badge-dot);
+  height: var(--k-badge-dot);
+  border-radius: 50%;
+}
+
+.badge[data-badge="ok"] {
+  background: var(--k-ok-soft);
+}
+
+.badge[data-badge="ok"] .badgeDot {
+  background: var(--k-st-ok);
+}
+
+.badge[data-badge="bad"] {
+  background: var(--k-bad-soft);
+}
+
+.badge[data-badge="bad"] .badgeDot {
+  background: var(--k-st-bad);
+}
+
+.badge[data-badge="wait"] {
+  background: var(--k-warn-soft);
+}
+
+.badge[data-badge="wait"] .badgeDot {
+  background: var(--k-st-warn);
+}
+
+.badge[data-badge="neutral"] {
+  background: var(--k-chip);
+}
+
+.badge[data-badge="neutral"] .badgeDot {
+  background: var(--k-st-grey);
+}
