@@ -78,6 +78,10 @@
   min-width: 0;
 }
 
+.fieldWide {
+  grid-column: span 2;
+}
+
 .caption {
   font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
   color: var(--k-muted);

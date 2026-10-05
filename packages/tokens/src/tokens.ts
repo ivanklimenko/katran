@@ -110,6 +110,7 @@ export const sizes = {
   'grid-rz': 7,
   'menu-max-h': 320,
   'filter-field': 220,
+  'range-time-w': 300,
   'cal-cell': 28,
   'preset-w': 140,
   'tag-max-h': 84,

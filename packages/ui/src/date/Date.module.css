@@ -100,6 +100,11 @@
   padding-right: 0;
 }
 
+/* период со временем: полный текст двух полей «дд.мм.гггг чч:мм» не режется — ширина не меньше токена */
+.dateBox[data-time] {
+  min-width: var(--k-range-time-w);
+}
+
 .calBtn {
   flex: none;
   color: var(--k-muted);

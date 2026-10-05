@@ -129,6 +129,11 @@
   border: 0;
 }
 
+/* Период со временем не помещается в колонку минимальной ширины: занимает две колонки сетки. */
+.fieldWide {
+  grid-column: span 2;
+}
+
 .fieldLabel {
   padding: 0;
   font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);

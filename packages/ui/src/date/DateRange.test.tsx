@@ -70,6 +70,13 @@ describe('DateRange', () => {
     await u.click(screen.getByRole('button', { name: 'Готово' }))
     expect(screen.getByRole('textbox', { name: 'Дата документа, с' })).toHaveValue('01.09.2026 09:30')
   })
+  it('со временем корень помечен data-time — по нему CSS держит минимальную ширину range-time-w', () => {
+    const { unmount } = renderK(<Host time />)
+    expect(screen.getByRole('group', { name: 'Дата документа' }).closest('[data-time]')).not.toBeNull()
+    unmount()
+    renderK(<Host />)
+    expect(screen.getByRole('group', { name: 'Дата документа' }).closest('[data-time]')).toBeNull()
+  })
   it('без горячих кнопок и пресетов', async () => {
     const u = userEvent.setup()
     renderK(<Host quick={[]} presets={[]} />)

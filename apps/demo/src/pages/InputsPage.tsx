@@ -16,9 +16,9 @@ const NAMES = ['ЗАО «Василёк»', 'ООО «Ромашка»', 'АО �
 const SUGGEST_DELAY = 250
 
 /** Поле витрины: подпись над контролом; сам контрол назван через aria-label. */
-function Field({ caption, children }: { caption: string; children: ReactNode }) {
+function Field({ caption, wide, children }: { caption: string; wide?: boolean; children: ReactNode }) {
   return (
-    <div className={s.field}>
+    <div className={wide ? `${s.field} ${s.fieldWide}` : s.field}>
       <span className={s.caption}>{caption}</span>
       {children}
     </div>
@@ -71,9 +71,10 @@ function useFakeSuggest(source: string[]) {
   return { suggestions, loading, onQuery, onClose }
 }
 
-const DATE_CODE = `// format — вид на экране; значение всегда 'ГГГГ-ММ-ДД'. quick — горячие кнопки под полем
+const DATE_CODE = `// format — вид на экране: 'YYYY-MM-DD' | 'DD.MM.YYYY'; значение всегда 'ГГГГ-ММ-ДД'
+// quick — горячие кнопки под полем
 <DateInput aria-label="Дата документа" value={d} onChange={setD}
-  format="DD.MM.YYYY" quick={[PRESET_TODAY, PRESET_YESTERDAY]} />
+  format={format} quick={[PRESET_TODAY, PRESET_YESTERDAY]} />
 
 // со временем значение — 'ГГГГ-ММ-ДДTчч:мм', например '2026-09-23T14:05'
 <DateInput aria-label="Дата и время" time value={dt} onChange={setDt} />
@@ -86,7 +87,7 @@ const SELECT_CODE = `<SearchSelect aria-label="Статус" options={STATUSES} 
 // value: Scalar | null; поиск в поповере включается, когда вариантов больше 7
 
 <MultiSelect aria-label="Статусы" options={STATUSES} value={many} onChange={setMany} />
-<MultiSelect aria-label="Не более трёх" options={MANY} max={3} maxChips={1} value={cps} onChange={setCps} />
+<MultiSelect aria-label="Контрагенты" options={MANY} max={3} maxChips={1} value={cps} onChange={setCps} />
 // value: Scalar[]; порядок — как в справочнике`
 
 const TAG_CODE = `// номера: пробел, запятая, «;» или Enter; колонку из Excel можно вставить целиком
@@ -97,7 +98,8 @@ const TAG_CODE = `// номера: пробел, запятая, «;» или En
 <TagInput mode="phrases" aria-label="Текст сообщения" value={ph} onChange={setPh}
   text={phText} onTextChange={setPhText} />
 
-// подсказки с бека: onQuery зовётся при вводе, onSuggestClose — при закрытии
+// подсказки приходят с бекенда: onQuery зовётся при вводе, onSuggestClose — при закрытии;
+// устаревшие ответы отбрасывает владелец поля (в приложении — модель фильтров)
 <TagInput mode="phrases" aria-label="Приказодатель" value={who} onChange={setWho}
   text={whoText} onTextChange={setWhoText}
   suggestions={suggestions} loading={loading} onQuery={onQuery} onSuggestClose={onClose} />`
@@ -130,7 +132,7 @@ function DatesDemo() {
       </div>
       <div className={s.fieldRow}>
         <Field caption="Период (горячие кнопки по умолчанию)"><DateRange label="Период" value={r1} onChange={setR1} format={format} /></Field>
-        <Field caption="Период со временем"><DateRange label="Период со временем" time value={r2} onChange={setR2} format={format} /></Field>
+        <Field caption="Период со временем" wide><DateRange label="Период со временем" time value={r2} onChange={setR2} format={format} /></Field>
         <Field caption="Без кнопок и списка"><DateRange label="Без кнопок" quick={[]} presets={[]} value={r3} onChange={setR3} format={format} /></Field>
       </div>
       <Live items={[['Дата документа', d1], ['Дата и время', d2], ['Период', r1], ['Период со временем', r2]]} />
@@ -171,11 +173,11 @@ function TagsDemo() {
   return (
     <>
       <h2 className={s.h2}>TagInput</h2>
-      <p className={s.note}>Номера — пробел, запятая, «;» или Enter; колонку из Excel вставляется целиком. Фразы — Enter или «;», фразы в кавычках разбираются сами: вставьте «"счёт не найден" "инструкция инвалидна"» — получится две фразы, а <code>ООО «Ромашка»</code> останется одной. Несколько фраз — условие «содержит каждую» (И).</p>
+      <p className={s.note}>Номера — пробел, запятая, «;» или Enter; колонка из Excel вставляется целиком. Фразы — Enter или «;», фразы в кавычках разбираются сами: вставьте «"счёт не найден" "инструкция инвалидна"» — получится две фразы, а <code>ООО «Ромашка»</code> останется одной. Несколько фраз — условие «содержит каждую» (И).</p>
       <div className={s.fieldRow}>
         <Field caption="Номера документов (значения, IN)"><TagInput aria-label="Номера документов" mode="values" value={ids} onChange={setIds} text={idText} onTextChange={setIdText} validate={(v) => /^\d+$/.test(v)} /></Field>
         <Field caption="Текст сообщения (фразы, И)"><TagInput aria-label="Текст сообщения" mode="phrases" value={msg} onChange={setMsg} text={msgText} onTextChange={setMsgText} /></Field>
-        <Field caption="Приказодатель (подсказки, задержка 250 мс)">
+        <Field caption={`Приказодатель (подсказки, задержка ${SUGGEST_DELAY} мс)`}>
           <TagInput aria-label="Приказодатель" mode="phrases" value={who} onChange={setWho} text={whoText} onTextChange={setWhoText}
             suggestions={suggest.suggestions} loading={suggest.loading} onQuery={suggest.onQuery} onSuggestClose={suggest.onClose} />
         </Field>

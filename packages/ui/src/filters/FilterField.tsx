@@ -82,7 +82,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
     }
     case 'dateRange':
       return (
-        <div className={s.fieldBox}>
+        <div className={field.type === 'DATETIME' ? `${s.fieldBox} ${s.fieldWide}` : s.fieldBox}>
           {caption}
           <DateRange label={field.label} size="s" time={field.type === 'DATETIME'} format={dateFormat} toDisabled={rangeToDisabled(field)}
             value={raw.kind === 'range' ? raw.value : { from: '', to: '' }} onChange={(v) => set({ kind: 'range', value: v })} />

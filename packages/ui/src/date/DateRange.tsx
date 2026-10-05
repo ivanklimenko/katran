@@ -106,7 +106,7 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
   const toMin = fromDay && (min === undefined || fromDay > min) ? fromDay : min
 
   return (
-    <span className={s.dateBox}>
+    <span className={s.dateBox} data-time={time || undefined}>
       <span ref={anchor} role="group" aria-label={label} className={[is.field, size === 's' ? is.sizeS : is.sizeM, invFrom || invTo ? is.invalid : '', s.dateField].filter(Boolean).join(' ')}>
         <MaskedDateField ref={fromInput} aria-label={`${label}, с`} value={value.from} onChange={setFrom} format={fmt} min={min} max={max} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvFrom} />
         <span className={s.dash} aria-hidden="true">–</span>
