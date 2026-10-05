@@ -26,6 +26,13 @@ describe('tokenizeJson (эталон jsonHtml)', () => {
     expect(tokenizeJson('{"true":"42"}').map((t) => t.kind)).toEqual(['punct', 'key', 'punct', 'str', 'punct'])
   })
 
+  it('строка в 10 млн знаков (base64 в аудите) — один кусок str, без переполнения стека', () => {
+    const big = 'A'.repeat(10_000_000)
+    const list = tokenizeJson(JSON.stringify({ b: big }))
+    expect(list.map((t) => t.kind)).toEqual(['punct', 'key', 'punct', 'str', 'punct'])
+    expect(list[3]!.text).toHaveLength(big.length + 2)
+  })
+
   it('не JSON — один кусок без подсветки', () => {
     expect(tokenizeJson('{id: 1,}')).toEqual([{ kind: '', text: '{id: 1,}' }])
     expect(tokenizeJson('')).toEqual([{ kind: '', text: '' }])

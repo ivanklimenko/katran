@@ -30,17 +30,27 @@ const tokens = (list: CodeToken[]) => list.map((t, i) => {
   return cls === undefined ? t.text : <span key={i} className={cls}>{t.text}</span>
 })
 
-const rawLines = (code: string): CodeLine[] => code.split('\n').map((text) => ({ depth: 0, tokens: [{ kind: '', text }] }))
+const rawLines = (code: string): CodeLine[] => code.split(/\r?\n/).map((text) => ({ depth: 0, tokens: [{ kind: '', text }] }))
+
+// Разбор недоверенного текста бека не должен ронять рендер (в React 17 исключение без границы ошибок размонтирует корень):
+// любое исключение разборщика — например, переполнение стека на враждебно глубоком XML — откат на сырой текст, как у битого XML
+const safely = <T,>(parse: () => T, fallback: () => T): T => {
+  try {
+    return parse()
+  } catch {
+    return fallback()
+  }
+}
 
 /**
  * Просмотр кода вкладок деталки (спека 2b §2, эталон pre.sw / .sw.xml, index.html:347–361; jsonHtml, swiftHtml, xmlHtml).
  * JSON и SWIFT — подсветка в pre; XML — строки с отступом по глубине и номером строки CSS-счётчиком
- * (номера не попадают в текст: копирование и скринридер их не видят); битый XML — сырой текст по строкам.
+ * (номера не попадают в текст: копирование и скринридер их не видят); битый XML и сбой разборщика — сырой текст.
  */
 export function CodeView({ code, language, label }: CodeViewProps) {
   const body = useMemo(() => {
     if (language === 'xml') {
-      const lines = layoutXml(code) ?? rawLines(code)
+      const lines = safely(() => layoutXml(code), () => null) ?? rawLines(code)
       return (
         <div className={s.xml}>
           {lines.map((l, i) => (
@@ -51,7 +61,8 @@ export function CodeView({ code, language, label }: CodeViewProps) {
         </div>
       )
     }
-    const list = language === 'json' ? tokenizeJson(code) : language === 'swift' ? tokenizeSwift(code) : [{ kind: '', text: code }]
+    const raw = (): CodeToken[] => [{ kind: '', text: code }]
+    const list = language === 'json' ? safely(() => tokenizeJson(code), raw) : language === 'swift' ? safely(() => tokenizeSwift(code), raw) : raw()
     return <pre className={s.pre}>{tokens(list)}</pre>
   }, [code, language])
   return (

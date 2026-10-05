@@ -75,6 +75,35 @@ describe('CodeView (спека 2b §2)', () => {
     expect(screen.getByRole('region').querySelectorAll('span')).toHaveLength(0)
   })
 
+  it('битый XML с CRLF — строки без \\r на конце', () => {
+    renderK(<CodeView code={'<a>\r\n<b></a>\r\n'} language="xml" label="XML" />)
+    const lines = screen.getByRole('region').querySelectorAll('.xl')
+    expect(Array.from(lines).map((l) => l.textContent)).toEqual(['<a>', '<b></a>', ''])
+  })
+
+  it('исключение разборщика (переполнение стека на вложенности) — откат на сырой текст, рендер не падает', () => {
+    // узел, вложенный сам в себя, — рекурсия walk без дна, как на враждебно глубоком XML (настоящий DOMParser jsdom на такой глубине слишком медленный)
+    const loop: { nodeType: number; nodeName: string; attributes: never[]; childNodes: unknown[] } = { nodeType: 1, nodeName: 'a', attributes: [], childNodes: [] }
+    loop.childNodes.push(loop)
+    const fake = { getElementsByTagName: () => [], documentElement: loop } as unknown as Document
+    const parse = vi.spyOn(DOMParser.prototype, 'parseFromString').mockReturnValue(fake)
+    try {
+      renderK(<CodeView code={'<a>\n<a/></a>'} language="xml" label="XML" />)
+      expect(parse).toHaveBeenCalled()
+      const lines = screen.getByRole('region', { name: 'XML' }).querySelectorAll('.xl')
+      expect(Array.from(lines).map((l) => l.textContent)).toEqual(['<a>', '<a/></a>'])
+      expect(screen.getByRole('region').querySelectorAll('span')).toHaveLength(0)
+    } finally {
+      parse.mockRestore()
+    }
+  })
+
+  it('JSON со строкой в 10 млн знаков — рендерится строкой str', () => {
+    const big = 'A'.repeat(10_000_000)
+    renderK(<CodeView code={JSON.stringify({ b: big })} language="json" label="JSON" />)
+    expect(screen.getByRole('region').querySelector('.str')!.textContent).toHaveLength(big.length + 2)
+  })
+
   it('text — как есть', () => {
     renderK(<CodeView code={'строка 1\nстрока 2'} language="text" label="Текст" />)
     expect(screen.getByRole('region').querySelector('pre')!.textContent).toBe('строка 1\nстрока 2')
