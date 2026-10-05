@@ -144,6 +144,11 @@
   --k-fs-kv: calc(11.5px * var(--k-density));
   --k-fs-kvs: calc(12px * var(--k-density));
   --k-ah-row: calc(25px * var(--k-density));
+  --k-code-pt: calc(6px * var(--k-density));
+  --k-code-px: calc(10px * var(--k-density));
+  --k-code-pl: calc(28px * var(--k-density));
+  --k-code-gutter: calc(46px * var(--k-density));
+  --k-code-num: calc(30px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

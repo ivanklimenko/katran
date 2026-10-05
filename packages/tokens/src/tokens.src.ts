@@ -96,6 +96,9 @@ export const sizes: Record<string, number> = {
   'kv-row': 24, 'kv-px': 10, 'kv-gap': 14, 'kvs-gap': 1, 'fs-kv': 11.5, 'fs-kvs': 12,
   // моноширинный заголовок сворачиваемого блока (эталон .au .ah, index.html:329): строка 25
   'ah-row': 25,
+  // просмотр кода вкладок деталки (спека 2b §2, эталон pre.sw / .sw.xml, index.html:347–361): отступы блока 6 / 10 / 28,
+  // поле номеров строк XML 46 (ширина номера 30 + зазор 16)
+  'code-pt': 6, 'code-px': 10, 'code-pl': 28, 'code-gutter': 46, 'code-num': 30,
 }
 
 export const fonts = {

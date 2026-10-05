@@ -71,6 +71,12 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-ah-row: calc\(25px \* var\(--k-density\)\)/)
   })
 
+  it('просмотр кода: поле номеров строк 46, номер 30, отступ SWIFT 28 (спека 2b)', () => {
+    expect(css).toMatch(/--k-code-gutter: calc\(46px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-code-num: calc\(30px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-code-pl: calc\(28px \* var\(--k-density\)\)/)
+  })
+
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {
       expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)

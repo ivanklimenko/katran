@@ -162,6 +162,11 @@ export const sizes = {
   'fs-kv': 11.5,
   'fs-kvs': 12,
   'ah-row': 25,
+  'code-pt': 6,
+  'code-px': 10,
+  'code-pl': 28,
+  'code-gutter': 46,
+  'code-num': 30,
 } as const
 
 export const fonts = {
