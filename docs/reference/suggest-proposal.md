@@ -71,6 +71,7 @@ Problem Details, как у `search` (§8):
 |---|---|---|---|
 | поле без `suggest: true` или неизвестное | 400 | `SUGGEST_NOT_SUPPORTED` | `field` |
 | `limit` вне 1–50 | 400 | `LIMIT_OUT_OF_RANGE` | `limit` |
+| `query` отсутствует или не строка | 400 | `QUERY_NOT_STRING` | `query` |
 | условие `filter` невалидно | 400 | как у `search` | как у `search` |
 | неизвестный `gridId` | 404 | — | — |
 

@@ -81,13 +81,13 @@
 - `filter.conditions` — тот же формат условий, что у `search` §5.1 контракта `vtb-filters`; фронт присылает применённый фильтр **без условий по самому полю `field`** (как у `facets`, раздел 1.3): подсказки не должны сужаться уже введёнными фразами этого же поля.
 - `field` — идентификатор поля из каталога с `suggest: true`.
 - `query` — введённый текст (фронт обрезает пробелы по краям); совпадение — **вхождение без учёта регистра**.
-- `limit` — от 1 до 50 (фронт шлёт 10).
+- `limit` — необязательный, по умолчанию 10; от 1 до 50 (фронт шлёт 10).
 - `items` — **различные** значения поля среди записей, попадающих под `filter`, содержащие `query`, **по убыванию частоты** (при равной частоте — по алфавиту); не больше `limit`. Пустые значения не включаются.
-- Ошибки — Problem Details (раздел 2): поле без `suggest: true` или неизвестное — `400` с кодом `SUGGEST_NOT_SUPPORTED` (путь `field`), `limit` вне 1–50 — `400` с кодом `LIMIT_OUT_OF_RANGE` (путь `limit`); условия `filter` проверяются как у `search`; неизвестный `gridId` — `404`. Отказ подсказок не мешает работе с фильтром: фронт просто не показывает список.
+- Ошибки — Problem Details (раздел 2): поле без `suggest: true` или неизвестное — `400` с кодом `SUGGEST_NOT_SUPPORTED` (путь `field`), `limit` вне 1–50 — `400` с кодом `LIMIT_OUT_OF_RANGE` (путь `limit`), `query` не строка или отсутствует — `400` с кодом `QUERY_NOT_STRING` (путь `query`); условия `filter` проверяются как у `search`; неизвестный `gridId` — `404`. Отказ подсказок не мешает работе с фильтром: фронт просто не показывает список.
 
 ## 2. Ошибки
 
-RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ type, title, status?, detail?, errors?: [{ path, code, message }] }`. `apps/pi` разбирает `errors[].code` только для отображения — коды не фиксированы контрактом на нашей стороне, использовать любые говорящие (в фейковом сервере — `UNKNOWN_FIELD`, `OPERATOR_NOT_ALLOWED`, `PAGE_SIZE_OUT_OF_RANGE`; у подсказок — `SUGGEST_NOT_SUPPORTED`, `LIMIT_OUT_OF_RANGE`).
+RFC 9457 Problem Details, как в контракте `vtb-filters` §8: `{ type, title, status?, detail?, errors?: [{ path, code, message }] }`. `apps/pi` разбирает `errors[].code` только для отображения — коды не фиксированы контрактом на нашей стороне, использовать любые говорящие (в фейковом сервере — `UNKNOWN_FIELD`, `OPERATOR_NOT_ALLOWED`, `PAGE_SIZE_OUT_OF_RANGE`; у подсказок — `SUGGEST_NOT_SUPPORTED`, `LIMIT_OUT_OF_RANGE`, `QUERY_NOT_STRING`).
 
 ## 3. `gridId`
 

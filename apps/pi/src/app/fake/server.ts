@@ -53,13 +53,18 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
       throw toApiError(400, p)
     }
     if (op === 'suggest') {
-      const sb = body as SuggestBody
+      // тело пришло по сети: limit необязателен (по умолчанию 10), query может оказаться не строкой — проверяем, а не верим типу
+      const sb = body as Omit<SuggestBody, 'query' | 'limit'> & { query?: unknown; limit?: unknown }
       const f = grid.meta.fields.find((x) => x.id === sb.field)
+      const limit = sb.limit === undefined ? 10 : sb.limit
       const bad: ProblemError[] = []
       if (!f || f.suggest !== true) bad.push({ path: 'field', code: 'SUGGEST_NOT_SUPPORTED', message: `У поля ${sb.field} нет подсказок` })
-      if (!(sb.limit >= 1 && sb.limit <= 50)) bad.push({ path: 'limit', code: 'LIMIT_OUT_OF_RANGE', message: 'limit — от 1 до 50' })
-      if (bad.length > 0) throw toApiError(400, { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
-      return grid.suggest(sb)
+      if (typeof sb.query !== 'string') bad.push({ path: 'query', code: 'QUERY_NOT_STRING', message: 'query — строка' })
+      if (!(typeof limit === 'number' && limit >= 1 && limit <= 50)) bad.push({ path: 'limit', code: 'LIMIT_OUT_OF_RANGE', message: 'limit — от 1 до 50' })
+      if (bad.length > 0 || typeof sb.query !== 'string' || typeof limit !== 'number') {
+        throw toApiError(400, { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
+      }
+      return grid.suggest({ ...sb, query: sb.query, limit })
     }
     return op === 'search' ? grid.search(body as SearchBody) : grid.facets(body as FacetsBody)
   }

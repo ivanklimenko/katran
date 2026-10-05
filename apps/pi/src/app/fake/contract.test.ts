@@ -73,6 +73,17 @@ describe('контракт fx-docs', () => {
     await expect(failing({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о', limit: 3 } }))
       .rejects.toMatchObject({ status: 500 })
   })
+  it('suggest: limit необязателен — по умолчанию 10; нестроковый query — 400 с путём query', async () => {
+    const handle = createFakeServer(fakeGrids)
+    const all = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о', limit: 50 } }) as { items: string[] }
+    const byDefault = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о' } }) as { items: string[] }
+    expect(byDefault.items).toEqual(all.items.slice(0, 10))
+    expect(byDefault.items).toHaveLength(Math.min(10, all.items.length))
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 5, limit: 3 } }))
+      .rejects.toMatchObject({ status: 400, problem: { errors: [{ path: 'query' }] } })
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', limit: 3 } }))
+      .rejects.toMatchObject({ status: 400, problem: { errors: [{ path: 'query' }] } })
+  })
   it('suggestFx: порт → requestFx → фейк; rub-docs — подсказки по наименованию получателя', async () => {
     const r = await allSettled(rubDocPorts.suggestFx, { scope: scope(), params: { field: 'toName', query: 'о', filter: [], limit: 5 } })
     expect(r.status).toBe('done')
