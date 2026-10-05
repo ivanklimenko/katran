@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { ConfigForm } from './ConfigForm'
-import type { FieldDef, FieldValue, FormSchema } from './types'
+import type { FieldDef, FieldValue, FormEdit, FormSchema } from './types'
 
 // Упрощённый MT103/MT202COV стенда (PROFILES, index.html:625): пары 50–54 | 55–59, текст 70/72, extra, последовательность B, секции
 const fields: Record<string, FieldDef> = {
@@ -200,6 +200,83 @@ describe('ConfigForm — управляемое раскрытие (спека 2
 
   it('без нарушений axe в управляемом режиме', async () => {
     const { container } = renderK(form({ expanded: ['50', '59', 'budget'] }))
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe('ConfigForm — правка (спека 2c §2.1)', () => {
+  // MT103-подобная схема: сетка 50|55, 52|56, 53|57, 54|59, текст 70, 72
+  const mt: FormSchema = { grid: [['50', '55'], ['52', '56'], ['53', '57'], ['54', '59']], text: ['70', '72'] }
+  const defs: Record<string, FieldDef> = {
+    ...fields,
+    '53': { label: 'Корреспондент отправителя', kind: 'bank' },
+    '54': { label: 'Корреспондент получателя', kind: 'bank' },
+  }
+  const editable = ['57', '59', '70', '72']
+  const edit: FormEdit = {
+    can: (tag) => editable.includes(tag),
+    editing: null,
+    onEdit: vi.fn(),
+    renderEditor: (tag) => <div data-testid={`editor-${tag}`} />,
+    state: () => null,
+  }
+  const base = { schema: mt, fields: defs, value: (t: string) => values[t] ?? null }
+  const order = (container: HTMLElement) => [...container.querySelectorAll('[data-field], [data-part="editor"]')].map((el) => el.getAttribute('data-field') ?? 'editor')
+
+  it('редактор поля сетки — после обеих ячеек его строки, на всю ширину', () => {
+    const { container } = renderK(<ConfigForm {...base} edit={{ ...edit, editing: '57' }} />)
+    const o = order(container)
+    expect(o.slice(o.indexOf('53'), o.indexOf('59') + 1)).toEqual(['53', '57', 'editor', '54', '59'])
+    expect(screen.getByTestId('editor-57').parentElement).toHaveAttribute('data-part', 'editor')
+    expect(screen.getByTestId('editor-57').parentElement).toHaveClass('editor')
+    expect(screen.getAllByTestId(/^editor-/)).toHaveLength(1)
+  })
+
+  it('редактор поля левой колонки — тоже после обеих ячеек строки', () => {
+    const { container } = renderK(<ConfigForm {...base} edit={{ ...edit, can: () => true, editing: '52' }} />)
+    const o = order(container)
+    expect(o.slice(o.indexOf('52'), o.indexOf('53') + 1)).toEqual(['52', '56', 'editor', '53'])
+  })
+
+  it('редактор текстового поля — сразу после поля', () => {
+    const { container } = renderK(<ConfigForm {...base} edit={{ ...edit, editing: '70' }} />)
+    const o = order(container)
+    expect(o.slice(o.indexOf('59'))).toEqual(['59', '70', 'editor', '72'])
+    expect(screen.getByTestId('editor-70')).toBeInTheDocument()
+  })
+
+  it('can(tag) false — карандаша нет; один редактор: editing одно значение', async () => {
+    const onEdit = vi.fn()
+    renderK(<ConfigForm {...base} edit={{ ...edit, onEdit }} />)
+    expect(screen.queryByRole('button', { name: 'Редактировать поле 52' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Редактировать поле 53' })).toBeNull()
+    for (const tag of editable) expect(screen.getByRole('button', { name: `Редактировать поле ${tag}` })).toBeInTheDocument()
+    expect(document.querySelector('[data-part="editor"]')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Редактировать поле 59' }))
+    expect(onEdit).toHaveBeenCalledWith('59')
+  })
+
+  it('ячейка с открытым редактором — data-editing, у других нет', () => {
+    renderK(<ConfigForm {...base} edit={{ ...edit, editing: '57' }} />)
+    expect(row('57')).toHaveAttribute('data-editing')
+    expect(document.querySelectorAll('[data-editing]')).toHaveLength(1)
+  })
+
+  it('state(tag) доходит до строки: изменённое поле помечено', () => {
+    const state = (tag: string) => (tag === '57' ? { changed: true, was: { lines: ['OLD BANK'] }, tip: 'Изменено: Петрова А. С., 22.09.2026 10:42' } : null)
+    renderK(<ConfigForm {...base} edit={{ ...edit, state }} />)
+    expect(row('57')).toHaveAttribute('data-edited')
+    expect(row('59')).not.toHaveAttribute('data-edited')
+  })
+
+  it('без edit — ни карандашей, ни редактора (вид 2a/2b)', () => {
+    renderK(<ConfigForm {...base} />)
+    expect(screen.queryByRole('button', { name: /Редактировать/ })).toBeNull()
+    expect(document.querySelector('[data-part="editor"]')).toBeNull()
+  })
+
+  it('без нарушений axe с открытым редактором', async () => {
+    const { container } = renderK(<ConfigForm {...base} edit={{ ...edit, editing: '57', renderEditor: () => <section data-k-edit="" aria-label="Поле 57 — правка"><input aria-label="Строка 1" /></section> }} />)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

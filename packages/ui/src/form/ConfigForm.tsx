@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { Disclosure } from './Disclosure'
 import { FieldRow } from './FieldRow'
 import { isEmptyValue, type FieldPresenter } from './present'
-import type { FieldDef, FieldRef, FieldValue, FormPart, FormSchema, HeroCell, SectionContent } from './types'
+import type { FieldDef, FieldRef, FieldValue, FormEdit, FormPart, FormSchema, HeroCell, SectionContent } from './types'
 import s from './Form.module.css'
 
 export type ConfigFormProps = {
@@ -23,6 +23,11 @@ export type ConfigFormProps = {
   expanded?: string[] | undefined
   /** Полный новый набор раскрытых после действия пользователя; зовётся в обоих режимах. */
   onExpandedChange?: ((keys: string[]) => void) | undefined
+  /**
+   * Правка (спека 2c §2.1): карандаши у полей can(tag), состояние правки state(tag) и один редактор editing —
+   * у поля сетки после обеих ячеек его строки, у текстового — сразу после поля, на всю ширину сетки. Не задано — вид 2a/2b.
+   */
+  edit?: FormEdit | undefined
 }
 
 const tagOf = (r: FieldRef): string => (typeof r === 'string' ? r : r.tag)
@@ -43,7 +48,7 @@ function mateGroups(parts: FormPart[]): string[][] {
  * Рендер «Общих данных» по схеме (спека 2a §3.1): сводка → блоки → поля (сетка пар, текст, extra) → последовательность B → секции.
  * Схема и реестр полей — данные приложения; ConfigForm не знает SWIFT.
  */
-export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange }: ConfigFormProps) {
+export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit }: ConfigFormProps) {
   const [open, setOpen] = useState<string[]>([])
   const [sections, setSections] = useState<Record<string, boolean>>({})
   const parts: FormPart[] = [schema, ...(schema.seqB ? [schema.seqB] : [])]
@@ -90,9 +95,13 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     const tag = tagOf(ref)
     return (
       <FieldRow key={tag} tag={tag} def={fields[baseOf(tag)]} value={value(tag)} present={present} optionLabels={optionLabels}
-        open={isOpen(tag)} onToggle={() => toggle(tag)} wide={wide} />
+        open={isOpen(tag)} onToggle={() => toggle(tag)} wide={wide}
+        editable={edit?.can(tag)} editing={edit?.editing === tag} onEdit={() => edit?.onEdit(tag)} edit={edit?.state(tag)} />
     )
   }
+  const editor = (tags: string[]) => (edit && edit.editing !== null && tags.includes(edit.editing)
+    ? <div key="editor" className={s.editor} data-part="editor">{edit.renderEditor(edit.editing)}</div>
+    : null)
   const grid = (part: FormPart) => (
     <div className={s.fg}>
       {(part.grid ?? []).map((row, i) => {
@@ -103,10 +112,16 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
             {row.map((r, k) => (r === null || hide[k]
               ? <div key={`gap${k}`} className={s.gap} data-part="gap" aria-hidden="true" />
               : cell(r, false)))}
+            {editor(row.filter((r, k): r is FieldRef => r !== null && !hide[k]).map(tagOf))}
           </Fragment>
         )
       })}
-      {(part.text ?? []).map((r) => cell(r, (part.text ?? []).length === 1))}
+      {(part.text ?? []).map((r) => (
+        <Fragment key={tagOf(r)}>
+          {cell(r, (part.text ?? []).length === 1)}
+          {editor([tagOf(r)])}
+        </Fragment>
+      ))}
     </div>
   )
   const extra = (refs: FieldRef[] | undefined) => (refs && refs.length > 0 ? (

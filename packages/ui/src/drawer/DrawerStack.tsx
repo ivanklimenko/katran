@@ -15,8 +15,11 @@ export type DrawerStackProps = {
   onEscape: () => void
 }
 
-/** У этих элементов Esc свой: поле ввода, меню, список, поповер (не сама деталка). */
-const OWN_ESCAPE = 'input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="dialog"]:not([data-k-drawer])'
+/**
+ * У этих элементов Esc свой: поле ввода, меню, список, поповер (не сама деталка); вопрос Prompt (alertdialog — Esc = «Отмена»)
+ * и правка поля [data-k-edit] (FieldEditor и встроенные правки — Esc = «Отмена» в любом месте, даже на кнопке; спека 2c §4).
+ */
+const OWN_ESCAPE = 'input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="dialog"]:not([data-k-drawer]), [role="alertdialog"], [data-k-edit]'
 
 /**
  * Раскладка двух drawer'ов (спека 2a §3.1): A у правого края, B слева от A; пустой слот не рендерится.

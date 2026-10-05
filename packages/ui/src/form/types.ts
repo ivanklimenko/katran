@@ -12,6 +12,8 @@ export type FieldDef = {
   width?: number | undefined
   /** Сколько строк текстового поля видно до раскрытия; по умолчанию lines, не больше 4. */
   show?: number | undefined
+  /** Поле правится (спека 2c §1.1); есть ли карандаш у конкретного документа — решает FormEdit.can. */
+  editable?: boolean | undefined
 }
 
 /** Поле в схеме: тег или тег с условием; префикс «B.» — поле последовательности B (MT202COV), описание — по тегу без префикса. */
@@ -53,3 +55,26 @@ export type HeroCell = { label: ReactNode; value: ReactNode; align?: 'right' | u
 
 /** Содержимое секции; null — секция без данных: бледный заголовок, не раскрывается (состав блоков не прыгает между документами). */
 export type SectionContent = { body: ReactNode; count?: number | undefined } | null
+
+/** Состояние правки поля (спека 2c §2.1); null — правок не было. */
+export type FieldEdit = {
+  /** Текущее ≠ исходному: warn-row, рамка warn, точка в углу, главное значение warn, «Было / Стало» в раскрытии. */
+  changed: boolean
+  /** Исходное значение. */
+  was: FieldValue
+  /** «Изменено: {who}, {when}» — тултип ячейки и скрытый текст строки. */
+  tip: string
+  /** EditHistory — в раскрытии, если есть история (в т. ч. после отката, changed = false). */
+  audit?: ReactNode | undefined
+}
+
+/** Правка в «Общих данных»: данные и действия приложения, ConfigForm лишь расставляет карандаши и слот редактора. */
+export type FormEdit = {
+  /** Карандаш у поля (тег из схемы, с 'B.'). */
+  can: (tag: string) => boolean
+  /** Тег открытого редактора — один на деталку. */
+  editing: string | null
+  onEdit: (tag: string) => void
+  renderEditor: (tag: string) => ReactNode
+  state: (tag: string) => FieldEdit | null
+}

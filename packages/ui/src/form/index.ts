@@ -1,4 +1,4 @@
-export type { FieldDef, FieldRef, FieldValue, FormPart, FormSchema, FormSection, HeroCell, SectionContent } from './types'
+export type { FieldDef, FieldEdit, FieldRef, FieldValue, FormEdit, FormPart, FormSchema, FormSection, HeroCell, SectionContent } from './types'
 export { defaultPresent, isEmptyValue, type FieldPresenter, type FieldView } from './present'
 export { FieldRow, type FieldRowProps } from './FieldRow'
 export { Disclosure, type DisclosureProps } from './Disclosure'
