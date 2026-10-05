@@ -85,7 +85,9 @@
   color: var(--k-ink);
 }
 
+/* border-box: UA-отступ <input> (1px сверху и снизу) не добавляется к высоте строки — иначе поле на 2px выше соседних */
 .tagInput {
+  box-sizing: border-box;
   flex: 1 1 var(--k-sp-8);
   min-width: var(--k-sp-8);
   height: calc(var(--k-h-ctl-s) - var(--k-sp-1));
