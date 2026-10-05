@@ -1,5 +1,5 @@
 import { ApiError } from './problem'
-import { fromFacetsResponse, fromFilterMetaResponse, fromSearchResponse, toFacetsBody, toSearchBody } from './grid-contract'
+import { fromFacetsResponse, fromFilterMetaResponse, fromSearchResponse, fromSuggestResponse, toFacetsBody, toSearchBody, toSuggestBody } from './grid-contract'
 import { obj, str } from './guards'
 
 const parseRow = (raw: unknown, path: string) => { const o = obj(raw, path); return { id: str(o, 'id', path) } }
@@ -48,5 +48,23 @@ describe('контракт грида', () => {
       { id: 'bic', label: 'БИК', type: 'STRING', ops: ['EQ'], values: undefined, group: undefined },
     ] })
     expect(() => fromFilterMetaResponse({ fields: [{ id: 'a', label: 'А', type: 'STRING', operators: ['LIKE'] }] })).toThrow('fields[0].operators[0]: неизвестный оператор')
+  })
+  it('fromFilterMetaResponse: defaultOperator и suggest поля', () => {
+    const meta = fromFilterMetaResponse({ fields: [
+      { id: 'docNumber', label: 'Номер документа', type: 'NUMBER', operators: ['EQ', 'IN'], defaultOperator: 'IN' },
+      { id: 'f50name', label: 'Приказодатель', type: 'STRING', operators: ['CONTAINS'], suggest: true },
+    ] })
+    expect(meta.fields[0]).toMatchObject({ id: 'docNumber', defaultOp: 'IN' })
+    expect(meta.fields[1]).toMatchObject({ id: 'f50name', suggest: true })
+    expect(() => fromFilterMetaResponse({ fields: [{ id: 'a', label: 'А', type: 'STRING', operators: ['EQ'], defaultOperator: 'LIKE' }] }))
+      .toThrow('fields[0].defaultOperator: неизвестный оператор')
+    expect(() => fromFilterMetaResponse({ fields: [{ id: 'a', label: 'А', type: 'STRING', operators: ['EQ'], suggest: 'да' }] }))
+      .toThrow('fields[0].suggest: ожидалось true или false')
+  })
+  it('suggest: тело и ответ', () => {
+    expect(toSuggestBody({ field: 'f50name', query: 'ва', filter: [{ field: 'status', op: 'EQ', value: 'ERROR' }], limit: 10 }))
+      .toEqual({ filter: { conditions: [{ field: 'status', op: 'EQ', value: 'ERROR' }] }, field: 'f50name', query: 'ва', limit: 10 })
+    expect(fromSuggestResponse({ items: ['ЗАО «Василёк»'] })).toEqual(['ЗАО «Василёк»'])
+    expect(() => fromSuggestResponse({ items: [1] })).toThrow('items[0]')
   })
 })

@@ -5,19 +5,24 @@ import type { FilterMetaDto } from '../../shared/api'
 import { field, inline } from './meta'
 
 const labelsOf = (xs: readonly string[]) => Object.fromEntries(xs.map((x) => [x, x]))
-/** То, что бек отдаст в GET /grids/fx-docs/filter-meta (девять полей режима simple). */
+/** То, что бек отдаст в GET /grids/fx-docs/filter-meta: порядок — как в панели; номера и референсы — списком (IN), наименования и тексты — с подсказками. */
 export const fxDocsMeta: FilterMetaDto = {
   gridId: 'fx-docs',
   fields: [
-    field('docNumber', 'Номер документа', 'NUMBER'),
+    field('docNumber', 'Номер документа', 'NUMBER', undefined, { defaultOperator: 'IN' }),
+    field('refIn', '20 вх', 'STRING', undefined, { defaultOperator: 'IN' }),
+    field('refOut', '20 исх', 'STRING', undefined, { defaultOperator: 'IN' }),
     field('status', 'Статус', 'ENUM', 'docStatus'),
     field('type', 'Тип сообщения', 'ENUM', 'fxType'),
     field('direction', 'Направление', 'ENUM', 'direction'),
     field('currency', 'Валюта', 'ENUM', 'currency'),
     field('amount', 'Сумма', 'NUMBER'),
     field('created', 'Дата документа', 'DATE'),
-    field('f50name', 'Приказодатель', 'STRING'),
-    field('f59name', 'Бенефициар', 'STRING'),
+    field('f50name', 'Приказодатель', 'STRING', undefined, { suggest: true }),
+    field('f59name', 'Бенефициар', 'STRING', undefined, { suggest: true }),
+    field('f52', 'BIC 52', 'STRING', undefined, { suggest: true }),
+    field('purpose', 'Назначение', 'STRING', undefined, { suggest: true }),
+    field('reason', 'Причина статуса', 'STRING', undefined, { suggest: true }),
   ],
   // направление — код и в гриде, и в фильтре (план 4, F7): справочник кодами, не подписями DIRECTION_LABEL
   dictionaries: { docStatus: inline(STATUS_LABEL), fxType: inline(labelsOf(FX_TYPES)), direction: inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' }), currency: inline(labelsOf(CURRENCIES)) },

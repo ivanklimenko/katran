@@ -158,6 +158,7 @@ katran/
 | Наложения | `Tooltip` (один плавающий на документ), `Menu`, `Popover` |
 | Состояния | `Skeleton`, `ProgressBar`, `EmptyState`, `ErrorState` |
 | Навигация | `Tabs` (горизонтальные сегментные — переключение реестров в одном блоке: «Документы / Архив / Исследование»; вертикальные списком — группа близких справочников в одном блоке: «Управление приоритетами»), `Pagination` |
+| Поля ввода фильтров | `DateInput`, `DateRange`, `SearchSelect`, `MultiSelect`, `TagInput` (спека 2026-09-30); с ними — `Calendar`, пресеты периода, помощники дат `dateStr` |
 | Крупное | `DataGrid`, `StatusLane`, `FilterPanel` (режим simple), `BulkBar` |
 | Оболочка | `KatranProvider` (тема, плотность). `ThemeSwitch`/`DensitySwitch` — в срезе 2: в срезе 1 единственный потребитель — демо, там они живут как обычные кнопки на `useKatran()` |
 | Утилиты | `format/`: даты — в гриде полная `22.09.2026 07:33:22` (`formatDateTimeFull`, решение владельца 24.09), компактная `22.09 07:33:22` — для транзакций деталки; дата без времени (`YYYY-MM-DD`) — `22.09.2026` строкой, без часового пояса; суммы — разряды всегда разделены неразрывным пробелом U+00A0 (узкий U+202F в Plex Sans не читается), десятичная точка как на стенде, счёт `8…3` с кодом валюты, `clipboard` |
@@ -344,7 +345,7 @@ type DataGridProps<Row> = {
 
 ### 7.1. Решено сейчас
 
-**Одна модель, два режима.** `simple` (справочник на 5–10 реквизитов: поля прямо на панели, оператор фиксирован типом — STRING `CONTAINS`, NUMBER/DATE/ENUM/BOOLEAN `EQ`, DATETIME `BETWEEN` за день; модификатора оператора нет — спека среза 1e, 6.2) и `advanced` (сущность на 200+ реквизитов) — режимы одной `createFiltersModel`, а не два компонента. Состояние одно:
+**Одна модель, два режима.** `simple` (справочник на 5–10 реквизитов: поля прямо на панели, модификатора оператора нет) и `advanced` (сущность на 200+ реквизитов) — режимы одной `createFiltersModel`, а не два компонента. Контрол поля в simple выбирается по типу поля и `defaultOp` (`defaultOperator` каталога): списки значений и фразы — `TagInput`, даты — `DateRange`, справочник — `MultiSelect`, булево — `SearchSelect`, число — `Input`; из значения контрола складываются условия поля, в том числе несколько условий по одному полю (фразы — `CONTAINS` на каждую, AND). Таблица соответствия и сужение операторов метой — спека `2026-09-30-katran-filter-inputs-design.md` §6.2 (до неё — спека среза 1e, 6.2: STRING `CONTAINS`, NUMBER/DATE/ENUM/BOOLEAN `EQ`, DATETIME `BETWEEN` за день). Состояние одно:
 
 ```ts
 type Condition =
@@ -367,7 +368,7 @@ type Filter = Condition[]   // v1: только AND
 
 - Вид и поведение advanced на 200+ реквизитах: каталог с группами и поиском, закрепление полей на экране (`PUT /grids/{gridId}/filter-layout`), модификатор оператора у поля, наборы фильтров (CRUD на беке).
 - Граница simple/advanced: переключатель, автоматика по числу полей или одна растущая панель.
-- Справочники с поиском и пагинацией (`GET /dictionaries/{id}`), диапазоны дат с пресетами.
+- Справочники с бека с поиском и пагинацией (`LOOKUP`, `GET /dictionaries/{id}`) — лягут на контролы плана 7 тем же путём, что подсказки. Диапазоны дат с пресетами и поиск по встроенному справочнику поставлены планом 7 (спека 2026-09-30).
 - Группы условий и OR — в контракте v1 только AND, вид не должен закрыть дорогу.
 
 Срез 1 поставляет модель, режим simple и лейн. Перед реализацией advanced — отдельный дизайн-заход с вариантами.
@@ -418,9 +419,11 @@ const grid = createGridModel<Doc>({
 
 `createFiltersModel({ meta, initial, laneField })` → `$conditions` (применённые), `$draft` (черновик панели до «Применить»), `$dirty` (черновик отличается от применённых), `$lane` (значение условия `EQ` по `laneField` в применённых, иначе `null`). События: `edit(condition)` — условие поля в черновик; `discard(field)` — убрать условие поля из черновика; `apply` — черновик → применённые; `remove(field)` — снять чип: условие уходит из применённых и из черновика, неприменённые правки других полей остаются; `reset` — очистить всё в `[]`, а не откатить к `initial`; `revert` — черновик ← применённые («Отменить» панели); `setLane(value | null)` — поставить или снять условие `EQ` по `laneField` сразу в применённых и черновике, не трогая правки других полей. Эффекты наборов подставляет приложение (не в срезе 1). `$conditions` и есть `$filter` для грида.
 
+С плана 7 (спека `2026-09-30-katran-filter-inputs-design.md` §7–8): `setField({ field, conditions })` — заменить все условия поля в черновике разом (контракт §4.4: несколько условий по полю — AND), пустой список снимает поле; `edit(c)` равен `setField({ field: c.field, conditions: [c] })`; место поля в списке — место его первого условия. `$lane` — значение, только если по `laneField` в применённых **ровно одно условие и оно `EQ`** (`IN` из мультиселекта панели или несколько условий дают `null`). Подсказки: конфигурация `suggest: { fetchFx, delay?, minChars?, limit? }` (`SuggestConfig`; `fetchFx: Effect<SuggestQuery, string[]>` даёт приложение, по умолчанию 250 мс, 1 знак, 10 подсказок), событие `suggest({ field, query })` — ввод в поле, `closeSuggest()`, стор `$suggest: Store<SuggestState | null>`; запрос — через свою `attach`-копию с фильтром без условий по самому полю, устаревший ответ и ответ после `closeSuggest` отбрасываются, отказ — пустой список без сообщения.
+
 ### 8.4. Хуки
 
-`useGrid(model)`, `useFilters(model)` в `@katran/effector` — через `useUnit`, возвращают props для соответствующих компонентов. Единственное место, где модель и компонент встречаются. `useGrid` → `GridBinding<Row>`: данные `rows total page pageSize sort widths order hidden selection state error` и колбэки `onPage onPageSize onSort onResize onColumns onSelect onSelectPage onRetry`; то, что это подмножество `DataGridProps`, проверяется при компиляции. С среза 1e `useGrid` отдаёт ещё `facets onSelectAll onClearSelection`, `useFilters` → `FiltersBinding`: `conditions draft dirty lane meta` и `edit discard apply revert reset remove setLane`. С плана 5a `useGrid` отдаёт ещё `split onSplit onResetWidths onResetWidth` (`rowState`/`openHint` — экранные пропы, задаются экраном, как `label`/`layout`).
+`useGrid(model)`, `useFilters(model)` в `@katran/effector` — через `useUnit`, возвращают props для соответствующих компонентов. Единственное место, где модель и компонент встречаются. `useGrid` → `GridBinding<Row>`: данные `rows total page pageSize sort widths order hidden selection state error` и колбэки `onPage onPageSize onSort onResize onColumns onSelect onSelectPage onRetry`; то, что это подмножество `DataGridProps`, проверяется при компиляции. С среза 1e `useGrid` отдаёт ещё `facets onSelectAll onClearSelection`, `useFilters` → `FiltersBinding`: `conditions draft dirty lane meta` и `edit discard apply revert reset remove setLane`; с плана 7 — ещё `setField`, `suggest` (`SuggestState | null`), `onSuggest`, `onSuggestClose` (им соответствуют пропы `FilterPanel` `onSetField`, `suggest`, `onSuggest`, `onSuggestClose`). С плана 5a `useGrid` отдаёт ещё `split onSplit onResetWidths onResetWidth` (`rowState`/`openHint` — экранные пропы, задаются экраном, как `label`/`layout`).
 
 ---
 

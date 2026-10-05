@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { axe } from 'jest-axe'
 import { createEffect } from 'effector'
-import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery } from '@katran/effector'
+import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery, type SuggestQuery } from '@katran/effector'
 import type { GridPorts } from '../shared/api'
 import { ApiError, fromFilterMetaResponse } from '../shared/api'
 import { createPageLifecycle } from '../shared/lib/lifecycle'
@@ -17,6 +17,7 @@ function stubPorts<Row>(rows: Row[], meta: FilterMeta): GridPorts<Row> {
   return {
     searchFx: createEffect<GridQuery, GridPage<Row>, ApiError>(async () => ({ rows, total: rows.length })),
     facetsFx: createEffect<FacetsQuery, Facet[], ApiError>(async () => []),
+    suggestFx: createEffect<SuggestQuery, string[], ApiError>(async () => []),
     filterMetaFx: createEffect<void, FilterMeta, ApiError>(async () => meta),
   }
 }

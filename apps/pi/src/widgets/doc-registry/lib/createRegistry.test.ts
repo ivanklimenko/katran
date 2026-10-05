@@ -1,5 +1,5 @@
 import { allSettled, createEffect, fork } from 'effector'
-import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery } from '@katran/effector'
+import { memoryPersist, type Facet, type FacetsQuery, type FilterMeta, type GridPage, type GridQuery, type SuggestQuery } from '@katran/effector'
 import type { RecordLayout } from '@katran/ui'
 import { ApiError } from '../../../shared/api'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -13,6 +13,7 @@ function setup(metaFails = false) {
   const ports = {
     searchFx: createEffect<GridQuery, GridPage<Row>, ApiError>(async () => { calls.search += 1; return { rows: [{ id: 'a', status: 'DONE' }], total: 1 } }),
     facetsFx: createEffect<FacetsQuery, Facet[], ApiError>(async () => []),
+    suggestFx: createEffect<SuggestQuery, string[], ApiError>(async () => []),
     filterMetaFx: createEffect<void, FilterMeta, ApiError>(async () => { calls.meta += 1; if (metaFails) throw new ApiError(500, null, 'сбой'); return { fields: [] } }),
   }
   const lifecycle = createPageLifecycle()

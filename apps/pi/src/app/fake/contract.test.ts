@@ -3,6 +3,7 @@ import { STATUS_LABEL } from '../../entities/doc-status'
 import { FX_TYPES, fxDocPorts } from '../../entities/fx-doc'
 import { RUB_TYPES, rubDocPorts } from '../../entities/rub-doc'
 import { ApiError, createGridPorts, requestFx } from '../../shared/api'
+import { makeFxDocs } from './fx-docs.data'
 import { fakeGrids } from './grids'
 import { makeRubDocs } from './rub-docs.data'
 import { makeRubDocDetail } from './rub-docs.detail'
@@ -44,7 +45,51 @@ describe('контракт fx-docs', () => {
     const f = await allSettled(fxDocPorts.facetsFx, { scope: s, params: { filter: [], field: 'status' } })
     expect(f.status === 'done' && f.value.reduce((n, x) => n + x.count, 0)).toBe(87)
     const m = await allSettled(fxDocPorts.filterMetaFx, { scope: s })
-    expect(m.status === 'done' && m.value.fields.map((x) => x.id)).toEqual(['docNumber', 'status', 'type', 'direction', 'currency', 'amount', 'created', 'f50name', 'f59name'])
+    expect(m.status === 'done' && m.value.fields.map((x) => x.id)).toEqual(['docNumber', 'refIn', 'refOut', 'status', 'type', 'direction', 'currency', 'amount', 'created', 'f50name', 'f59name', 'f52', 'purpose', 'reason'])
+    const byId = new Map(m.status === 'done' ? m.value.fields.map((x) => [x.id, x] as const) : [])
+    expect(['docNumber', 'refIn', 'refOut'].map((id) => byId.get(id)?.defaultOp)).toEqual(['IN', 'IN', 'IN'])
+    expect(['f50name', 'f59name', 'f52', 'purpose', 'reason'].every((id) => byId.get(id)?.suggest === true)).toBe(true)
+    expect(byId.get('amount')?.suggest).toBeUndefined()
+  })
+  it('suggest: различные значения поля по выборке, по убыванию частоты; поле без suggest — 400; ?fail=suggest — 500', async () => {
+    const handle = createFakeServer(fakeGrids)
+    const res = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'ооо', limit: 3 } }) as { items: string[] }
+    expect(res.items.length).toBeGreaterThan(0)
+    expect(res.items.length).toBeLessThanOrEqual(3)
+    expect(res.items.every((x) => x.toLowerCase().includes('ооо'))).toBe(true)
+    // порядок — по убыванию частоты в выборке; выборка сужается условиями других полей
+    const rows = makeFxDocs().filter((d) => d.status === 'ERROR')
+    const freq = (name: string) => rows.filter((d) => d.f50name === name).length
+    const narrowed = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [{ field: 'status', op: 'EQ', value: 'ERROR' }] }, field: 'f50name', query: 'о', limit: 50 } }) as { items: string[] }
+    expect(narrowed.items.length).toBeGreaterThan(1)
+    expect(narrowed.items.every((x) => freq(x) > 0)).toBe(true)
+    const counts = narrowed.items.map(freq)
+    expect(counts).toEqual([...counts].sort((a, b) => b - a))
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'amount', query: '1', limit: 3 } }))
+      .rejects.toMatchObject({ status: 400 })
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о', limit: 51 } }))
+      .rejects.toMatchObject({ status: 400, problem: { errors: [{ code: 'LIMIT_OUT_OF_RANGE' }] } })
+    const failing = createFakeServer(fakeGrids, { failing: () => 'suggest' })
+    await expect(failing({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о', limit: 3 } }))
+      .rejects.toMatchObject({ status: 500 })
+  })
+  it('suggest: limit необязателен — по умолчанию 10; нестроковый query — 400 с путём query', async () => {
+    const handle = createFakeServer(fakeGrids)
+    const all = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о', limit: 50 } }) as { items: string[] }
+    const byDefault = await handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 'о' } }) as { items: string[] }
+    expect(byDefault.items).toEqual(all.items.slice(0, 10))
+    expect(byDefault.items).toHaveLength(Math.min(10, all.items.length))
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', query: 5, limit: 3 } }))
+      .rejects.toMatchObject({ status: 400, problem: { errors: [{ path: 'query' }] } })
+    await expect(handle({ method: 'POST', url: '/grids/fx-docs/suggest', body: { filter: { conditions: [] }, field: 'f50name', limit: 3 } }))
+      .rejects.toMatchObject({ status: 400, problem: { errors: [{ path: 'query' }] } })
+  })
+  it('suggestFx: порт → requestFx → фейк; rub-docs — подсказки по наименованию получателя', async () => {
+    const r = await allSettled(rubDocPorts.suggestFx, { scope: scope(), params: { field: 'toName', query: 'о', filter: [], limit: 5 } })
+    expect(r.status).toBe('done')
+    if (r.status !== 'done') return
+    expect(r.value.length).toBeGreaterThan(0)
+    expect(r.value.length).toBeLessThanOrEqual(5)
   })
   it('400 на недопустимый оператор, 404 на неизвестный грид', async () => {
     const bad = await allSettled(fxDocPorts.searchFx, { scope: scope(), params: { filter: [{ field: 'amount', op: 'CONTAINS', value: '1' }], sort: [], page: 0, size: 20 } })

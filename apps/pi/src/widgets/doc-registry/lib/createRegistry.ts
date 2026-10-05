@@ -33,7 +33,8 @@ export function createRegistry<Row>(cfg: RegistryConfig<Row>): Registry<Row> {
   const { ports, lifecycle } = cfg
   const $meta = createStore<FilterMeta | null>(null).on(ports.filterMetaFx.doneData, (_, m) => m)
   const $metaReady = $meta.map((m) => m !== null)
-  const filters = createFiltersModel({ meta: $meta, laneField: 'status' })
+  // подсказки при вводе — порт грида (POST /grids/{gridId}/suggest); задержка, минимум знаков и предел — по умолчанию модели
+  const filters = createFiltersModel({ meta: $meta, laneField: 'status', suggest: { fetchFx: ports.suggestFx } })
   const grid = createGridModel<Row>({
     id: cfg.id,
     // gridColumns разворачивает части составных колонок (ColumnDef.split, план 5a, R5) — у частей свои id и ширины

@@ -48,6 +48,8 @@ export default tseslint.config(
     plugins: { 'jsx-a11y': jsxA11y, 'react-hooks': reactHooks },
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
+      // autoFocus запрещён на DOM-элементах; у компонентов кита это их API (Calendar в поповере дат — фокус на день по APG)
+      'jsx-a11y/no-autofocus': ['error', { ignoreNonDOM: true }],
       ...reactHooks.configs.recommended.rules,
       // Граница слоёв (спека 3.2): ui не знает об effector, effector — о DOM/ui
       'import-x/no-restricted-paths': ['error', {

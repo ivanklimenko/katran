@@ -92,6 +92,10 @@
   --k-grid-rz: calc(7px * var(--k-density));
   --k-menu-max-h: calc(320px * var(--k-density));
   --k-filter-field: calc(220px * var(--k-density));
+  --k-range-time-w: calc(300px * var(--k-density));
+  --k-cal-cell: calc(28px * var(--k-density));
+  --k-preset-w: calc(140px * var(--k-density));
+  --k-tag-max-h: calc(84px * var(--k-density));
   --k-grid-pad: calc(8px * var(--k-density));
   --k-grid-gap: calc(3px * var(--k-density));
   --k-hatch: calc(10px * var(--k-density));

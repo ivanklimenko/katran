@@ -9,18 +9,23 @@ export type PopoverProps = {
   anchor: RefObject<HTMLElement | null>
   onClose: () => void
   placement?: Placement | undefined
+  /** id панели — для aria-controls кнопки, которая её открывает. */
+  id?: string | undefined
   /** Доступное имя панели. */
   label?: string | undefined
-  role?: 'dialog' | 'menu' | undefined
+  /** presentation — всплывающий список комбобокса: роль несёт сам `listbox` внутри. */
+  role?: 'dialog' | 'menu' | 'presentation' | undefined
   children: ReactNode
   className?: string | undefined
   /** Не переносить фокус внутрь автоматически (меню делает это само). */
   manualFocus?: boolean | undefined
+  /** Куда вернуть фокус при закрытии; по умолчанию anchor (для полей с обёрткой-якорем — само поле). */
+  returnFocus?: RefObject<HTMLElement | null> | undefined
 }
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
-export function Popover({ open, anchor, onClose, placement = 'bottom-start', label, role = 'dialog', children, className, manualFocus }: PopoverProps) {
+export function Popover({ open, anchor, onClose, placement = 'bottom-start', id, label, role = 'dialog', children, className, manualFocus, returnFocus }: PopoverProps) {
   const { portalRoot } = useKatran()
   const box = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -39,13 +44,20 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', lab
     })
   }, [open, anchor, placement])
 
-  // фокус внутрь, возврат при закрытии
+  // фокус внутрь, возврат при закрытии. У списка комбобокса (presentation) — ни того, ни другого:
+  // фокус всё время в поле, а возврат при закрытии по Tab забрал бы его из следующего поля.
   useEffect(() => {
-    if (!open || !box.current) return
-    const returnTo = anchor.current
+    if (!open || !box.current || role === 'presentation') return
+    const returnTo = (returnFocus ?? anchor).current
     if (!manualFocus) (box.current.querySelector(FOCUSABLE) as HTMLElement | null)?.focus()
-    return () => { returnTo?.focus() }
-  }, [open, anchor, manualFocus])
+    // Возврат — только если фокус был внутри снятой панели (тогда activeElement — body/null). Если фокус уже ушёл
+    // в другой элемент (Tab с края панели, клик по соседней кнопке), отнимать его нельзя: эффект очистки в React 17
+    // срабатывает уже после перехода по Tab.
+    return () => {
+      const at = document.activeElement
+      if (at === null || at === document.body) returnTo?.focus()
+    }
+  }, [open, anchor, returnFocus, role, manualFocus])
 
   // Escape и клик вне
   useEffect(() => {
@@ -66,7 +78,7 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', lab
 
   if (!open || !portalRoot) return null
   return createPortal(
-    <div ref={box} role={role} aria-label={label} className={[s.pop, className].filter(Boolean).join(' ')}>{children}</div>,
+    <div ref={box} id={id} role={role} aria-label={role === 'presentation' ? undefined : label} className={[s.pop, className].filter(Boolean).join(' ')}>{children}</div>,
     portalRoot,
   )
 }

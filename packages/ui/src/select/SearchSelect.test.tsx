@@ -1,0 +1,272 @@
+import { useState } from 'react'
+import { fireEvent, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
+import { renderK } from '../test/renderK'
+import type { Scalar } from '../filters/types'
+import type { Option } from './options'
+import { SearchSelect, type SearchSelectProps } from './SearchSelect'
+
+const MANY: Option[] = ['В работе', 'К экспорту', 'В обработке', 'Ошибка', 'Отложенный', 'Экспортирован', 'Невалидный', 'Отказ', 'Обработан']
+  .map((label, i) => ({ value: `S${i}`, label }))
+const FEW: Option[] = [{ value: 'true', label: 'да' }, { value: 'false', label: 'нет' }]
+
+function Host({ initial = null, onValue = () => {}, ...p }: Partial<SearchSelectProps> & { initial?: Scalar | null; onValue?: (v: Scalar | null) => void }) {
+  const [v, setV] = useState<Scalar | null>(initial)
+  return <SearchSelect aria-label="Статус" options={MANY} {...p} value={v} onChange={(x) => { setV(x); onValue(x) }} />
+}
+
+describe('SearchSelect', () => {
+  it('с поиском (вариантов больше 7): ввод фильтрует, стрелка и Enter выбирают', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    expect(box.tagName).toBe('INPUT')
+    await u.click(box)
+    expect(screen.getByRole('listbox', { name: 'Статус' })).toBeInTheDocument()
+    await u.type(box, 'отка') // «отк» нашёл бы и «В обраб*отк*е»
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Отказ'])
+    await u.keyboard('{Enter}')
+    expect(onValue).toHaveBeenLastCalledWith('S7')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(box).toHaveValue('Отказ')
+  })
+  it('aria-activedescendant следует за стрелками; Escape закрывает без выбора', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    box.focus()
+    await u.keyboard('{ArrowDown}{ArrowDown}')
+    const opt = document.getElementById(box.getAttribute('aria-activedescendant')!)
+    expect(opt).toHaveTextContent('К экспорту')
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(onValue).not.toHaveBeenCalled()
+  })
+  it('без поиска: кнопка-комбобокс, Enter открывает, буква переходит, Enter выбирает', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host options={FEW} onValue={onValue} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    expect(box.tagName).toBe('BUTTON')
+    box.focus()
+    await u.keyboard('{Enter}')
+    await u.keyboard('н')
+    expect(document.getElementById(box.getAttribute('aria-activedescendant')!)).toHaveTextContent('нет')
+    await u.keyboard('{Enter}')
+    expect(onValue).toHaveBeenLastCalledWith('false')
+  })
+  it('очистка кнопкой и Delete; Enter не отправляет форму', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    const onSubmit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault())
+    renderK(<form onSubmit={onSubmit}><Host initial="S3" onValue={onValue} /></form>)
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(onValue).toHaveBeenLastCalledWith(null)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    await u.click(box)
+    await u.keyboard('{Enter}')
+    expect(onSubmit).not.toHaveBeenCalled()
+    await u.keyboard('{Escape}')
+    await u.keyboard('{Delete}')
+    expect(onValue).toHaveBeenLastCalledWith(null)
+  })
+  it('пустой результат — «Ничего не найдено»', async () => {
+    const u = userEvent.setup()
+    renderK(<Host />)
+    await u.type(screen.getByRole('combobox', { name: 'Статус' }), 'яяя')
+    expect(screen.getByRole('option')).toHaveTextContent('Ничего не найдено')
+  })
+  it('axe: закрыт и открыт', async () => {
+    const u = userEvent.setup()
+    const { container } = renderK(<Host initial="S1" />)
+    expect(await axe(container)).toHaveNoViolations()
+    await u.click(screen.getByRole('combobox', { name: 'Статус' }))
+    // список портируется в корень KatranProvider внутри container; axe(document.body) ловит страничное правило region
+    expect(container).toContainElement(screen.getByRole('listbox', { name: 'Статус' }))
+    expect(await axe(container)).toHaveNoViolations()
+  })
+  it('фокус выделяет подпись выбранного: ввод заменяет её и становится запросом', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial="S7" />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    await u.tab()
+    expect(box).toHaveFocus()
+    expect(box).toHaveValue('Отказ')
+    await u.keyboard('экс')
+    expect(box).toHaveValue('экс')
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['К экспорту', 'Экспортирован'])
+  })
+  it('программный фокус (после очистки, клика по рамке) тоже выделяет подпись', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial="S7" />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    box.focus()
+    await u.keyboard('ош')
+    expect(box).toHaveValue('ош')
+  })
+  it('после выбора Enter подпись снова выделена: следующий ввод — новый запрос', async () => {
+    const u = userEvent.setup()
+    renderK(<Host />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    await u.click(box)
+    await u.keyboard('отка{Enter}')
+    expect(box).toHaveValue('Отказ')
+    await u.keyboard('ош')
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Ошибка'])
+  })
+  it('открытый с пустым запросом показывает выбранное в плейсхолдере', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial="S7" />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    expect(box).toHaveAttribute('placeholder', 'Не выбрано')
+    await u.click(box)
+    expect(box).toHaveValue('')
+    expect(box).toHaveAttribute('placeholder', 'Отказ')
+  })
+  it('очистка кнопкой закрывает список и оставляет фокус в поле (с поиском и без)', async () => {
+    const u = userEvent.setup()
+    const { unmount } = renderK(<Host initial="S3" />)
+    await u.click(screen.getByRole('combobox', { name: 'Статус' }))
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveFocus()
+    unmount()
+    renderK(<Host options={FEW} initial="true" />)
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveFocus()
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveTextContent('Не выбрано')
+  })
+  it('клик по рамке поля (шеврон, отступ) фокусирует поле и открывает список, повторный — закрывает', async () => {
+    const u = userEvent.setup()
+    renderK(<Host />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    const frame = box.closest('[role="presentation"]')!
+    await u.click(frame.querySelector('[aria-hidden="true"]')!)
+    expect(box).toHaveFocus()
+    expect(screen.getByRole('listbox', { name: 'Статус' })).toBeInTheDocument()
+    await u.click(frame.querySelector('[aria-hidden="true"]')!)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(box).toHaveFocus()
+  })
+  it('клик по «Очистить» список не открывает', async () => {
+    const u = userEvent.setup()
+    renderK(<Host initial="S3" />)
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveAttribute('aria-expanded', 'false')
+  })
+  it('typeahead: к первому пункту на букву, повтор — к следующему по кругу; модификаторы не срабатывают', async () => {
+    const u = userEvent.setup()
+    const opts: Option[] = [{ value: 'y', label: 'да' }, { value: 'n', label: 'нет' }, { value: 'x', label: 'новый' }]
+    renderK(<Host options={opts} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    const activeText = () => document.getElementById(box.getAttribute('aria-activedescendant')!)?.textContent
+    box.focus()
+    await u.keyboard('{Enter}')
+    expect(activeText()).toBe('да')
+    await u.keyboard('н')
+    expect(activeText()).toBe('нет')
+    await u.keyboard('н')
+    expect(activeText()).toBe('новый')
+    await u.keyboard('н')
+    expect(activeText()).toBe('нет')
+    await u.keyboard('{Control>}д{/Control}{Alt>}д{/Alt}{Meta>}д{/Meta}')
+    expect(activeText()).toBe('нет')
+    await u.keyboard('д')
+    expect(activeText()).toBe('да')
+  })
+  it('значения нет в справочнике (загрузится позже): поле показывает само значение, очистка доступна', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    const { unmount } = renderK(<Host initial="S99" onValue={onValue} />)
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveValue('S99')
+    await u.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(onValue).toHaveBeenLastCalledWith(null)
+    unmount()
+    renderK(<Host options={FEW} initial={42} />)
+    expect(screen.getByRole('combobox', { name: 'Статус' })).toHaveTextContent('42')
+  })
+  it('Home/End — первый и последний; Tab закрывает без выбора; aria-controls только у открытого', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    const activeText = () => document.getElementById(box.getAttribute('aria-activedescendant')!)?.textContent
+    expect(box).not.toHaveAttribute('aria-controls')
+    box.focus()
+    await u.keyboard('{ArrowDown}')
+    expect(box).toHaveAttribute('aria-controls', screen.getByRole('listbox').id)
+    await u.keyboard('{End}')
+    expect(activeText()).toBe('Обработан')
+    await u.keyboard('{Home}')
+    expect(activeText()).toBe('В работе')
+    await u.tab()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(box).not.toHaveAttribute('aria-controls')
+    expect(onValue).not.toHaveBeenCalled()
+  })
+  it('числовые значения уходят числом, не строкой', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    const nums: Option[] = [{ value: 1, label: 'Первая' }, { value: 2, label: 'Вторая' }]
+    renderK(<Host options={nums} initial={1} onValue={onValue} />)
+    const box = screen.getByRole('combobox', { name: 'Статус' })
+    box.focus()
+    await u.keyboard('{Enter}{ArrowDown}{Enter}')
+    expect(onValue).toHaveBeenLastCalledWith(2)
+    expect(box).toHaveTextContent('Вторая')
+  })
+  it('мышь: клик по пункту выбирает; нажатие на одном и отпускание на другом — нет', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.click(screen.getByRole('combobox', { name: 'Статус' }))
+    const [first, second] = screen.getAllByRole('option')
+    await u.pointer([{ keys: '[MouseLeft>]', target: first! }, { target: second! }, { keys: '[/MouseLeft]' }])
+    expect(onValue).not.toHaveBeenCalled()
+    await u.click(screen.getByRole('option', { name: 'Отказ' }))
+    expect(onValue).toHaveBeenLastCalledWith('S7')
+  })
+  it('к активному пункту прокручивает клавиатура, наведение мышью — нет', async () => {
+    const u = userEvent.setup()
+    const scroll = vi.fn()
+    const proto = Element.prototype as unknown as { scrollIntoView?: unknown }
+    const had = proto.scrollIntoView
+    proto.scrollIntoView = scroll
+    try {
+      renderK(<Host />)
+      const box = screen.getByRole('combobox', { name: 'Статус' })
+      box.focus()
+      await u.keyboard('{ArrowDown}{ArrowDown}')
+      expect(scroll).toHaveBeenCalled()
+      scroll.mockClear()
+      await u.hover(screen.getByRole('option', { name: 'Отказ' }))
+      expect(document.getElementById(box.getAttribute('aria-activedescendant')!)).toHaveTextContent('Отказ')
+      expect(scroll).not.toHaveBeenCalled()
+    } finally {
+      if (had === undefined) delete proto.scrollIntoView
+      else proto.scrollIntoView = had
+    }
+  })
+  it('синтетический click без событий мыши выбирает (режим обзора экранного диктора, голосовое управление)', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.click(screen.getByRole('combobox', { name: 'Статус' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Отказ' }))
+    expect(onValue).toHaveBeenLastCalledWith('S7')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+  it('пункт «Ничего не найдено» не выбирается', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host onValue={onValue} />)
+    await u.type(screen.getByRole('combobox', { name: 'Статус' }), 'яяя')
+    fireEvent.click(screen.getByRole('option', { name: 'Ничего не найдено' }))
+    expect(onValue).not.toHaveBeenCalled()
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
+})

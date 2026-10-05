@@ -1,6 +1,7 @@
 import { allSettled, fork } from 'effector'
 import { obj, str } from './guards'
 import { ApiError, contractError, toApiError } from './problem'
+import { toSuggestBody } from './grid-contract'
 import { createGridPorts } from './ports'
 import { requestFx, type HttpRequest } from './request'
 
@@ -20,6 +21,14 @@ describe('createGridPorts', () => {
     await allSettled(ports.facetsFx, { scope, params: { filter: [], field: 'status' } })
     await allSettled(ports.filterMetaFx, { scope })
     expect(seen).toEqual(['POST /grids/docs/facets', 'GET /grids/docs/filter-meta'])
+  })
+  it('suggestFx: POST /grids/docs/suggest с телом toSuggestBody, ответ — items', async () => {
+    const seen: HttpRequest[] = []
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { seen.push(r); return { items: ['ООО «Кедр»'] } }]] })
+    const q = { field: 'name', query: 'кедр', filter: [{ field: 'status', op: 'EQ' as const, value: 'ERROR' }], limit: 10 }
+    const r = await allSettled(ports.suggestFx, { scope, params: q })
+    expect(r).toEqual({ status: 'done', value: ['ООО «Кедр»'] })
+    expect(seen).toEqual([{ method: 'POST', url: '/grids/docs/suggest', body: toSuggestBody(q) }])
   })
   it('отказ транспорта доходит до порта как ApiError', async () => {
     const scope = fork({ handlers: [[requestFx, async () => { throw toApiError(400, { type: 't', title: 'Некорректный фильтр' }) }]] })

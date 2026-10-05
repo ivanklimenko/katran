@@ -46,7 +46,8 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
         <div className={s.filters}>
           {f.meta
             ? <FilterPanel meta={f.meta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
-                onEdit={f.edit} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove} />
+                onEdit={f.edit} onSetField={f.setField} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove}
+                suggest={f.suggest} onSuggest={f.onSuggest} onSuggestClose={f.onSuggestClose} />
             : <Button size="s" disabled>Фильтры</Button>}
         </div>
       </div>

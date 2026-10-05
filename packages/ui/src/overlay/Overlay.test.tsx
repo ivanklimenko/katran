@@ -20,6 +20,36 @@ function PopoverHost() {
   )
 }
 
+function ReturnFocusHost() {
+  const [open, setOpen] = useState(false)
+  const a = useRef<HTMLSpanElement>(null)
+  const f = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <span ref={a}>
+        <input ref={f} aria-label="Поле-якорь" />
+        <button onClick={() => setOpen(true)}>Открыть</button>
+      </span>
+      <Popover open={open} anchor={a} returnFocus={f} onClose={() => setOpen(false)} label="Панель">
+        <input aria-label="Поле" />
+      </Popover>
+    </>
+  )
+}
+
+function PresentationHost({ open }: { open: boolean }) {
+  const a = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input ref={a} aria-label="Комбобокс" />
+      <button>Снаружи</button>
+      <Popover open={open} anchor={a} onClose={() => {}} label="Варианты" role="presentation">
+        <button>Внутри</button>
+      </Popover>
+    </>
+  )
+}
+
 function MenuHost({ items }: { items: MenuItem[] }) {
   const [open, setOpen] = useState(false)
   const a = useRef<HTMLButtonElement>(null)
@@ -46,6 +76,40 @@ describe('Popover', () => {
     await userEvent.click(screen.getByText('Открыть'))
     await userEvent.click(screen.getByText('Снаружи'))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('returnFocus: при закрытии фокус уходит в указанный элемент, а не в якорь', async () => {
+    renderK(<ReturnFocusHost />)
+    await userEvent.click(screen.getByText('Открыть'))
+    expect(screen.getByLabelText('Поле')).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByLabelText('Поле-якорь')).toHaveFocus()
+  })
+  it('закрытие не отнимает фокус, если он уже ушёл в другой элемент; с Escape фокус возвращается', async () => {
+    const u = userEvent.setup()
+    renderK(<PopoverHost />)
+    await u.click(screen.getByText('Открыть'))
+    screen.getByText('Снаружи').focus()
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Снаружи')).toHaveFocus()
+    await u.click(screen.getByText('Открыть'))
+    await u.keyboard('{Escape}')
+    expect(screen.getByText('Открыть')).toHaveFocus()
+  })
+  it('role="presentation": без роли dialog и имени, фокус не переносится и не возвращается', async () => {
+    const { rerender } = renderK(<PresentationHost open={false} />)
+    const outside = screen.getByText('Снаружи')
+    outside.focus()
+    rerender(<PresentationHost open />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const panel = screen.getByText('Внутри').closest('[role="presentation"]')
+    expect(panel).not.toBeNull()
+    expect(panel).not.toHaveAttribute('aria-label')
+    expect(document.activeElement).toBe(outside)
+    rerender(<PresentationHost open={false} />)
+    expect(screen.queryByText('Внутри')).toBeNull()
+    expect(document.activeElement).toBe(outside)
   })
 })
 
