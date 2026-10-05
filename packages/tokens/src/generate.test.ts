@@ -53,6 +53,29 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-lh-pre: calc\(16\.3px \* var\(--k-density\)\)/)
     expect(css).toMatch(/--k-dt-label-l: calc\(250px \* var\(--k-density\)\)/)
   })
+  it('бейдж статуса вкладок деталки: точка 6, радиус 10 (спека 2b)', () => {
+    expect(css).toMatch(/--k-badge-dot: calc\(6px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-r-badge: calc\(10px \* var\(--k-density\)\)/)
+  })
+  it('таблица вкладок деталки MiniTable: строка 24, шапка 22, раскрываемая строка 26 (спека 2b)', () => {
+    expect(css).toMatch(/--k-tt-row: calc\(24px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-tt-head: calc\(22px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-tt-row-x: calc\(26px \* var\(--k-density\)\)/)
+  })
+
+  it('«ключ–значение» вкладок деталки: строка 24, отступ 10, кегли 11.5 и 12 (спека 2b)', () => {
+    expect(css).toMatch(/--k-kv-row: calc\(24px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-kv-px: calc\(10px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-fs-kv: calc\(11\.5px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-fs-kvs: calc\(12px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-ah-row: calc\(25px \* var\(--k-density\)\)/)
+  })
+
+  it('просмотр кода: поле номеров строк 46, номер 30, отступ SWIFT 28 (спека 2b)', () => {
+    expect(css).toMatch(/--k-code-gutter: calc\(46px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-code-num: calc\(30px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-code-pl: calc\(28px \* var\(--k-density\)\)/)
+  })
 
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {

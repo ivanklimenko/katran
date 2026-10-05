@@ -124,6 +124,32 @@
   --k-dt-label-s: calc(128px * var(--k-density));
   --k-dt-label-m: calc(150px * var(--k-density));
   --k-dt-label-l: calc(250px * var(--k-density));
+  --k-dt-hist: calc(70px * var(--k-density));
+  --k-badge-dot: calc(6px * var(--k-density));
+  --k-badge-py: calc(2px * var(--k-density));
+  --k-badge-px: calc(7px * var(--k-density));
+  --k-badge-gap: calc(5px * var(--k-density));
+  --k-r-badge: calc(10px * var(--k-density));
+  --k-tt-row: calc(24px * var(--k-density));
+  --k-tt-head: calc(22px * var(--k-density));
+  --k-tt-row-x: calc(26px * var(--k-density));
+  --k-tt-num: calc(22px * var(--k-density));
+  --k-tt-chev: calc(14px * var(--k-density));
+  --k-tt-gap: calc(10px * var(--k-density));
+  --k-tt-empty: calc(14px * var(--k-density));
+  --k-tt-panel-pt: calc(6px * var(--k-density));
+  --k-kv-row: calc(24px * var(--k-density));
+  --k-kv-px: calc(10px * var(--k-density));
+  --k-kv-gap: calc(14px * var(--k-density));
+  --k-kvs-gap: calc(1px * var(--k-density));
+  --k-fs-kv: calc(11.5px * var(--k-density));
+  --k-fs-kvs: calc(12px * var(--k-density));
+  --k-ah-row: calc(25px * var(--k-density));
+  --k-code-pt: calc(6px * var(--k-density));
+  --k-code-px: calc(10px * var(--k-density));
+  --k-code-pl: calc(28px * var(--k-density));
+  --k-code-gutter: calc(46px * var(--k-density));
+  --k-code-num: calc(30px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

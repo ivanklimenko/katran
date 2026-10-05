@@ -31,6 +31,27 @@ export type DetailSummary = {
   /** Вкладки без данных — вторая группа полосы; до загрузки — пусто. */
   tabsOff: string[]
 }
+/** Контекст вида вкладки (спека 2b §3.3): что вкладка может сделать, не зная о виджете. */
+export type TabContext = {
+  /** id открытого документа — «ID платёжной инструкции» в «Комплаенсе». */
+  docId: string
+  /** Открыть документ в B (DrawerOpen { id, secondary: true }) — ID связанного документа. */
+  openDocument: (id: string) => void
+  announce: (message: string) => void
+  /** Раскрытые ключи вкладки этого документа; null — пользователь не трогал: вид берёт свои умолчания. */
+  expanded: string[] | null
+  setExpanded: (keys: string[]) => void
+}
+/** Вкладка на данных детали («Общие», «Доп. поля») — без запроса. */
+export type LocalTabView<D> = { kind: 'local'; render: (detail: D, ctx: TabContext) => ReactNode }
+/** Вкладка со своим запросом (tabFx): data — результат parseTab того же id. */
+export type RemoteTabView = {
+  kind: 'remote'
+  render: (data: unknown, ctx: TabContext) => ReactNode
+  /** Строк скелетона: по умолчанию 4, у «Задач» 5 (эталон SK.tabBody). */
+  skeletonRows?: number | undefined
+}
+export type TabView<D> = LocalTabView<D> | RemoteTabView
 /** Всё доменное, что виджет деталки получает от сущности (спека 2a §4.3): widgets/doc-detail не импортирует entities. */
 export type DetailDomain<D, Row> = {
   /** Заголовок шапки: «Платёжная инструкция». */
@@ -47,4 +68,6 @@ export type DetailDomain<D, Row> = {
   renderHero: (d: D, id: string) => HeroCell
   renderBlock: (d: D, id: string) => ReactNode
   renderSection?: ((d: D, id: string) => SectionContent) | undefined
+  /** Виды вкладок по id (спека 2b §3.3); нет вида — вкладка показывает заглушку 2a. */
+  tabViews?: Record<string, TabView<D>> | undefined
 }

@@ -12,13 +12,17 @@ export type FakeGrid = {
   suggest: (b: SuggestBody) => unknown
   /** Документ по id; null — такого нет (404). Нет поля — у грида нет детали. */
   detail?: ((id: string) => unknown) | undefined
+  /** Вкладки деталки (спека 2b §3.5): набор id вкладок грида и данные вкладки документа; null — документа нет (404). */
+  tabs?: { ids: readonly string[]; get: (id: string, tab: string) => unknown } | undefined
 }
 
 /** Опции фейкового грида. sortLabels — как у createFakeBackend демо (сверка S3): перечисленные ключи сортируются по подписи, а не по коду. */
 export type FakeGridOptions<Row> = {
   sortLabels?: Record<string, Record<string, string>> | undefined
-  /** Деталь из строки реестра (спека 2a §4.4): index — номер строки в наборе, для детерминированных полей. */
-  detail?: ((row: Row, index: number) => unknown) | undefined
+  /** Деталь из строки реестра (спека 2a §4.4): index — номер строки в наборе, rows — весь набор (tabsOff считается по данным вкладок, спека 2b §3.5). */
+  detail?: ((row: Row, index: number, rows: Row[]) => unknown) | undefined
+  /** Вкладки: ids — набор грида (вкладка не из набора — 404), data — ответы всех вкладок документа по id вкладки. */
+  tabs?: { ids: readonly string[]; data: (row: Row, index: number, rows: Row[]) => Record<string, unknown> } | undefined
 }
 
 const fromSortDto = (dto: SortDto[]): Sort => dto.map((s) => ({ key: s.field, dir: s.direction === 'ASC' ? 'asc' : 'desc' }))
@@ -61,7 +65,17 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
   if (toDetail) {
     grid.detail = (id) => {
       const i = rows.findIndex((r) => r.id === id)
-      return i < 0 ? null : toDetail(rows[i]!, i)
+      return i < 0 ? null : toDetail(rows[i]!, i, rows)
+    }
+  }
+  const toTabs = opts.tabs
+  if (toTabs) {
+    grid.tabs = {
+      ids: toTabs.ids,
+      get: (id, tab) => {
+        const i = rows.findIndex((r) => r.id === id)
+        return i < 0 ? null : (toTabs.data(rows[i]!, i, rows)[tab] ?? null)
+      },
     }
   }
   return grid

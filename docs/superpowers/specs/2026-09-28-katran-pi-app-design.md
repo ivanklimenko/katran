@@ -43,8 +43,8 @@ apps/pi/src/
       fx-docs.data.ts      # детерминированные вымышленные записи
       rub-docs.data.ts
   pages/
-    fx-docs/   index.ts · model/registry.model.ts · ui/FxDocsPage.tsx
-    rub-docs/  index.ts · model/registry.model.ts · ui/RubDocsPage.tsx
+    fx-docs/   index.ts · model/registry.model.ts · ui/FxDocsPage.tsx · ui/detailDomain.ts   # 2b: виды вкладок (tabViews)
+    rub-docs/  index.ts · model/registry.model.ts · ui/RubDocsPage.tsx · ui/detailDomain.ts
   widgets/
     doc-registry/  index.ts · lib/createRegistry.ts · ui/DocRegistry.tsx
     doc-detail/    index.ts · lib/createDetail.ts · ui/DocDetail.tsx      # срез 2a: деталка A/B, не импортирует entities
@@ -53,10 +53,11 @@ apps/pi/src/
     fx-doc/      index.ts · model/ · api/ · ui/     # с 2a: model/detail.ts, model/swift.ts, api/detail.mapper.ts, ui/detail.tsx
     rub-doc/     index.ts · model/ · api/ · ui/     # с 2a: model/detail.ts, model/profiles.ts, api/detail.mapper.ts, ui/detail.tsx
     posting/     index.ts · model/ · api/ · ui/TxBlock.tsx · @x/fx-doc.ts · @x/rub-doc.ts   # проводки деталки (2a)
+    doc-trail/   index.ts · model/ · api/ · ui/ · @x/fx-doc.ts · @x/rub-doc.ts   # 2b: история обработки — вкладки деталки обоих реестров
   shared/
     api/            request.ts · problem.ts
     lib/lifecycle/  createPageLifecycle.ts
-    lib/detail/     types.ts — DetailDomain и типы шва «сущность → виджет деталки» (2a)
+    lib/detail/     types.ts — DetailDomain и типы шва «сущность → виджет деталки» (2a); TabContext, TabView, remoteTab (2b)
 ```
 
 - **Граница переноса.** `pages`, `widgets`, `entities`, `shared` переезжают без правок. `app/` наш и выбрасывается: у команды свой `app`, куда переносятся одна строка транспорта и адаптер роутера. Для пути «remote» `app/` дополняется `bootstrap` для Module Federation — в срезе только описание в документе использования (раздел 9).
@@ -92,6 +93,7 @@ export function toApiError(status: number, body: unknown): ApiError
 
 - Сущность экспортирует порты одним объектом (`fxDocPorts`, `rubDocPorts`); мапперы наружу не отдаются. **Исключение (срез 2a, решение контроллера R9):** мапперы детали `parseFxDocDetail`/`parseRubDocDetail`, примеры ответа `FX_DETAIL_EXAMPLE`/`RUB_DETAIL_EXAMPLE` и маппер проводок `parseTx`/`parseTxs` (`entities/posting`) экспортируются — только для тестов (мапперы, доступность деталки на реальных профилях) и примеров контракта в `pi-api.md` §7.5; рабочий код ходит через порты.
 - **Порт детали (срез 2a).** `createGridPorts({ gridId, parseRow, parseDetail })` — при `parseDetail` порты дополняются `detailFx: Effect<string, Detail, ApiError>`: `GET /grids/{gridId}/documents/{id}`, `id` кодируется в пути, ответ проверяется гардом `obj` и парсером сущности. Эндпоинт — **предложение** в контракт, как `/facets`; состав детали — `docs/reference/pi-api.md` §1.4, §7. Спека среза — `2026-09-29-katran-detail-view-design.md` §4.1.
+- **Порт вкладок (срез 2b).** `createGridPorts({ …, parseTab })` — при `parseTab: Record<tabId, TabParser>` порты дополняются `tabFx: Effect<{ id, tab }, unknown, ApiError>`: `GET /grids/{gridId}/documents/{id}/tabs/{tab}`; вкладка без парсера — `contractError` до запроса. Порты сущностей получают `parseTab: trailParsersFor(FX_TABS | RUB_TABS)` — парсеры `doc-trail` через `@x`. Эндпоинт — **предложение**; состав — `docs/reference/pi-api.md` §1.6, §8. Спека среза — `2026-09-30-katran-detail-tabs-design.md` §3.1.
 - **Проверка формы ответа** — рукописные гарды (`parseFxDoc`, `parseRubDoc`, разбор страницы и каталога), без zod: меньше зависимостей в закрытом контуре. Несоответствие → `ApiError` со `status: 0` и `problem.type = 'urn:katran:contract'`, `detail` называет первое неверное поле. Грид показывает состояние ошибки, приложение не падает.
 - **Имена полей строки бека неизвестны** (контракт не определяет состав `content[]`). Наш вариант — в `docs/reference/pi-api.md`; всё переименование держится в `api/*.mapper.ts`. Если бек отдаёт иначе, внутри правят только мапперы.
 - **Farfetched** (если он внутри): порты оборачиваются как есть — `createQuery({ effect: searchFx })`; пример — в документе использования.
@@ -102,6 +104,7 @@ export function toApiError(status: number, body: unknown): ApiError
 - Проверка запроса по каталогу: неизвестное поле, недопустимый для типа оператор, размер страницы вне 1–500 → `400` в формате Problem Details с `errors[]` и кодами контракта §8 (`UNKNOWN_FIELD`, `OPERATOR_NOT_ALLOWED`, `PAGE_SIZE_OUT_OF_RANGE`). Неизвестный `gridId` → `404`.
 - Регуляторы в адресе: `?slow=N` — задержка ровно N мс (есть); новый `?fail=search|facets|meta` — отказ `500` соответствующего запроса. Закрывает техдолг «демо без регуляторов для empty/error» (STATE §7).
 - Сервер знает данные сущностей — это нормально: `app` — верхний слой.
+- **Срез 2a–2b:** маршруты `GET …/documents/{id}` (деталь) и `GET …/documents/{id}/tabs/{tab}` (вкладка; данные — `trail.data.ts`, `fx-docs.trail.ts`, `rub-docs.trail.ts`, детерминированно по номеру строки), регуляторы `?fail=detail`, `?fail=tab` (любая вкладка) и `?fail=tab:<id>` (одна); `tabsOff` детали считается по тем же данным вкладок (вкладка пуста ⇔ в `tabsOff`).
 
 ## 6. Правки кита
 
@@ -210,6 +213,7 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 | `docs/guides/effector-fsd.md` | все | Примеры приводятся к реальным именам (`fx-doc`, `doc-registry`, `createPageLifecycle`), ссылка на `apps/pi` как живой образец |
 | STATE, CHANGELOG, основная спека §10–11 | мы | Экраны в `apps/pi`, срез в таблице работ, эталон рубля в §10 |
 | `docs/guides/pi-usage.md` §13, `docs/reference/pi-api.md` §1.4 и §7 | команда внутри, бекенд | Срез 2a: из чего состоит деталка, сборка на странице, что правится, если бек отдаёт деталь иначе, жесты; предложение `GET /grids/{gridId}/documents/{id}` и состав детали `fx-docs`/`rub-docs` с примерами из тестов мапперов |
+| `docs/guides/pi-usage.md` §13.7, `docs/reference/pi-api.md` §1.6 и §8 | команда внутри, бекенд | Срез 2b: как добавить вкладку, что править, если бек отдаёт вкладку иначе, как проверить; предложение `GET /grids/{gridId}/documents/{id}/tabs/{tab}` и состав каждой вкладки с примерами `TRAIL_EXAMPLES` |
 
 Для пересылки в Telegram документ использования собирается в PDF под телефон — по запросу владельца.
 

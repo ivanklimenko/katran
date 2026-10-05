@@ -58,6 +58,11 @@
   padding: var(--k-sp-2) var(--k-dw-pad) var(--k-dw-pad);
 }
 
+/* display выше перебил бы атрибут hidden: неактивные панели вкладок (TabPanel) — пустые блоки с отступами */
+.body[hidden] {
+  display: none;
+}
+
 .body:focus-visible {
   outline: 2px solid var(--k-val);
   outline-offset: -2px;

@@ -1,0 +1,208 @@
+/* Вкладки истории документа (эталон .tt/.tbar/.tk/.xg, index.html:282–345): содержимое ячеек и тел строк.
+   Сетку, высоту строк, шапку, «№» и пустое состояние таблиц рисует MiniTable кита. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+.box {
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-s);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--k-sp-3) var(--k-sp-2);
+  font-size: var(--k-fs-1);
+  color: var(--k-muted);
+  text-align: center;
+}
+
+.count {
+  margin-right: auto;
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.cut {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.nil {
+  color: var(--k-faint);
+}
+
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.lnk {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-val);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lnk:hover {
+  text-decoration: underline;
+}
+
+.lnk:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.lnkMono {
+  font-family: var(--k-mono);
+  font-weight: 400;
+}
+
+/* Статусы (эталон .tt .code/.suf/.fin/.reason/.dur) */
+.code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
+  color: var(--k-val);
+}
+
+.start {
+  color: var(--k-muted);
+}
+
+.end {
+  color: var(--k-ok);
+}
+
+.fin {
+  font-weight: 600;
+  color: var(--k-ok);
+}
+
+.reason {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--k-fs-1);
+  color: var(--k-warn);
+}
+
+.dur {
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  color: var(--k-faint);
+}
+
+.slow {
+  color: var(--k-warn);
+}
+
+/* Комплаенс: вложенная таблица истории (эталон .cp-kv .tt, margin 6 10 8) */
+.nested {
+  margin: var(--k-sp-1) var(--k-sp-2) var(--k-sp-2);
+}
+
+/* Задачи: тело раскрытой строки (эталон .tk.open .txt, .tk .hist) */
+.task {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+.taskText {
+  margin: 0;
+  color: var(--k-ink);
+}
+
+.hist {
+  display: grid;
+  grid-template-columns: var(--k-dt-hist) minmax(0, 1fr);
+  gap: 0 var(--k-sp-2);
+  padding-top: var(--k-sp-1);
+  border-top: 1px dashed var(--k-line);
+  font-size: var(--k-fs-2);
+}
+
+.histAt {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-muted);
+}
+
+.closed {
+  color: var(--k-val);
+}
+
+/* Связанные (эталон .ld/.ldb/.kvs/.two-t, index.html:325–333) и MPU (карточка .ldb + .ah swiftText) */
+.date {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.lbl {
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.val {
+  color: var(--k-val);
+}
+
+.monoVal {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+  color: var(--k-val);
+}
+
+.idLine {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--k-sp-2);
+  min-width: 0;
+}
+
+.linkedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+.twoT {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--k-sp-2);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+/* длина исходника и число ключей в заголовке аккордеона (эталон .au .ah .lbl): занимает свободное место и прижат вправо —
+   у шеврона кита тоже margin-left: auto, и с ним свободное место делилось бы пополам (счётчик посередине) */
+.len {
+  flex: 1 1 auto;
+  text-align: right;
+  font: var(--k-fs-3) / var(--k-lh-3) var(--k-mono);
+  color: var(--k-muted);
+  white-space: nowrap;
+}

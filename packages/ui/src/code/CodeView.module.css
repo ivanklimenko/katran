@@ -1,0 +1,117 @@
+/* просмотр кода (спека 2b §2, эталон pre.sw / .sw.xml, index.html:347–361): моно 11.5 / 1.45 на фоне sunk */
+.code {
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--k-sunk);
+  font: var(--k-fs-pre) / 1.45 var(--k-mono);
+  color: var(--k-ink2);
+}
+
+.code:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: -2px;
+}
+
+.pre {
+  margin: 0;
+  padding: var(--k-code-pt) var(--k-code-px) var(--k-sp-2) var(--k-code-pl);
+  font: inherit;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* JSON (эталон .au pre .k/.s/.num/.nul); пунктуация — цветом текста */
+.punct {
+  color: var(--k-ink2);
+}
+
+.key {
+  color: var(--k-bad);
+}
+
+.str {
+  color: var(--k-ok);
+}
+
+.num {
+  color: var(--k-val);
+}
+
+.lit {
+  color: var(--k-muted);
+}
+
+/* SWIFT (эталон .sw .blk/.tag4/.uetr) */
+.blk {
+  color: var(--k-muted);
+}
+
+.tag {
+  font-weight: 600;
+  color: var(--k-bad);
+}
+
+.uetr {
+  color: var(--k-val);
+}
+
+/* XML: строка — блок с отступом по глубине (--k-d) и выравниванием атрибута (--k-a) в ch;
+   перенос длинной строки уходит под начало её содержимого (висячий отступ 2ch), номер строки — в поле слева */
+.xml {
+  padding: var(--k-code-pt) var(--k-code-px) var(--k-sp-2) 0;
+  counter-reset: xl;
+}
+
+.xl {
+  position: relative;
+  padding-left: calc(var(--k-code-gutter) + var(--k-d, 0) * 2ch + var(--k-a, 0) * 1ch + 2ch);
+  overflow-wrap: anywhere;
+  text-indent: -2ch;
+  white-space: pre-wrap;
+  counter-increment: xl;
+}
+
+.xl::before {
+  content: counter(xl);
+  position: absolute;
+  left: 0;
+  width: var(--k-code-num);
+  font-size: var(--k-fs-3);
+  color: var(--k-faint);
+  text-align: right;
+  text-indent: 0;
+  user-select: none;
+}
+
+.xl:hover {
+  background: var(--k-hover);
+}
+
+.xp {
+  color: var(--k-faint);
+}
+
+.xt {
+  font-weight: 600;
+  color: var(--k-ink);
+}
+
+.xns {
+  color: var(--k-muted);
+}
+
+.xa {
+  color: var(--k-muted);
+}
+
+.xans {
+  color: var(--k-faint);
+}
+
+.xv {
+  color: var(--k-val);
+}
+
+.xx {
+  color: var(--k-ink);
+}

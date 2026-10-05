@@ -1,9 +1,10 @@
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { fxDocDetailDomain, fxDocLayout } from '../../../entities/fx-doc'
+import { fxDocLayout } from '../../../entities/fx-doc'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { detail, registry } from '../model/registry.model'
+import { fxDetailDomain } from './detailDomain'
 
 const TITLE = 'Валютные документы'
 
@@ -29,7 +30,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
       />
       <DocDetail
         detail={detail}
-        domain={fxDocDetailDomain}
+        domain={fxDetailDomain}
         rowOf={(id) => rows.find((r) => fxDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
       />

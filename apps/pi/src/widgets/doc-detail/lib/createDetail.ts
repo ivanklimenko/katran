@@ -1,12 +1,27 @@
-import { attach, combine, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
+import { attach, combine, createEvent, createStore, merge, sample, type Effect, type EventCallable, type Store } from 'effector'
 import { createDrawerStackModel, type DrawerEntry, type DrawerOpen, type DrawerSlot, type DrawerStackModel, type DrawerStackState } from '@katran/effector'
-import type { ApiError } from '../../../shared/api'
+import type { ApiError, TabQuery } from '../../../shared/api'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type DetailSlotState = 'loading' | 'ready' | 'error'
-export type DetailSlot<D> = { slot: DrawerSlot; id: string; tab: string; state: DetailSlotState; data: D | null; error: string | null }
+/** Нелокальная вкладка слота (спека 2b §3.3): свои загрузка, данные и ошибка — шапку, лейн и другие вкладки не трогают. */
+export type TabSlot = { state: DetailSlotState; data: unknown; error: string | null }
+export type DetailSlot<D> = {
+  slot: DrawerSlot
+  id: string
+  tab: string
+  state: DetailSlotState
+  data: D | null
+  error: string | null
+  /** Активная вкладка, если она грузится своим запросом; null — локальная (данные в детали) или порта вкладок нет. */
+  tabView: TabSlot | null
+}
 export type DetailConfig<D> = {
   detailFx: Effect<string, D, ApiError>
+  /** Порт вкладок (спека 2b §3.1, GET …/documents/{id}/tabs/{tab}); нет — нелокальные вкладки не грузятся (tabView null). */
+  tabFx?: Effect<TabQuery, unknown, ApiError> | undefined
+  /** Вкладки, чьи данные приходят в детали, — без своего запроса; по умолчанию ['main']. */
+  localTabs?: string[] | undefined
   lifecycle: PageLifecycle
   /** Вкладка только что открытого документа; по умолчанию 'main'. */
   firstTab?: string | undefined
@@ -29,6 +44,14 @@ export type Detail<D> = {
   closeTop: EventCallable<void>
   setTab: EventCallable<{ slot: DrawerSlot; tab: string }>
   retry: EventCallable<DrawerSlot>
+  /** Повтор загрузки активной нелокальной вкладки слота; готовая, уже грузящаяся, локальная вкладка и пустой слот — без запроса. */
+  retryTab: EventCallable<DrawerSlot>
+  /**
+   * Раскрытое во вкладках по ключу `${id}:${tab}` (строки, аккордеоны, поля «Общих данных»): TabPanel размонтирует
+   * неактивную вкладку, а раскрытое переживает переключение и закрытие drawer — до pageClosed (спека 2b §3.3, техдолг M-g).
+   */
+  $expanded: Store<Record<string, string[]>>
+  setExpanded: EventCallable<{ id: string; tab: string; keys: string[] }>
 }
 
 const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
@@ -38,10 +61,16 @@ const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
 }
 
 type Load = { id: string; visit: number }
+type TabLoad = TabQuery & { visit: number }
+type Visit = { opened: boolean; visit: number }
+const tabKey = (id: string, tab: string) => `${id}:${tab}`
+/** Ответ своего визита экрана: пришедший после ухода или от прошлого визита не принимается. */
+const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.opened && params.visit === cur.visit
 
 /**
- * Деталка экрана (спека 2a §4.3): стек A/B кита плюс загрузка документа по слоту и кэш по id на время открытого экрана.
- * Модель статична после импорта; ответы порта принимаются только пока экран открыт и только своего визита:
+ * Деталка экрана (спека 2a §4.3, 2b §3.3): стек A/B кита, загрузка документа по слоту и кэш по id, ленивая загрузка
+ * нелокальной вкладки с кэшем по id:tab, раскрытое во вкладках — всё на время открытого экрана.
+ * Модель статична после импорта; ответы портов принимаются только пока экран открыт и только своего визита:
  * запрос, висевший при уходе, после возврата не пишет ни в кэш, ни в ошибки, ни в загрузку нового визита.
  */
 export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
@@ -53,6 +82,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   const retry = createEvent<DrawerSlot>()
   // номер визита: растёт при каждом входе на экран
   const $visit = createStore(0).on(lifecycle.pageOpened, (v) => v + 1)
+  const current = { opened: lifecycle.$opened, visit: $visit }
 
   const $cache = createStore<Record<string, D>>({})
   const $errors = createStore<Record<string, string>>({})
@@ -76,8 +106,6 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   })
 
   // ответ после ухода с экрана и ответ прошлого визита не принимаются: при возврате деталь запросится заново
-  const current = { opened: lifecycle.$opened, visit: $visit }
-  const mine = ({ opened, visit }: { opened: boolean; visit: number }, { params }: { params: Load }) => opened && params.visit === visit
   const done = sample({ clock: loadFx.done, source: current, filter: mine, fn: (_, x) => x })
   const failed = sample({ clock: loadFx.fail, source: current, filter: mine, fn: (_, x) => x })
   const settled = sample({ clock: loadFx.finally, source: current, filter: mine, fn: (_, x) => x })
@@ -85,6 +113,59 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $errors.on(loadFx, (e, { id }) => without(e, id))
   $cache.on(done, (c, { params, result }) => ({ ...c, [params.id]: result }))
   $errors.on(failed, (e, { params, error }) => ({ ...e, [params.id]: error.message }))
+
+  // --- вкладки (спека 2b §3.3) ---
+  const localTabs = cfg.localTabs ?? ['main']
+  const tabFx = cfg.tabFx
+  const remote = (tab: string) => tabFx !== undefined && !localTabs.includes(tab)
+  const retryTab = createEvent<DrawerSlot>()
+  const setExpanded = createEvent<{ id: string; tab: string; keys: string[] }>()
+  const $tabCache = createStore<Record<string, unknown>>({})
+  const $tabErrors = createStore<Record<string, string>>({})
+  const $tabLoading = createStore<Record<string, true>>({})
+  const $expanded = createStore<Record<string, string[]>>({})
+  $expanded.on(setExpanded, (m, { id, tab, keys }) => ({ ...m, [tabKey(id, tab)]: keys }))
+
+  if (tabFx) {
+    // своя копия порта, как у детали; порту уходит только { id, tab }
+    const loadTabFx = attach({ effect: tabFx, mapParams: (p: TabLoad): TabQuery => ({ id: p.id, tab: p.tab }) })
+    type Need = { cache: Record<string, unknown>; loading: Record<string, true> }
+    // вкладку грузим, если она нелокальная, её нет в кэше и она уже не грузится (ошибка — не препятствие: повторный выбор = повтор)
+    const need = ({ cache, loading }: Need, e: DrawerEntry | null): boolean => {
+      if (e === null || !remote(e.tab)) return false
+      const k = tabKey(e.id, e.tab)
+      return !(k in cache) && !(k in loading)
+    }
+    const load = (e: DrawerEntry | null, visit: number): TabLoad => ({ id: e?.id ?? '', tab: e?.tab ?? '', visit })
+    // вкладка стала активной в слоте: setTab, открытие, сдвиг B в A. $a/$b обновляются только при смене своей записи —
+    // открытие B и переключение вкладки в B запись A не трогают. Деталь не ждём: эндпоинт вкладки самостоятелен (§3.1)
+    sample({
+      clock: merge([stack.$a.updates, stack.$b.updates]),
+      source: { cache: $tabCache, loading: $tabLoading, visit: $visit },
+      filter: need,
+      fn: ({ visit }, e) => load(e, visit),
+      target: loadTabFx,
+    })
+    sample({
+      clock: retryTab,
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit },
+      filter: (src, slot) => need(src, src.st[slot]),
+      fn: ({ st, visit }, slot) => load(st[slot], visit),
+      target: loadTabFx,
+    })
+    // счётчик визитов — тот же, что у детали; внутри визита дубли исключает карта загрузок,
+    // а ответ другой вкладки при быстром переключении ложится в кэш своего ключа
+    const tabDone = sample({ clock: loadTabFx.done, source: current, filter: mine, fn: (_, x) => x })
+    const tabFailed = sample({ clock: loadTabFx.fail, source: current, filter: mine, fn: (_, x) => x })
+    const tabSettled = sample({ clock: loadTabFx.finally, source: current, filter: mine, fn: (_, x) => x })
+    $tabLoading
+      .on(loadTabFx, (l, p) => ({ ...l, [tabKey(p.id, p.tab)]: true }))
+      .on(tabSettled, (l, { params }) => without(l, tabKey(params.id, params.tab)))
+    $tabErrors
+      .on(loadTabFx, (e, p) => without(e, tabKey(p.id, p.tab)))
+      .on(tabFailed, (e, { params, error }) => ({ ...e, [tabKey(params.id, params.tab)]: error.message }))
+    $tabCache.on(tabDone, (c, { params, result }) => ({ ...c, [tabKey(params.id, params.tab)]: result }))
+  }
 
   const bump = (f: Record<string, number>, id: string) => ({ ...f, [id]: (f[id] ?? 0) + 1 })
   // повторное открытие уже открытого пользователем — фокус в его drawer; quiet-открытие фокус не трогает
@@ -111,14 +192,35 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $focus.reset(lifecycle.pageClosed)
   $quiet.reset(lifecycle.pageClosed)
   $shift.reset(lifecycle.pageClosed)
+  $tabCache.reset(lifecycle.pageClosed)
+  $tabErrors.reset(lifecycle.pageClosed)
+  $tabLoading.reset(lifecycle.pageClosed)
+  $expanded.reset(lifecycle.pageClosed)
 
-  const view = (slot: DrawerSlot, e: DrawerEntry | null, cache: Record<string, D>, errors: Record<string, string>): DetailSlot<D> | null => {
-    if (!e) return null
-    const has = e.id in cache
-    const error = errors[e.id] ?? null
-    return { slot, id: e.id, tab: e.tab, state: has ? 'ready' : error !== null ? 'error' : 'loading', data: has ? (cache[e.id] as D) : null, error }
+  type Maps = { cache: Record<string, D>; errors: Record<string, string>; tabCache: Record<string, unknown>; tabErrors: Record<string, string> }
+  const tabViewOf = (e: DrawerEntry, m: Maps): TabSlot | null => {
+    if (!remote(e.tab)) return null
+    const k = tabKey(e.id, e.tab)
+    if (k in m.tabCache) return { state: 'ready', data: m.tabCache[k], error: null }
+    const error = m.tabErrors[k] ?? null
+    return { state: error !== null ? 'error' : 'loading', data: null, error }
   }
-  const $slots = combine(stack.$a, stack.$b, $cache, $errors, (a, b, cache, errors) => ({ a: view('a', a, cache, errors), b: view('b', b, cache, errors) }))
+  const view = (slot: DrawerSlot, e: DrawerEntry | null, m: Maps): DetailSlot<D> | null => {
+    if (!e) return null
+    const has = e.id in m.cache
+    const error = m.errors[e.id] ?? null
+    return {
+      slot, id: e.id, tab: e.tab,
+      state: has ? 'ready' : error !== null ? 'error' : 'loading',
+      data: has ? (m.cache[e.id] as D) : null,
+      error,
+      tabView: tabViewOf(e, m),
+    }
+  }
+  const $slots = combine(
+    { a: stack.$a, b: stack.$b, cache: $cache, errors: $errors, tabCache: $tabCache, tabErrors: $tabErrors },
+    (m) => ({ a: view('a', m.a, m), b: view('b', m.b, m) }),
+  )
   const $marks = combine(stack.$a, stack.$b, (a, b) => {
     const m: Record<string, DrawerSlot> = {}
     if (a) m[a.id] = 'a'
@@ -126,5 +228,9 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     return m
   })
 
-  return { stack, $slots, $marks, $focus, $quiet, open: stack.open, close: stack.close, closeTop: stack.closeTop, setTab: stack.setTab, retry }
+  return {
+    stack, $slots, $marks, $focus, $quiet,
+    open: stack.open, close: stack.close, closeTop: stack.closeTop, setTab: stack.setTab, retry,
+    retryTab, $expanded, setExpanded,
+  }
 }

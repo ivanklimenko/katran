@@ -44,8 +44,9 @@ test('B1: заблокированная запись — кнопка откр�
   await inactive.waitFor()
   await expect(inactive.getByRole('checkbox')).toBeDisabled()
   // значение внутри заблокированной записи приглушено переопределением --k-val на записи (STATE §8): проверяем computed color, а не класс
+  // запись без метки деталки: у открытой (автооткрытие В-Д4) акцент не приглушается — Д28
   const { valueColor, mutedColor } = await page.evaluate(() => {
-    const el = document.querySelector('tbody[data-state="locked"] [class*="copy"]') as HTMLElement
+    const el = document.querySelector('tbody[data-state="locked"]:not([data-mark]) [class*="copy"]') as HTMLElement
     const probe = document.createElement('div')
     probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-muted')
     document.body.appendChild(probe)

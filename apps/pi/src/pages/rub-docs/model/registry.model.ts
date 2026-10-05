@@ -6,8 +6,10 @@ import { createRegistry } from '../../../widgets/doc-registry'
 
 export const lifecycle = createPageLifecycle()
 export const registry = createRegistry({ id: 'rub-docs', layout: rubDocLayout, ports: rubDocPorts, lifecycle })
-/** Деталка экрана — на том же жизненном цикле (спека 2a §5). */
-export const detail = createDetail({ detailFx: rubDocPorts.detailFx, lifecycle })
+/** Вкладки рубля с данными в детали — только «Общие данные» (спека 2b §3.1); «Доп. полей» у рубля нет. */
+export const RUB_LOCAL_TABS = ['main']
+/** Деталка экрана — на том же жизненном цикле (спека 2a §5, 2b §3.3); вкладки кроме «Общих» — лениво через tabFx. */
+export const detail = createDetail({ detailFx: rubDocPorts.detailFx, tabFx: rubDocPorts.tabFx, localTabs: RUB_LOCAL_TABS, lifecycle })
 // реестр о деталке не знает: открытие — через шов openRequested (спека apps/pi §7, спека 2a §4.4)
 sample({ clock: registry.openRequested, target: detail.open })
 

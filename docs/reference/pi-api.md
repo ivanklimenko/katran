@@ -1,6 +1,6 @@
 # API `apps/pi` для бекенда
 
-Документ для команды бекенда: какими запросами пользуется фронт `apps/pi` (реестры «Валютные документы» и «Рублёвые документы»), какой состав строки ожидает каждый грид, и примеры запросов/ответов. Контракт транспорта — `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — из `vtb-filters` (`/Users/shaman/_CODE/VTB/vtb-filters/docs/filter-contract.md`, §5–6 «Запрос поиска», «Каталог фильтров»; здесь контракт не копируется, только состав строки и примеры под наши гриды). Эндпоинты `POST /grids/{gridId}/facets`, `GET /grids/{gridId}/documents/{id}` и `POST /grids/{gridId}/suggest`, а также признак поля `suggest` в каталоге в контракте `vtb-filters` не описаны — это наши предложения (разделы 1.3, 1.4 и 1.5, состав детали — раздел 7).
+Документ для команды бекенда: какими запросами пользуется фронт `apps/pi` (реестры «Валютные документы» и «Рублёвые документы»), какой состав строки ожидает каждый грид, и примеры запросов/ответов. Контракт транспорта — `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — из `vtb-filters` (`/Users/shaman/_CODE/VTB/vtb-filters/docs/filter-contract.md`, §5–6 «Запрос поиска», «Каталог фильтров»; здесь контракт не копируется, только состав строки и примеры под наши гриды). Эндпоинты `POST /grids/{gridId}/facets`, `GET /grids/{gridId}/documents/{id}`, `POST /grids/{gridId}/suggest` и `GET /grids/{gridId}/documents/{id}/tabs/{tab}`, а также признак поля `suggest` в каталоге в контракте `vtb-filters` не описаны — это наши предложения (разделы 1.3, 1.4, 1.5 и 1.6; состав детали — раздел 7, состав вкладок документа — раздел 8).
 
 Реализация на фронте — `apps/pi/src/shared/api/grid-contract.ts` (сборка тела запроса и разбор ответа) и `apps/pi/src/app/fake/server.ts` (фейковый сервер на этом же контракте, для разработки без бека).
 
@@ -84,6 +84,15 @@
 - `limit` — необязательный, по умолчанию 10; от 1 до 50 (фронт шлёт 10).
 - `items` — **различные** значения поля среди записей, попадающих под `filter`, содержащие `query`, **по убыванию частоты** (при равной частоте — по алфавиту); не больше `limit`. Пустые значения не включаются.
 - Ошибки — Problem Details (раздел 2): поле без `suggest: true` или неизвестное — `400` с кодом `SUGGEST_NOT_SUPPORTED` (путь `field`), `limit` вне 1–50 — `400` с кодом `LIMIT_OUT_OF_RANGE` (путь `limit`), `query` не строка или отсутствует — `400` с кодом `QUERY_NOT_STRING` (путь `query`); условия `filter` проверяются как у `search`; неизвестный `gridId` — `404`. Отказ подсказок не мешает работе с фильтром: фронт просто не показывает список.
+
+### 1.6. `GET /grids/{gridId}/documents/{id}/tabs/{tab}` (предложение)
+
+В контракте `vtb-filters` не описан. Нужен деталке (срез 2b): данные одной вкладки документа. Фронт запрашивает вкладку лениво — когда пользователь её выбирает; повторный выбор, переключение между drawer'ами A и B и повторное открытие документа на том же экране не перезапрашивают (кэш по паре `id` + `tab` до ухода с экрана).
+
+- `id` — как в 1.4 (кодируется в пути). `tab` — ключ вкладки из таблицы 7.4, кроме локальных `main` и `extra` (их данные приходят в детали, раздел 7): `statuses`, `compliance`, `linked`, `tasks`, `notif`, `source` (только `fx-docs`), `ed244` (только `rub-docs`), `stream`, `mpu`, `audit`. Тела запроса и query-параметров нет.
+- `200` — данные вкладки, **всегда JSON-объект**, состав — раздел 8 (списки — под своим ключом: `{ "events": [...] }`, а не голый массив; массив вместо объекта фронт отклоняет как нарушение контракта). Вкладка без данных — объект по форме раздела 8 с пустым списком (`{ "events": [] }`), исходники без текстов (`null` или `""`) или аудит `{}`; её ключ должен быть в `tabsOff` детали, и наоборот. Вкладку из `tabsOff` фронт показывает недоступной (вторая группа полосы, раздел 7.1) и обычно не запрашивает; но вкладка, выбранная в drawer'е до того, как пришла деталь, запрашивается сразу, не дожидаясь `tabsOff`, — на неё бек отвечает так же, `200` с пустым объектом (после прихода детали фронт переводит такой drawer на «Общие данные»).
+- `404` — Problem Details: документа нет («Документ не найден») или вкладка не из набора этого грида — `source` у `rub-docs`, `ed244` у `fx-docs`, локальные `main`/`extra` («Неизвестная вкладка»); неизвестный `gridId` — тоже `404` («Неизвестный грид»). Заголовки — как у фейка; бек волен выбрать свои.
+- Ошибки транспорта и `5xx` — фронт показывает текст ошибки внутри вкладки с кнопкой «Повторить»; шапка, лейн и другие вкладки документа работают.
 
 ## 2. Ошибки
 
@@ -484,6 +493,7 @@ POST /grids/fx-docs/suggest
 - Границы `DATETIME` сравниваются строкой настенного времени: смещение зоны в значении условия не учитывается. Настоящий бек обязан приводить момент к одной зоне.
 - Подсказки (`suggest`, раздел 1.5) считаются по данным стенда (87 валютных и набор рублёвых документов) полным перебором; частоты и порядок — свойство этих данных, не образец. Регулятор `?fail=suggest` (ответ `500`) есть только у фейка.
 - Деталь документа (`GET …/documents/{id}`, раздел 7) строится из строки реестра формулами по номеру строки (`apps/pi/src/app/fake/fx-docs.detail.ts`, `rub-docs.detail.ts`); метод запроса не проверяется. Регулятор `?fail=detail` (ответ `500`) есть только у фейка; `404` фейк отдаёт на любой `id`, которого нет среди строк реестра, с `type` `urn:katran:fake` (пример — раздел 7.5) — у настоящего бека правило «документа нет» и `type` свои, фронт смотрит только на статус и текст (раздел 1.4).
+- Вкладки (`…/tabs/{tab}`, раздел 8) строятся детерминированно по `id` документа из общих словарей стенда (`apps/pi/src/app/fake/trail.data.ts`, `fx-docs.trail.ts`, `rub-docs.trail.ts`); `tabsOff` детали считается по тем же генераторам; метод запроса не проверяется. Регуляторы `?fail=tab` (500 на любой вкладке) и `?fail=tab:<id>` (только на одной) — только у фейка.
 
 Настоящий бек должен проверять метод, поле фасетов и зону в границах `DATETIME`.
 
@@ -497,7 +507,7 @@ POST /grids/fx-docs/suggest
 - **Номер, сумма и статус обязаны совпадать со строкой реестра** того же `id`: шапка и лейн деталки до загрузки показываются из строки, после — из детали, и расхождение было бы видно пользователю.
 - Пустой строковый реквизит — пустая строка `""`, а не отсутствие ключа (маппер требует каждый ключ); пустое SWIFT-поле — `lines: []` или отсутствие тега в `fields`. Фронт показывает пустое бледной строкой «не заполнено», чтобы два документа рядом (drawer A и B) совпадали построчно.
 - **«да (может быть `null`)»** в таблицах ниже (`inSender`, `inReceiver`, `time` проводки) — правило предложения строже маппера: бек отдаёт ключ всегда, `null` — «значения нет». Маппер фронта (`strOrNull`) сейчас мягче и отсутствующий ключ тоже читает как `null`, но на это не полагайтесь — так же устроены поля строки `refIn`/`refOut`/`reason` (раздел 4).
-- `tabsOff` — ключи вкладок, у которых для этого документа нет данных (таблица 7.4): они уходят второй группой полосы вкладок, недоступными, с подсказкой «Нет данных». Неизвестные фронту ключи игнорируются; с набором вкладок грида `tabsOff` не сверяется — опечатка в ключе просто не выключит вкладку.
+- `tabsOff` — ключи вкладок, у которых для этого документа нет данных (таблица 7.4): они уходят второй группой полосы вкладок, недоступными, с подсказкой «Нет данных». Неизвестные фронту ключи игнорируются; с набором вкладок грида `tabsOff` не сверяется — опечатка в ключе просто не выключит вкладку. Вкладка в `tabsOff` ⇔ ответ раздела 8 для неё пуст; фейк считает `tabsOff` по тем же данным, что отдаёт на `…/tabs/{tab}`.
 - Реализация на фронте: типы — `apps/pi/src/entities/fx-doc/model/detail.ts` (`FxDocDetail`), `apps/pi/src/entities/rub-doc/model/detail.ts` (`RubDocDetail`); мапперы — `entities/*/api/detail.mapper.ts` (`parseFxDocDetail`, `parseRubDocDetail`): если бек называет поля иначе, правятся только они.
 
 ### 7.2. `fx-docs` — `FxDocDetail`
@@ -567,22 +577,22 @@ POST /grids/fx-docs/suggest
 
 ### 7.4. Ключи вкладок (`tabsOff`)
 
-Порядок вкладок фиксированный (`FX_TABS` — `entities/fx-doc/model/swift.ts`, `RUB_TABS` — `entities/rub-doc/model/profiles.ts`). В срезе 2a содержимое есть только у «Общих данных»; остальные вкладки показывают «будет в срезе 2b», но `tabsOff` уже управляет их доступностью.
+Порядок вкладок фиксированный (`FX_TABS` — `entities/fx-doc/model/swift.ts`, `RUB_TABS` — `entities/rub-doc/model/profiles.ts`). С среза 2b содержимое есть у всех вкладок. `main` и `extra` — локальные: их данные — в детали (разделы 7.2–7.3). Остальные грузятся по одной запросом 1.6, состав — раздел 8.
 
-| Ключ | Вкладка | `fx-docs` | `rub-docs` |
-|---|---|---|---|
-| `main` | Общие данные | да | да |
-| `extra` | Доп. поля | да | — |
-| `statuses` | Статусы | да | да |
-| `compliance` | Комплаенс | да | да |
-| `linked` | Связанные документы | да | да |
-| `tasks` | Задачи | да | да |
-| `notif` | Нотификации | да | да |
-| `source` | Исходный текст | да | — |
-| `ed244` | ED244 | — | да |
-| `stream` | Стриминг | да | да |
-| `mpu` | MPU | да | да |
-| `audit` | Аудит | да | да |
+| Ключ | Вкладка | `fx-docs` | `rub-docs` | Откуда данные |
+|---|---|---|---|---|
+| `main` | Общие данные | да | да | деталь (раздел 7) |
+| `extra` | Доп. поля | да | — | деталь (раздел 7) |
+| `statuses` | Статусы | да | да | `…/tabs/{tab}` (раздел 8) |
+| `compliance` | Комплаенс | да | да | `…/tabs/{tab}` (раздел 8) |
+| `linked` | Связанные документы | да | да | `…/tabs/{tab}` (раздел 8) |
+| `tasks` | Задачи | да | да | `…/tabs/{tab}` (раздел 8) |
+| `notif` | Нотификации | да | да | `…/tabs/{tab}` (раздел 8) |
+| `source` | Исходный текст | да | — | `…/tabs/{tab}` (раздел 8) |
+| `ed244` | ED244 | — | да | `…/tabs/{tab}` (раздел 8) |
+| `stream` | Стриминг | да | да | `…/tabs/{tab}` (раздел 8) |
+| `mpu` | MPU | да | да | `…/tabs/{tab}` (раздел 8) |
+| `audit` | Аудит | да | да | `…/tabs/{tab}` (раздел 8) |
 
 ### 7.5. Примеры
 
@@ -700,3 +710,318 @@ GET /grids/fx-docs/documents/nope
 ```
 
 Фронт показывает внутри drawer'а «Не удалось загрузить документ» с текстом ошибки (`title` и `detail`) и кнопкой «Повторить»; шапка и лейн остаются из строки реестра.
+
+## 8. Вкладки документа (предложение)
+
+Ответ `GET /grids/{gridId}/documents/{id}/tabs/{tab}` (раздел 1.6). Состав общий для `fx-docs` и `rub-docs` — история обработки документа (сущность `apps/pi/src/entities/doc-trail`); различаются данные: у рубля суммы в `RUB`, рублёвые счета, сценарии `SC_NCB_*`, ED244 вместо исходного SWIFT. Имена полей бека живут только в мапперах `apps/pi/src/entities/doc-trail/api/trail.mapper.ts` (`TRAIL_PARSERS`): бек отдаёт вкладку иначе — правится маппер, виды не трогаются. Примеры ниже — `TRAIL_EXAMPLES` (`api/trail.example.ts`) дословно; разбор проверяется тестом `api/trail.mapper.test.ts`.
+
+**Общие правила:**
+
+- Ответ — **всегда JSON-объект**: списки — под своим ключом (`events`, `documents`, `tasks`, `notifications`, `messages`), «Комплаенс» — объект групп, «Аудит» — объект секций, исходники — объект «ключ → текст». Массив на верхнем уровне маппер отклоняет (`ожидался объект`).
+- `tab` — ключ из таблицы 7.4 без локальных (`main`, `extra`): `fx-docs` — `statuses`, `compliance`, `linked`, `tasks`, `notif`, `source`, `stream`, `mpu`, `audit`; `rub-docs` — то же, но `ed244` вместо `source`. Неизвестный `id` или вкладка не из набора грида → `404` (Problem Details, раздел 2; подробно — раздел 1.6).
+- Отметки времени — ISO 8601 **без зоны** (время банка, как `created` строки): `"2026-09-22T07:31:45.241"`, миллисекунды необязательны (есть — фронт показывает их тремя знаками, нет — без долей; у задач эталона их нет). Даты — `"YYYY-MM-DD"`. Хвост `Z` или смещение фронт допускает и игнорирует — часы показываются как пришли, без пересчёта зоны.
+- `T | null` — ключ присутствует всегда, `null` — «значения нет»; пустая строка читается так же, как `null`. Как и в разделе 7.1, маппер мягче правила и отсутствующий ключ тоже читает как `null` — не полагайтесь на это.
+- Списки показываются **в порядке ответа**: сортировки, фильтров и пагинации внутри вкладок нет (как на эталоне) — бек отдаёт события в хронологическом порядке.
+- Суммы связанных документов — десятичная строка без разрядки (`"1249965.00"`); в аудите — как есть (число).
+- **Пустая вкладка** — объект той же формы: пустой список (`{ "events": [] }`), исходники без текстов (`null` или `""` у всех ключей) или аудит `{}`. Такая вкладка обязана быть в `tabsOff` детали, и наоборот (раздел 7.1).
+- Тон бейджа решения или статуса (`decision`, `status`, `exportStatus`) — одна таблица на все вкладки (`entities/doc-trail/model/tone.ts`, `toneOf`): `ALLOW`, `OK`, `SENT`, `DONE`, `EXPORTED`, `PASSED` — зелёный; `TIMEOUT`, `DENY`, `BLOCK`, `ERROR`, `FAILED`, `REJECTED`, `INVALID` — красный; остальные (`REVIEW`, `QUEUED`, `RETRY`, `NEW`…) — жёлтый «ожидание». Регистр не важен.
+- Реализация на фронте: типы — `apps/pi/src/entities/doc-trail/model/types.ts`, мапперы — `entities/doc-trail/api/trail.mapper.ts` (`TRAIL_PARSERS`), примеры — `entities/doc-trail/api/trail.example.ts` (`TRAIL_EXAMPLES`). Пример каждой вкладки — валютный документ эталона (`DOCS[0]` стенда), для `ed244` — первый рублёвый документ эталона.
+
+### 8.1. `statuses` — Статусы
+
+`{ "events": [...] }` — шаги обработки документа; фронт рисует таблицу «№ · Дата/время · Маршрут · Статус · Причина · Δ» (Δ — разница с предыдущей строкой, больше 30 с — подсвечивается).
+
+| Поле `events[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `at` | строка, отметка времени | да | `"2026-09-22T07:31:45.241"` |
+| `route` | строка или `null` — маршрут (`null` — «—») | да (может быть `null`) | `"RT_FX_IN"` |
+| `statusCode` | строка — код шага (`….start` / `….end`, финиш — `fx.finish`) | да | `"fx-in-checks.start"` |
+| `reason` | строка или `null` — причина (длинная обрезается, полный текст — тултипом) | да (может быть `null`) | `"Ожидание решения сотрудника"` |
+
+```json
+{
+  "events": [
+    { "at": "2026-09-22T07:31:45.241", "route": null, "statusCode": "fx-dup-check.end", "reason": null },
+    { "at": "2026-09-22T07:31:45.642", "route": "RT_FX_IN", "statusCode": "fx-in-checks.start", "reason": null },
+    { "at": "2026-09-22T07:31:47.542", "route": "RT_FX_IN", "statusCode": "fx-in-checks.end", "reason": null },
+    { "at": "2026-09-22T07:31:48.141", "route": "RT_FX_IN", "statusCode": "fx-in-routing.start", "reason": "Ожидание решения сотрудника" },
+    { "at": "2026-09-22T07:33:20.383", "route": "RT_FX_IN", "statusCode": "fx-in-routing.end", "reason": null },
+    { "at": "2026-09-22T07:33:21.709", "route": "RT_FX_CREDIT", "statusCode": "fx-credit-client.start", "reason": null },
+    { "at": "2026-09-22T07:33:22.957", "route": "RT_FX_CREDIT", "statusCode": "fx-credit-client.end", "reason": null },
+    { "at": "2026-09-22T07:33:23.413", "route": "RT_FX_CREDIT", "statusCode": "fx-postprocess.start", "reason": null },
+    { "at": "2026-09-22T07:33:24.312", "route": "RT_FX_CREDIT", "statusCode": "fx-postprocess.end", "reason": null },
+    { "at": "2026-09-22T07:35:00.814", "route": "RT_FX_CREDIT", "statusCode": "fx-accounting.start", "reason": null },
+    { "at": "2026-09-22T07:35:01.820", "route": "RT_FX_CREDIT", "statusCode": "fx-accounting.end", "reason": null },
+    { "at": "2026-09-22T07:35:01.915", "route": "RT_FX_CREDIT", "statusCode": "fx.finish", "reason": null }
+  ]
+}
+```
+
+### 8.2. `compliance` — Комплаенс
+
+Объект из пяти частей: запись комплаенс-проверки, отрицательная нотификация, мониторинг (ИС4021), подразделение комплаенс-контроля (ОПС3308), история попаданий. Все пять ключей обязательны, даже если значения внутри `null`.
+
+| Поле | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `record` | `{ id: string; processingStart: string \| null; processingEnd: string \| null; nzr: boolean \| null }` — `nzr` — признак постановки на НЗР | да | см. пример |
+| `negativeNotification` | `{ decision, direction, comment }` — строки или `null` | да | все `null` — нотификации нет |
+| `monitoring` | `{ start, end, decision, transactionId, requestedAt, clientId }` — строки или `null`; `decision` — `ALLOW`, `REVIEW`, `DENY`… | да | см. пример |
+| `complianceControl` | `{ start, end, decision }` — строки или `null` | да | см. пример |
+| `history` | массив `{ enteredAt: string; controlSystem: string; departmentCode: string }` | да (может быть `[]`) | см. пример |
+
+Форма «проверок не было» не определена: маппер требует все части и строку `record.id`, а пустой такую вкладку фейк не делает (у каждого его документа комплаенс есть). Документ без проверок — ключ `compliance` в `tabsOff`; форму ответа на такой запрос нужно согласовать с беком (`docs/STATE.md` §7).
+
+```json
+{
+  "record": { "id": "3e854037-b84c-40ee-90e0-440734c1d5e3", "processingStart": "2026-09-22T07:31:48.126", "processingEnd": "2026-09-22T07:31:52.601", "nzr": false },
+  "negativeNotification": { "decision": null, "direction": null, "comment": null },
+  "monitoring": {
+    "start": "2026-09-22T07:31:48.220",
+    "end": "2026-09-22T07:31:49.601",
+    "decision": "ALLOW",
+    "transactionId": "97cae8c7162531f4093e1db5d7171bde",
+    "requestedAt": "2026-09-22T07:31:49.354",
+    "clientId": "CLT0000123456789"
+  },
+  "complianceControl": { "start": "2026-09-22T07:31:49.719", "end": "2026-09-22T07:31:52.601", "decision": "ALLOW" },
+  "history": [{ "enteredAt": "2026-09-22T07:31:51", "controlSystem": "3308_CTRL", "departmentCode": "DEP 0417" }]
+}
+```
+
+### 8.3. `linked` — Связанные документы
+
+`{ "documents": [...] }` — документы, порождённые этим (или породившие его). `docId` — `id` документа **того же грида**: по клику фронт открывает его в drawer B запросом `GET /grids/{gridId}/documents/{docId}` (раздел 1.4); документа нет — ошибка внутри B. Документы другого реестра фронт пока не открывает (межреестровая навигация — вне среза 2b).
+
+| Поле `documents[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `docId` | строка — `id` документа того же грида | да | `"a18d3c05-b393-4252-a3c1-c93791937ccc"` |
+| `date` | строка, дата | да | `"2026-09-23"` |
+| `docType` | строка — тип документа | да | `"InternalFXDOC"` |
+| `relation` | строка — связь (`CHILD`, `PARENT`) | да | `"CHILD"` |
+| `purpose` | строка или `null` — назначение | да (может быть `null`) | `"Комиссия за входящий перевод по тарифу OUR"` |
+| `status` | строка — статус (тон — `toneOf`) | да | `"DONE"` |
+| `processedAt` | строка (отметка времени) или `null` | да (может быть `null`) | `"2026-09-22T07:35:01"` |
+| `postingDate` | строка (дата) или `null` | да (может быть `null`) | `"2026-09-22"` |
+| `kind` | строка или `null` — вид (тариф комиссии и т. п.) | да (может быть `null`) | `"OUR"` |
+| `debit`, `credit` | `{ account, amount, currency, register }` — строки или `null`; `amount` — десятичная строка без разрядки | да | `{ "account": "40817840100050017762", "amount": "35.00", "currency": "USD", "register": "00010_ClientCurrent" }` |
+| `sender`, `receiver` | `{ name, account, details }` — строки или `null` | да | `{ "name": "SEMENOVA IRINA VLADIMIROVNA", "account": "40817840100050017762", "details": null }` |
+
+```json
+{
+  "documents": [
+    {
+      "docId": "a18d3c05-b393-4252-a3c1-c93791937ccc",
+      "date": "2026-09-23",
+      "docType": "InternalFXDOC",
+      "relation": "CHILD",
+      "purpose": "MT103 USD 1249965.00 23.09.2026 возврат (1.6.2.2.1.)",
+      "status": "NEW",
+      "processedAt": "2026-09-23T09:02:11",
+      "postingDate": "2026-09-23",
+      "kind": "SHA",
+      "debit": { "account": "40817840100050017762", "amount": "1249965.00", "currency": "USD", "register": "00010_ClientCurrent" },
+      "credit": { "account": "30110840700000001842", "amount": "1249965.00", "currency": "USD", "register": "00000_NostroUSD" },
+      "sender": { "name": "SEMENOVA IRINA VLADIMIROVNA", "account": "40817840100050017762", "details": null },
+      "receiver": { "name": "LAVRENTIEV DMITRY OLEGOVICH", "account": "40817840500010042371", "details": "RETURN OF FX2609220000417" }
+    },
+    {
+      "docId": "5e9b7255-c859-4786-b92a-5315c1b73227",
+      "date": "2026-09-22",
+      "docType": "InternalFXFEE",
+      "relation": "CHILD",
+      "purpose": "Комиссия за входящий перевод по тарифу OUR",
+      "status": "DONE",
+      "processedAt": "2026-09-22T07:35:01",
+      "postingDate": "2026-09-22",
+      "kind": "OUR",
+      "debit": { "account": "40817840100050017762", "amount": "35.00", "currency": "USD", "register": "00010_ClientCurrent" },
+      "credit": { "account": "70601840100000000519", "amount": "35.00", "currency": "USD", "register": "00020_CommissionIncome" },
+      "sender": { "name": "SEMENOVA IRINA VLADIMIROVNA", "account": "40817840100050017762", "details": null },
+      "receiver": { "name": "VOSTOCHNY KREDIT BANK", "account": "70601840100000000519", "details": "Тариф 4.2.1" }
+    }
+  ]
+}
+```
+
+### 8.4. `tasks` — Задачи
+
+`{ "tasks": [...] }` — задачи по документу: строка — точка (открыта / выполнена), время, тип, текст, «История»; раскрытие — полный текст и история.
+
+| Поле `tasks[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `id` | строка | да | `"task-5d1c0e7a9b20"` |
+| `status` | `OPEN` или `DONE` | да | `"DONE"` |
+| `severity` | `OK`, `INFO` или `WARN` — тон точки открытой задачи (зелёный, синий, жёлтый); у выполненной точка всегда зелёная | да | `"INFO"` |
+| `taskType` | строка | да | `"PAYMENT_INSTRUCTION"` |
+| `createdAt` | строка, отметка времени | да | `"2026-09-22T07:31:59"` |
+| `text` | строка — текст задачи | да | `"Требуется подтвердить маршрут; …"` |
+| `assignee` | строка или `null` — исполнитель | да (может быть `null`) | `"Иванова М. П."` |
+| `history` | массив `{ at: string; event: string }` — события в хронологическом порядке | да (может быть `[]`) | см. пример |
+
+**Закрытие задачи — событие истории от бека, обязательно.** У задачи `status: "DONE"` последнее событие `history` — запись о закрытии, её текст начинается со слова «Закрыта» (`"Закрыта · Иванова М. П."`). Фронт её не достраивает (на эталоне строка «Закрыта · …» собиралась из отдельного поля закрытия) и выделяет в истории по началу текста; без такой записи история выполненной задачи обрывается на последнем действии.
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task-5d1c0e7a9b20",
+      "status": "DONE",
+      "severity": "OK",
+      "taskType": "PAYMENT_INSTRUCTION",
+      "createdAt": "2026-09-22T07:31:59",
+      "text": "Требуется подтвердить маршрут; требуется утвердить зачисление по клиентскому счёту 40817840100050017762",
+      "assignee": "Иванова М. П.",
+      "history": [
+        { "at": "2026-09-22T07:31:59", "event": "Создана: fx-in-routing" },
+        { "at": "2026-09-22T07:32:40", "event": "Взята в работу: Иванова М. П." },
+        { "at": "2026-09-22T07:33:20", "event": "Решение: маршрут подтверждён, зачисление утверждено" },
+        { "at": "2026-09-22T07:33:20", "event": "Закрыта · Иванова М. П." }
+      ]
+    },
+    {
+      "id": "task-8f3a61c2d4e7",
+      "status": "OPEN",
+      "severity": "INFO",
+      "taskType": "PAYMENT_INSTRUCTION",
+      "createdAt": "2026-09-22T07:35:02",
+      "text": "Комиссия USD 35,00 удержана по тарифу OUR; проверить корректность тарифного плана клиента",
+      "assignee": null,
+      "history": [{ "at": "2026-09-22T07:35:02", "event": "Создана: fx-accounting" }]
+    }
+  ]
+}
+```
+
+### 8.5. `notif` — Нотификации
+
+`{ "notifications": [...] }` — попытки отправки нотификаций по документу.
+
+| Поле `notifications[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `sentAt` | строка, отметка времени | да | `"2026-09-22T07:31:46.000"` |
+| `attempts` | число — попыток | да | `3` |
+| `status` | строка — `OK`, `TIMEOUT`… (тон — `toneOf`) | да | `"TIMEOUT"` |
+| `responseCode` | строка — код ответа получателя | да | `"accepted"` |
+
+```json
+{
+  "notifications": [
+    { "sentAt": "2026-09-22T07:31:46.000", "attempts": 3, "status": "TIMEOUT", "responseCode": "accepted" },
+    { "sentAt": "2026-09-22T07:33:25.000", "attempts": 1, "status": "OK", "responseCode": "confirmAck" },
+    { "sentAt": "2026-09-22T07:35:02.000", "attempts": 3, "status": "TIMEOUT", "responseCode": "confirmCrd" }
+  ]
+}
+```
+
+### 8.6. `source` (`fx-docs`) / `ed244` (`rub-docs`) — Исходный текст / ED244
+
+Объект «ключ → текст сообщения»; `null` или `""` — «нет» (аккордеон не раскрывается, в заголовке «нет»). Ключи — открытый набор: фронт показывает каждый ключ отдельным аккордеоном в порядке ответа, с подсветкой. Текст, начинающийся с `<` (пробелы и переводы строк перед ним допустимы — `/^\s*</`), показывается как XML (разбор, отступ по глубине, номера строк; битый XML — сырым текстом), иначе — как SWIFT MT (блоки `{1:}`…`{5:}`, теги `:20:`). Валюта — `swiftMessage` (входящее) и `outgoingSwiftMessage` (исходящее); рубль — `ED244` (XML ЭС).
+
+| Поле | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `<ключ>` | строка или `null` — текст сообщения | хотя бы один ключ | `fx-docs`: `swiftMessage`, `outgoingSwiftMessage`; `rub-docs`: `ED244` |
+
+**`fx-docs`, `source`:**
+
+```json
+{
+  "swiftMessage": "{1:F01VKRBRU8KXXXX0427047245}{2:O1030731260922NRDIRUMMXXXX04270806512609220731N}{3:{108:1IBSR00048090722}{111:001}{121:eb6305c9-1f8c-41e3-a3b2-6d7e9f2a4c10}}{4:\n:20:FX2609220000417\n:23B:CRED\n:32A:260922USD1250000,00\n:33B:EUR1148300,00\n:36:1,0886\n:50F:/40817840500010042371\n1/LAVRENTIEV DMITRY OLEGOVICH\n2/ULITSA PROFSOYUZNAYA 83-1-214\n3/RU/MOSCOW, 117279\n:52A:NRDIRUMMXXX\n:53A:BCLHLV22XXX\n:54A:HSTBDEHHXXX\n:56A:MRDNGB2LXXX\n:57A:VKRBRU8KXXX\n:59F:/40817840100050017762\n1/SEMENOVA IRINA VLADIMIROVNA\n2/PROSPEKT MIRA 101-2-45\n3/RU/MOSCOW, 129085\n:70:/INV/ 2026-0417 DD 15.09.2026\nPAYMENT FOR CONSULTING SERVICES\nUNDER CONTRACT 12-45 DD 01.03.2026\nVAT NOT APPLICABLE\n:71A:OUR\n:71F:USD35,00\n:72:/INS/NRDIRUMMXXX\n/ACC/PLEASE CREDIT WITHOUT DELAY\n/REC/REF FX2609220000417\n:77B:/ORDERRES/RU//CONTRACT 12-45 DD 01.03.2026\n-}{5:{MAC:00000000}{CHK:00009443BE30}}{S:{MDG:A35B7A2E46531D1AAD9937DB5DB4CA4F2E3EAEBEF323B6E8EED6769B454F0E91}}",
+  "outgoingSwiftMessage": "{1:F01VKRBRU8KXXXX0000000000}{2:I103BCLHLV22XXXXN}{3:{121:eb6305c9-1f8c-41e3-a3b2-6d7e9f2a4c10}}{4:\n:20:VK2609220000417\n:23B:CRED\n:32A:260922USD1250000,00\n:50F:/40817840500010042371\n1/LAVRENTIEV DMITRY OLEGOVICH\n2/ULITSA PROFSOYUZNAYA 83-1-214\n3/RU/MOSCOW, 117279\n:52A:NRDIRUMMXXX\n:57A:VKRBRU8KXXX\n:59F:/40817840100050017762\n1/SEMENOVA IRINA VLADIMIROVNA\n:70:/INV/ 2026-0417 DD 15.09.2026\n:71A:OUR\n-}"
+}
+```
+
+**`rub-docs`, `ed244`:**
+
+```json
+{
+  "ED244": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ed:ED244 xmlns:ed=\"urn:cbr-ru:ed:v2.0\" EDNo=\"9818\" EDDate=\"2026-09-24\" EDAuthor=\"2072537694\" EDReceiver=\"4971095821\" Sum=\"7639481\" PaymentPrecedence=\"5\">\n  <ed:AccDoc AccDocNo=\"3741\" AccDocDate=\"2026-09-24\"/>\n  <ed:Payer PersonalAcc=\"40702810064578557830\" INN=\"4340195751\" KPP=\"473897776\">\n    <ed:Name>ООО «ХУРЫГУПЯ»</ed:Name>\n    <ed:Bank BIC=\"049597373\" CorrespAcc=\"30101810508469019375\"/>\n  </ed:Payer>\n  <ed:Payee PersonalAcc=\"40802810820980451081\" INN=\"394831189084\">\n    <ed:Name>ИП ТЫСЫЛИОВ ГИБАС ЗУДЫОВИЧ</ed:Name>\n    <ed:Bank BIC=\"042993195\" CorrespAcc=\"30101810664602335376\"/>\n  </ed:Payee>\n  <ed:Purpose>Оплата по счёту № 6945-2101 от 18.07.2026 за оборудование по договору 65-89 от 27.02.2026. В том числе НДС 20% — 18 658.24 руб.</ed:Purpose>\n</ed:ED244>"
+}
+```
+
+### 8.7. `stream` — Стриминг
+
+`{ "events": [...] }` — события, отправленные во внешние системы.
+
+| Поле `events[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `at` | строка, отметка времени | да | `"2026-09-22T07:33:24.795"` |
+| `systemCode` | строка — код системы | да | `"MSB"` |
+| `systemName` | строка — наименование системы («ИС куда») | да | `"Шина сообщений"` |
+| `event` | строка — код события (у рубля — `rub_evt_*`) | да | `"fx_evt_credit_end"` |
+| `status` | строка — `SENT`, `RETRY`… (тон — `toneOf`) | да | `"SENT"` |
+| `attempts` | число — попыток | да | `1` |
+
+```json
+{
+  "events": [
+    { "at": "2026-09-22T07:33:24.795", "systemCode": "MSB", "systemName": "Шина сообщений", "event": "fx_evt_credit_end", "status": "SENT", "attempts": 1 },
+    { "at": "2026-09-22T07:35:01.866", "systemCode": "MSB", "systemName": "Шина сообщений", "event": "fx_evt_account_end", "status": "SENT", "attempts": 1 },
+    { "at": "2026-09-22T07:35:01.902", "systemCode": "DWH", "systemName": "Хранилище", "event": "fx_evt_finish", "status": "SENT", "attempts": 2 }
+  ]
+}
+```
+
+### 8.8. `mpu` — MPU
+
+`{ "messages": [...] }` — сообщения MPU по документу; карточка на сообщение и аккордеон с текстом SWIFT.
+
+| Поле `messages[]` | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `id` | строка | да | `"ee8bf4eb-5545-4f07-9617-8a5e7106302f"` |
+| `messageType` | строка — тип сообщения | да | `"MT199"` |
+| `createdAt` | строка, отметка времени | да | `"2026-09-22T07:35:02.121"` |
+| `exportStatus` | строка — `SENT`, `QUEUED`… (тон — `toneOf`) | да | `"SENT"` |
+| `exportedAt` | строка (отметка времени) или `null` — ещё не выгружено | да (может быть `null`) | `"2026-09-22T07:35:47.308"` |
+| `receiver` | строка — BIC получателя | да | `"NRDIRUMMXXX"` |
+| `docReference` | строка — референс документа | да | `"VK2609220000417"` |
+| `docId` | строка — идентификатор документа; показывается как есть, не ссылка | да | `"03e8b84b-d1c5-4f07-aa49-8be3e9e4c8e8"` |
+| `swiftText` | строка — текст сообщения SWIFT (`""` — «нет») | да | см. пример |
+
+```json
+{
+  "messages": [
+    {
+      "id": "ee8bf4eb-5545-4f07-9617-8a5e7106302f",
+      "messageType": "MT199",
+      "createdAt": "2026-09-22T07:35:02.121",
+      "exportStatus": "SENT",
+      "exportedAt": "2026-09-22T07:35:47.308",
+      "receiver": "NRDIRUMMXXX",
+      "docReference": "VK2609220000417",
+      "docId": "03e8b84b-d1c5-4f07-aa49-8be3e9e4c8e8",
+      "swiftText": "{1:F01VKRBRU8KXXXX0000000000}{2:I199NRDIRUMMXXXXN}{3:{121:eb6305c9-1f8c-41e3-a3b2-6d7e9f2a4c10}}{4:\n:20:VK2609220000417\n:21:FX2609220000417\n:79:YOUR MT103 FX2609220000417 DD 22.09.2026\nUSD 1250000,00 HAS BEEN CREDITED TO\nBENEFICIARY ACCOUNT VALUE 22.09.2026.\nOUR CHARGES USD 35,00 DEDUCTED (71A OUR).\nBEST REGARDS. SETTLEMENTS CENTRE\n-}"
+    }
+  ]
+}
+```
+
+### 8.9. `audit` — Аудит
+
+Объект «секция → объект»: каждая секция показывается аккордеоном с JSON как есть (подсветка, без разбора содержимого); `{}` — аудит пуст. Значение секции обязано быть объектом (строка, число или массив на месте секции — нарушение контракта); внутри — произвольный JSON. Порядок секций — порядок ответа; по умолчанию раскрыта `commonSection`.
+
+| Поле | Тип | Обязательно | Пример |
+|---|---|---|---|
+| `<секция>` | объект — произвольные поля | нет (может быть `{}`) | `"taskSections": { "open": 1, "closed": 1, "lastAssignee": "Иванова М. П." }` |
+
+```json
+{
+  "commonSection": { "creationDate": "2026-09-22T04:31:45.051765Z", "paymentServiceProvider": "SUBOUL", "paymentFlow": null, "paymentInitiatorSystem": "ERS.ERS_1", "sourceSystem": "SRC1", "resending": false },
+  "documentSection": {
+    "docReferenceIn": "FX2609220000417",
+    "docReferenceOut": "VK2609220000417",
+    "messageType": "MT103",
+    "amount": 1250000,
+    "currency": "USD",
+    "valueDate": "2026-09-22",
+    "uetr": "eb6305c9-1f8c-41e3-a3b2-6d7e9f2a4c10"
+  },
+  "originalDocumentSection": { "receivedAt": "2026-09-22T04:31:44Z", "sender": "NRDIRUMMXXX", "receiver": "VKRBRU8KXXX", "rawLength": 612, "hash": "sha256:9f3c…a1e0" },
+  "statusSections": { "count": 12, "last": "fx.finish", "lastAt": "2026-09-22T04:35:01.915Z" },
+  "accountingSection": { "debitAccount": "30110840700000001842", "creditAccount": "40817840100050017762", "postings": 6, "executed": 4, "canceled": 1, "pending": 1 },
+  "paymentTransactionSections": { "transactionId": "ba5ac473-d0a4-40ea-b639-47326d3b8e45", "registers": ["00000_NostroUSD", "00010_ClientCurrent", "00020_CommissionIncome", "00030_FxConversion"] },
+  "taskSections": { "open": 1, "closed": 1, "lastAssignee": "Иванова М. П." },
+  "outgoingRoutingSections": { "routeType": "NOSTRO", "nostroAccount": "30114840900000000517", "receiver": "BCLHLV22XXX", "rule": "USD_EU_COUNTERPARTIES_V3" },
+  "controlAttributesSection": { "complianceCheck": "PASSED", "sanctionsCheck": "PASSED", "duplicateCheck": "PASSED", "manualReview": true },
+  "manualOperationRecordsSection": { "records": 1, "last": { "at": "2026-09-22T07:42:00Z", "user": "Иванова М. П.", "field": "57", "action": "EDIT" } }
+}
+```

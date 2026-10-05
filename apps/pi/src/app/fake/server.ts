@@ -6,6 +6,7 @@ export type FakeServerOptions = { delayMs?: (() => number) | undefined; failing?
 
 const ROUTE = /^\/grids\/([^/]+)\/(search|facets|suggest|filter-meta)$/
 const DOCUMENT = /^\/grids\/([^/]+)\/documents\/([^/]+)$/
+const TAB = /^\/grids\/([^/]+)\/documents\/([^/]+)\/tabs\/([^/]+)$/
 const fail = (status: number, title: string, detail: string): never => {
   const p: Problem = { type: 'urn:katran:fake', title, status, detail }
   throw toApiError(status, p)
@@ -28,6 +29,21 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
   return async (req: HttpRequest): Promise<unknown> => {
     const delay = opts.delayMs?.() ?? 0
     if (delay > 0) await new Promise((r) => setTimeout(r, delay))
+    const tabRoute = TAB.exec(req.url)
+    if (tabRoute) {
+      const [, gridId = '', rawId = '', rawTab = ''] = tabRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      const id = decodeURIComponent(rawId)
+      const tab = decodeURIComponent(rawTab)
+      if (!grid.tabs || !grid.tabs.ids.includes(tab)) return fail(404, 'Неизвестная вкладка', `${gridId}: ${tab}`)
+      // ?fail=tab — любая вкладка, ?fail=tab:<id> — одна; ?fail=detail сюда не доходит
+      const failing = opts.failing?.() ?? null
+      if (failing === 'tab' || failing === `tab:${tab}`) return fail(500, 'Сбой сервера', `Регулятор ?fail=${failing}`)
+      const body = grid.tabs.get(id, tab)
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
     const doc = DOCUMENT.exec(req.url)
     if (doc) {
       const [, gridId = '', raw = ''] = doc

@@ -1,4 +1,6 @@
 import type { FxDoc } from '../../entities/fx-doc'
+import { FX_TRAIL_TABS, fxDocTrail, fxTxId } from './fx-docs.trail'
+import { by35, swiftAmount, tabsOffOf } from './trail.data'
 
 // Словари — со стенда pi-constructor (index.html:742–757, grid.html:1747–1783), обезличен; данные вымышленные.
 const ROUTE_BY_TYPE: Record<FxDoc['routeType'], { desc: string; text: string }> = {
@@ -16,16 +18,13 @@ const T72 = ['/INS/ NRDIRUMMXXX', '/ACC/ PLEASE CREDIT WITHOUT DELAY', '/REC/ RE
 const T79 = ['RE YOUR MT103 FX2609220000417 DD 22.09.2026', 'AMOUNT USD 1250000,00', 'PLS BE ADVISED THAT BENEFICIARY ACCOUNT', '40817840100050017762 IS CLOSED.', 'KINDLY AUTHORIZE US TO RETURN THE FUNDS', 'LESS OUR CHARGES USD 35,00', 'OR PROVIDE AMENDED BENEFICIARY DETAILS.', 'BEST REGARDS', 'PAYMENTS DEPT, VOSTOCHNY KREDIT BANK']
 const CHARGES = ['OUR', 'SHA', 'BEN']
 const EMPTY = { lines: [] as string[] }
-const pad = (n: number, w: number) => String(n).padStart(w, '0')
-/** Строки по 35 знаков по границе слова — формат поля 70 (эталон grid.html:1783). */
-const by35 = (s: string) => (s.match(/.{1,35}(?=\s|$)|.{1,35}/g) ?? []).map((x) => x.trim()).filter(Boolean)
-const swiftAmount = (n: number) => n.toFixed(2).replace('.', ',')
 
 /**
  * Деталь валютного документа (спека 2a §4.4): строка реестра как есть (номер, сумма, статус совпадают с реестром)
- * плюс поля по профилю, сообщения, маршрут и проводки — детерминированно по номеру строки i.
+ * плюс поля по профилю, сообщения, маршрут и проводки — детерминированно по номеру строки i;
+ * tabsOff — по данным вкладок того же документа (спека 2b §3.5), rows — для «Связанных».
  */
-export function makeFxDocDetail(row: FxDoc, i: number): Record<string, unknown> {
+export function makeFxDocDetail(row: FxDoc, i: number, rows: readonly FxDoc[]): Record<string, unknown> {
   const inbound = row.direction === 'IN' || row.direction === 'TRANSIT'
   const accDt = inbound ? row.routeAcc : row.f50acc
   const accKt = inbound ? row.f59acc : row.routeAcc
@@ -76,9 +75,9 @@ export function makeFxDocDetail(row: FxDoc, i: number): Record<string, unknown> 
     accDt, accKt,
     routeDesc: ROUTE_BY_TYPE[row.routeType].desc,
     routeText: ROUTE_BY_TYPE[row.routeType].text,
-    txId: `ba5ac4${pad(i % 100, 2)}-d0a4-40ea-b639-${pad((i * 7919) % 1e12, 12)}`,
+    txId: fxTxId(i),
     txAt: row.created,
     txs,
-    tabsOff: i % 2 ? ['notif', 'stream', 'mpu'] : ['mpu'],
+    tabsOff: tabsOffOf(FX_TRAIL_TABS, fxDocTrail(row, i, rows)),
   }
 }

@@ -156,8 +156,13 @@ test('вкладки: в полосе 800 px не помещаются все �
   await page.keyboard.press('Escape')
   await expect(menu).toHaveCount(0)
   await expect(dialogs(page)).toHaveCount(1)
-  await dw.getByRole('tab', { name: 'Статусы' }).click()
-  await expect(dw.getByText('Вкладка «Статусы» — будет в срезе 2b')).toBeVisible()
+  // с 2b вкладка показывает содержимое, заглушки «будет в срезе 2b» нет (сами вкладки — detail-tabs.spec.ts)
+  const statuses = dw.getByRole('tab', { name: 'Статусы' })
+  // статусы есть у каждого документа фейка (цепочка не бывает пустой) — вкладка всегда доступна
+  await expect(statuses).toBeEnabled()
+  await statuses.click()
+  await expect(dw.getByRole('tabpanel').getByRole('table').first()).toBeVisible()
+  await expect(dw.getByText(/будет в срезе 2b/)).toHaveCount(0)
 })
 
 test('медленная загрузка — скелетон, затем форма', async ({ page }) => {

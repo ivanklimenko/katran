@@ -3,3 +3,4 @@ export { defaultPresent, isEmptyValue, type FieldPresenter, type FieldView } fro
 export { FieldRow, type FieldRowProps } from './FieldRow'
 export { Disclosure, type DisclosureProps } from './Disclosure'
 export { ConfigForm, type ConfigFormProps } from './ConfigForm'
+export { KeyValueList, type KeyValueItem, type KeyValueListProps } from './KeyValueList'

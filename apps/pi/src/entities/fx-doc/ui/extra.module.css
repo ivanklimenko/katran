@@ -1,0 +1,50 @@
+/* «Доп. поля» валюты (эталон .xr .kv/.lbl/.diffd, index.html:283–295): части значения в строке */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-2);
+}
+
+.kv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--k-sp-3);
+  min-width: 0;
+}
+
+.part {
+  white-space: nowrap;
+}
+
+.lbl {
+  margin-right: var(--k-sp-1);
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}
+
+.v {
+  color: var(--k-val);
+}
+
+.mono {
+  font: var(--k-fs-2) / var(--k-lh-2) var(--k-mono);
+}
+
+.diff {
+  font-weight: 600;
+  color: var(--k-warn);
+}
+
+.nil {
+  color: var(--k-faint);
+}
+
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

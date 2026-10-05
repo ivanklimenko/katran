@@ -60,4 +60,40 @@ describe('createGridPorts', () => {
   it('без parseDetail порта детали нет', () => {
     expect('detailFx' in ports).toBe(false)
   })
+  const noteTab = (raw: unknown, path: string) => ({ text: str(obj(raw, path), 'text', path) })
+  const withTabs = createGridPorts({
+    gridId: 'docs',
+    parseRow: (raw, path) => ({ id: str(obj(raw, path), 'id', path) }),
+    parseDetail: (raw, path) => ({ id: str(obj(raw, path), 'id', path) }),
+    parseTab: { notes: noteTab, 'x/y': noteTab },
+  })
+  it('tabFx: GET /grids/docs/documents/{id}/tabs/{tab}, id и tab кодируются; ответ — парсером вкладки', async () => {
+    const seen: HttpRequest[] = []
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { seen.push(r); return { text: 'ок' } }]] })
+    const r = await allSettled(withTabs.tabFx, { scope, params: { id: 'a/1', tab: 'x/y' } })
+    expect(r).toEqual({ status: 'done', value: { text: 'ок' } })
+    expect(seen).toEqual([{ method: 'GET', url: '/grids/docs/documents/a%2F1/tabs/x%2Fy' }])
+  })
+  it('tabFx: вкладка без парсера — contractError до запроса (и для ключей прототипа)', async () => {
+    const seen: HttpRequest[] = []
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { seen.push(r); return { text: 'ок' } }]] })
+    const nope = await allSettled(withTabs.tabFx, { scope, params: { id: 'x', tab: 'nope' } })
+    expect(nope.status).toBe('fail')
+    expect((nope.value as ApiError).message).toBe(contractError('вкладка «nope»: нет парсера').message)
+    const proto = await allSettled(withTabs.tabFx, { scope, params: { id: 'x', tab: 'toString' } })
+    expect((proto.value as ApiError).message).toBe(contractError('вкладка «toString»: нет парсера').message)
+    expect(seen).toEqual([])
+  })
+  it('tabFx: ответ не объект или без поля — contractError с путём; отказ транспорта — ApiError со статусом', async () => {
+    const notObj = await allSettled(withTabs.tabFx, { scope: fork({ handlers: [[requestFx, async () => [1]]] }), params: { id: 'x', tab: 'notes' } })
+    expect((notObj.value as ApiError).message).toBe(contractError('ответ: ожидался объект').message)
+    const noField = await allSettled(withTabs.tabFx, { scope: fork({ handlers: [[requestFx, async () => ({})]] }), params: { id: 'x', tab: 'notes' } })
+    expect((noField.value as ApiError).message).toContain('ответ.text: ожидалась строка')
+    const gone = await allSettled(withTabs.tabFx, { scope: fork({ handlers: [[requestFx, async () => { throw toApiError(404, { type: 't', title: 'Неизвестная вкладка' }) }]] }), params: { id: 'x', tab: 'notes' } })
+    expect((gone.value as ApiError).status).toBe(404)
+  })
+  it('без parseTab порта вкладок нет', () => {
+    expect('tabFx' in withDetail).toBe(false)
+    expect('detailFx' in withTabs).toBe(true)
+  })
 })
