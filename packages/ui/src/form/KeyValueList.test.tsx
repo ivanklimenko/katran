@@ -53,6 +53,8 @@ describe('KeyValueList (спека 2b §2)', () => {
   it('моноширинное значение и приписка справа', () => {
     renderK(<KeyValueList items={refs} />)
     expect(screen.getByText('FX2609220000417')).toHaveClass('kvMono')
+    // обёртка значения сжимается в колонке (min-width: 0) — обрезка внутри неё работает; геометрия — e2e
+    expect(screen.getByText('UETR').nextElementSibling?.firstElementChild).toHaveClass('kvText')
     expect(screen.getByText('15 симв.')).toHaveClass('kvAside')
     expect(screen.getByText('15 симв.').closest('dd')).toBe(row('20').querySelector('dd'))
   })

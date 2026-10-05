@@ -458,6 +458,11 @@
   color: var(--k-val);
 }
 
+/* значение — элемент flex-строки: сжимается до ширины колонки, и обрезка с многоточием внутри (.cut потребителя) срабатывает */
+.kvText {
+  min-width: 0;
+}
+
 .kvMono {
   font-family: var(--k-mono);
   font-size: var(--k-fs-kvs);

@@ -48,7 +48,7 @@ export function KeyValueList({ items, title, labelWidth, columns = 1 }: KeyValue
         <dd className={s.kvValue} data-empty={empty ? '' : undefined} data-wide={wide ? '' : undefined}>
           {empty
             ? <><span className={s.kvNone} aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></>
-            : <span className={it.mono ? s.kvMono : undefined}>{it.value}</span>}
+            : <span className={[s.kvText, it.mono ? s.kvMono : ''].filter(Boolean).join(' ')}>{it.value}</span>}
           {it.aside !== undefined && <span className={s.kvAside}>{it.aside}</span>}
         </dd>
       </>
