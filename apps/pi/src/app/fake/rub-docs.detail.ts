@@ -1,5 +1,7 @@
 import { RUB_OPERATION, TYPE_NAME, type RubDoc } from '../../entities/rub-doc'
 import { RBANKS } from './rub-docs.data'
+import { RUB_TRAIL_TABS, rubCorrAcc, rubDocTrail, rubScenario } from './rub-docs.trail'
+import { tabsOffOf } from './trail.data'
 
 // Словари — со стенда pi-constructor (первый и второй рублёвые документы, index.html:895–921), обезличен; данные вымышленные.
 const ADDR = ['740828, Г. ЛЫСУЛА, УЛ. НИФЕМЯ, Д. 133, ПОМ. 520', '057617, Г. СОЛОКЫ, УЛ. МЕСОБО, Д. 83, КВ. 143']
@@ -32,21 +34,22 @@ const corrOf = (bic: string) => RBANKS.find((b) => b[1] === bic)?.[2] ?? ''
 
 /**
  * Деталь рублёвого документа (спека 2a §4.4): строка реестра как есть (номер, сумма, статус — из реестра),
- * стороны из реквизитов строки, секции и проводки — детерминированно по номеру строки i.
+ * стороны из реквизитов строки, секции и проводки — детерминированно по номеру строки i;
+ * tabsOff — по данным вкладок того же документа (спека 2b §3.5), rows — для «Связанных».
  */
-export function makeRubDocDetail(row: RubDoc, i: number): Record<string, unknown> {
+export function makeRubDocDetail(row: RubDoc, i: number, rows: readonly RubDoc[]): Record<string, unknown> {
   const inbound = row.direction === 'IN'
   const pending = row.status === 'IN_PROGRESS' || row.status === 'ERROR' || row.status === 'DEFERRED'
   const base = Date.parse(`${row.created}Z`)
   const at = (sec: number) => new Date(base + sec * 1000 + ((i * 41) % 1000)).toISOString()
-  const corr = `30102810${pad((i * 7919 + 17) % 1e12, 12)}`
+  const corr = rubCorrAcc(i)
   const client = inbound ? row.toAcc : row.fromAcc
   return {
     ...row,
     numDate: row.created.slice(0, 10),
     opCode: RUB_OPERATION[row.type],
     opName: TYPE_NAME[row.type],
-    scenario: inbound ? 'SC_NCB_IN_CREDIT' : row.direction === 'OUT' ? 'SC_NCB_OUT_DEBIT' : 'SC_NCB_TRANSIT',
+    scenario: rubScenario(row),
     sysFrom: inbound ? 'DB01' : 'DB02',
     sysTo: inbound ? 'DB02' : 'DB01',
     party: {
@@ -64,6 +67,6 @@ export function makeRubDocDetail(row: RubDoc, i: number): Record<string, unknown
       { dir: 'DEBIT', st: 'EXECUTED', acc: inbound ? corr : client, reg: inbound ? '00000_CorrCBR' : '00010_ClientCurrent', time: at(6), amount: row.amount, currency: 'RUB' },
       { dir: 'CREDIT', st: pending ? 'PENDING' : 'EXECUTED', acc: inbound ? client : corr, reg: inbound ? '00010_ClientCurrent' : '00000_CorrCBR', time: pending ? null : at(6), amount: row.amount, currency: 'RUB' },
     ],
-    tabsOff: i % 2 ? ['mpu'] : ['stream', 'mpu'],
+    tabsOff: tabsOffOf(RUB_TRAIL_TABS, rubDocTrail(row, i, rows)),
   }
 }

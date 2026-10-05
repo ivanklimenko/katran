@@ -1,13 +1,17 @@
-import { allSettled, fork } from 'effector'
+import { allSettled, fork, type Effect } from 'effector'
 import { STATUS_LABEL } from '../../entities/doc-status'
-import { FX_TYPES, fxDocPorts } from '../../entities/fx-doc'
-import { RUB_TYPES, rubDocPorts } from '../../entities/rub-doc'
-import { ApiError, createGridPorts, requestFx } from '../../shared/api'
-import { makeFxDocs } from './fx-docs.data'
+import { TRAIL_EXAMPLES, TRAIL_PARSERS, type TrailTabId } from '../../entities/doc-trail'
+import { FX_TABS, FX_TYPES, fxDocPorts, parseFxDocDetail } from '../../entities/fx-doc'
+import { RUB_TABS, RUB_TYPES, parseRubDocDetail, rubDocPorts } from '../../entities/rub-doc'
+import { ApiError, createGridPorts, requestFx, type TabQuery } from '../../shared/api'
 import { fakeGrids } from './grids'
+import { makeFxDocs } from './fx-docs.data'
+import { FX_TRAIL_TABS, fxDocTrail } from './fx-docs.trail'
 import { makeRubDocs } from './rub-docs.data'
 import { makeRubDocDetail } from './rub-docs.detail'
+import { RUB_TRAIL_TABS, rubDocTrail } from './rub-docs.trail'
 import { createFakeServer } from './server'
+import { tabsOffOf } from './trail.data'
 
 /** Цепочка «порт → requestFx → сервер». Внутри тот же тест гоняется против своего бека: подставить свой обработчик в handlers. */
 const scope = () => fork({ handlers: [[requestFx, createFakeServer(fakeGrids)]] })
@@ -198,12 +202,104 @@ describe('контракт детали rub-docs (спека 2a §6)', () => {
   })
   it('есть документ с бюджетными реквизитами и с посредниками', () => {
     const rows = makeRubDocs()
-    const details = rows.map((row, i) => makeRubDocDetail(row, i))
+    const details = rows.map((row, i) => makeRubDocDetail(row, i, rows))
     expect(details.some((d) => (d.budget as { b101: string }).b101 !== '')).toBe(true)
     expect(details.some((d) => (d.agents as unknown[]).length > 0)).toBe(true)
   })
   it('404 на неизвестный id', async () => {
     const r = await allSettled(rubDocPorts.detailFx, { scope: scope(), params: 'rub-9999' })
     expect((r.value as ApiError).status).toBe(404)
+  })
+})
+
+describe('контракт вкладок (спека 2b §3.1, §3.5): порт → requestFx → фейк', () => {
+  // порты вкладок сущностей подключает Task 10; здесь — те же парсеры поверх того же фейка
+  const fxTabPorts = createGridPorts({ gridId: 'fx-docs', parseRow: (x) => x, parseDetail: parseFxDocDetail, parseTab: TRAIL_PARSERS })
+  const rubTabPorts = createGridPorts({ gridId: 'rub-docs', parseRow: (x) => x, parseDetail: parseRubDocDetail, parseTab: TRAIL_PARSERS })
+  const remoteOf = (tabs: { id: string }[], local: string[]) => tabs.map((t) => t.id).filter((id) => !local.includes(id))
+  /** Пустота в домене: список без строк, аудит без секций, исходники без текста; комплаенс пустым не бывает. */
+  const isEmpty = (data: unknown) => (Array.isArray(data) ? data.length === 0 : Object.values(data as Record<string, unknown>).every((v) => v === ''))
+
+  async function everyDoc<D extends { tabsOff: string[] }>(detailFx: Effect<string, D, ApiError>, tabFx: Effect<TabQuery, unknown, ApiError>, ids: string[], tabs: readonly string[]) {
+    const sc = scope()
+    for (const id of ids) {
+      const d = await allSettled(detailFx, { scope: sc, params: id })
+      if (d.status !== 'done') throw new Error(`${id}: деталь не пришла`)
+      const off = d.value.tabsOff
+      const got = await Promise.all(tabs.map((tab) => allSettled(tabFx, { scope: sc, params: { id, tab } })))
+      tabs.forEach((tab, k) => {
+        const r = got[k]!
+        if (r.status !== 'done') throw new Error(`${id}/${tab}: ${r.value.message}`)
+        expect(isEmpty(r.value), `${id}/${tab}: пусто ⇔ в tabsOff`).toBe(off.includes(tab))
+      })
+    }
+  }
+
+  it('TRAIL_PARSERS: ключи — ровно TrailTabId, это объединение нелокальных вкладок обоих реестров; наборы фейка — нелокальные вкладки реестра', () => {
+    const fx = remoteOf(FX_TABS, ['main', 'extra'])
+    const rub = remoteOf(RUB_TABS, ['main'])
+    const keys = Object.keys(TRAIL_PARSERS).sort()
+    expect(keys).toEqual(['audit', 'compliance', 'ed244', 'linked', 'mpu', 'notif', 'source', 'statuses', 'stream', 'tasks'])
+    expect(keys).toEqual([...new Set([...fx, ...rub])].sort())
+    expect([...FX_TRAIL_TABS]).toEqual(fx)
+    expect([...RUB_TRAIL_TABS]).toEqual(rub)
+  })
+  it('TRAIL_EXAMPLES (форма pi-api.md) разбираются TRAIL_PARSERS', () => {
+    expect(Object.keys(TRAIL_EXAMPLES).sort()).toEqual(Object.keys(TRAIL_PARSERS).sort())
+    for (const tab of Object.keys(TRAIL_PARSERS) as TrailTabId[]) expect(() => TRAIL_PARSERS[tab](TRAIL_EXAMPLES[tab], 'ответ'), tab).not.toThrow()
+  })
+  it('fx-docs: каждая вкладка каждого документа разбирается; вкладка в tabsOff ⇔ её данные пусты', async () => {
+    await everyDoc(fxTabPorts.detailFx, fxTabPorts.tabFx, makeFxDocs().map((r) => r.id), FX_TRAIL_TABS)
+  }, 60_000)
+  it('rub-docs: каждая вкладка каждого документа разбирается; вкладка в tabsOff ⇔ её данные пусты', async () => {
+    await everyDoc(rubTabPorts.detailFx, rubTabPorts.tabFx, makeRubDocs().map((r) => r.id), RUB_TRAIL_TABS)
+  }, 60_000)
+  it('данные разнообразны: у части документов вкладка пуста, у части — нет', () => {
+    const fx = makeFxDocs()
+    const rub = makeRubDocs()
+    const fxOff = fx.map((r, i) => tabsOffOf(FX_TRAIL_TABS, fxDocTrail(r, i, fx)))
+    const rubOff = rub.map((r, i) => tabsOffOf(RUB_TRAIL_TABS, rubDocTrail(r, i, rub)))
+    for (const tab of ['notif', 'stream', 'mpu']) {
+      expect(fxOff.some((o) => o.includes(tab)), `fx ${tab} пуста`).toBe(true)
+      expect(fxOff.some((o) => !o.includes(tab)), `fx ${tab} непуста`).toBe(true)
+    }
+    for (const tab of ['linked', 'notif', 'ed244', 'stream', 'mpu']) {
+      expect(rubOff.some((o) => o.includes(tab)), `rub ${tab} пуста`).toBe(true)
+      expect(rubOff.some((o) => !o.includes(tab)), `rub ${tab} непуста`).toBe(true)
+    }
+  })
+  it('«Связанные» ссылаются на существующие документы того же реестра', () => {
+    const fx = makeFxDocs()
+    const fxIds = new Set(fx.map((r) => r.id))
+    for (const [i, r] of fx.entries()) {
+      for (const l of (fxDocTrail(r, i, fx).linked as { documents: { docId: string }[] }).documents) expect(fxIds.has(l.docId), l.docId).toBe(true)
+    }
+    const rub = makeRubDocs()
+    const rubIds = new Set(rub.map((r) => r.id))
+    for (const [i, r] of rub.entries()) {
+      for (const l of (rubDocTrail(r, i, rub).linked as { documents: { docId: string }[] }).documents) expect(rubIds.has(l.docId), l.docId).toBe(true)
+    }
+  })
+  it('рубль — свои данные: сценарии SC_NCB_*, события rub_evt_*, без артефактов валюты', () => {
+    const rows = makeRubDocs()
+    const trails = rows.map((r, i) => rubDocTrail(r, i, rows))
+    expect(JSON.stringify(trails)).not.toMatch(/USD|EUR|CNY|fx[-_]|RT_FX|Nostro/)
+    for (const t of trails) {
+      for (const e of (t.statuses as { events: { route: string | null }[] }).events) if (e.route !== null) expect(e.route).toMatch(/^SC_NCB_/)
+      for (const e of (t.stream as { events: { event: string }[] }).events) expect(e.event).toMatch(/^rub_evt_/)
+    }
+  })
+  it('404 на вкладку не из набора реестра; ?fail=tab:<id> — 500 только на ней', async () => {
+    const fxId = makeFxDocs()[0]!.id
+    const rubId = makeRubDocs()[0]!.id
+    const ed = await allSettled(fxTabPorts.tabFx, { scope: scope(), params: { id: fxId, tab: 'ed244' } })
+    expect((ed.value as ApiError).status).toBe(404)
+    const src = await allSettled(rubTabPorts.tabFx, { scope: scope(), params: { id: rubId, tab: 'source' } })
+    expect((src.value as ApiError).status).toBe(404)
+    const failing = fork({ handlers: [[requestFx, createFakeServer(fakeGrids, { failing: () => 'tab:statuses' })]] })
+    const st = await allSettled(fxTabPorts.tabFx, { scope: failing, params: { id: fxId, tab: 'statuses' } })
+    expect((st.value as ApiError).status).toBe(500)
+    const au = await allSettled(fxTabPorts.tabFx, { scope: failing, params: { id: fxId, tab: 'audit' } })
+    expect(au.status).toBe('done')
   })
 })

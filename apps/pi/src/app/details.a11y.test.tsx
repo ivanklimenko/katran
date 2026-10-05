@@ -34,14 +34,14 @@ describe('a11y деталки на реальных профилях обоих 
     for (const t of FX_TYPES) {
       const i = rows.findIndex((r) => r.type === t)
       if (i < 0) continue
-      await check(fxDocDetailDomain, parseFxDocDetail(makeFxDocDetail(rows[i]!, i), 'ответ'), new RegExp(`^Поля ${t}$`))
+      await check(fxDocDetailDomain, parseFxDocDetail(makeFxDocDetail(rows[i]!, i, rows), 'ответ'), new RegExp(`^Поля ${t}$`))
     }
   }, 60_000)
   it('рубль: каждый вид документа', async () => {
     const rows = makeRubDocs()
     for (const t of RUB_TYPES) {
       const i = rows.findIndex((r) => r.type === t)
-      await check(rubDocDetailDomain, parseRubDocDetail(makeRubDocDetail(rows[i]!, i), 'ответ'), /^Отправитель \/ Получатель$/)
+      await check(rubDocDetailDomain, parseRubDocDetail(makeRubDocDetail(rows[i]!, i, rows), 'ответ'), /^Отправитель \/ Получатель$/)
     }
   }, 60_000)
 })
