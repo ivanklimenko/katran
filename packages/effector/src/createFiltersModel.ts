@@ -1,6 +1,7 @@
 import { attach, combine, createEffect, createEvent, createStore, is, sample, type Effect, type EventCallable, type Store } from 'effector'
 import type { Condition, Filter, FilterMeta, Scalar, SuggestQuery, SuggestState } from './types'
 
+/** Подсказки поля. filter запроса берётся из применённых условий в момент ввода (без условий по самому полю), не из черновика. */
 export type SuggestConfig = {
   fetchFx: Effect<SuggestQuery, string[]>
   /** Задержка после последнего ввода, мс; по умолчанию 250. */
@@ -27,7 +28,7 @@ export type FiltersModel = {
   /** Черновик панели до нажатия «Применить». */
   $draft: Store<Filter>
   $dirty: Store<boolean>
-  /** Значение условия EQ по laneField в применённых, иначе null (условие IN по тому же полю — тоже null). */
+  /** Значение, если по laneField в применённых ровно одно условие и оно EQ; иначе null (IN, NE или несколько условий по полю — null). */
   $lane: Store<Scalar | null>
   /** Каталог полей; null — ещё не загружен. */
   $meta: Store<FilterMeta | null>

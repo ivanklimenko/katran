@@ -101,7 +101,7 @@ export function foreignOf(f: FilterField, conditions: Filter): Condition[] {
 export function draftOf(draft: Filter, f: FilterField): FieldRaw {
   const own = represented(f)
   const cs = ofField(draft, f).filter((c) => own.has(c.op))
-  const scalars = (): Scalar[] => cs.flatMap((c) => (c.op === 'IN' || c.op === 'NOT_IN' ? c.values : 'value' in c ? [c.value] : []))
+  const scalars = (): Scalar[] => cs.flatMap((c) => (c.op === 'IN' ? c.values : 'value' in c ? [c.value] : []))
   switch (fieldControl(f)) {
     case 'values':
     case 'phrases': return { kind: 'tags', value: scalars().map(String), text: '' }

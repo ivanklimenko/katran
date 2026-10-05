@@ -20,9 +20,11 @@ export type FilterPanelProps = {
   dirty: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Заменить условие поля; без onSetField панель зовёт его с первым условием поля (совместимость). */
+  /** Заменить условие поля; без onSetField панель зовёт его с первым условием поля (совместимость).
+   * В совместимом режиме чужие условия поля (NE, NOT_IN…) теряются; новым экранам — onSetField. */
   onEdit: (c: Condition) => void
-  /** Снять поле из черновика; без onSetField — когда поле опустело. */
+  /** Снять поле из черновика; без onSetField — когда поле опустело.
+   * В совместимом режиме вместе с полем снимаются и его чужие условия (NE, NOT_IN…); новым экранам — onSetField. */
   onDiscard: (field: string) => void
   /** Заменить все условия поля в черновике разом; [] — снять поле (спека 2026-09-30 §7). */
   onSetField?: ((p: { field: string; conditions: Condition[] }) => void) | undefined

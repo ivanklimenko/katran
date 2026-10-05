@@ -148,6 +148,8 @@ test('тёмная тема: поповер на paper темы, скриншо�
     probe.remove()
     return [getComputedStyle(el).backgroundColor, p]
   })
+  // проба не пустая: иначе равенство прошло бы и при неразрешённом --k-paper (прозрачный фон у обоих)
+  expect(paper).not.toBe('rgba(0, 0, 0, 0)')
   expect(bg).toBe(paper)
   await page.screenshot({ path: info.outputPath('filters-dark.png') })
 })

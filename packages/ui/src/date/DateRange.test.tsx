@@ -285,7 +285,7 @@ describe('DateRange', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('grid', { name: 'Август 2026' })).toBeInTheDocument()
   })
-  it('клики календаря сохраняют время «с»', async () => {
+  it('клики календаря сохраняют время «с» и «по»: «по» на время ожидания второго клика пусто, вторым кликом получает прежние часы', async () => {
     const u = userEvent.setup()
     const onValue = vi.fn()
     renderK(<Host time initial={{ from: '2026-09-01T09:30', to: '2026-09-02T18:00' }} onValue={onValue} />)
@@ -293,7 +293,21 @@ describe('DateRange', () => {
     await u.click(screen.getByRole('button', { name: /^10 сентября/ }))
     expect(onValue).toHaveBeenLastCalledWith({ from: '2026-09-10T09:30', to: '' })
     await u.click(screen.getByRole('button', { name: /^12 сентября/ }))
-    expect(onValue).toHaveBeenLastCalledWith({ from: '2026-09-10T09:30', to: '2026-09-12' })
+    expect(onValue).toHaveBeenLastCalledWith({ from: '2026-09-10T09:30', to: '2026-09-12T18:00' })
+    // со временем поповер открыт и после второго клика; без прежнего времени «по» второй клик ставит день без времени
+    await u.clear(screen.getByRole('textbox', { name: 'Время по' }))
+    await u.click(screen.getByRole('button', { name: /^14 сентября/ }))
+    await u.click(screen.getByRole('button', { name: /^16 сентября/ }))
+    expect(onValue).toHaveBeenLastCalledWith({ from: '2026-09-14T09:30', to: '2026-09-16' })
+  })
+  it('прежнее время «по» раньше времени «с» при выборе одного дня двумя кликами — «по» без времени, а не раньше «с»', async () => {
+    const u = userEvent.setup()
+    const onValue = vi.fn()
+    renderK(<Host time initial={{ from: '2026-09-01T18:00', to: '2026-09-02T09:00' }} onValue={onValue} />)
+    await u.click(screen.getByRole('button', { name: 'Выбрать период' }))
+    await u.click(screen.getByRole('button', { name: /^10 сентября/ }))
+    await u.click(screen.getByRole('button', { name: /^10 сентября/ }))
+    expect(onValue).toHaveBeenLastCalledWith({ from: '2026-09-10T18:00', to: '2026-09-10' })
   })
   it('toDisabled: «по» недоступно, день календаря ставит только «с» и закрывает; многодневные пресеты недоступны', async () => {
     const u = userEvent.setup()

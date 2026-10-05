@@ -51,6 +51,8 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
   // первый клик календаря уже сделан, второго ещё нет
   const [pending, setPending] = useState<IsoDay | null>(null)
   const [hover, setHover] = useState<IsoDay | null>(null)
+  // время «по» до первого клика: первый клик очищает «по», второй ставит новый день под прежние часы
+  const [toTimeKept, setToTimeKept] = useState('')
   const [invFrom, setInvFrom] = useState(false)
   const [invTo, setInvTo] = useState(false)
   const panelId = useStableId()
@@ -62,18 +64,25 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
     ? { from: fromDay, to: toDay }
     : hover === null ? { from: pending, to: '' } : hover < pending ? { from: hover, to: pending } : { from: pending, to: hover }
 
+  // «по» не может быть раньше «с»: позже днём — сбрасывается целиком, в тот же день раньше временем — остаётся день
+  const fitTo = (from: DateValue, to: DateValue): DateValue => {
+    if (!from || !to) return to
+    if (dayOf(from) > dayOf(to)) return ''
+    return dayOf(from) === dayOf(to) && timeOf(to) !== '' && timeOf(from) !== '' && to < from ? dayOf(to) : to
+  }
   const close = () => { setOpen(false); setPending(null); setHover(null) }
   const toggle = () => { if (open) { close(); return } setMonth(fromDay || t); setOpen(true) }
-  // время «с» переживает выбор дней, как у DateInput: новый день ставится под прежние часы
+  // время «с» и «по» переживает выбор дней, как у DateInput: новый день ставится под прежние часы
   const fromTime = value.from ? timeOf(value.from) : ''
   const pick = (d: IsoDay) => {
     // один клик — «с»; со временем поповер остаётся открытым, как в обычном режиме со временем: дописать часы
     if (toDisabled) { onChange({ from: withDay(d, fromTime), to: '' }); if (!time) close(); return }
-    if (pending === null) { setPending(d); onChange({ from: withDay(d, fromTime), to: '' }); return }
+    if (pending === null) { setPending(d); setToTimeKept(value.to ? timeOf(value.to) : ''); onChange({ from: withDay(d, fromTime), to: '' }); return }
     const [a, b] = d < pending ? [d, pending] : [pending, d]
     setPending(null)
     setHover(null)
-    onChange({ from: withDay(a, fromTime), to: b })
+    const from = withDay(a, fromTime)
+    onChange({ from, to: fitTo(from, withDay(b, toTimeKept)) })
     if (!time) setOpen(false)
   }
   // без «по» многодневный период не выразить — такие пресеты недоступны, однодневные («Сегодня») остаются
@@ -96,12 +105,6 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
     setHover(null)
     // со временем поповер остаётся: после пресета ещё нужно вписать часы (спека §3.6)
     if (!time) setOpen(false)
-  }
-  // «по» не может быть раньше «с»: позже днём — сбрасывается целиком, в тот же день раньше временем — остаётся день
-  const fitTo = (from: DateValue, to: DateValue): DateValue => {
-    if (!from || !to) return to
-    if (dayOf(from) > dayOf(to)) return ''
-    return dayOf(from) === dayOf(to) && timeOf(to) !== '' && timeOf(from) !== '' && to < from ? dayOf(to) : to
   }
   const setFrom = (v: DateValue) => onChange({ from: v, to: fitTo(v, value.to) })
   const sameDay = fromDay !== '' && fromDay === toDay
