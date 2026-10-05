@@ -112,3 +112,13 @@ export const TRAIL_PARSERS: Record<TrailTabId, TabParser> = {
   statuses: parseStatuses, compliance: parseCompliance, linked: parseLinked, tasks: parseTasks, notif: parseNotifications,
   source: parseSourceTexts, ed244: parseSourceTexts, stream: parseStream, mpu: parseMpu, audit: parseAudit,
 }
+
+/**
+ * Парсеры для порта реестра (createGridPorts parseTab): ровно вкладки набора, у которых есть парсер doc-trail.
+ * Локальные (main, extra) и чужие (ed244 у валюты, source у рубля) не попадают — порт откажет им до запроса.
+ */
+export function trailParsersFor(tabs: readonly { id: string }[]): Record<string, TabParser> {
+  const out: Record<string, TabParser> = {}
+  for (const { id } of tabs) if (Object.prototype.hasOwnProperty.call(TRAIL_PARSERS, id)) out[id] = TRAIL_PARSERS[id as TrailTabId]
+  return out
+}

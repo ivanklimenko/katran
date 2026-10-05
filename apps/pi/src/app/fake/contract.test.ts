@@ -303,3 +303,36 @@ describe('контракт вкладок (спека 2b §3.1, §3.5): порт
     expect(au.status).toBe('done')
   })
 })
+
+describe('контракт вкладок: порты сущностей (fxDocPorts / rubDocPorts) — парсеры doc-trail по набору вкладок реестра', () => {
+  // каждый документ и каждую вкладку проверяет блок выше; здесь — что порты сущностей подключили ровно свои вкладки
+  const remote = (tabs: { id: string }[], local: string[]) => tabs.map((t) => t.id).filter((id) => !local.includes(id))
+  /** Сервер фейка, считающий запросы вкладок: чужая вкладка должна отказать до запроса. */
+  const counting = () => {
+    const handle = createFakeServer(fakeGrids)
+    const calls: string[] = []
+    const sc = fork({ handlers: [[requestFx, (req: Parameters<typeof handle>[0]) => { if (req.url.includes('/tabs/')) calls.push(req.url); return handle(req) }]] })
+    return { sc, calls }
+  }
+  const cases = [
+    { name: 'fx-docs', ports: fxDocPorts, id: () => makeFxDocs()[0]!.id, tabs: remote(FX_TABS, ['main', 'extra']), alien: 'ed244' },
+    { name: 'rub-docs', ports: rubDocPorts, id: () => makeRubDocs()[0]!.id, tabs: remote(RUB_TABS, ['main']), alien: 'source' },
+  ] as const
+  for (const c of cases) {
+    it(`${c.name}: каждая нелокальная вкладка разбирается; «${c.alien}» — отказ контракта без запроса`, async () => {
+      const { sc, calls } = counting()
+      const id = c.id()
+      for (const tab of c.tabs) {
+        const r = await allSettled(c.ports.tabFx, { scope: sc, params: { id, tab } })
+        expect(r.status, tab).toBe('done')
+      }
+      expect(calls).toHaveLength(c.tabs.length)
+      for (const tab of [c.alien, 'main', 'extra']) {
+        const r = await allSettled(c.ports.tabFx, { scope: sc, params: { id, tab } })
+        expect(r.status, tab).toBe('fail')
+        expect((r.value as ApiError).message, tab).toContain('нет парсера')
+      }
+      expect(calls).toHaveLength(c.tabs.length)
+    })
+  }
+})
