@@ -17,7 +17,7 @@
   flex: none;
   width: var(--k-drawer);
   height: 100%;
-  overflow: hidden auto;
+  overflow: hidden;
   background: var(--k-paper);
   border-left: 1px solid var(--k-line);
   box-shadow: var(--k-shadow);
@@ -25,6 +25,13 @@
   color: var(--k-ink);
   pointer-events: auto;
   animation: k-drawer-in var(--k-t-drawer) ease-out both;
+}
+
+/* Прокрутка — внутри, а не у корня: слой overlay (Prompt) с inset: 0 накрывает видимую часть панели и не уезжает с содержимым (спека 2c §2.1) */
+.scroll {
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden auto;
 }
 
 @keyframes k-drawer-in {
@@ -40,7 +47,7 @@
   }
 }
 
-/* Метка слота (эталон .slotlbl): прилипает к верху при прокрутке. B — warn-soft/ink2: paper на warn ниже 4.5 для мелкого текста */
+/* Метка слота (эталон .slotlbl): прилипает к верху прокручиваемой части. B — warn-soft/ink2: paper на warn ниже 4.5 для мелкого текста */
 .badge {
   position: sticky;
   top: 0;

@@ -248,6 +248,14 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
     })
   })
 
+  it('overlay — поверх панели вне прокручиваемого содержимого', () => {
+    renderK(<Drawer label="Д" title="Т" onClose={vi.fn()} overlay={<div data-testid="ov" />}><p>тело</p></Drawer>)
+    const scroll = screen.getByRole('dialog').querySelector('[data-part="scroll"]')
+    expect(scroll).toContainElement(screen.getByText('тело'))
+    expect(scroll).not.toContainElement(screen.getByTestId('ov'))
+    expect(screen.getByRole('dialog')).toContainElement(screen.getByTestId('ov'))
+  })
+
   it('без нарушений axe (A и B)', async () => {
     const { container } = renderK(<Host start={{ a: 'd1', b: 'd2' }} />)
     expect(await axe(container)).toHaveNoViolations()

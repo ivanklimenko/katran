@@ -50,6 +50,7 @@
   --k-st-okl: #4E9E77;
   --k-st-grey: #8A93A6;
   --k-st-letter-soft: #141A29;
+  --k-scrim: #141A2947;
   --k-shadow: 0 1px 2px rgba(20,26,41,.06), 0 8px 28px rgba(20,26,41,.08);
 }
 /* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
@@ -150,6 +151,31 @@
   --k-code-pl: calc(28px * var(--k-density));
   --k-code-gutter: calc(46px * var(--k-density));
   --k-code-num: calc(30px * var(--k-density));
+  --k-prompt-w: calc(340px * var(--k-density));
+  --k-prompt-btn: calc(30px * var(--k-density));
+  --k-prompt-btn-px: calc(14px * var(--k-density));
+  --k-r-l: calc(8px * var(--k-density));
+  --k-fs-prompt: calc(14px * var(--k-density));
+  --k-prompt-shift: calc(6px * var(--k-density));
+  --k-fe-line: calc(21px * var(--k-density));
+  --k-fe-pt: calc(7px * var(--k-density));
+  --k-fe-px: calc(9px * var(--k-density));
+  --k-fe-pb: calc(8px * var(--k-density));
+  --k-fe-box-py: calc(5px * var(--k-density));
+  --k-fe-box-px: calc(7px * var(--k-density));
+  --k-fe-gap: calc(10px * var(--k-density));
+  --k-opt-btn: calc(18px * var(--k-density));
+  --k-opt-min: calc(22px * var(--k-density));
+  --k-h-inline: calc(22px * var(--k-density));
+  --k-fs-edit: calc(12px * var(--k-density));
+  --k-sug-row: calc(24px * var(--k-density));
+  --k-sug-w: calc(320px * var(--k-density));
+  --k-sug-tag: calc(34px * var(--k-density));
+  --k-sug-kind: calc(120px * var(--k-density));
+  --k-pen: calc(17px * var(--k-density));
+  --k-mark-dot: calc(6px * var(--k-density));
+  --k-fs-mark: calc(8px * var(--k-density));
+  --k-edit-dot: calc(8px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;
@@ -185,6 +211,7 @@
   --k-st-okl: #8ADCB0;
   --k-st-grey: #A7B0C2;
   --k-st-letter-soft: #161B26;
+  --k-scrim: #00000073;
   --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
 }
 @media (prefers-color-scheme: dark) {
@@ -222,6 +249,7 @@
     --k-st-okl: #8ADCB0;
     --k-st-grey: #A7B0C2;
     --k-st-letter-soft: #161B26;
+    --k-scrim: #00000073;
     --k-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
   }
 }

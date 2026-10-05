@@ -24,6 +24,8 @@ export const colorsLight: ColorSet = {
   // буква в статусной точке на светлых тонах flowl/okl/grey: на них paper (белый) даёт 3.0–3.2,
   // поэтому буква тёмная — ink
   'st-letter-soft': '#141A29',
+  // подложка Prompt (спека 2c, эталон prompt.css: rgba(20,26,41,.28)) — восьмизначный hex, альфа 0x47
+  scrim: '#141A2947',
 }
 
 export const colorsDark: ColorSet = {
@@ -41,6 +43,8 @@ export const colorsDark: ColorSet = {
   'st-ok': '#52CC8A', 'st-okl': '#8ADCB0', 'st-grey': '#A7B0C2',
   // буква в статусной точке на flowl/okl/grey: тоны тёмной темы светлые, буква тёмная — paper, как на остальных тонах
   'st-letter-soft': '#161B26',
+  // подложка Prompt: чёрный с альфой .45 (0x73); эталон тёмную тему не проверяет
+  scrim: '#00000073',
 }
 
 /** Тени задаются целиком: в них есть rgba, генератор их не трогает. */
@@ -101,6 +105,15 @@ export const sizes: Record<string, number> = {
   // просмотр кода вкладок деталки (спека 2b §2, эталон pre.sw / .sw.xml, index.html:347–361): отступы блока 6 / 10 / 28,
   // поле номеров строк XML 46 (ширина номера 30 + зазор 16)
   'code-pt': 6, 'code-px': 10, 'code-pl': 28, 'code-gutter': 46, 'code-num': 30,
+  // правка деталки (спека 2c, эталон .fe/.opts/.txted/.acced/.sug/.pr/.mark, index.html:138–153, 202–245, 365–443; prompt.css):
+  // Prompt — коробка 340, кнопка 30 с отступом 14, радиус 8, кегль заголовка 14, подъём при появлении 6 (@keyframes pr-up);
+  // FieldEditor — строка 21, отступы 7 / 9 / 8, поле 5 / 7, зазор 10, кнопка опции 18 (мин. ширина 22);
+  // поле на месте 22, кегль правки 12, строка подсказки 24, список 320, метка 34, колонка вида 120;
+  // карандаш 17, точка маркера 6, кегль галочки 8, точка правки 8
+  'prompt-w': 340, 'prompt-btn': 30, 'prompt-btn-px': 14, 'r-l': 8, 'fs-prompt': 14, 'prompt-shift': 6,
+  'fe-line': 21, 'fe-pt': 7, 'fe-px': 9, 'fe-pb': 8, 'fe-box-py': 5, 'fe-box-px': 7, 'fe-gap': 10, 'opt-btn': 18, 'opt-min': 22,
+  'h-inline': 22, 'fs-edit': 12, 'sug-row': 24, 'sug-w': 320, 'sug-tag': 34, 'sug-kind': 120,
+  'pen': 17, 'mark-dot': 6, 'fs-mark': 8, 'edit-dot': 8,
 }
 
 export const fonts = {
