@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Tag } from '../value'
 import type { Option } from './options'
 import s from './Select.module.css'
 
@@ -82,6 +83,7 @@ export function Listbox({ id, label, options, active, isSelected, isDisabled, mu
           >
             {multi && <span className={s.box} data-on={sel || undefined} aria-hidden="true" />}
             <span className={s.optLabel}>{highlight !== undefined ? mark(o.label, highlight) : o.label}</span>
+            {o.tag !== undefined && <Tag tone="mt">{o.tag}</Tag>}
             {o.hint && <span className={s.hint}>{o.hint}</span>}
           </li>
         )

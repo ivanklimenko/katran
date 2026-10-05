@@ -205,3 +205,106 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* SuggestInput — одно значение только из списка (эталон .acced / .sug, index.html:376–391) */
+.sugBox {
+  display: grid;
+  min-width: 0;
+}
+
+.sugInput {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--k-h-inline);
+  padding: 0 var(--k-fe-box-px);
+  border: 1px solid var(--k-val);
+  border-radius: var(--k-r-s);
+  background: var(--k-paper);
+  font: 400 var(--k-fs-edit) / 1 var(--k-mono);
+  letter-spacing: 0.02em;
+  color: var(--k-ink);
+}
+
+.sugInput::placeholder {
+  color: var(--k-faint);
+}
+
+.sugInput:focus {
+  outline: 0;
+  box-shadow: 0 0 0 2px var(--k-val-soft);
+}
+
+.sugInput[aria-invalid="true"] {
+  border-color: var(--k-bad);
+}
+
+.sugNote {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--k-sp-2);
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.sugBad {
+  color: var(--k-bad);
+}
+
+/* список: без внутреннего отступа поповера, строки встык через разделитель */
+.sug {
+  min-width: var(--k-sug-w);
+  padding: 0;
+  border-radius: var(--k-r-s);
+}
+
+.sug .opt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--k-sug-tag) var(--k-sug-kind);
+  gap: 0 var(--k-sp-2);
+  justify-items: start;
+  min-height: var(--k-sug-row);
+  border-radius: 0;
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+}
+
+.sug .opt + .opt {
+  border-top: 1px solid var(--k-line2);
+}
+
+.sug .optLabel {
+  justify-self: stretch;
+  font: 400 var(--k-fs-edit) / 1 var(--k-mono);
+  color: var(--k-ink);
+}
+
+.sug .optLabel b {
+  font-weight: 600;
+  color: var(--k-val);
+}
+
+.sug .hint {
+  justify-self: stretch;
+  overflow: hidden;
+  font: inherit;
+  color: var(--k-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sug .empty {
+  color: var(--k-bad);
+}
+
+.sugMore {
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border-top: 1px solid var(--k-line2);
+  background: var(--k-sunk);
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.sugStatus {
+  padding: var(--k-sp-2);
+  font: 400 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-ink2);
+}
