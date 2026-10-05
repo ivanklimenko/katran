@@ -1,5 +1,5 @@
 import type { FxDoc } from '../../entities/fx-doc'
-import { by35, complianceOf, ddmmyyyy, decimal, hexOf, lt, pad, stamp, statusEvents, swiftAmount, uuidOf, WHO, yymmdd, type Step } from './trail.data'
+import { by35, complianceOf, ddmmyyyy, decimal, hexOf, lt, pad, stamp, stampS, statusEvents, swiftAmount, uuidOf, WHO, yymmdd, type Step } from './trail.data'
 
 /** Нелокальные вкладки валютного реестра — набор GET …/tabs/{tab} (FX_TABS без main и extra, спека 2b §3.1). */
 export const FX_TRAIL_TABS = ['statuses', 'compliance', 'linked', 'tasks', 'notif', 'source', 'stream', 'mpu', 'audit'] as const
@@ -80,27 +80,27 @@ function tasks(row: FxDoc, i: number, b: string, who: string) {
   if (!finished(row)) {
     return [{
       id: `task-${hexOf(i, 22, 12)}`, status: 'OPEN', severity: row.status === 'ERROR' || row.status === 'REJECTED' ? 'WARN' : 'INFO',
-      taskType: 'PAYMENT_INSTRUCTION', createdAt: stamp(b, 2338),
+      taskType: 'PAYMENT_INSTRUCTION', createdAt: stampS(b, 2338),
       text: `Требуется подтвердить маршрут; требуется подтверждение контролёра на ${act}`, assignee: null,
-      history: [{ at: stamp(b, 2338), event: `Создана: fx-${d}-routing` }],
+      history: [{ at: stampS(b, 2338), event: `Создана: fx-${d}-routing` }],
     }]
   }
   return [
     {
-      id: `task-${hexOf(i, 21, 12)}`, status: 'DONE', severity: 'OK', taskType: 'PAYMENT_INSTRUCTION', createdAt: stamp(b, 13759),
+      id: `task-${hexOf(i, 21, 12)}`, status: 'DONE', severity: 'OK', taskType: 'PAYMENT_INSTRUCTION', createdAt: stampS(b, 13759),
       text: `Требуется подтвердить маршрут; требуется утвердить ${inbound ? `зачисление по клиентскому счёту ${row.f59acc}` : `списание с клиентского счёта ${row.f50acc}`}`,
       assignee: who,
       history: [
-        { at: stamp(b, 13759), event: `Создана: fx-${d}-routing` },
-        { at: stamp(b, 54759), event: `Взята в работу: ${who}` },
-        { at: stamp(b, 94759), event: `Решение: маршрут подтверждён, ${act} утверждено` },
-        { at: stamp(b, 94759), event: `Закрыта · ${who}` },
+        { at: stampS(b, 13759), event: `Создана: fx-${d}-routing` },
+        { at: stampS(b, 54759), event: `Взята в работу: ${who}` },
+        { at: stampS(b, 94759), event: `Решение: маршрут подтверждён, ${act} утверждено` },
+        { at: stampS(b, 94759), event: `Закрыта · ${who}` },
       ],
     },
     {
-      id: `task-${hexOf(i, 23, 12)}`, status: 'OPEN', severity: 'INFO', taskType: 'PAYMENT_INSTRUCTION', createdAt: stamp(b, 196759),
+      id: `task-${hexOf(i, 23, 12)}`, status: 'OPEN', severity: 'INFO', taskType: 'PAYMENT_INSTRUCTION', createdAt: stampS(b, 196759),
       text: `Комиссия ${row.currency} 35,00 удержана по тарифу OUR; проверить корректность тарифного плана клиента`, assignee: null,
-      history: [{ at: stamp(b, 196759), event: 'Создана: fx-accounting' }],
+      history: [{ at: stampS(b, 196759), event: 'Создана: fx-accounting' }],
     },
   ]
 }

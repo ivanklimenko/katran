@@ -1,6 +1,6 @@
 import { RUB_OPERATION, type RubDoc } from '../../entities/rub-doc'
 import { RBANKS } from './rub-docs.data'
-import { complianceOf, ddmmyyyy, decimal, hexOf, lt, pad, stamp, statusEvents, swiftAmount, uuidOf, WHO, type Step } from './trail.data'
+import { complianceOf, ddmmyyyy, decimal, hexOf, lt, pad, stamp, stampS, statusEvents, swiftAmount, uuidOf, WHO, type Step } from './trail.data'
 
 /** Нелокальные вкладки рублёвого реестра — набор GET …/tabs/{tab} (RUB_TABS без main, спека 2b §3.1). */
 export const RUB_TRAIL_TABS = ['statuses', 'compliance', 'linked', 'tasks', 'notif', 'ed244', 'stream', 'mpu', 'audit'] as const
@@ -68,20 +68,20 @@ function tasks(row: RubDoc, i: number, b: string, who: string) {
   if (!finished(row)) {
     return [{
       id: `task-${hexOf(i, 62, 12)}`, status: 'OPEN', severity: row.status === 'ERROR' || row.status === 'REJECTED' ? 'WARN' : 'INFO',
-      taskType: 'PAYMENT_DOCUMENT', createdAt: stamp(b, 2210),
+      taskType: 'PAYMENT_DOCUMENT', createdAt: stampS(b, 2210),
       text: `Требуется подтвердить сценарий ${sc}; ${row.reason ?? 'требуется решение сотрудника'}`, assignee: null,
-      history: [{ at: stamp(b, 2210), event: 'Создана: rub-routing' }],
+      history: [{ at: stampS(b, 2210), event: 'Создана: rub-routing' }],
     }]
   }
   const act = row.direction === 'IN' ? `зачисление на счёт ${clientAcc(row)}` : `списание со счёта ${clientAcc(row)}`
   return [{
-    id: `task-${hexOf(i, 61, 12)}`, status: 'DONE', severity: 'OK', taskType: 'PAYMENT_DOCUMENT', createdAt: stamp(b, 2210),
+    id: `task-${hexOf(i, 61, 12)}`, status: 'DONE', severity: 'OK', taskType: 'PAYMENT_DOCUMENT', createdAt: stampS(b, 2210),
     text: `Требуется подтвердить сценарий ${sc}; требуется утвердить ${act}`, assignee: who,
     history: [
-      { at: stamp(b, 2210), event: 'Создана: rub-routing' },
-      { at: stamp(b, 2950), event: `Взята в работу: ${who}` },
-      { at: stamp(b, 3985), event: 'Решение: сценарий подтверждён' },
-      { at: stamp(b, 3985), event: `Закрыта · ${who}` },
+      { at: stampS(b, 2210), event: 'Создана: rub-routing' },
+      { at: stampS(b, 2950), event: `Взята в работу: ${who}` },
+      { at: stampS(b, 3985), event: 'Решение: сценарий подтверждён' },
+      { at: stampS(b, 3985), event: `Закрыта · ${who}` },
     ],
   }]
 }

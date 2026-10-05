@@ -10,7 +10,7 @@ const DOT: Record<DocTask['tone'], StatusTone> = { ok: 'ok', info: 'flow', warn:
 /** Время в истории — только часы (эталон: '07:31:59'); не ISO — как есть. */
 const clock = (at: string) => formatTimestamp(at)?.time ?? at
 
-/** Тело задачи: полный текст и история. Закрытие («Закрыта · кто») — последняя запись истории от маппера (Task 7). */
+/** Тело задачи: полный текст и история. Закрытие («Закрыта · кто») — последняя запись истории, её присылает бек. */
 function TaskBody({ t }: { t: DocTask }) {
   return (
     <div className={s.task}>
@@ -40,8 +40,9 @@ export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
         ? <StatusDot tone="ok" size="s" label="Выполнена" />
         : <StatusDot tone={DOT[t.tone]} size="s" label="Открыта" />),
     },
-    { id: 'at', header: '', width: 100, render: (t) => <Timestamp iso={t.at} /> },
-    { id: 'type', header: '', width: 170, render: (t) => <Tag>{t.type}</Tag> },
+    // время и тег — по содержимому строки, как эталон .tk (14px 100px auto minmax(0,1fr) auto 14px): длинный тег не налезает
+    { id: 'at', header: '', width: 'auto', render: (t) => <Timestamp iso={t.at} /> },
+    { id: 'type', header: '', width: 'auto', render: (t) => <Tag>{t.type}</Tag> },
     { id: 'text', header: '', render: (t) => <span className={s.cut} data-k-tip={t.text} data-k-tip-if="truncated">{t.text}</span> },
     { id: 'history', header: '', width: 64, align: 'end', render: () => <LinkButton onClick={() => ctx.announce(STUB)}>История</LinkButton> },
   ]

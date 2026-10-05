@@ -40,7 +40,7 @@ function PairTable({ label, heads, rows }: { label: string; heads: [string, stri
 function LinkedBody({ doc, ctx }: { doc: LinkedDoc; ctx: TabContext }) {
   const items: KeyValueItem[] = [
     {
-      key: 'id', label: 'ID',
+      key: 'id', label: 'ID', wide: true,
       value: (
         <span className={s.idLine}>
           <LinkButton mono label={`Открыть ${doc.type} ${doc.docId} в соседней панели`} onClick={() => ctx.openDocument(doc.docId)}>{doc.docId}</LinkButton>
@@ -85,9 +85,10 @@ function LinkedBody({ doc, ctx }: { doc: LinkedDoc; ctx: TabContext }) {
 export function LinkedTab({ data, ctx }: TrailTabProps<LinkedDoc[]>) {
   const first = data[0]
   const columns: MiniColumn<LinkedDoc>[] = [
-    { id: 'date', header: '', width: 84, render: (d) => <span className={s.date}>{d.date}</span> },
-    { id: 'type', header: '', width: 130, render: (d) => <Tag tone="mt">{d.type}</Tag> },
-    { id: 'relation', header: '', width: 70, render: (d) => <Tag>{d.relation}</Tag> },
+    // дата, тип и связь — по содержимому строки (эталон .ld — flex с зазором): без пустот фиксированных ширин
+    { id: 'date', header: '', width: 'auto', render: (d) => <span className={s.date}>{d.date}</span> },
+    { id: 'type', header: '', width: 'auto', render: (d) => <Tag tone="mt">{d.type}</Tag> },
+    { id: 'relation', header: '', width: 'auto', render: (d) => <Tag>{d.relation}</Tag> },
     {
       id: 'purpose', header: '',
       render: (d) => (d.purpose ? <span className={[s.cut, s.muted].join(' ')} data-k-tip={d.purpose} data-k-tip-if="truncated">{d.purpose}</span> : <Nil />),

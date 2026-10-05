@@ -12,6 +12,8 @@ export const WHO = ['Иванова М. П.', 'Кузнецов Д. А.', 'См�
 export function stamp(base: string, offsetMs: number): string {
   return new Date(Date.parse(`${base}Z`) + offsetMs).toISOString().slice(0, 23)
 }
+/** То же до секунд — время задач: у эталона и TRAIL_EXAMPLES оно без долей секунды. */
+export const stampS = (base: string, offsetMs: number) => stamp(base, offsetMs).slice(0, 19)
 /** «ДД.ММ.ГГГГ» и «ГГММДД» (поле 32A) из ISO. */
 export const ddmmyyyy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`
 export const yymmdd = (iso: string) => iso.slice(2, 4) + iso.slice(5, 7) + iso.slice(8, 10)
