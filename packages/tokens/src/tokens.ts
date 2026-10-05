@@ -142,6 +142,7 @@ export const sizes = {
   'dt-label-s': 128,
   'dt-label-m': 150,
   'dt-label-l': 250,
+  'dt-hist': 70,
   'badge-dot': 6,
   'badge-py': 2,
   'badge-px': 7,
