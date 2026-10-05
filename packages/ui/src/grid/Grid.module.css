@@ -413,6 +413,10 @@
 .record[data-state] {
   --k-ink: var(--k-muted);
   --k-ink2: var(--k-muted);
+}
+
+/* акцент val не приглушается у записи, открытой в деталке: метка (полоса слева — var(--k-val)) сильнее состояния (Д28) */
+.record[data-state]:not([data-mark]) {
   --k-val: var(--k-muted);
 }
 
@@ -435,13 +439,13 @@
   box-shadow: inset 3px 0 0 var(--k-warn-soft);
 }
 
-.record[data-state='inactive'] .cell,
-.record[data-state='inactive'] .filler {
+.record[data-state='inactive']:not([data-mark]) .cell,
+.record[data-state='inactive']:not([data-mark]) .filler {
   background: repeating-linear-gradient(135deg, transparent 0 calc(var(--k-hatch) * 0.9), var(--k-sunk) calc(var(--k-hatch) * 0.9) var(--k-hatch));
 }
 
-.record[data-state='inactive']:hover .cell,
-.record[data-state='inactive']:hover .filler {
+.record[data-state='inactive']:not([data-mark]):hover .cell,
+.record[data-state='inactive']:not([data-mark]):hover .filler {
   background: var(--k-hover);
 }
 

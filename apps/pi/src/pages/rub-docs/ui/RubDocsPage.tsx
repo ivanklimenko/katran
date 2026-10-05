@@ -1,9 +1,10 @@
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { rubDocDetailDomain, rubDocLayout } from '../../../entities/rub-doc'
+import { rubDocLayout } from '../../../entities/rub-doc'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { detail, registry } from '../model/registry.model'
+import { rubDetailDomain } from './detailDomain'
 
 const TITLE = 'Рублёвые документы'
 
@@ -29,7 +30,7 @@ export function RubDocsPage({ note }: { note?: string | undefined }) {
       />
       <DocDetail
         detail={detail}
-        domain={rubDocDetailDomain}
+        domain={rubDetailDomain}
         rowOf={(id) => rows.find((r) => rubDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
       />

@@ -6,8 +6,13 @@ import { createRegistry } from '../../../widgets/doc-registry'
 
 export const lifecycle = createPageLifecycle()
 export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle })
-/** Деталка экрана — на том же жизненном цикле: уход с экрана закрывает оба drawer'а и чистит кэш (спека 2a §5). */
-export const detail = createDetail({ detailFx: fxDocPorts.detailFx, lifecycle })
+/** Вкладки валюты с данными в детали — без своего запроса (спека 2b §3.1): «Общие данные» и «Доп. поля». */
+export const FX_LOCAL_TABS = ['main', 'extra']
+/**
+ * Деталка экрана — на том же жизненном цикле: уход с экрана закрывает оба drawer'а, чистит кэш детали и вкладок
+ * и раскрытое (спека 2a §5, 2b §3.3). Остальные вкладки — лениво через tabFx.
+ */
+export const detail = createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle })
 // реестр о деталке не знает: открытие — через шов openRequested (спека apps/pi §7, спека 2a §4.4)
 sample({ clock: registry.openRequested, target: detail.open })
 
