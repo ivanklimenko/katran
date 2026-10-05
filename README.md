@@ -164,13 +164,64 @@ export function DocsPage() {
 
 Рабочий экран — `apps/pi`: виджет `apps/pi/src/widgets/doc-registry` (лейн, панель, грид, массовые действия), страницы `apps/pi/src/pages/fx-docs` и `apps/pi/src/pages/rub-docs` (по 87 документов на фейковом сервере `apps/pi/src/app/fake`). Как перенести во внутреннее приложение — `docs/guides/pi-usage.md`.
 
+## Поля ввода и фильтры
+
+Пять контролов `@katran/ui` для фильтров, форм и деталки: `DateInput`, `DateRange`, `SearchSelect`, `MultiSelect`, `TagInput`. Все контролируемые; даты — строки без зоны (`'ГГГГ-ММ-ДД'`, со временем `'ГГГГ-ММ-ДДTчч:мм'`), шаблон `format` меняет только вид на экране. Витрина — страница «Поля ввода» демо (`apps/demo/src/pages/InputsPage.tsx`), правила — спека `docs/superpowers/specs/2026-09-30-katran-filter-inputs-design.md`.
+
+```tsx
+import { useState } from 'react'
+import { DateRange, MultiSelect, TagInput, PRESET_TODAY, PRESET_YESTERDAY, type DateRangeValue, type Scalar } from '@katran/ui'
+
+const STATUSES = [{ value: 'ERROR', label: 'Ошибка' }, { value: 'REJECTED', label: 'Отказ' }, { value: 'DONE', label: 'Обработан' }]
+
+export function Inputs() {
+  const [r, setR] = useState<DateRangeValue>({ from: '', to: '' })
+  const [many, setMany] = useState<Scalar[]>([])
+  const [ids, setIds] = useState<string[]>([])
+  const [idText, setIdText] = useState('')
+  const [ph, setPh] = useState<string[]>([])
+  const [phText, setPhText] = useState('')
+  return (
+    <>
+      {/* горячие кнопки по умолчанию: Сегодня, Вчера, 3 дня, 7 дней; quick={[]} — без кнопок */}
+      <DateRange label="Период" value={r} onChange={setR} format="YYYY-MM-DD" quick={[PRESET_TODAY, PRESET_YESTERDAY]} />
+      <DateRange label="Период со временем" time value={r} onChange={setR} />
+      {/* value: Scalar[]; порядок — как в справочнике */}
+      <MultiSelect aria-label="Статусы" options={STATUSES} value={many} onChange={setMany} />
+      {/* значения: пробел, запятая, «;», Enter; колонка из Excel вставляется целиком */}
+      <TagInput mode="values" aria-label="Номера документов" value={ids} onChange={setIds}
+        text={idText} onTextChange={setIdText} validate={(v) => /^\d+$/.test(v)} />
+      {/* фразы: Enter или «;»; "a" "b" — две фразы, ООО «Ромашка» — одна */}
+      <TagInput mode="phrases" aria-label="Текст сообщения" value={ph} onChange={setPh}
+        text={phText} onTextChange={setPhText} />
+    </>
+  )
+}
+```
+
+`TagInput` хранит набираемый текст отдельно (`text`/`onTextChange`): владелец поля учитывает его при применении, не дожидаясь чипа. Подсказки к `TagInput` — пропы `suggestions`, `loading`, `onQuery`, `onSuggestClose`.
+
+**Панель фильтров** сама выбирает контрол по типу поля и `defaultOp` (`defaultOperator` каталога) и складывает условия, в том числе несколько на поле. Подсказки с бека: модель фильтров получает эффект приложения, `FilterPanel` — пропы из `useFilters`:
+
+```tsx
+const filters = createFiltersModel({ meta: $meta, laneField: 'status', suggest: { fetchFx: ports.suggestFx } })
+
+const f = useFilters(filters)
+// f.meta — каталог с бека; пока он null, панель не рендерится (так в DocRegistry)
+<FilterPanel meta={f.meta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
+  onEdit={f.edit} onSetField={f.setField} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove}
+  suggest={f.suggest} onSuggest={f.onSuggest} onSuggestClose={f.onSuggestClose} />
+```
+
+`fetchFx: Effect<SuggestQuery, string[]>` — `{ field, query, filter, limit }` → значения поля; задержка (250 мс), минимум знаков (1) и предел (10) — `delay`, `minChars`, `limit`. Подсказки получают только поля с `suggest: true` в каталоге. Без `onSetField` панель работает в совместимом режиме — одно условие на поле. Живой образец — `apps/pi/src/widgets/doc-registry` (`lib/createRegistry.ts`, `ui/DocRegistry.tsx`); эндпоинт для бека — `docs/reference/suggest-proposal.md`.
+
 ## Границы слоёв
 
 `@katran/ui` не знает об effector, `@katran/effector` берёт из `@katran/ui` только типы (`import type`) и не трогает DOM — это проверяет `pnpm lint`, а не договорённость (спека 3.2).
 
 ## Замер геометрии
 
-Playwright-спеки `apps/pi/e2e/` (`geometry`, `isolation`, `registry`, `registry-persist`) замеряют реальную высоту записи, шапки и скелетона грида, полос лейна/фильтров/подвала и изоляцию от стилей хоста (`?hostile`) на обоих реестрах против production-сборки `apps/pi` (`vite build` + `vite preview`, порт 5186). В `pnpm check` не входит — гоняется отдельно.
+Playwright-спеки `apps/pi/e2e/` (`geometry`, `isolation`, `registry`, `registry-persist`, `detail`, `filters`) замеряют реальную высоту записи, шапки и скелетона грида, полос лейна/фильтров/подвала, деталку, поля фильтров (поповеры, вставку, подсказки, высоты контролов, тёмную тему) и изоляцию от стилей хоста (`?hostile`) на обоих реестрах против production-сборки `apps/pi` (`vite build` + `vite preview`, порт 5186). В `pnpm check` не входит — гоняется отдельно.
 
 Установка браузера (один раз):
 
