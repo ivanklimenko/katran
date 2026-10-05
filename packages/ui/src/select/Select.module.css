@@ -283,6 +283,7 @@
 }
 
 .sug .hint {
+  grid-column: 3;
   justify-self: stretch;
   overflow: hidden;
   font: inherit;

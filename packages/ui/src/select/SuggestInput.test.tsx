@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
+import { Button } from '../button'
 import { renderK } from '../test/renderK'
 import type { Option } from './options'
 import { SuggestInput, type SuggestInputProps } from './SuggestInput'
@@ -169,11 +170,72 @@ describe('SuggestInput (спека 2c §2.1, эталон accSuggest)', () => {
     expect(screen.getByText('Загрузка счетов…')).toBeInTheDocument()
     expect(field()).toHaveAttribute('aria-expanded', 'false')
     expect(field()).not.toHaveAttribute('aria-controls')
-    expect(field()).toHaveAccessibleDescription('Только из карточки клиента · USD · 7 сч. ↑↓ Enter · Esc')
+    expect(field()).toHaveAccessibleDescription('Только из карточки клиента · USD · 7 сч. ↑↓ Enter · Esc Загрузка счетов…')
     rerender(<Host value="" hint="Только из карточки клиента · USD · 7 сч." keysHint="↑↓ Enter · Esc" />)
     const row = screen.getAllByRole('option')[0]!
     expect(row).toHaveTextContent('40817840100050017762USDТекущий')
     expect(screen.getAllByText('USD')).toHaveLength(5)
+  })
+
+  it('хвост «ещё N» — в описании поля; активный пункт — aria-selected', async () => {
+    const u = userEvent.setup()
+    setup({ value: '', keysHint: '↑↓ Enter · Esc' })
+    expect(field()).toHaveAccessibleDescription('↑↓ Enter · Esc ещё 2 — уточните номер')
+    expect(screen.getAllByRole('option').filter((o) => o.getAttribute('aria-selected') === 'true')).toHaveLength(0)
+    await u.keyboard('{ArrowDown}{ArrowDown}')
+    expect(screen.getAllByRole('option').map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false', 'false'])
+  })
+
+  it('Enter при status — ни выбора, ни ошибки', async () => {
+    const u = userEvent.setup()
+    setup({ value: '17762', status: 'Загрузка счетов…' })
+    await u.keyboard('{Enter}')
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(field()).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('status с кнопкой: Tab — на кнопку, Shift+Tab — в поле, Tab с последней — onCancel', async () => {
+    const u = userEvent.setup()
+    const retry = vi.fn()
+    setup({ value: '', status: <>Не удалось загрузить счета <Button onClick={retry}>Повторить</Button></> })
+    const btn = screen.getByRole('button', { name: 'Повторить' })
+    await u.tab()
+    expect(btn).toHaveFocus()
+    expect(onCancel).not.toHaveBeenCalled()
+    await u.keyboard('{Enter}')
+    expect(retry).toHaveBeenCalledTimes(1)
+    await u.tab({ shift: true })
+    expect(field()).toHaveFocus()
+    expect(onCancel).not.toHaveBeenCalled()
+    await u.tab()
+    await u.tab()
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('Esc на кнопке в status — onCancel; ни родитель, ни слушатель document (DrawerStack) его не получают', async () => {
+    const u = userEvent.setup()
+    const drawerEsc = vi.fn()
+    const onDoc = (e: KeyboardEvent) => { if (e.key === 'Escape') drawerEsc() }
+    document.addEventListener('keydown', onDoc, true)
+    try {
+      setup({ value: '', status: <Button onClick={vi.fn()}>Повторить</Button> })
+      await u.tab()
+      expect(screen.getByRole('button', { name: 'Повторить' })).toHaveFocus()
+      parentKeydown.mockClear() // Tab из поля родитель видит — проверяем только Esc
+      await u.keyboard('{Escape}')
+      expect(onCancel).toHaveBeenCalledTimes(1)
+      expect(drawerEsc).not.toHaveBeenCalled()
+      expect(parentKeydown).not.toHaveBeenCalled()
+    } finally {
+      document.removeEventListener('keydown', onDoc, true)
+    }
+  })
+
+  it('status без фокусируемого — Tab, как и без status, onCancel', async () => {
+    const u = userEvent.setup()
+    setup({ value: '', status: 'Загрузка счетов…' })
+    await u.tab()
+    expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
   it('по умолчанию: вхождение без регистра, тождественный ввод, хвост своим текстом', () => {

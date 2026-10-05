@@ -40,13 +40,17 @@ export type SuggestInputProps = {
 }
 
 const same = (text: string) => text
+const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+const focusables = (box: HTMLElement | null): HTMLElement[] => (box ? Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)) : [])
 const moreDefault = (n: number) => `ещё ${n} — уточните номер`
 
 /**
  * Одно значение только из списка (спека 2c §2.1, эталон accSuggest): поле role=combobox, список открыт всё время правки.
  * ↑↓ — по кругу; Enter — активный → единственный в выдаче → точное совпадение введённого → иначе ошибка notInListText.
  * Esc, pointerdown вне поля и списка (onClose поповера) и Tab — onCancel. Esc ловит поповер в фазе захвата со stopPropagation:
- * до обработчиков деталки он не доходит, а DrawerStack пропускает Esc из поля (OWN_ESCAPE) — фокус всё время в поле.
+ * до обработчиков деталки он не доходит, а DrawerStack пропускает Esc из поля (OWN_ESCAPE) — фокус в поле.
+ * Исключение — фокусируемое в status («Повторить»): Tab из поля ведёт на него, Shift+Tab с первого — обратно в поле,
+ * Tab с последнего и Esc на нём — onCancel. Esc там ловится на window в захвате — раньше DrawerStack на document.
  */
 export function SuggestInput({
   options, value, onChange, onCommit, onCancel, emptyText, notInListText, match, sanitize = same, max = SUGGEST_MAX,
@@ -56,7 +60,12 @@ export function SuggestInput({
   const listId = useStableId()
   const noteId = useStableId()
   const keysId = useStableId()
+  const moreId = useStableId()
+  const statusId = useStableId()
   const input = useRef<HTMLInputElement>(null)
+  const statusBox = useRef<HTMLDivElement>(null)
+  const onCancelRef = useRef(onCancel)
+  useEffect(() => { onCancelRef.current = onCancel })
   const [active, setActive] = useState(-1)
   const [invalid, setInvalid] = useState(false)
   const [width, setWidth] = useState(0)
@@ -82,6 +91,27 @@ export function SuggestInput({
     return () => ro.disconnect()
   }, [])
 
+  // Клавиши на фокусируемом внутри status: поповер в портале, поэтому порядок Tab и Esc задаются здесь.
+  useEffect(() => {
+    if (listed) return
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const box = statusBox.current
+      const t = e.target
+      if (!box || !(t instanceof Node) || !box.contains(t)) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        onCancelRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const all = focusables(box)
+      if (e.shiftKey && t === all[0]) { e.preventDefault(); input.current?.focus() } else if (!e.shiftKey && t === all[all.length - 1]) onCancelRef.current()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [listed])
+
   const commit = (o: Option) => { setInvalid(false); onCommit(o) }
   const enter = () => {
     if (current >= 0) return commit(visible[current]!)
@@ -104,16 +134,23 @@ export function SuggestInput({
       case 'Enter':
         // Enter в комбобоксе форму не отправляет (спека §6.6)
         e.preventDefault()
-        enter()
+        if (listed) enter()
         return
-      case 'Tab':
-        onCancel()
+      case 'Tab': {
+        const first = e.shiftKey ? undefined : focusables(statusBox.current)[0]
+        if (first) { e.preventDefault(); first.focus() } else onCancel()
         return
+      }
       default:
     }
   }
 
-  const described = [hint !== undefined || invalid ? noteId : null, keysHint !== undefined ? keysId : null].filter(Boolean).join(' ')
+  const described = [
+    hint !== undefined || invalid ? noteId : null,
+    keysHint !== undefined ? keysId : null,
+    listed && rest > 0 ? moreId : null,
+    listed ? null : statusId,
+  ].filter(Boolean).join(' ')
   return (
     <div className={s.sugBox}>
       <input
@@ -149,16 +186,16 @@ export function SuggestInput({
                   label={name}
                   options={visible}
                   active={current}
-                  isSelected={() => false}
+                  isSelected={(o) => o === visible[current]}
                   onPick={commit}
                   onActive={setActive}
                   emptyText={emptyText(query)}
                   highlight={query}
                 />
-                {rest > 0 && <div className={s.sugMore}>{moreText(rest)}</div>}
+                {rest > 0 && <div id={moreId} className={s.sugMore}>{moreText(rest)}</div>}
               </>
             )
-            : <div className={s.sugStatus}>{status}</div>}
+            : <div ref={statusBox} id={statusId} className={s.sugStatus}>{status}</div>}
         </div>
       </Popover>
     </div>
