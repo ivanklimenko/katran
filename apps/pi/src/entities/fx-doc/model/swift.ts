@@ -6,7 +6,7 @@ import type { FxDoc } from './fxDoc'
 /** Заголовок деталки — как на эталоне (`dhHtml(d,'Платёжная инструкция ВАЛЮТА')`, index.html:1369): решение В-Д1 от 30.09, detail-drift.md Д7. */
 export const FX_DETAIL_TITLE = 'Платёжная инструкция ВАЛЮТА'
 
-/** Реестр SWIFT-полей — FIELDS стенда (index.html:597) дословно: name → label; признак правки (editable) — срез 2c. */
+/** Реестр SWIFT-полей — FIELDS стенда (index.html:597) дословно: name → label; признак правки (editable) — editable:true FIELDS эталона, index.html:597–620. */
 export const FX_FIELDS: Record<string, FieldDef> = {
   '20': { label: 'Референс отправителя', kind: 'ref' },
   '21': { label: 'Связанный референс', kind: 'ref' },

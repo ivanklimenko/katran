@@ -1,9 +1,9 @@
 import type { ColumnDef } from '@katran/ui'
 import { ApiError, type HttpRequest } from '../../shared/api'
-import { createFxEditStore } from './edits'
 import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
 import { makeFxDocDetail } from './fx-docs.detail'
 import { fakeGrid } from './grid'
+import { createFxDocsEditStore } from './grids'
 import { field, inline } from './meta'
 import { createFakeServer } from './server'
 
@@ -115,7 +115,7 @@ describe('фейковый сервер: правка детали (план 2c)
   const fxRows = makeFxDocs(3)
   const doc = fxRows[2]!
   const edited = (opts: Parameters<typeof createFakeServer>[1] = {}) =>
-    createFakeServer({ fx: fakeGrid(fxRows, [], fxDocsMeta, { detail: makeFxDocDetail, edits: createFxEditStore({ seedId: null }) }) }, { now: () => '2026-10-06T12:30:00', ...opts })
+    createFakeServer({ fx: fakeGrid(fxRows, [], fxDocsMeta, { detail: makeFxDocDetail, edits: createFxDocsEditStore(null) }) }, { now: () => '2026-10-06T12:30:00', ...opts })
   const editUrl = (id: string) => `/grids/fx/documents/${encodeURIComponent(id)}/edits`
   const bank57 = { opt: 'A', lines: [doc.f57name, doc.f57] }
   const next57 = { opt: 'A', lines: [doc.f57name, 'VKRBRU8K2KD'] }
@@ -170,6 +170,16 @@ describe('фейковый сервер: правка детали (план 2c)
     expect((await bad({ target: 'accKt', was: accKt, now: '40817840100050017762' })).problem?.errors?.[0])
       .toEqual({ path: 'now', code: 'VALIDATION', message: 'Счёт не из карточки клиента — выберите из списка' })
     await expect(s(post(editUrl('nope'), { target: 'refOut', was: '', now: 'A' }))).rejects.toMatchObject({ status: 404 })
+  })
+  it('400 VALIDATION: бек повторяет правила — кириллица в поле 57', async () => {
+    const s = edited()
+    const error = (await s(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: { opt: 'A', lines: ['БАНК'] } })).catch((e: unknown) => e)) as ApiError
+    expect(error.status).toBe(400)
+    expect(error.problem?.errors?.[0]).toEqual({ path: 'now', code: 'VALIDATION', message: "Строка 1: недопустимые символы (только латиница, цифры и / - ? : ( ) . , ' +)" })
+    // дата валютирования — ГГГГ-ММ-ДД, 20 исх — правила референса
+    const vd = (await s(get(`/grids/fx/documents/${doc.id}`)) as { valueDates: string[] }).valueDates[0]!
+    expect((await s(post(editUrl(doc.id), { target: 'valueDate', was: vd, now: 'завтра' })).catch((e: unknown) => e) as ApiError).status).toBe(400)
+    expect((await s(post(editUrl(doc.id), { target: 'refOut', was: doc.refOut ?? '', now: '/REF' })).catch((e: unknown) => e) as ApiError).status).toBe(400)
   })
   it('?fail=edit и ?fail=accounts — 500 только у своего маршрута', async () => {
     const accUrl = `/grids/fx/documents/${doc.id}/accounts`

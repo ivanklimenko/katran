@@ -11,7 +11,11 @@ export type FxEdit = { now: EditValue | null; hist: FxHistEntry[] }
 export const fieldTarget = (tag: string): string => `field:${tag}`
 const FIELD = 'field:'
 
-/** Текущее значение цели в детали: поле — SwiftValue ({ lines: [] } у пустого), refOut ?? '', accDt/accKt, valueDates[0]. */
+/**
+ * Текущее значение цели в детали: поле — SwiftValue ({ lines: [] } у пустого), refOut ?? '', accDt/accKt, valueDates[0].
+ * 'route' — ключ edits, но не цель редактора (маршрут меняет бек, значения правки нет): для него, как и для неизвестной цели, —
+ * исключение; виды читают d.edits.route напрямую. То же для originalOf и isChanged.
+ */
 export function currentOf(d: FxDocDetail, target: string): EditValue {
   if (target.startsWith(FIELD)) return d.fields[target.slice(FIELD.length)] ?? { lines: [] }
   switch (target) {

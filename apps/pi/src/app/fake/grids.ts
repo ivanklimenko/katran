@@ -1,7 +1,8 @@
-import { fxDocLayout } from '../../entities/fx-doc'
+import { fxDocLayout, fxEditableTargets, validateFxEdit, type FxDocDetail } from '../../entities/fx-doc'
+import type { EditValue } from '../../shared/api'
 import { rubDocLayout } from '../../entities/rub-doc'
 import { STATUS_LABEL } from '../../entities/doc-status'
-import { createFxEditStore } from './edits'
+import { createFxEditStore, type FakeEditStore } from './edits'
 import { fakeGrid, type FakeGrid } from './grid'
 import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
 import { makeFxDocDetail } from './fx-docs.detail'
@@ -9,6 +10,16 @@ import { FX_TRAIL_TABS, fxDocTrail } from './fx-docs.trail'
 import { rubDocsMeta, makeRubDocs } from './rub-docs.data'
 import { makeRubDocDetail } from './rub-docs.detail'
 import { RUB_TRAIL_TABS, rubDocTrail } from './rub-docs.trail'
+
+/**
+ * Хранилище правок валюты: бек повторяет правила фронта и цели профиля (план 2c §3.6) — одни функции домена, без своей копии.
+ * У сырой детали фейка edits нет (правки — в памяти хранилища), цели считаются по ней.
+ */
+export const createFxDocsEditStore = (seedId: string | null): FakeEditStore => createFxEditStore({
+  seedId,
+  validate: (target, now) => validateFxEdit(target, now as EditValue),
+  targets: (detail) => fxEditableTargets({ edits: {}, ...detail } as unknown as FxDocDetail),
+})
 
 /**
  * Гриды фейка. Правки валюты живут в памяти своего набора: приложению — один набор на сессию (fakeGrids),
@@ -21,7 +32,7 @@ export function createFakeGrids(): Record<string, FakeGrid> {
   return {
     'fx-docs': fakeGrid(fx, fxDocLayout.columns, fxDocsMeta, {
       sortLabels: { status: STATUS_LABEL }, detail: makeFxDocDetail, tabs: { ids: FX_TRAIL_TABS, data: fxDocTrail },
-      edits: createFxEditStore({ seedId }),
+      edits: createFxDocsEditStore(seedId),
     }),
     'rub-docs': fakeGrid(makeRubDocs(), rubDocLayout.columns, rubDocsMeta, {
       sortLabels: { status: STATUS_LABEL }, detail: makeRubDocDetail, tabs: { ids: RUB_TRAIL_TABS, data: rubDocTrail },

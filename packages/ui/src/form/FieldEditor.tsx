@@ -81,7 +81,7 @@ export function FieldEditor({
     <section ref={root} className={s.fe} data-k-edit="" aria-label={title}>
       {/* Esc — на обёртке (role="presentation", как подложка Prompt): всплывает с полей и кнопок редактора */}
       <div role="presentation" onKeyDown={onKeyDown}>
-        <h6 className={s.feTitle}>{title}</h6>
+        <h4 className={s.feTitle}>{title}</h4>
         <div className={s.feTwo}>
           <div className={s.feBox} data-ro="">
             <div className={s.feCap}><span>Как есть</span><span>{total(original.lines)}/{max}</span></div>

@@ -101,3 +101,8 @@
   white-space: nowrap;
   color: var(--k-val);
 }
+
+/* значение, изменённое правкой (план 2c; эталон .txtrow.edited .mono, .accrow.edited .mono) */
+.mono.warn {
+  color: var(--k-warn);
+}

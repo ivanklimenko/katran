@@ -1,4 +1,4 @@
-import { FX_FIELDS, FX_PROFILES, fieldTarget, sameEditValue, type FxDoc } from '../../entities/fx-doc'
+import { fieldTarget, sameEditValue } from '../../entities/fx-doc'
 import { toApiError, type EditValue, type Problem } from '../../shared/api'
 import { BANK_ACCOUNTS, CLIENT_ACCOUNTS, ROUTES, type FakeAccount, type FakeRoute } from './edits.data'
 
@@ -20,8 +20,8 @@ export type FakeEditStoreConfig = {
   seedId: string | null
   /** Бек повторяет правила фронта: текст первой ошибки → 400 VALIDATION по пути 'now'. */
   validate?: ((target: string, now: unknown) => string | null) | undefined
-  /** Цели правки документа; по умолчанию — поля профиля с editable, 20 исх, счета и дата валютирования (кроме MT199). */
-  targets?: ((detail: Detail) => string[]) | undefined
+  /** Цели правки документа (правила домена — fxEditableTargets: поля профиля с editable, 20 исх, счета, дата валютирования). */
+  targets: (detail: Detail) => string[]
 }
 
 const FIELD = 'field:'
@@ -44,17 +44,6 @@ const isEditValue = (v: unknown): v is EditValue => {
   return Array.isArray(o.lines) && o.lines.every(isStr) && (o.opt === undefined || isStr(o.opt)) && (o.acc === undefined || isStr(o.acc))
 }
 
-/** Цели по профилю типа: поля сетки, текста и последовательности B с FX_FIELDS[база].editable + 20 исх, Дт, Кт + дата валютирования (у MT199 её нет). */
-function profileTargets(detail: Detail): string[] {
-  const profile = FX_PROFILES[detail.type as FxDoc['type']] as (typeof FX_PROFILES)[FxDoc['type']] | undefined
-  if (!profile) return []
-  const { grid = [], text = [], seqB } = profile.schema
-  const refs = [...grid.flat(), ...text, ...(seqB?.grid ?? []).flat(), ...(seqB?.text ?? [])]
-  const tags = refs.flatMap((r) => (r === null ? [] : [typeof r === 'string' ? r : r.tag]))
-  const fields = tags.filter((t) => FX_FIELDS[t.replace(/^B\./, '')]?.editable === true).map(fieldTarget)
-  return [...fields, 'refOut', 'accDt', 'accKt', ...(detail.type === 'MT199' ? [] : ['valueDate'])]
-}
-
 /** Значение цели в детали без правок. */
 function rawValue(detail: Detail, target: string): EditValue {
   if (target.startsWith(FIELD)) return ((detail.fields ?? {}) as Record<string, EditValue | undefined>)[target.slice(FIELD.length)] ?? { lines: [] }
@@ -73,7 +62,7 @@ const nextRoute = (r: FakeRoute): FakeRoute => {
 const accountsOf = (side: 'kt' | 'dt'): readonly FakeAccount[] => (side === 'kt' ? CLIENT_ACCOUNTS : BANK_ACCOUNTS)
 
 export function createFxEditStore(cfg: FakeEditStoreConfig): FakeEditStore {
-  const targetsOf = cfg.targets ?? profileTargets
+  const targetsOf = cfg.targets
   /** id → цель → история (от первой записи); текущее значение цели — now последней записи. */
   const hists = new Map<string, Map<string, HistDto[]>>()
   /** id → исходный маршрут (снят при первой правке Кт) и текущий. */
