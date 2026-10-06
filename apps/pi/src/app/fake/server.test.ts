@@ -1,9 +1,10 @@
 import type { ColumnDef } from '@katran/ui'
 import { ApiError, type HttpRequest } from '../../shared/api'
 import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
+import { makeRubDocs } from './rub-docs.data'
 import { makeFxDocDetail } from './fx-docs.detail'
 import { fakeGrid } from './grid'
-import { createFxDocsEditStore } from './grids'
+import { createFakeGrids, createFxDocsEditStore } from './grids'
 import { field, inline } from './meta'
 import { createFakeServer } from './server'
 
@@ -225,5 +226,113 @@ describe('фейковый сервер: правка детали (план 2c)
     const plain = createFakeServer({ docs: fakeGrid(rows, columns, meta, { detail: (r) => r }) })
     await expect(plain(post('/grids/docs/documents/1/edits', { target: 'refOut', was: '', now: 'A' }))).rejects.toMatchObject({ status: 404 })
     await expect(plain({ method: 'GET', url: '/grids/docs/documents/1/accounts', query: { side: 'kt' } })).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('фейковый сервер: утверждение и отклонение правки (срез 2d)', () => {
+  const WHEN = '2026-10-07T15:20:00'
+  const fxRows = makeFxDocs()
+  // сид поля 57 — первый документ с полем 57 (MT202, CNY); сид accKt — второй MT103 в USD без блокировки (чужая ожидающая правка)
+  const doc57 = fxRows[1]!
+  const accDoc = fxRows[14]!
+  const own = fxRows[3]!
+  const fresh = () => createFakeServer(createFakeGrids(), { now: () => WHEN })
+  const decideUrl = (id: string, target: string, kind: string, grid = 'fx-docs') => `/grids/${grid}/documents/${encodeURIComponent(id)}/edits/${encodeURIComponent(target)}/${kind}`
+  type Hist = { who: string; when: string; was: unknown; now: unknown; status: string; by?: string; at?: string; reason?: string; note?: string }
+  type D = { accKt: string; routeAcc: string; fields: Record<string, unknown>; edits: Record<string, { now: unknown; canConfirm: boolean; hist: Hist[] }> }
+  const detail = async (s: ReturnType<typeof fresh>, id: string) => (await s(get(`/grids/fx-docs/documents/${id}`))) as D
+  const code = async (p: Promise<unknown>) => (await p.catch((e: unknown) => e)) as ApiError
+
+  it('canConfirm: чужая ожидающая правка поля 57 — true; своя после POST edits — false', async () => {
+    const s = fresh()
+    const d = await detail(s, doc57.id)
+    expect(d.edits['field:57']?.canConfirm).toBe(true)
+    const cur = d.fields['57']
+    const next = { opt: 'A', lines: [doc57.f57name, 'VKRBRU8K2KD'] }
+    const after = (await s(post(`/grids/fx-docs/documents/${doc57.id}/edits`, { target: 'field:57', was: cur, now: next }))) as D
+    expect(after.edits['field:57']?.canConfirm).toBe(false)
+    const mine = (await s(post(`/grids/fx-docs/documents/${own.id}/edits`, { target: 'refOut', was: own.refOut ?? '', now: 'FX1' }))) as D
+    expect(mine.edits.refOut?.canConfirm).toBe(false)
+  })
+  it('confirm: запись confirmed, by «Вы», at = now фейка, canConfirm false; GET после — то же', async () => {
+    const s = fresh()
+    const d = await detail(s, doc57.id)
+    const when = d.edits['field:57']!.hist[1]!.when
+    const after = (await s(post(decideUrl(doc57.id, 'field:57', 'confirm'), { when }))) as D
+    expect(after.edits['field:57']?.hist[1]).toMatchObject({ status: 'confirmed', by: 'Вы', at: WHEN })
+    expect(after.edits['field:57']?.canConfirm).toBe(false)
+    expect(after.fields['57']).toEqual(d.fields['57'])
+    expect(await detail(s, doc57.id)).toEqual(after)
+  })
+  it('confirm: чужой when — 409 edit-conflict, повторный — 409; свою правку — 403; нет правок цели — 404', async () => {
+    const s = fresh()
+    const when = (await detail(s, doc57.id)).edits['field:57']!.hist[1]!.when
+    await expect(s(post(decideUrl(doc57.id, 'field:57', 'confirm'), { when: '2020-01-01T00:00:00' }))).rejects.toMatchObject({ status: 409, problem: { type: 'urn:katran:edit-conflict' } })
+    await s(post(decideUrl(doc57.id, 'field:57', 'confirm'), { when }))
+    await expect(s(post(decideUrl(doc57.id, 'field:57', 'confirm'), { when }))).rejects.toMatchObject({ status: 409, problem: { type: 'urn:katran:edit-conflict' } })
+    const mine = (await s(post(`/grids/fx-docs/documents/${own.id}/edits`, { target: 'refOut', was: own.refOut ?? '', now: 'FX1' }))) as D
+    expect((await code(s(post(decideUrl(own.id, 'refOut', 'confirm'), { when: mine.edits.refOut!.hist[0]!.when })))).status).toBe(403)
+    expect((await code(s(post(decideUrl(own.id, 'refOut', 'reject'), { when: mine.edits.refOut!.hist[0]!.when, reason: 'нет' })))).status).toBe(403)
+    // MT202COV без правок цели
+    const cov = fxRows.find((r) => r.type === 'MT202COV')!
+    expect((await code(s(post(decideUrl(cov.id, 'field:B.57', 'confirm'), { when })))).status).toBe(404)
+    expect((await code(s(post(decideUrl('nope', 'field:57', 'confirm'), { when })))).status).toBe(404)
+  })
+  it('target в пути декодируется: field%3A57', async () => {
+    const s = fresh()
+    const when = (await detail(s, doc57.id)).edits['field:57']!.hist[1]!.when
+    expect(decideUrl(doc57.id, 'field:57', 'confirm')).toContain('/edits/field%3A57/confirm')
+    await expect(s(post(decideUrl(doc57.id, 'field:57', 'confirm'), { when }))).resolves.toBeDefined()
+  })
+  it('reject: пустая и слишком длинная причина — 400 по пути reason; тело не той формы — 400', async () => {
+    const s = fresh()
+    const when = (await detail(s, doc57.id)).edits['field:57']!.hist[1]!.when
+    for (const reason of ['  ', 'я'.repeat(141)]) {
+      const e = await code(s(post(decideUrl(doc57.id, 'field:57', 'reject'), { when, reason })))
+      expect(e.status).toBe(400)
+      expect(e.problem?.type).toBe('urn:katran:edit-validation')
+      expect(e.problem?.errors?.[0]).toMatchObject({ path: 'reason', code: 'VALIDATION' })
+    }
+    expect((await code(s(post(decideUrl(doc57.id, 'field:57', 'reject'), { when })))).problem?.errors?.[0]).toMatchObject({ path: 'reason' })
+    expect((await code(s(post(decideUrl(doc57.id, 'field:57', 'confirm'), {})))).problem?.errors?.[0]).toMatchObject({ path: 'when' })
+    expect((await code(s(post(decideUrl(doc57.id, 'field:57', 'confirm'), 'x')))).status).toBe(400)
+    // граница: 140 знаков после trim принимаются
+    const ok = (await s(post(decideUrl(doc57.id, 'field:57', 'reject'), { when, reason: ` ${'я'.repeat(140)} ` }))) as D
+    expect(ok.edits['field:57']?.hist[1]?.reason).toBe('я'.repeat(140))
+  })
+  it('reject поля 57: запись rejected с причиной, значение цели = was записи, note автора на месте', async () => {
+    const s = fresh()
+    const before = await detail(s, doc57.id)
+    const h = before.edits['field:57']!.hist[1]!
+    const after = (await s(post(decideUrl(doc57.id, 'field:57', 'reject'), { when: h.when, reason: ' Не согласовано ' }))) as D
+    expect(after.edits['field:57']?.hist[1]).toEqual({ ...h, status: 'rejected', by: 'Вы', at: WHEN, reason: 'Не согласовано' })
+    expect(after.edits['field:57']?.hist).toHaveLength(2)
+    expect(after.fields['57']).toEqual(h.was)
+    expect(after.edits['field:57']?.now).toEqual(h.was)
+    expect(after.edits['field:57']?.canConfirm).toBe(false)
+  })
+  it('сид accKt: чужая ожидающая правка у второго MT103 в USD; reject — Кт = was, маршрут пересчитан, route от «система»', async () => {
+    const s = fresh()
+    const d0 = await detail(s, accDoc.id)
+    const [h] = d0.edits.accKt!.hist
+    expect(accDoc).toMatchObject({ type: 'MT103', currency: 'USD', lock: null })
+    expect(h).toMatchObject({ who: 'Кузнецов Д. А.', status: 'pending' })
+    expect(d0.edits.accKt?.canConfirm).toBe(true)
+    expect(d0.accKt).toBe(h!.now)
+    expect(d0.edits.route?.hist).toHaveLength(1)
+    const after = (await s(post(decideUrl(accDoc.id, 'accKt', 'reject'), { when: h!.when, reason: 'Счёт не согласован с клиентом' }))) as D
+    expect(after.accKt).toBe(h!.was)
+    expect(after.edits.accKt?.hist[0]).toMatchObject({ status: 'rejected', by: 'Вы', at: WHEN, reason: 'Счёт не согласован с клиентом' })
+    const route = after.edits.route!.hist
+    expect(route).toHaveLength(2)
+    expect(route[1]).toMatchObject({ who: 'система', status: 'confirmed', by: 'система', when: WHEN, was: route[0]!.now, now: route[0]!.was })
+    expect(after.routeAcc).not.toBe(d0.routeAcc)
+  })
+  it('маршрут решения: нет edit у грида или не POST — 404', async () => {
+    const s = fresh()
+    await expect(s(get(decideUrl(doc57.id, 'x', 'confirm')))).rejects.toMatchObject({ status: 404 })
+    await expect(s(post(decideUrl(makeRubDocs()[0]!.id, 'x', 'confirm', 'rub-docs'), { when: 'w' }))).rejects.toMatchObject({ status: 404 })
+    await expect(s(post(decideUrl('1', 'x', 'confirm', 'nope'), { when: 'w' }))).rejects.toMatchObject({ status: 404 })
+    await expect(s(post(`/grids/fx-docs/documents/${doc57.id}/edits/x/maybe`, {}))).rejects.toMatchObject({ status: 404 })
   })
 })

@@ -47,16 +47,17 @@ export const FX_DETAIL_EXAMPLE = {
   edits: {
     'field:57': {
       now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK BR', 'VKRBRU8KXXX'] },
+      canConfirm: false,
       hist: [
         {
           who: 'Кузнецов Д. А.', when: '2026-09-23T09:15:00',
           was: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK', 'VKRBRU8KXXX'] }, now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK', 'VKRBRU8KXXX'] },
-          note: 'Наименование филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-23T09:40:00',
+          note: 'Наименование филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-23T09:40:00', reason: null,
         },
         {
           who: 'Иванова М. П.', when: '2026-09-23T10:42:00',
           was: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK', 'VKRBRU8KXXX'] }, now: { opt: 'A', lines: ['VOSTOCHNY KREDIT BANK KHABAROVSK BR', 'VKRBRU8KXXX'] },
-          note: 'Полное наименование филиала', status: 'pending', by: null, at: null,
+          note: 'Полное наименование филиала', status: 'pending', by: null, at: null, reason: null,
         },
       ],
     },

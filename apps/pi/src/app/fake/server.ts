@@ -17,6 +17,7 @@ const ROUTE = /^\/grids\/([^/]+)\/(search|facets|suggest|filter-meta)$/
 const DOCUMENT = /^\/grids\/([^/]+)\/documents\/([^/]+)$/
 const TAB = /^\/grids\/([^/]+)\/documents\/([^/]+)\/tabs\/([^/]+)$/
 const EDITS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits$/
+const DECIDE = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits\/([^/]+)\/(confirm|reject)$/
 const ACCOUNTS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/accounts$/
 const pad2 = (n: number) => String(n).padStart(2, '0')
 /** Локальное «сейчас» до минут: «ГГГГ-ММ-ДДTчч:мм:00». */
@@ -73,6 +74,18 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
       if (opts.conflicting?.() === 'edit') throw toApiError(409, { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 })
       const id = decodeURIComponent(raw)
       const body = grid.edit(id, req.body, opts.now?.() ?? localMinute())
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const decideRoute = DECIDE.exec(req.url)
+    if (decideRoute) {
+      const [, gridId = '', rawId = '', rawTarget = '', kind = ''] = decideRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'POST' || !grid.decide) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'decide') return fail(500, 'Сбой сервера', 'Регулятор ?fail=decide')
+      const id = decodeURIComponent(rawId)
+      const body = grid.decide(id, decodeURIComponent(rawTarget), kind === 'confirm' ? 'confirm' : 'reject', req.body, opts.now?.() ?? localMinute())
       if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
       return body
     }
