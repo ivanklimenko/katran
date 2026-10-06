@@ -1,7 +1,7 @@
 import { FX_DETAIL_EXAMPLE } from '../api/detail.example'
 import { parseFxDocDetail } from '../api/detail.mapper'
 import type { FxDocDetail } from './detail'
-import { FX_CONFIRM_TARGETS, fxEditRule, fxEditableTargets, normalizeFxEdit, validateFxEdit, validateRefOut, validateSwiftField } from './rules'
+import { FX_CONFIRM_TARGETS, fxEditRule, fxEditableTargets, normalizeFxEdit, swiftFieldInvalid, validateFxEdit, validateRefOut, validateSwiftField } from './rules'
 import { FX_FIELDS } from './swift'
 
 const f57 = FX_FIELDS['57']!, f50 = FX_FIELDS['50']!
@@ -39,6 +39,12 @@ describe('правила SWIFT X (validate() эталона, index.html:1480–1
     expect(validateRefOut('  ')).toBe('Референс не может быть пустым')
     expect(['/ABC', 'ABC/', 'A//B', 'РЕФ', 'A'.repeat(17)].map(validateRefOut)).toEqual([BAD, BAD, BAD, BAD, BAD])
     expect(validateRefOut(' fx2609220000417 ')).toBeNull()
+  })
+
+  it('swiftFieldInvalid: виноватые строки (длина или набор) и счёт; «Всего n…» строк не называет (Д64)', () => {
+    expect(swiftFieldInvalid(f57, { lines: ['OK', 'ПРИВЕТ', 'A'.repeat(36), 'ok'] })).toEqual({ lines: [1, 2], acc: false })
+    expect(swiftFieldInvalid(f50, { acc: '40817 840', lines: ['IVANOV'] })).toEqual({ lines: [], acc: true })
+    expect(swiftFieldInvalid(f57, { lines: new Array<string>(5).fill('A'.repeat(35)) })).toEqual({ lines: [], acc: false })
   })
 
   it('validateFxEdit: поля — по FX_FIELDS базы тега (B.57 как 57); 20 исх; счета — null (список держат SuggestInput и бек)', () => {

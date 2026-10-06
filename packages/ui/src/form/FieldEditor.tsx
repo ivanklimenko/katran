@@ -22,6 +22,11 @@ export type FieldEditorProps = {
   account?: boolean | undefined
   /** Первая ошибка проверки черновика; не null — «Сохранить» недоступна. */
   error: string | null
+  /**
+   * Какие поля виноваты в ошибке: lines — индексы строк с 0, acc — поле «Счёт». Подсвечиваются (aria-invalid) только они, описание
+   * ошибкой — у всех полей. Не задано — при ошибке подсвечены все поля (прежнее поведение). Без error не действует.
+   */
+  invalid?: { lines: number[]; acc: boolean } | undefined
   /** Подвал слева: «4 строк по 35 символов, набор SWIFT X, счёт до 34». */
   rule: string
   /** Сохранение идёт: кнопки подвала недоступны, ввод сохраняется. */
@@ -43,7 +48,7 @@ const padTo = (lines: string[], n: number) => (lines.length >= n ? lines : lines
  * сохранение — гасится); корень помечен data-k-edit, чтобы DrawerStack не закрывал деталку тем же Esc. Enter ничего не сохраняет.
  */
 export function FieldEditor({
-  tag, name, original, value, onChange, lines: n, width: w, opts, account, error, rule, busy, saveError, onCancel, onSave,
+  tag, name, original, value, onChange, lines: n, width: w, opts, account, error, invalid, rule, busy, saveError, onCancel, onSave,
 }: FieldEditorProps) {
   const errId = useStableId()
   const first = useRef<HTMLInputElement>(null)
@@ -53,7 +58,12 @@ export function FieldEditor({
   const was = padTo(original.lines, n)
   const live = total(value.lines)
   const message = error ?? saveError ?? ''
-  const invalid = error !== null ? { 'aria-invalid': true, 'aria-describedby': errId } : {}
+  // ошибка — описание у всех полей; подсветка — у виноватых (invalid) или у всех
+  const bad = (which: { line: number } | 'acc') => {
+    if (error === null) return {}
+    const own = invalid === undefined || (which === 'acc' ? invalid.acc : invalid.lines.includes(which.line))
+    return own ? { 'aria-invalid': true, 'aria-describedby': errId } : { 'aria-describedby': errId }
+  }
   const title = `Поле ${tag.replace(/^B\./, '')} · ${name} — правка`
 
   // фокус при открытии: «Счёт» у стороны, иначе «Строка 1» (эталон :1456)
@@ -130,7 +140,7 @@ export function FieldEditor({
                   aria-label="Счёт"
                   value={value.acc ?? ''}
                   onChange={(e) => onChange({ ...value, acc: e.target.value })}
-                  {...invalid}
+                  {...bad('acc')}
                 />
                 <div className={s.feLbl}>Наименование / адрес</div>
               </>
@@ -144,7 +154,7 @@ export function FieldEditor({
                 placeholder={`Строка ${k + 1} до ${w} символов`}
                 value={l}
                 onChange={(e) => setLine(k, e.target.value)}
-                {...invalid}
+                {...bad({ line: k })}
               />
             ))}
             <div id={errId} className={s.feErr} aria-live="polite">{message}</div>

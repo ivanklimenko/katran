@@ -59,13 +59,19 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', id,
     }
   }, [open, anchor, returnFocus, role, manualFocus])
 
-  // Escape и клик вне
+  // Escape и клик вне. Prompt поверх ([data-k-prompt], модальный слой деталки) — не «вне»: его Esc и кнопки решают сами,
+  // иначе поповер закрыл бы правку под Prompt раньше ответа
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onCloseRef.current() } }
+    const inPrompt = (t: EventTarget | null) => t instanceof Element && t.closest('[data-k-prompt]') !== null
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || inPrompt(e.target)) return
+      e.stopPropagation()
+      onCloseRef.current()
+    }
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node
-      if (box.current?.contains(t) || anchor.current?.contains(t)) return
+      if (box.current?.contains(t) || anchor.current?.contains(t) || inPrompt(e.target)) return
       onCloseRef.current()
     }
     document.addEventListener('keydown', onKey, true)

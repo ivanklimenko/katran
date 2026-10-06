@@ -69,7 +69,7 @@ export function EditHistory({ entries, label }: EditHistoryProps) {
   if (!last) return null
   const people = entries.map((e) => e.who).filter((w, i, all) => all.indexOf(w) === i)
   return (
-    <div className={s.hist}>
+    <div>
       <div className={s.hs}>
         <span className={s.hsCount}>{editCountLabel(entries.length)}</span>
         <span className={s.hsWho}>{people.join(', ')}</span>

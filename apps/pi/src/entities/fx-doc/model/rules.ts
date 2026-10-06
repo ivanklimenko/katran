@@ -35,6 +35,17 @@ export function validateSwiftField(def: FieldDef, v: SwiftValue): string | null 
   return errors[0] ?? null
 }
 
+/**
+ * Какие поля черновика виноваты (Д64, проп invalid FieldEditor): строки длиннее W или вне набора X (индексы с 0) и счёт стороны.
+ * «Всего n символов…» ни одной строки не называет — подсветки нет, ошибка видна строкой.
+ */
+export function swiftFieldInvalid(def: FieldDef, v: SwiftValue): { lines: number[]; acc: boolean } {
+  const { w } = sizeOf(def)
+  const lines = v.lines.flatMap((line, k) => (line.length > w || !X.test(line) ? [k] : []))
+  const acc = v.acc ?? ''
+  return { lines, acc: acc.length > ACC_MAX || !ACC.test(acc) }
+}
+
 /** Ошибка 20 исх (эталон txtCommit, index.html:1333–1340) — по trim().toUpperCase() значения. */
 export function validateRefOut(v: string): string | null {
   const t = v.trim().toUpperCase()

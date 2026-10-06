@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
 import s from './Prompt.module.css'
@@ -29,7 +29,7 @@ export type PromptProps = {
  */
 export function Prompt({
   open, title = 'Подтвердите действие', note, okLabel = 'Подтвердить', cancelLabel = 'Отмена', tone = 'neutral', onResult,
-}: PromptProps): JSX.Element | null {
+}: PromptProps): ReactElement | null {
   const titleId = useStableId()
   const noteId = useStableId()
   const ok = useRef<HTMLButtonElement>(null)
@@ -94,7 +94,7 @@ export function Prompt({
 }
 
 /** «Было → стало» для note: прежнее зачёркнуто, новое выделено (эталон .note .was/.arr/.now). */
-export function PromptChange({ was, now }: { was: string; now: string }): JSX.Element {
+export function PromptChange({ was, now }: { was: string; now: string }): ReactElement {
   return (
     <>
       {/* пробелы — текстом вне span: иначе доступное описание склеит «было→стало» */}

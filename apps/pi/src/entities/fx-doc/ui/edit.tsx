@@ -8,7 +8,7 @@ import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
 import { groupAccount } from '../model/account'
 import type { FxDocDetail } from '../model/detail'
 import { currentOf, fieldTarget, isChanged, originalOf, type FxHistEntry } from '../model/edit'
-import { fxEditRule, fxEditableTargets } from '../model/rules'
+import { fxEditRule, fxEditableTargets, swiftFieldInvalid } from '../model/rules'
 import { FX_FIELDS } from '../model/swift'
 import e from './edit.module.css'
 
@@ -315,11 +315,13 @@ export function fxFormEdit(d: FxDocDetail, edit: EditContext): FormEdit {
       const target = fieldTarget(tag)
       const def = FX_FIELDS[base(tag)]
       if (!def) return null
+      const value = asField(edit.draft ?? currentOf(d, target))
       return (
         <FieldEditor
-          tag={tag} name={def.label} original={asField(originalOf(d, target))} value={asField(edit.draft ?? currentOf(d, target))}
+          tag={tag} name={def.label} original={asField(originalOf(d, target))} value={value}
           onChange={edit.change} lines={def.lines ?? 4} width={def.width ?? 35} opts={def.opts} account={def.kind === 'party'}
-          rule={fxEditRule(def)} error={edit.error} busy={edit.saving} saveError={edit.saveError} onCancel={edit.cancel} onSave={edit.save}
+          rule={fxEditRule(def)} error={edit.error} invalid={edit.error !== null ? swiftFieldInvalid(def, value) : undefined}
+          busy={edit.saving} saveError={edit.saveError} onCancel={edit.cancel} onSave={edit.save}
         />
       )
     },

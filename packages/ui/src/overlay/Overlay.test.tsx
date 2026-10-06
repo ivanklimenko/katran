@@ -1,18 +1,19 @@
 import { useRef, useState } from 'react'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
 import { Menu, type MenuItem } from './Menu'
 import { Popover } from './Popover'
 
-function PopoverHost() {
+function PopoverHost({ prompt = false }: { prompt?: boolean }) {
   const [open, setOpen] = useState(false)
   const a = useRef<HTMLButtonElement>(null)
   return (
     <>
       <button ref={a} onClick={() => setOpen(true)}>Открыть</button>
       <button>Снаружи</button>
+      {prompt && <div data-k-prompt=""><button>Продолжить правку</button></div>}
       <Popover open={open} anchor={a} onClose={() => setOpen(false)} label="Панель">
         <input aria-label="Поле" />
       </Popover>
@@ -75,6 +76,16 @@ describe('Popover', () => {
     renderK(<PopoverHost />)
     await userEvent.click(screen.getByText('Открыть'))
     await userEvent.click(screen.getByText('Снаружи'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('pointerdown и Esc внутри Prompt ([data-k-prompt]) — не «снаружи»: Prompt решает сам, поповер открыт', async () => {
+    renderK(<PopoverHost prompt />)
+    await userEvent.click(screen.getByText('Открыть'))
+    const inPrompt = screen.getByRole('button', { name: 'Продолжить правку' })
+    fireEvent.pointerDown(inPrompt)
+    fireEvent.keyDown(inPrompt, { key: 'Escape' })
+    expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
+    fireEvent.pointerDown(screen.getByText('Снаружи'))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
   it('returnFocus: при закрытии фокус уходит в указанный элемент, а не в якорь', async () => {

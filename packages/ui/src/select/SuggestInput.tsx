@@ -47,7 +47,8 @@ const moreDefault = (n: number) => `ещё ${n} — уточните номер`
 /**
  * Одно значение только из списка (спека 2c §2.1, эталон accSuggest): поле role=combobox, список открыт всё время правки.
  * ↑↓ — по кругу; Enter — активный → единственный в выдаче → точное совпадение введённого → иначе ошибка notInListText.
- * Esc, pointerdown вне поля и списка (onClose поповера) и Tab — onCancel. Esc ловит поповер в фазе захвата со stopPropagation:
+ * Esc, pointerdown вне поля со строкой под ним и списка (onClose поповера) и Tab — onCancel. Список привязан к обёртке поля
+ * со строкой подсказки (Д63): подсказка видна над списком целиком, клик по ней — внутри якоря. Esc ловит поповер в фазе захвата со stopPropagation:
  * до обработчиков деталки он не доходит, а DrawerStack пропускает Esc из поля (OWN_ESCAPE) — фокус в поле.
  * Исключение — фокусируемое в status («Повторить»): Tab из поля ведёт на него, Shift+Tab с первого — обратно в поле,
  * Tab с последнего и Esc на нём — onCancel. Esc там ловится на window в захвате — раньше DrawerStack на document.
@@ -63,6 +64,7 @@ export function SuggestInput({
   const moreId = useStableId()
   const statusId = useStableId()
   const input = useRef<HTMLInputElement>(null)
+  const anchor = useRef<HTMLDivElement>(null)
   const statusBox = useRef<HTMLDivElement>(null)
   const onCancelRef = useRef(onCancel)
   useEffect(() => { onCancelRef.current = onCancel })
@@ -152,7 +154,7 @@ export function SuggestInput({
     listed ? null : statusId,
   ].filter(Boolean).join(' ')
   return (
-    <div className={s.sugBox}>
+    <div ref={anchor} className={s.sugBox}>
       <input
         ref={input}
         role="combobox"
@@ -176,7 +178,7 @@ export function SuggestInput({
         <span id={noteId} className={invalid ? s.sugBad : undefined} aria-live="polite">{invalid ? notInListText : hint}</span>
         {keysHint !== undefined && <span id={keysId}>{keysHint}</span>}
       </div>
-      <Popover open anchor={input} onClose={onCancel} role="presentation" className={s.sug}>
+      <Popover open anchor={anchor} onClose={onCancel} role="presentation" className={s.sug}>
         <div style={{ minWidth: width }}>
           {listed
             ? (

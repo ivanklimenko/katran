@@ -150,6 +150,26 @@ describe('FieldEditor', () => {
     expect(first).toHaveAccessibleDescription(ERR)
   })
 
+  it('invalid: aria-invalid только у названных строк и счёта; описание ошибкой — у всех полей (Д64)', () => {
+    setup({ error: ERR, account: true, value: { opt: 'A', acc: 'ИБАН', lines: ['OK', 'ПЛОХО', 'OK'] }, invalid: { lines: [1], acc: true } })
+    const line = (k: number) => screen.getByRole('textbox', { name: `Строка ${k}` })
+    expect(line(2)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('textbox', { name: 'Счёт' })).toHaveAttribute('aria-invalid', 'true')
+    for (const k of [1, 3, 4]) {
+      expect(line(k)).not.toHaveAttribute('aria-invalid')
+      expect(line(k)).toHaveAccessibleDescription(ERR)
+    }
+  })
+
+  it('invalid без строк («Всего n символов…») — ни одно поле не подсвечено, ошибка видна; без ошибки invalid не действует', () => {
+    const { unmount } = setup({ error: 'Всего 141 символов, максимум 140', invalid: { lines: [], acc: false } })
+    expect(screen.getByText('Всего 141 символов, максимум 140')).toBeInTheDocument()
+    expect(screen.getAllByRole('textbox').filter((el) => el.hasAttribute('aria-invalid'))).toHaveLength(0)
+    unmount()
+    setup({ error: null, invalid: { lines: [0], acc: false } })
+    expect(screen.getByRole('textbox', { name: 'Строка 1' })).not.toHaveAttribute('aria-invalid')
+  })
+
   it('busy: обе кнопки недоступны, поля доступны; saveError показывается', async () => {
     setup({ busy: true, saveError: 'Документ изменили — откройте заново' })
     expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()

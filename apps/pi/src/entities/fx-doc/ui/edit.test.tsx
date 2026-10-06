@@ -44,16 +44,20 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
   })
 
   it('открытый редактор 57: «Как есть» — исходное, черновик — edit.draft, правило подвала', async () => {
-    const edit = ctx({ editing: 'field:57', draft: { opt: 'A', lines: ['NEW BANK', 'VKRBRU8KXXX'] }, error: 'Строка 1: 36 символов, максимум 35' })
+    const edit = ctx({ editing: 'field:57', draft: { opt: 'A', lines: ['N'.repeat(36), 'VKRBRU8KXXX'] }, error: 'Строка 1: 36 символов, максимум 35' })
     renderEdit(d, edit)
     const editor = screen.getByRole('region', { name: 'Поле 57 · Банк получателя — правка' })
     expect(editor).toHaveTextContent('VOSTOCHNY KREDIT BANK') // was первой записи истории
-    expect(within(editor).getByRole('textbox', { name: 'Строка 1' })).toHaveValue('NEW BANK')
+    expect(within(editor).getByRole('textbox', { name: 'Строка 1' })).toHaveValue('N'.repeat(36))
     expect(editor).toHaveTextContent('4 строк по 35 символов, набор SWIFT X')
     expect(editor).toHaveTextContent('Строка 1: 36 символов, максимум 35')
     expect(within(editor).getByRole('button', { name: 'Сохранить' })).toBeDisabled()
+    // подсвечена только виноватая строка 1 (Д64), описание ошибкой — у всех
+    expect(within(editor).getByRole('textbox', { name: 'Строка 1' })).toHaveAttribute('aria-invalid', 'true')
+    expect(within(editor).getByRole('textbox', { name: 'Строка 2' })).not.toHaveAttribute('aria-invalid')
+    expect(within(editor).getByRole('textbox', { name: 'Строка 2' })).toHaveAccessibleDescription('Строка 1: 36 символов, максимум 35')
     await userEvent.type(within(editor).getByRole('textbox', { name: 'Строка 2' }), 'Z')
-    expect(edit.change).toHaveBeenLastCalledWith({ opt: 'A', lines: ['NEW BANK', 'VKRBRU8KXXXZ', '', ''] })
+    expect(edit.change).toHaveBeenLastCalledWith({ opt: 'A', lines: ['N'.repeat(36), 'VKRBRU8KXXXZ', '', ''] })
   })
 
   it('20 исх: Enter — save, Esc — cancel, mousedown вне — cancel; ↺ — revert(refOut, текущее, исходное)', async () => {
@@ -206,6 +210,17 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(fxCommitView('valueDate', '2026-09-23', '2026-09-24')).toMatchObject({
       title: 'Утвердить новую дату валютирования?', okLabel: 'Утвердить', cancelLabel: 'Отмена', tone: 'neutral',
     })
+  })
+
+  it('дата валютирования: календарь — клик по выбранному (текущему) дню — cancel, без запроса (Д65)', async () => {
+    const edit = ctx({ editing: 'valueDate', draft: d.valueDates[0] })
+    renderEdit(d, edit)
+    await userEvent.click(screen.getByRole('button', { name: 'Выбрать дату' }))
+    const selected = screen.getAllByRole('gridcell').find((c) => c.getAttribute('aria-selected') === 'true')!
+    await userEvent.click(within(selected).getByRole('button'))
+    expect(edit.cancel).toHaveBeenCalledTimes(1)
+    expect(edit.change).not.toHaveBeenCalled()
+    expect(edit.save).not.toHaveBeenCalled()
   })
 
   it('дата валютирования: ошибка сохранения и 409 — строкой у поля (aria-live)', () => {

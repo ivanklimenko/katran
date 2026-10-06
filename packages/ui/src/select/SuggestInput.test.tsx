@@ -156,6 +156,13 @@ describe('SuggestInput (спека 2c §2.1, эталон accSuggest)', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
+  it('pointerdown по строке подсказки и клавиш под полем — внутри якоря списка: onCancel не зовётся (Д63)', () => {
+    setup({ value: '', hint: 'Только из карточки клиента · USD · 7 сч.', keysHint: '↑↓ Enter · Esc' })
+    fireEvent.pointerDown(screen.getByText('Только из карточки клиента · USD · 7 сч.'))
+    fireEvent.pointerDown(screen.getByText('↑↓ Enter · Esc'))
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
   it('Tab — onCancel', async () => {
     const u = userEvent.setup()
     setup({ value: '17' })
