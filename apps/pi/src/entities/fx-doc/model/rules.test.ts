@@ -90,4 +90,8 @@ describe('fxEditableTargets — правимое по профилю (спека
     ]))
     expect(of({ type: 'MT199' })).toEqual(new Set(tail))
   })
+
+  it('заблокированный документ — только просмотр: целей нет, бек отклоняет любую правку (Д66)', () => {
+    expect(of({ lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' } })).toEqual(new Set())
+  })
 })

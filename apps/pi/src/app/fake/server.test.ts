@@ -118,9 +118,10 @@ describe('фейковый сервер', () => {
 })
 
 describe('фейковый сервер: правка детали (план 2c)', () => {
-  // fx-подобная деталь: [0] MT199 USD, [1] MT202 CNY, [2] MT103 RUB; у каждого сервера — своё хранилище правок
-  const fxRows = makeFxDocs(3)
-  const doc = fxRows[2]!
+  // fx-подобная деталь: [0] MT199 USD, [1] MT202 CNY, [2] MT103 RUB (заблокирован, № 811306), [3] MT103 CNY; у каждого сервера — своё хранилище правок
+  const fxRows = makeFxDocs(4)
+  const doc = fxRows[3]!
+  const locked = fxRows[2]!
   const edited = (opts: Parameters<typeof createFakeServer>[1] = {}) =>
     createFakeServer({ fx: fakeGrid(fxRows, [], fxDocsMeta, { detail: makeFxDocDetail, edits: createFxDocsEditStore(null) }) }, { now: () => '2026-10-06T12:30:00', ...opts })
   const editUrl = (id: string) => `/grids/fx/documents/${encodeURIComponent(id)}/edits`
@@ -172,7 +173,10 @@ describe('фейковый сервер: правка детали (план 2c)
     expect((await bad({ target: 'refOut', was: doc.refOut ?? '', now: { lines: ['X'] } })).problem?.errors?.[0]).toMatchObject({ path: 'now' })
     expect((await bad({ target: 'field:57', was: bank57, now: 'X' })).problem?.errors?.[0]).toMatchObject({ path: 'now' })
     expect((await bad('x')).status).toBe(400)
-    // счёт не из списка — текст эталона (документ в RUB, счёт клиента в USD)
+    // заблокированный документ — только просмотр (Д66): любая цель — 400 по target
+    expect(locked.lock).not.toBeNull()
+    expect((await bad({ target: 'refOut', was: locked.refOut ?? '', now: 'FX1' }, locked.id)).problem?.errors?.[0]).toMatchObject({ path: 'target', code: 'VALIDATION' })
+    // счёт не из списка — текст эталона (документ в CNY, счёт клиента в USD)
     const accKt = ((await s(get(`/grids/fx/documents/${doc.id}`))) as { accKt: string }).accKt
     expect((await bad({ target: 'accKt', was: accKt, now: '40817840100050017762' })).problem?.errors?.[0])
       .toEqual({ path: 'now', code: 'VALIDATION', message: 'Счёт не из карточки клиента — выберите из списка' })

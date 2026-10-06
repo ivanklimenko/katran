@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
-import { ConfigForm } from '@katran/ui'
+import { ConfigForm, Prompt } from '@katran/ui'
 import type { AccountsSlot, EditContext } from '../../../shared/lib/detail'
 import { renderK } from '../../../shared/lib/test'
 import { FX_DETAIL_EXAMPLE } from '../api/detail.example'
@@ -81,6 +81,45 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(view.revert).toHaveBeenCalledWith('refOut', 'FX1', '')
     await userEvent.click(screen.getByRole('button', { name: 'Изменить 20 исх' }))
     expect(view.open).toHaveBeenCalledWith('refOut', 'FX1')
+  })
+
+  it('20 исх: mousedown по Prompt «Отменить правку?» — не «клик вне», правка не отменяется (C1)', () => {
+    const edit = ctx({ editing: 'refOut', draft: 'FX1' })
+    renderK(
+      <>
+        <ConfigForm schema={dom.schemaOf(d)} fields={dom.fields} value={(t) => dom.value(d, t)} present={dom.present}
+          renderHero={(id) => dom.renderHero(d, id, edit)} renderBlock={(id) => dom.renderBlock(d, id, edit)} edit={dom.formEdit!(d, edit)} />
+        <Prompt open title="Отменить правку?" okLabel="Отменить правку" cancelLabel="Продолжить правку" tone="danger" onResult={vi.fn()} />
+      </>,
+    )
+    const dialog = screen.getByRole('alertdialog', { name: 'Отменить правку?' })
+    fireEvent.mouseDown(within(dialog).getByRole('button', { name: 'Продолжить правку' }))
+    fireEvent.mouseDown(within(dialog).getByRole('button', { name: 'Отменить правку' }))
+    fireEvent.mouseDown(dialog)
+    fireEvent.mouseDown(dialog.parentElement!) // подложка Prompt
+    expect(edit.cancel).not.toHaveBeenCalled()
+  })
+
+  it('заблокированный документ — только просмотр: ни карандашей, ни ↺, ни редакторов; маркеры и аудит на месте (Д66)', async () => {
+    const locked: FxDocDetail = {
+      ...d, lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' }, refOut: 'FX1',
+      edits: { ...d.edits, refOut: { now: 'FX1', hist: [entry({ was: '', now: 'FX1' })] } },
+    }
+    // даже при «открытом» редакторе в модели — вид его не рисует
+    for (const editing of [null, 'refOut', 'accKt', 'valueDate', 'field:57']) {
+      const { unmount } = renderEdit(locked, ctx({ editing, draft: editing === 'field:57' ? d.fields['57']! : 'FX1' }))
+      expect(screen.queryAllByRole('button', { name: /^(Редактировать поле|Изменить|Вернуть исходное)/ }), String(editing)).toHaveLength(0)
+      expect(document.querySelector('[data-k-edit]'), String(editing)).toBeNull()
+      expect(screen.queryByRole('region', { name: /— правка$/ })).toBeNull()
+      expect(screen.getByRole('img', { name: 'Было — · Вы, 23.09.2026 11:05' })).toBeInTheDocument()
+      const f57 = document.querySelector('[data-field="57"]') as HTMLElement
+      expect(f57).toHaveAttribute('data-edited')
+      if (editing === null) {
+        await userEvent.click(within(f57).getByRole('button', { expanded: false }))
+        expect(f57).toHaveTextContent('2 изменения')
+      }
+      unmount()
+    }
   })
 
   it('счёт Кт: подсказка «Только из карточки клиента · USD · 6 сч.»; выбор — change(счёт) и save; ошибка загрузки — «Повторить»', async () => {

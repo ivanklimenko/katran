@@ -53,6 +53,9 @@ function useLatest<T>(value: T) {
 }
 
 type EditedView = { tip: string } | null
+/** Заблокированный документ — только просмотр (Д66): ни карандашей, ни ↺, ни редакторов; маркеры и подсказки остаются. */
+const lockedOf = (d: FxDocDetail) => d.lock !== null
+
 /** Изменённая строковая цель: «Было {was} · {who}, {when}» (эталон txtRowHtml/accRowHtml) — исходное и последняя запись. */
 function editedText(d: FxDocDetail, target: string, show: (was: string) => string): EditedView {
   const last = lastOf(d.edits[target]?.hist ?? [])
@@ -75,10 +78,13 @@ function RefOutEditor({ edit }: { edit: EditContext }) {
   const message = edit.error ?? edit.saveError
   // открытие — фокус и выделение (эталон :1456)
   useEffect(() => { input.current?.focus(); input.current?.select() }, [])
-  // клик вне блока правки — отмена (эталон, Р15); фаза захвата — раньше обработчиков под курсором
+  // клик вне блока правки — отмена (эталон, Р15); фаза захвата — раньше обработчиков под курсором.
+  // Prompt «Отменить правку?» поверх деталки — не «вне»: его кнопки решают сами (иначе черновик сброшен до click)
   useEffect(() => {
     const onDown = (ev: MouseEvent) => {
-      if (ev.target instanceof Node && box.current && !box.current.contains(ev.target)) cancel.current()
+      if (!(ev.target instanceof Element) || !box.current || box.current.contains(ev.target)) return
+      if (ev.target.closest('[data-k-prompt]')) return
+      cancel.current()
     }
     document.addEventListener('mousedown', onDown, true)
     return () => document.removeEventListener('mousedown', onDown, true)
@@ -102,7 +108,8 @@ function RefOutEditor({ edit }: { edit: EditContext }) {
 
 /** 20 исх с правкой на месте (эталон txtRowHtml/txtCommit, index.html:1326–1340): Enter — сохранить, Esc и клик вне — отмена. */
 export function RefOutRow({ d, edit, value }: { d: FxDocDetail; edit: EditContext; value: (warn: boolean) => ReactNode }) {
-  const open = edit.editing === 'refOut'
+  const locked = lockedOf(d)
+  const open = !locked && edit.editing === 'refOut'
   const pen = usePenReturn(open)
   const edited = editedText(d, 'refOut', (was) => was || '—')
   return (
@@ -110,9 +117,11 @@ export function RefOutRow({ d, edit, value }: { d: FxDocDetail; edit: EditContex
       <span className={e.val}>
         {value(edited !== null)}
         {edited && <EditMark tip={edited.tip} />}
-        {edited && <Revert d={d} edit={edit} target="refOut" />}
-        <IconButton ref={pen} size="s" className={e.pen} label="Изменить 20 исх" data-k-tip="Изменить 20 исх"
-          onClick={() => edit.open('refOut', currentOf(d, 'refOut'))}><Pen /></IconButton>
+        {edited && !locked && <Revert d={d} edit={edit} target="refOut" />}
+        {!locked && (
+          <IconButton ref={pen} size="s" className={e.pen} label="Изменить 20 исх" data-k-tip="Изменить 20 исх"
+            onClick={() => edit.open('refOut', currentOf(d, 'refOut'))}><Pen /></IconButton>
+        )}
       </span>
       {open && <RefOutEditor edit={edit} />}
     </>
@@ -164,7 +173,8 @@ function AccountEditor({ d, edit, side }: { d: FxDocDetail; edit: EditContext; s
 /** Счёт Дт / Кт с правкой только из справочника (эталон accRowHtml/accCommit, index.html:1302–1352). */
 export function AccountRow({ d, edit, side, value }: { d: FxDocDetail; edit: EditContext; side: AccountSide; value: (warn: boolean) => ReactNode }) {
   const { target, label } = SIDE[side]
-  const open = edit.editing === target
+  const locked = lockedOf(d)
+  const open = !locked && edit.editing === target
   const pen = usePenReturn(open)
   const edited = editedText(d, target, groupAccount)
   return (
@@ -172,9 +182,11 @@ export function AccountRow({ d, edit, side, value }: { d: FxDocDetail; edit: Edi
       <span className={e.val}>
         {value(edited !== null)}
         {edited && <EditMark tip={edited.tip} />}
-        {edited && <Revert d={d} edit={edit} target={target} />}
-        <IconButton ref={pen} size="s" className={e.pen} label={`Изменить счёт ${label}`} data-k-tip={`Изменить счёт ${label}`}
-          onClick={() => edit.open(target, currentOf(d, target))}><Pen /></IconButton>
+        {edited && !locked && <Revert d={d} edit={edit} target={target} />}
+        {!locked && (
+          <IconButton ref={pen} size="s" className={e.pen} label={`Изменить счёт ${label}`} data-k-tip={`Изменить счёт ${label}`}
+            onClick={() => edit.open(target, currentOf(d, target))}><Pen /></IconButton>
+        )}
       </span>
       {open && <AccountEditor d={d} edit={edit} side={side} />}
     </>
@@ -241,7 +253,8 @@ function valueDateMark(d: FxDocDetail): { tip: string; status: FxHistEntry['stat
 
 /** Значение ячейки «Валютирование» с правкой (эталон heroHtml vd, index.html:1046–1056 и обработчик change :1380–1400). */
 export function ValueDateCell({ d, edit, same }: { d: FxDocDetail; edit: EditContext; same: ReactNode }) {
-  const open = edit.editing === 'valueDate'
+  const locked = lockedOf(d)
+  const open = !locked && edit.editing === 'valueDate'
   const pen = usePenReturn(open)
   if (open) return <ValueDateEditor d={d} edit={edit} />
   const mark = valueDateMark(d)
@@ -250,8 +263,10 @@ export function ValueDateCell({ d, edit, same }: { d: FxDocDetail; edit: EditCon
       <span className={mark ? e.warn : undefined}>{formatDate(d.valueDates[0])}</span>
       {mark && <EditMark tip={mark.tip} status={mark.status} />}
       {same}
-      <IconButton ref={pen} size="s" className={e.vdPen} label="Изменить дату валютирования" data-k-tip="Изменить дату валютирования"
-        onClick={() => edit.open('valueDate', currentOf(d, 'valueDate'))}><Pen /></IconButton>
+      {!locked && (
+        <IconButton ref={pen} size="s" className={e.vdPen} label="Изменить дату валютирования" data-k-tip="Изменить дату валютирования"
+          onClick={() => edit.open('valueDate', currentOf(d, 'valueDate'))}><Pen /></IconButton>
+      )}
     </>
   )
 }
@@ -276,12 +291,13 @@ const historyOf = (hist: FxHistEntry[]): EditHistoryEntry[] => hist.map((h) => (
 
 /** Правка полей «Общих данных» в ConfigForm (спека 2c §2.1): карандаши правимых целей, состояние с аудитом, FieldEditor. */
 export function fxFormEdit(d: FxDocDetail, edit: EditContext): FormEdit {
+  // заблокированный документ: целей нет (fxEditableTargets) — ни карандашей, ни «✎ Изменить», ни редактора; состояние с аудитом остаётся
   const targets = fxEditableTargets(d)
   const FIELD = 'field:'
   const base = (tag: string) => tag.replace(/^B\./, '')
   return {
     can: (tag) => targets.includes(fieldTarget(tag)),
-    editing: edit.editing?.startsWith(FIELD) ? edit.editing.slice(FIELD.length) : null,
+    editing: !lockedOf(d) && edit.editing?.startsWith(FIELD) ? edit.editing.slice(FIELD.length) : null,
     onEdit: (tag) => edit.open(fieldTarget(tag), currentOf(d, fieldTarget(tag))),
     state: (tag) => {
       const target = fieldTarget(tag)
