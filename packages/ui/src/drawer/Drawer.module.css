@@ -27,6 +27,12 @@
   animation: k-drawer-in var(--k-t-drawer) ease-out both;
 }
 
+/* Обёртка клавиш (onKeyDown) во всю панель: позиционирована — слой overlay с inset: 0 накрывает ту же площадь, что и корень */
+.keys {
+  position: absolute;
+  inset: 0;
+}
+
 /* Прокрутка — внутри, а не у корня: слой overlay (Prompt) с inset: 0 накрывает видимую часть панели и не уезжает с содержимым (спека 2c §2.1) */
 .scroll {
   box-sizing: border-box;

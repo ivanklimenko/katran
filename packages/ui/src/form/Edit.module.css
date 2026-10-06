@@ -75,6 +75,10 @@
   background: var(--k-warn);
 }
 
+.hlItem[data-status="rejected"]::before {
+  background: var(--k-bad);
+}
+
 .hlHead {
   display: flex;
   align-items: center;
@@ -94,6 +98,26 @@
 
 .hlBadge {
   margin-left: auto;
+}
+
+/* кнопки решения второй руки (спека 2d §2.1) — правее бейджа «ожидает» */
+.hlActs {
+  display: flex;
+  gap: var(--k-sp-1);
+}
+
+/* «Отклонить»: ghost-кнопка кита в тоне bad; двойной класс — выше варианта кнопки независимо от порядка в бандле */
+.hlReject.hlReject {
+  color: var(--k-bad);
+}
+
+.hlReject.hlReject:focus-visible {
+  outline-color: var(--k-bad);
+}
+
+.hlReject.hlReject:hover:not(:disabled) {
+  border-color: var(--k-bad);
+  color: var(--k-bad);
 }
 
 .hlNote {

@@ -344,6 +344,11 @@
   visibility: hidden;
 }
 
+/* отклонённая правка (спека 2d §2.1): точка цвета bad, галочка держит место невидимой */
+.mark[data-status="rejected"] .markDot {
+  background: var(--k-bad);
+}
+
 .mark[data-status="confirmed"] .markOk {
   visibility: visible;
   color: var(--k-ok);

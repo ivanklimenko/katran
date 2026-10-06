@@ -264,6 +264,19 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
     expect(onEscape).not.toHaveBeenCalled()
   })
 
+  it('onKeyDown — на keydown из кнопки закрытия и из содержимого', async () => {
+    const onKeyDown = vi.fn()
+    renderK(<Drawer label="Д" title="Т" onClose={vi.fn()} onKeyDown={onKeyDown}><input aria-label="Поле" /></Drawer>)
+    screen.getByRole('button', { name: 'Закрыть' }).focus()
+    await userEvent.keyboard('{F5}')
+    expect(onKeyDown).toHaveBeenCalledTimes(1)
+    expect(onKeyDown.mock.calls[0]![0].key).toBe('F5')
+    screen.getByRole('textbox', { name: 'Поле' }).focus()
+    await userEvent.keyboard('a')
+    expect(onKeyDown).toHaveBeenCalledTimes(2)
+    expect(onKeyDown.mock.calls[1]![0].key).toBe('a')
+  })
+
   it('без нарушений axe (A и B)', async () => {
     const { container } = renderK(<Host start={{ a: 'd1', b: 'd2' }} />)
     expect(await axe(container)).toHaveNoViolations()

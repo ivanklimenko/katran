@@ -83,3 +83,64 @@ describe('EditHistory', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 })
+
+describe('EditHistory: решение второй руки и rejected (спека 2d §2.1)', () => {
+  const pendingLast: EditHistoryEntry[] = [
+    { who: 'Иванова М. П.', when: '21.09.2026 08:00', status: 'pending', diff: [] },
+    { who: 'Иванова М. П.', when: '22.09.2026 10:42', status: 'pending', diff: [] },
+  ]
+  const open = async () => { await userEvent.click(screen.getByRole('button', { name: 'История' })) }
+
+  it('обработчики заданы, последняя pending — «Утвердить» и «Отклонить» только в последней записи; клик вызывает обработчик', async () => {
+    const onConfirm = vi.fn()
+    const onReject = vi.fn()
+    renderK(<EditHistory entries={pendingLast} label="поля 57" onConfirm={onConfirm} onReject={onReject} />)
+    await open()
+    const [first, last] = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(within(first!).queryAllByRole('button')).toHaveLength(0)
+    expect(within(last!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Утвердить', 'Отклонить'])
+    await userEvent.click(within(last!).getByRole('button', { name: 'Утвердить' }))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    await userEvent.click(within(last!).getByRole('button', { name: 'Отклонить' }))
+    expect(onReject).toHaveBeenCalledTimes(1)
+  })
+
+  it('подписи — свойствами confirmLabel/rejectLabel; задан один обработчик — одна кнопка', async () => {
+    renderK(<EditHistory entries={pendingLast} label="поля 57" onReject={vi.fn()} rejectLabel="Вернуть" confirmLabel="Принять" />)
+    await open()
+    const last = within(screen.getByRole('list')).getAllByRole('listitem')[1]!
+    expect(within(last).getAllByRole('button').map((b) => b.textContent)).toEqual(['Вернуть'])
+  })
+
+  it('последняя confirmed — кнопок нет; обработчики не заданы — кнопок нет', async () => {
+    const { rerender } = renderK(<EditHistory entries={entries.slice(0, 1)} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
+    await open()
+    expect(within(screen.getByRole('list')).queryAllByRole('button')).toHaveLength(0)
+    rerender(<EditHistory entries={pendingLast} label="поля 57" />)
+    expect(within(screen.getByRole('list')).queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('rejected: бейдж «отклонено» (bad), подсказка «Отклонил(а) …», строка «Причина: …», примечание автора', async () => {
+    const rej: EditHistoryEntry = {
+      who: 'Иванова М. П.', when: '22.09.2026 10:42', status: 'rejected', by: 'Смирнова Е. В.', at: '23.09.2026 10:00',
+      note: 'Полное наименование филиала', reason: 'BIC не по справочнику', diff: [],
+    }
+    renderK(<EditHistory entries={[rej]} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
+    expect(screen.getByText('отклонено')).toHaveAttribute('data-badge', 'bad')
+    await open()
+    const item = within(screen.getByRole('list')).getByRole('listitem')
+    expect(item).toHaveAttribute('data-status', 'rejected')
+    const badge = within(item).getByText('отклонено')
+    expect(badge).toHaveAttribute('data-badge', 'bad')
+    expect(badge.closest('[data-k-tip]')).toHaveAttribute('data-k-tip', 'Отклонил(а) Смирнова Е. В., 23.09.2026 10:00')
+    expect(within(item).getByText('Причина: BIC не по справочнику')).toBeInTheDocument()
+    expect(within(item).getByText('Полное наименование филиала')).toBeInTheDocument()
+    expect(within(item).queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('axe без нарушений для истории с кнопками', async () => {
+    const { container } = renderK(<EditHistory entries={pendingLast} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
+    await open()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})

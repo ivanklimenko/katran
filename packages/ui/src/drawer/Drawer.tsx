@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { IconButton } from '../button'
 import s from './Drawer.module.css'
 
@@ -30,6 +30,8 @@ export type DrawerProps = {
    * накрывает видимую часть drawer'а и не уезжает при прокрутке (спека 2c §2.1, план Р1).
    */
   overlay?: ReactNode | undefined
+  /** keydown панели (обёртка во всю площадь внутри корня) — из любого её элемента (шапка, кнопка закрытия, содержимое, overlay); F5 деталки — спека 2d. */
+  onKeyDown?: ((e: KeyboardEvent<HTMLElement>) => void) | undefined
   children?: ReactNode
 }
 
@@ -68,7 +70,7 @@ function restoreFocus(ref: ReturnRef) {
  * Корень не прокручивается: прокрутка — во внутреннем `data-part="scroll"` (метка слота, шапка, содержимое),
  * слой `overlay` — после него, поверх панели (спека 2c §2.1).
  */
-export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, children }: DrawerProps) {
+export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, children }: DrawerProps) {
   const head = useRef<HTMLHeadingElement>(null)
   const returnRef = useRef(returnFocus)
   // Актуализация ref — в эффекте, не в теле рендера (правило react-hooks/refs), как в Popover
@@ -84,17 +86,20 @@ export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus 
   useEffect(() => () => restoreFocus(returnRef), [])
   return (
     <div role="dialog" aria-label={label} data-k-drawer="" data-slot={badge?.tone} className={s.drawer}>
-      <div className={s.scroll} data-part="scroll">
-        {badge && <span className={s.badge} data-tone={badge.tone}>{badge.text}</span>}
-        {/* div, а не header: два drawer'а дали бы два ориентира banner (axe landmark-no-duplicate-banner) */}
-        <div className={s.head} data-part="head">
-          <h2 ref={head} tabIndex={-1} className={s.title}>{title}</h2>
-          {meta && <div className={s.meta}>{meta}</div>}
-          <IconButton label="Закрыть" className={s.close} onClick={onClose}><X /></IconButton>
+      {/* клавиши — на обёртке role="presentation" во всю панель (как подложка Prompt): keydown любого элемента панели всплывает сюда */}
+      <div role="presentation" className={s.keys} onKeyDown={onKeyDown}>
+        <div className={s.scroll} data-part="scroll">
+          {badge && <span className={s.badge} data-tone={badge.tone}>{badge.text}</span>}
+          {/* div, а не header: два drawer'а дали бы два ориентира banner (axe landmark-no-duplicate-banner) */}
+          <div className={s.head} data-part="head">
+            <h2 ref={head} tabIndex={-1} className={s.title}>{title}</h2>
+            {meta && <div className={s.meta}>{meta}</div>}
+            <IconButton label="Закрыть" className={s.close} onClick={onClose}><X /></IconButton>
+          </div>
+          {children}
         </div>
-        {children}
+        {overlay}
       </div>
-      {overlay}
     </div>
   )
 }
