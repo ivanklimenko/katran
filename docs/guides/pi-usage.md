@@ -15,8 +15,8 @@ apps/pi/src/
   widgets/        doc-registry — «грид + фильтры + лейн + жизненный цикл» как единый блок;
                   doc-detail — деталка документа: drawer A/B, шапка, лейн, вкладки, «Общие данные» (раздел 13)
   features/       doc-edit — правка документа в деталке: модель правки, счета, контекст правки для деталки (раздел 14)
-  entities/       fx-doc, rub-doc, doc-status, posting — типы документов, порты (searchFx/facetsFx/filterMetaFx/detailFx),
-                  раскладка колонок, профили деталки, проводки
+  entities/       fx-doc, rub-doc, doc-status, doc-trail, posting — типы документов, порты (searchFx/facetsFx/filterMetaFx/detailFx/tabFx;
+                  у валюты ещё fxEditPorts — saveEditFx/accountsFx, раздел 14), раскладка колонок, профили деталки, проводки
   shared/         api (транспорт requestFx, контракт grid-contract.ts, guards, problem), lib (lifecycle, detail, test)
 ```
 
@@ -34,7 +34,7 @@ apps/pi/src/
 
 Импорты в скопированном коде относительные (`../../../shared/api`, без алиасов `@/...`) — переносятся как есть, ничего не переписывать. Если в вашем проекте настроен алиас `@/`, можно (не обязательно) заменить относительные пути на алиас — это косметика, на поведение не влияет.
 
-**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/fx-doc/ui/detail.module.css`, `entities/fx-doc/ui/edit.module.css` (правка, срез 2c), `entities/rub-doc/ui/cells.module.css`, `entities/rub-doc/ui/detail.module.css`, `entities/posting/ui/posting.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, `widgets/doc-detail/ui/DocDetail.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
+**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/fx-doc/ui/detail.module.css`, `entities/fx-doc/ui/edit.module.css` (правка, срез 2c), `entities/fx-doc/ui/extra.module.css` (вкладка «Доп. поля»), `entities/doc-trail/ui/trail.module.css` (вкладки следа документа), `entities/rub-doc/ui/cells.module.css`, `entities/rub-doc/ui/detail.module.css`, `entities/posting/ui/posting.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, `widgets/doc-detail/ui/DocDetail.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
 
 - **CSS Modules для `*.module.css`** в сборщике. Vite включает их сам; webpack — `css-loader` с `modules: { auto: true }` (или правило на `/\.module\.css$/`). Имена классов в файлах — camelCase (`dirRow`, `srTag`), обращение в коде — `s.dirRow`, так что `localsConvention`/`exportLocalsConvention` можно не настраивать; у нас (`apps/pi/vite.config.ts`) стоят `camelCaseOnly` и `generateScopedName` вида `k-<файл>__<класс>` — это удобство отладки, не требование.
 - **Объявление типа `*.module.css` для TypeScript**, иначе `tsc` не пропустит импорт стиля. У нас — `packages/ui/src/css-modules.d.ts` (одна строка `declare module '*.module.css' { const classes: Record<string, string>; export default classes }`), подключён через `include` в `apps/pi/tsconfig.json`. У вас — такой же файл в своём `src` (или готовое объявление из `vite/client`, если вы на Vite).
@@ -520,7 +520,7 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
 |---|---|
 | `shared/api/edit-ports.ts` (новый), `shared/api/index.ts` | `createEditPorts({ gridId, parseDetail })` → `saveEditFx` (`POST …/edits`, ответ — деталь тем же парсером) и `accountsFx` (`GET …/accounts?side=`); типы `EditValue`, `EditQuery`, `EditPorts`, `AccountItem`, `AccountsQuery`, `AccountSide`; `fromAccountsResponse` |
 | `shared/lib/detail/types.ts`, `index.ts` | `EditContext` — правка одного документа для видов сущности; `EditConfirmView`, `AccountsSlot`, `LeaveIntent`; у `DetailDomain` — третий необязательный параметр `edit` у `renderHero`/`renderBlock` (функции рубля с двумя параметрами совместимы) и `formEdit` |
-| `entities/fx-doc/model/edit.ts`, `model/rules.ts`, `model/account.ts` (новые) | `FxEdit`, `FxHistEntry`, `currentOf`/`originalOf`/`isChanged`/`sameEditValue`/`fieldTarget`; правила `validateFxEdit`, `normalizeFxEdit`, `fxEditableTargets`, `fxEditRule`, `FX_CONFIRM_TARGETS`; `groupAccount` |
+| `entities/fx-doc/model/edit.ts`, `model/rules.ts`, `model/account.ts` (новые) | `FxEdit`, `FxHistEntry`, `currentOf`/`originalOf`/`isChanged`/`sameEditValue`/`fieldTarget`; правила `validateFxEdit`, `normalizeFxEdit`, `fxEditableTargets` (у заблокированного — пусто), `fxEditRule`, `swiftFieldInvalid`, `FX_CONFIRM_TARGETS`; `groupAccount` |
 | `entities/fx-doc/model/detail.ts`, `api/detail.mapper.ts`, `api/detail.example.ts` | поле детали `edits` и его разбор (`parseEdits`); пример с правкой поля 57 |
 | `entities/fx-doc/model/swift.ts` | `editable: true` у 50, 52, 56, 57, 59, 70, 72 в `FX_FIELDS` |
 | `entities/fx-doc/api/ports.ts` | `fxEditPorts = createEditPorts({ gridId: 'fx-docs', parseDetail: parseFxDocDetail })` |
@@ -537,10 +537,10 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
 
 | Где | Что |
 |---|---|
-| `@katran/effector` — `createEditModel` | правка без DOM и HTTP: один редактор на экран (`$editing`, A и B вместе), черновики по ключу (`$drafts`), ошибки валидатора приложения (`$errors`), `$dirty`, сохранение через `saveFx` приложения (`$saving`, `$saveError`; ответ принимается только своего ключа и визита), `$confirm` — ожидающий `Prompt` («Отменить правку?» или подтверждение перед запросом), `requestLeave(next)` (грязный черновик — вопрос, иначе сразу `leave(next)`), `submit` (↺ — сохранение без редактора), факты `saved`/`failed` |
-| `features/doc-edit` — `createDocEdit` | модель кита с ключами `` `${id}:${target}` `` (цель — `field:57`, `refOut`, `accDt`, `accKt`, `valueDate`), правила сущности (`validate`, `normalize`, `same`), цели с подтверждением (`confirmTargets`), порты `saveEditFx`/`accountsFx`. Модель получает **нормализованное** текущее значение (иначе только что открытый редактор «грязный»), а в `was` запроса уходит значение **как его прислал бек** — бек сверяет его со своим (иначе `409` на строчных буквах и пробелах). Справочники счетов — `$accounts` по `` `${id}:${side}` ``, грузятся при открытии правки счёта, живут до ухода с экрана. Наружу — `docEdited({ id, detail })`, `conflict({ id })`, `$savedCount` |
-| `features/doc-edit` — `useEditContexts(edit, commitView)` | функция `(docId) => EditContext` для `DocDetail`: состояние редактора и `Prompt` видит только документ, которому они принадлежат; объявление «Изменения сохранены» в живую область |
-| `entities/fx-doc` | что правится (`fxEditableTargets` — по профилю, поле 56 у MT103 — только заполненное или уже с правками), правила и тексты ошибок (`validateFxEdit` — дословно эталона), нормализация (`normalizeFxEdit`), виды правки на компонентах кита (`FieldEditor`, `SuggestInput`, `DateInput`, `EditMark`, `EditHistory`, `Prompt`) |
+| `@katran/effector` — `createEditModel` | правка без DOM и HTTP: один редактор на экран (`$editing`, A и B вместе), черновики по ключу (`$drafts`), ошибки валидатора приложения (`$errors`), `$dirty`, сохранение через `saveFx` приложения (`$saving`, `$saveError`; ответ принимается только своего визита экрана: `saved`/`failed` — для любого ключа, а закрывается редактор или получает `$saveError` только тот, чей ключ в ответе), `$confirm` — ожидающий `Prompt` («Отменить правку?» или подтверждение перед запросом), `requestLeave(next)` (грязный черновик — вопрос, иначе сразу `leave(next)`), `submit` (↺ — сохранение без редактора), факты `saved`/`failed` |
+| `features/doc-edit` — `createDocEdit` | модель кита с ключами `` `${id}:${target}` `` (цель — `field:57`, `refOut`, `accDt`, `accKt`, `valueDate`), правила сущности (`validate`, `normalize`, `same`), цели с подтверждением (`confirmTargets`), порты `saveEditFx`/`accountsFx`. Модель получает **нормализованное** текущее значение (иначе только что открытый редактор «грязный»), а в `was` запроса уходит значение **как его прислал бек** — бек сверяет его со своим (иначе `409` на строчных буквах и пробелах). Справочники счетов — `$accounts` по `` `${id}:${side}` ``, грузятся при открытии правки счёта, живут до ухода с экрана. Наружу — `docEdited({ id, detail })`, `conflict({ id })`, `$savedCount`, `$unsaved` (отказ, которому негде показаться строкой: ↺ или редактор этого ключа уже закрыт уходом) |
+| `features/doc-edit` — `useEditContexts(edit, commitView)` | функция `(docId) => EditContext` для `DocDetail`: состояние редактора и `Prompt` видит только документ, которому они принадлежат; объявления в живую область — «Изменения сохранены» и «Изменения не сохранены: {текст отказа}» |
+| `entities/fx-doc` | что правится (`fxEditableTargets` — по профилю, поле 56 у MT103 — только заполненное или уже с правками; заблокированный документ — ничего), правила и тексты ошибок (`validateFxEdit` — дословно эталона), нормализация (`normalizeFxEdit`), виды правки на компонентах кита (`FieldEditor`, `SuggestInput`, `DateInput`, `EditMark`, `EditHistory`, `Prompt`) |
 | `widgets/doc-detail` | деталка о правке не знает: получает `editOf` и отдаёт `EditContext` видам домена; при `guard: true` закрытие и замену документа в слоте сначала сообщает (`leaveRequested`), выполняет — по `leave`; `replaceDetail`/`reloadDetail` |
 
 ### 14.2. Сборка на странице
@@ -570,11 +570,18 @@ sample({ clock: docEdit.docEdited, target: detail.replaceDetail })
 sample({ clock: docEdit.docEdited, target: registry.refreshRequested })
 // 409: документ изменили — деталь перезапрашивается, редактор с черновиком остаётся
 sample({ clock: docEdit.conflict, fn: ({ id }) => id, target: detail.reloadDetail })
+// документ пришёл заблокированным (перезапрос по 409) — только просмотр: редактор закрывается
+sample({
+  source: { slots: detail.$slots, editing: docEdit.model.$editing },
+  filter: ({ slots, editing }) => editing !== null
+    && [slots.a, slots.b].some((s) => s !== null && s.data !== null && s.data.lock !== null && editing.key.startsWith(editScope(s.id))),
+  target: docEdit.model.cancel,
+})
 ```
 
 В `registry.model.ts` деталка создаётся с охраной ухода — `createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle, guard: true })`. **С `guard: true` без связей `leaveRequested → requestLeave` и `leave → detail.leave` деталка не закрывается вовсе** — «×», Esc и замена документа только сообщают о намерении. Если правка вам не нужна, оставьте `createDetail` без `guard` (как у рубля).
 
-Экран передаёт контексты правки деталке (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`, к примеру раздела 13.2 добавляются две строки):
+Экран передаёт контексты правки деталке (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`, к примеру раздела 13.2 добавляются три импорта, вызов хука и проп `editOf`):
 
 ```tsx
 import { fxCommitView } from '../../../entities/fx-doc'
@@ -591,11 +598,12 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 
 ### 14.3. Поведение
 
+- Заблокированный документ (`lock` в детали; в реестре — «открыть только для просмотра») — только просмотр: ни карандашей, ни ↺, ни редакторов; маркеры «изменено» и аудит видны. Бек правку такого документа отклоняет (`400`, `path: target`).
 - Карандаш — у правимых полей при наведении на строку и по фокусу с клавиатуры (`:focus-visible`); имена «Редактировать поле {tag}» (с `B.` у последовательности B), «Изменить 20 исх», «Изменить счёт Дт» / «Изменить счёт Кт», «Изменить дату валютирования».
 - Редактор поля — «Как есть» (исходное с бека) и «Редактирование» (текущее), на всю ширину сетки под строкой поля; фокус — в первое поле; валидация на лету, «Сохранить» недоступна при ошибке. Один редактор на экран: открытие другого при грязном черновике — `Prompt` «Отменить правку?».
-- Esc в любом месте редактора — «Отмена» (черновик сбрасывается без вопроса), деталка открыта; Esc во время сохранения поглощается. Клик вне редактора поля его не закрывает. 20 исх — Enter сохраняет, Esc отменяет. Счёт — только из списка подсказки: Tab в строку состояния («Повторить» при отказе справочника), Esc, Tab за последним и клик вне — отмена.
+- Esc в любом месте редактора — «Отмена» (черновик сбрасывается без вопроса), деталка открыта; Esc во время сохранения поглощается. Клик вне редактора поля его не закрывает. 20 исх — Enter сохраняет, Esc отменяет. Счёт — только из списка подсказки: Tab в строку состояния («Повторить» при отказе справочника), Esc, Tab за последним и клик вне поля со строкой подсказки и списка — отмена; список открывается под строкой подсказки; выбор во время сохранения игнорируется. Клик по `Prompt` правку не отменяет — решают его кнопки.
 - Сохранение: «стало = текущее» — редактор закрывается без запроса; ↺ — правка «стало = исходное» с аудитом; дата валютирования — сначала `Prompt` «Утвердить новую дату валютирования?» («Отмена» оставляет правку с выбранной датой).
-- После сохранения — деталь из ответа, вкладки документа сброшены, реестр перезапрошен, «Изменения сохранены» в живую область; поле не раскрывается само (аудит — по раскрытию строки). Ошибка — строкой под редактором (`400` — `errors[0].message` бека как есть), «Сохранить» = повтор; `409` — «Документ изменили — откройте заново» и перезапрос детали.
+- После сохранения — деталь из ответа, вкладки документа сброшены, реестр перезапрошен, «Изменения сохранены» в живую область; поле не раскрывается само (аудит — по раскрытию строки). Ошибка — строкой под редактором (`400` — `errors[0].message` бека как есть; в редакторе поля подсвечены только виноватые строки и счёт — `FieldEditor.invalid`), «Сохранить» = повтор; `409` — «Документ изменили — откройте заново» и перезапрос детали. Отказ ↺ и отказ сохранения, когда редактор уже закрыт уходом, — объявлением «Изменения не сохранены: …».
 - Уход из документа с грязным черновиком («×», Esc, сдвиг B→A, другой документ в слоте) — `Prompt` «Отменить правку?» в drawer'е документа: «Продолжить правку» — остаёмся, «Отменить правку» — уходим. Уход во время сохранения и уход с экрана (`pageClosed`) — без вопроса.
 
 ### 14.4. Бек отдаёт правку иначе
@@ -604,18 +612,36 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 - **Другая форма `edits` в детали** — правится только маппер `parseEdits` в `entities/fx-doc/api/detail.mapper.ts`; он обязан вернуть `Record<string, FxEdit>` (`model/edit.ts`). После правки обновите `edits` в `api/detail.example.ts` — на нём гоняется `detail.mapper.test.ts`.
 - **Другой ответ счетов** — `fromAccountsResponse` в `edit-ports.ts`.
 - **Другие правила** (набор, длины, референс) — `entities/fx-doc/model/rules.ts`; правила фронта и бека должны совпадать, иначе пользователь увидит ошибку только после «Сохранить». Тексты ошибок бека фронт показывает дословно (`pi-api.md` §1.7).
-- **Другой набор правимого** — `editable` в `FX_FIELDS` (`model/swift.ts`) и `fxEditableTargets` (`model/rules.ts`).
+- **Другой набор правимого** — `editable` в `FX_FIELDS` (`model/swift.ts`) и `fxEditableTargets` (`model/rules.ts`); подсветка виноватых строк — `swiftFieldInvalid` там же (держите её в согласии с `validateSwiftField`).
 
 ### 14.5. Как проверить
 
 - **Контрактный тест правки против своего бека.** Блок `describe('контракт правки fx-docs (план 2c) …')` в `apps/pi/src/app/fake/contract.test.ts` — скопируйте его, как блоки детали (раздел 13.6), и подставьте свой обработчик. Против бека держите: `saveEditFx` возвращает деталь, которую разбирает маппер, с новым значением и записью в `edits`; `accKt` — запись `edits.route` от «система» и новые поля маршрута; ↺ `accKt` — исходный маршрут, история сохранена; `valueDate` — запись сразу `confirmed`, `by` = `who`; `accountsFx` для `kt` и `dt` разбирается, неверный `side` — `400`; у рубля — `404`. Специфичны для фейка и уберите: сид поля 57 (документ и тексты записей), состав справочников `CLIENT_ACCOUNTS`/`BANK_ACCOUNTS`, «следующий по кругу» маршрут, `who: 'Вы'`. Ответы `409`, `400` и регуляторы проверяет `apps/pi/src/app/fake/server.test.ts` («фейковый сервер: правка детали») — это тесты фейка, у вас — свои на `409` и `400` бека.
 - **Правила и модели** — `entities/fx-doc/model/rules.test.ts`, `features/doc-edit/model/createDocEdit.test.ts`, `features/doc-edit/ui/useEditContexts.test.tsx`, `pages/fx-docs/model/registry.model.test.ts` (связи страницы, охрана ухода), `entities/fx-doc/ui/edit.test.tsx` — переезжают вместе со слайсами.
-- **e2e правки** — `apps/pi/e2e/detail-edit.spec.ts`: геометрия против эталона ± 2, поле 57 (ошибка набора, сохранение, маркер, реестр перезапрошен), 20 исх, счёт Кт и маршрут, дата с `Prompt`, грязный черновик и уход, `409` и отказ сохранения, у рубля карандашей нет. Как есть не заработает: завязан на данные фейка (сид правки поля 57 у второй записи реестра, MT202 в CNY; подсказка и 20 исх — первая запись, MT199 в USD; маршрут — первая запись USD типа MT103/MT202), регуляторы `?slow=N`, `?conflict=edit`, `?fail=edit` и счёт запросов через событие окна `k-fake-request` — фейк живёт в странице, и сеть его запросов не видит (`browserFakeOptions.observe`, `app/fake/params.ts`). С вашим беком считайте запросы обычным `page.on('request')`.
+- **e2e правки** — `apps/pi/e2e/detail-edit.spec.ts`: геометрия против эталона ± 2, поле 57 (ошибка набора, сохранение, маркер, реестр перезапрошен), 20 исх, счёт Кт и маршрут, дата с `Prompt`, грязный черновик и уход (в т. ч. клик по кнопкам `Prompt` при правке 20 исх), `409` и отказ сохранения, заблокированный документ без карандашей (третья запись фейка, № 811306), у рубля карандашей нет. Как есть не заработает: завязан на данные фейка (сид правки поля 57 у второй записи реестра, MT202 в CNY; подсказка и 20 исх — первая запись, MT199 в USD; маршрут — первая запись USD типа MT103/MT202), регуляторы `?slow=N`, `?conflict=edit`, `?fail=edit` и счёт запросов через событие окна `k-fake-request` — фейк живёт в странице, и сеть его запросов не видит (`browserFakeOptions.observe`, `app/fake/params.ts`). С вашим беком считайте запросы обычным `page.on('request')`.
 - **Регуляторы фейка** (только стенд, `apps/pi/README.md`): `?fail=edit` — `500` на сохранении, `?fail=accounts` — `500` на справочнике счетов, `?conflict=edit` — `409` на любой правке. Правки фейка — в памяти страницы до перезагрузки, строки реестра они не меняют. Поля 50, 59, 70 у данных фейка — кириллицей: редактор этих полей открывается сразу с ошибкой набора — это данные стенда, не дефект.
+
+### 14.6. Правка в другом реестре
+
+Рубль в 2c — только просмотр; когда правка понадобится другому реестру (рублю или вашему), шаги те же, что у валюты. Порядок:
+
+1. **Порты** — `createEditPorts({ gridId, parseDetail })` из `shared/api` в `api/ports.ts` сущности (как `fxEditPorts`): `saveEditFx` (`POST …/documents/{id}/edits`, ответ — деталь тем же парсером, что у `detailFx`) и `accountsFx` (`GET …/documents/{id}/accounts?side=`).
+2. **Правки в детали** — поле `edits` в типе детали и его разбор в маппере (по образцу `parseEdits` в `entities/fx-doc/api/detail.mapper.ts`), пример с правкой — в `api/detail.example.ts`; помощники `currentOf`/`originalOf`/`isChanged` — по образцу `entities/fx-doc/model/edit.ts`.
+3. **Правила сущности** — `validate(target, v)`, `normalize(target, v)`, `same(a, b)`, `confirmTargets` (по образцу `entities/fx-doc/model/rules.ts`) и список правимого (`…EditableTargets`, им же бек проверяет цель). **Без своего `same`** модель сравнивает JSON и чувствительна к порядку ключей: только что открытый редактор окажется «грязным», и уход спросит «Отменить правку?» без правки.
+4. **Виды** — `formEdit(d, edit)` домена для `ConfigForm` (по образцу `fxFormEdit`) и третий параметр `edit` у `renderHero`/`renderBlock`: виды строятся на `EditContext` (`shared/lib/detail`) — `editing`, `draft`, `error`, `saving`, `saveError`, команды `open`/`change`/`cancel`/`save`/`revert`, справочники `accounts(side)`/`retryAccounts(side)`. Тексты подсказки счетов («Только из карточки клиента · …», «Счёт не из списка …») — в `entities/fx-doc/ui/edit.tsx` (`SIDE`), у другой сущности — свои.
+5. **`commitView` для `useEditContexts`** — `(target, was, now) => EditConfirmView`: текст `Prompt` подтверждения перед запросом (у валюты — `fxCommitView`, «было → стало» элементами `PromptChange`). Без целей подтверждения (`confirmTargets: []`) он не вызывается — передайте функцию, возвращающую общий вид, например `() => ({ title: 'Подтвердите действие', okLabel: 'Подтвердить', cancelLabel: 'Отмена', tone: 'neutral' })`.
+6. **Модель страницы** — `pages/<экран>/model/edit.model.ts` по образцу раздела 14.2 (связи `leaveRequested`/`leave`, `docEdited`, `conflict`, закрытие редактора у заблокированного документа) и `createDetail({ …, guard: true })`; `editOf={useEditContexts(docEdit, commitView)}` в `DocDetail`.
+7. **Бек (или фейк стенда)** — `…/edits` и `…/accounts` по `docs/reference/pi-api.md` §1.7, §1.8, правки в детали — §7.6; у фейка — хранилище `createFxEditStore` (`app/fake/edits.ts`) с правилами сущности.
+
+Оговорки:
+
+- **Заблокированный документ — только просмотр** (Д66): список правимого у документа с `lock` — пустой (бек отклоняет правку), виды не рисуют карандаши, ↺ и редакторы (маркеры и аудит остаются), модель страницы закрывает редактор, если документ пришёл заблокированным.
+- **Справочник счетов** `$accounts` грузится только для целей `accDt`/`accKt` (`sideOf` в `features/doc-edit/model/createDocEdit.ts`); другие имена целей счетов справочник не запросят.
+- **Прокрутка drawer'а** с 2c — во внутренней части `[data-part="scroll"]`, не в корне (`CHANGELOG.md`, срез 2c): стили и скрипты, прокручивающие деталку, переносите туда.
 
 ## Зависимости
 
-Версии — как в `apps/pi/package.json`; переносимые слайсы (`pages`/`widgets`/`entities`/`shared`) ставят те же пакеты и версии в вашем приложении:
+Версии — как в `apps/pi/package.json`; переносимые слайсы (`pages`/`widgets`/`features`/`entities`/`shared`) ставят те же пакеты и версии в вашем приложении:
 
 | Пакет | Версия | Кто именно |
 |---|---|---|
@@ -623,7 +649,7 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 | `effector` | `^23.4.4` | peer-зависимость `@katran/effector` — `>=23` |
 | `effector-react` | `^23.3.0` | `useUnit` — вызывается напрямую в `widgets/doc-registry/ui/DocRegistry.tsx`, `widgets/doc-detail/ui/DocDetail.tsx` и в страницах (не только внутри `@katran/effector`); peer-зависимость `@katran/effector` — `>=23` |
 | `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel`, `Drawer`, `ConfigForm` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui`, `widgets/doc-detail/ui`, страницы (`gridFocusTarget`) |
-| `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts`; `createDrawerStackModel` — внутри `widgets/doc-detail/lib/createDetail.ts` |
+| `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts`; `createDrawerStackModel` — внутри `widgets/doc-detail/lib/createDetail.ts`; `createEditModel` — внутри `features/doc-edit/model/createDocEdit.ts` |
 | `@katran/tokens` | `workspace:*` | шрифты (`@katran/tokens/fonts.css`, раздел 3); токены переезжают вместе с `@katran/ui` (см. ниже) |
 
 **Для тестов слайсов** (если оставляете `*.test.ts(x)`, раздел 2) — dev-зависимости, версии как в `apps/pi/package.json` (библиотеки тестирования — под React 17):
