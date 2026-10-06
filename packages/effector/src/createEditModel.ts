@@ -207,11 +207,11 @@ export function createEditModel<Draft, Result, Next = void, Fail extends Error =
   })
   sample({ clock: saveDecision, filter: (q) => !same(q.draft, q.initial) && !confirmSave(q.key), target: requestFx })
 
-  // --- submit (↺): без редактора и без Prompt ---
+  // --- submit (↺): без редактора и без Prompt; при открытом Prompt — игнор (как open и save: вопрос ждёт ответа) ---
   const submitted = sample({
     clock: submit,
-    source: { saving: $saving, visit: $visit },
-    filter: ({ saving }) => !saving,
+    source: { saving: $saving, confirm: $confirm, visit: $visit },
+    filter: ({ saving, confirm }) => !saving && confirm === null,
     fn: ({ visit }, { key, initial, draft }): Request<Draft> => ({ key, initial, draft: normalize(key, draft), visit }),
   })
   sample({ clock: submitted, filter: (q) => !same(q.draft, q.initial), target: requestFx })

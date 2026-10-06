@@ -24,3 +24,11 @@ sample({ clock: docEdit.docEdited, target: detail.replaceDetail })
 sample({ clock: docEdit.docEdited, target: registry.refreshRequested })
 // 409: документ изменили — деталь перезапрашивается, редактор с черновиком остаётся
 sample({ clock: docEdit.conflict, fn: ({ id }) => id, target: detail.reloadDetail })
+// документ пришёл заблокированным (перезапрос по 409) — только просмотр (Д66): вид редактор не рисует, модель его закрывает,
+// иначе невидимый грязный черновик держал бы Prompt «Отменить правку?» при уходе
+sample({
+  source: { slots: detail.$slots, editing: docEdit.model.$editing },
+  filter: ({ slots, editing }) => editing !== null
+    && [slots.a, slots.b].some((s) => s !== null && s.data !== null && s.data.lock !== null && editing.key.startsWith(editScope(s.id))),
+  target: docEdit.model.cancel,
+})

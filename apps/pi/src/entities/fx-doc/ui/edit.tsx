@@ -148,7 +148,8 @@ const byDigits = (o: Option, q: string) => String(o.value).includes(q)
 
 function AccountEditor({ d, edit, side }: { d: FxDocDetail; edit: EditContext; side: AccountSide }) {
   const cfg = SIDE[side]
-  // текст запроса — состояние вида; черновик модели — только выбранный счёт (Р9)
+  // текст запроса — состояние вида; черновик модели — только выбранный счёт (Р9); выбор во время сохранения — игнор
+  // (модель save при запросе в полёте не примет, а черновик сменился бы молча)
   const [q, setQ] = useState('')
   const slot = edit.accounts(side)
   const items = slot?.items ?? []
@@ -164,7 +165,7 @@ function AccountEditor({ d, edit, side }: { d: FxDocDetail; edit: EditContext; s
         aria-label={`Счёт ${cfg.label}`} placeholder="20 цифр" options={options} value={q} onChange={setQ}
         match={byDigits} sanitize={digits} emptyText={(query) => cfg.empty(d.currency, query)} notInListText={cfg.notInList}
         hint={edit.saveError ?? (slot?.state === 'ready' ? cfg.hint(d.currency, items.length) : undefined)} keysHint="↑↓ Enter · Esc" status={status}
-        onCommit={(o) => { edit.change(String(o.value)); edit.save() }} onCancel={edit.cancel}
+        onCommit={(o) => { if (edit.saving) return; edit.change(String(o.value)); edit.save() }} onCancel={edit.cancel}
       />
     </div>
   )

@@ -306,6 +306,55 @@ describe('createEditModel (спека 2c §2.2)', () => {
     expect(scope.getState(m.$drafts)).toEqual({})
   })
 
+  it('защита: cancel закрывает редактор, открытый после ухода во время сохранения другого ключа (Ruling: игнор только своего ключа)', async () => {
+    const { m, scope, open, change, fire, settle, resolve } = setup()
+    await open('d1:57', A); await change('d1:57', B)
+    fire(allSettled(m.save, { scope }))
+    await flush()
+    fire(allSettled(m.requestLeave, { scope, params: { scope: 'd1:', next: 'away' } }))
+    fire(allSettled(m.open, { scope, params: { key: 'd2:59', initial: C } }))
+    expect(scope.getState(m.$saving)).toBe(true)
+    fire(allSettled(m.cancel, { scope }))
+    expect(scope.getState(m.$editing)).toBeNull()
+    resolve('d1:57', 'ok')
+    await settle()
+  })
+
+  it('защита: при открытом $confirm open, save и submit игнорируются; confirmResult(true) шлёт только запрос commit', async () => {
+    const { m, scope, calls, open, change, resolve } = setup()
+    await open('d1:vd', A); await change('d1:vd', B)
+    await allSettled(m.save, { scope })
+    expect(scope.getState(m.$confirm)).toEqual({ kind: 'commit', key: 'd1:vd' })
+    await allSettled(m.open, { scope, params: { key: 'd2:59', initial: C } })
+    await allSettled(m.save, { scope })
+    await allSettled(m.submit, { scope, params: { key: 'd2:59', initial: C, draft: A } })   // ↺ при открытом Prompt
+    expect(calls).toHaveLength(0)
+    expect(scope.getState(m.$saving)).toBe(false)
+    expect(scope.getState(m.$editing)).toEqual({ key: 'd1:vd', initial: A })
+    expect(scope.getState(m.$confirm)).toEqual({ kind: 'commit', key: 'd1:vd' })
+    const p = allSettled(m.confirmResult, { scope, params: true })
+    await flush()
+    expect(calls.map((c) => c.q)).toEqual([{ key: 'd1:vd', draft: B, initial: A }])
+    resolve('d1:vd', 'ok')
+    await p
+    expect(calls).toHaveLength(1)
+  })
+
+  it('защита: requestLeave в scope при запросе этого ключа в полёте — редактор закрыт, leave без Prompt (даже с грязным черновиком)', async () => {
+    const { m, scope, open, change, fire, settle, resolve, leaves } = setup()
+    await open('d1:57', A); await change('d1:57', B)
+    fire(allSettled(m.save, { scope }))
+    await flush()
+    fire(allSettled(m.change, { scope, params: { key: 'd1:57', draft: C } }))   // черновик меняется и во время сохранения — он всё равно грязный
+    expect(scope.getState(m.$dirty)).toBe(true)
+    fire(allSettled(m.requestLeave, { scope, params: { scope: 'd1:', next: 'go' } }))
+    expect(scope.getState(m.$confirm)).toBeNull()
+    expect(scope.getState(m.$editing)).toBeNull()
+    expect(leaves()).toEqual(['go'])
+    resolve('d1:57', 'ok')
+    await settle()
+  })
+
   it('reset: всё к начальному', async () => {
     const { m, scope, open, change, reject } = setup()
     await open('d1:57', A); await change('d1:57', B)

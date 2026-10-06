@@ -94,11 +94,11 @@ describe('страница fx-docs: вкладки деталки (спека 2b
 describe('страница fx-docs: правка деталки (план 2c, Task 12)', () => {
   const doc = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
   /** Экран со счётчиками запросов детали и реестра; saveEditFx — свой обработчик. */
-  function page(save: (q: EditQuery) => Promise<FxDocDetail>) {
+  function page(save: (q: EditQuery) => Promise<FxDocDetail>, load: (id: string, n: number) => FxDocDetail = (id) => ({ ...doc, id })) {
     const calls = { detail: [] as string[], search: 0 }
     const scope = fork({
       handlers: [
-        [fxDocPorts.detailFx, async (id: string) => { calls.detail.push(id); return { ...doc, id } }],
+        [fxDocPorts.detailFx, async (id: string) => { calls.detail.push(id); return load(id, calls.detail.length) }],
         [fxDocPorts.searchFx, async () => { calls.search += 1; return { rows: [], total: 0 } }],
         [fxDocPorts.facetsFx, async () => []],
         [fxDocPorts.filterMetaFx, async () => ({ fields: [] })],
@@ -180,6 +180,48 @@ describe('страница fx-docs: правка деталки (план 2c, Ta
     expect(scope.getState(docEdit.model.$drafts)['u1:refOut']).toBe('NEWREF')
     expect(scope.getState(docEdit.model.$saveError)).toBe(CONFLICT_TEXT)
     expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'u1', state: 'ready' })
+    await allSettled(lifecycle.pageClosed, { scope })
+  })
+
+  it('уход во время сохранения — без Prompt; ответ после ухода — деталь в кэше (без запроса при повторном открытии) и перезапрос реестра', async () => {
+    const answer: FxDocDetail = { ...doc, id: 'u1', refOut: 'NEWREF' }
+    let release: () => void = () => {}
+    const { scope, calls } = page(() => new Promise<FxDocDetail>((ok) => { release = () => ok(answer) }))
+    await allSettled(lifecycle.pageOpened, { scope })
+    await openDoc(scope, 'u1')
+    await dirty(scope, 'u1')
+    const saving = allSettled(docEdit.model.save, { scope })
+    await new Promise<void>((r) => setTimeout(r, 0))
+    expect(scope.getState(docEdit.model.$saving)).toBe(true)
+    const closing = allSettled(detail.closeTop, { scope })
+    expect(scope.getState(docEdit.model.$confirm)).toBeNull()
+    expect(scope.getState(detail.$slots)).toEqual({ a: null, b: null })
+    expect(scope.getState(docEdit.model.$editing)).toBeNull()
+    release()
+    await saving; await closing
+    expect(calls).toEqual({ detail: ['u1'], search: 2 })
+    await openDoc(scope, 'u1')
+    expect(calls.detail).toEqual(['u1'])
+    expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'u1', state: 'ready', data: answer })
+    await allSettled(lifecycle.pageClosed, { scope })
+  })
+
+  it('409, а перезапрошенный документ заблокирован — редактор закрыт (только просмотр, Д66), Prompt при уходе не нужен', async () => {
+    const locked = { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' }
+    const { scope, calls } = page(
+      async () => { throw toApiError(409, { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 }) },
+      (id, n) => ({ ...doc, id, lock: n > 1 ? locked : null }),
+    )
+    await allSettled(lifecycle.pageOpened, { scope })
+    await openDoc(scope, 'u1')
+    await dirty(scope, 'u1')
+    await allSettled(docEdit.model.save, { scope })
+    expect(calls.detail).toEqual(['u1', 'u1'])
+    expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'u1', state: 'ready', data: { lock: locked } })
+    expect(scope.getState(docEdit.model.$editing)).toBeNull()
+    await allSettled(detail.closeTop, { scope })
+    expect(scope.getState(docEdit.model.$confirm)).toBeNull()
+    expect(scope.getState(detail.$slots)).toEqual({ a: null, b: null })
     await allSettled(lifecycle.pageClosed, { scope })
   })
 })

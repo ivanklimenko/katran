@@ -28,6 +28,11 @@ export type DocEdit<D> = {
   conflict: Event<{ id: string }>
   /** Растёт на docEdited — объявление «Изменения сохранены». */
   $savedCount: Store<number>
+  /**
+   * Отказ сохранения, которому негде показаться строкой: ↺ (редактора нет) или редактор этого ключа уже закрыт (уход во время
+   * сохранения). count растёт — объявление text «Изменения не сохранены: {текст отказа}».
+   */
+  $unsaved: Store<{ count: number; text: string }>
 }
 
 /** Ключ правки: `${id}:${target}`; id без ':' (UUID контракта), цель может содержать ':' ('field:57'). */
@@ -107,11 +112,11 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   })
   $was.on(accepted, (m, { key, raw }) => ({ ...m, [key]: raw }))
   $openRaw.reset(accepted)
-  // ↺: модель примет submit, только если запроса в полёте нет; ключ открытого редактора хранит was своего открытия
+  // ↺: модель примет submit, только если запроса в полёте нет и Prompt не открыт; ключ открытого редактора хранит was своего открытия
   const submitted = sample({
     clock: submit,
-    source: { saving: inner.$saving, editing: inner.$editing },
-    filter: ({ saving, editing }, { key }) => !saving && (editing === null || editing.key !== key),
+    source: { saving: inner.$saving, editing: inner.$editing, confirm: inner.$confirm },
+    filter: ({ saving, editing, confirm }, { key }) => !saving && confirm === null && (editing === null || editing.key !== key),
     fn: (_, x) => x,
   })
   $was.on(submitted, (m, { key, initial }) => ({ ...m, [key]: initial }))
@@ -121,6 +126,14 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   const docEdited = sample({ clock: inner.saved, fn: ({ result }) => ({ id: result.id, detail: result }) })
   const conflict = sample({ clock: inner.failed, filter: ({ error }) => error.status === 409, fn: ({ key }) => ({ id: idOf(key) }) })
   const $savedCount = createStore(0).on(docEdited, (n) => n + 1)
+  // отказ без своего открытого редактора — объявлением (строки под редактором нет)
+  const unseen = sample({
+    clock: inner.failed,
+    source: inner.$editing,
+    filter: (editing, { key }) => editing === null || editing.key !== key,
+    fn: (_, { error }) => `Изменения не сохранены: ${errorText(error)}`,
+  })
+  const $unsaved = createStore({ count: 0, text: '' }).on(unseen, ({ count }, text) => ({ count: count + 1, text }))
 
   // --- справочники счетов: своя копия порта, ответы только своего визита экрана (как у createDetail) ---
   const loadAccounts = createEvent<AccountsQuery>()
@@ -159,5 +172,5 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   $was.reset(lifecycle.pageClosed)
   $openRaw.reset(lifecycle.pageClosed)
 
-  return { model, $accounts, loadAccounts, docEdited, conflict, $savedCount }
+  return { model, $accounts, loadAccounts, docEdited, conflict, $savedCount, $unsaved }
 }

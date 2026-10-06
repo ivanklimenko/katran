@@ -146,11 +146,15 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   })
 
   // ответ после ухода с экрана и ответ прошлого визита не принимаются: при возврате деталь запросится заново;
-  // ответ прежней эпохи (ушёл до replaceDetail) — доправочный: ни в кэш, ни в ошибки; finally — по визиту, загрузку снимает
+  // ответ прежней эпохи (ушёл до replaceDetail) — доправочный: ни в кэш, ни в ошибки, ни в загрузку. Загрузку документа
+  // снимает сам replaceDetail (деталь уже есть — перезапрос уходит сразу), а finally старой эпохи не снимает загрузку новой
   const done = sample({ clock: loadFx.done, source: currentEpoch, filter: fresh, fn: (_, x) => x })
   const failed = sample({ clock: loadFx.fail, source: currentEpoch, filter: fresh, fn: (_, x) => x })
-  const settled = sample({ clock: loadFx.finally, source: current, filter: mine, fn: (_, x) => x })
-  $loading.on(loadFx, (l, { id }) => ({ ...l, [id]: true })).on(settled, (l, { params }) => without(l, params.id))
+  const settled = sample({ clock: loadFx.finally, source: currentEpoch, filter: fresh, fn: (_, x) => x })
+  $loading
+    .on(loadFx, (l, { id }) => ({ ...l, [id]: true }))
+    .on(settled, (l, { params }) => without(l, params.id))
+    .on(replaced, (l, { id }) => without(l, id))
   $errors.on(loadFx, (e, { id }) => without(e, id))
   $cache.on(done, (c, { params, result }) => ({ ...c, [params.id]: result }))
   $errors.on(failed, (e, { params, error }) => ({ ...e, [params.id]: error.message }))

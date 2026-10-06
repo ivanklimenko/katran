@@ -148,6 +148,15 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(failed.retryAccounts).toHaveBeenCalledWith('kt')
   })
 
+  it('счёт: выбор во время сохранения игнорируется — ни change, ни save (иначе черновик сменился бы без запроса)', async () => {
+    const ready: AccountsSlot = { state: 'ready', items: [{ account: '40817840100050017762', ccy: 'USD', kind: 'Текущий' }], error: null }
+    const edit = ctx({ editing: 'accKt', saving: true, draft: '40817840200050017763', accounts: vi.fn(() => ready) })
+    renderEdit(d, edit)
+    await userEvent.click(screen.getByRole('option', { name: /40817840100050017762/ }))
+    expect(edit.change).not.toHaveBeenCalled()
+    expect(edit.save).not.toHaveBeenCalled()
+  })
+
   it('счёт Дт: справочник ещё не пришёл — «Загрузка счетов…», фокус в поле', () => {
     renderEdit(d, ctx({ editing: 'accDt' }))
     expect(screen.getByRole('combobox', { name: 'Счёт Дт' })).toHaveFocus()

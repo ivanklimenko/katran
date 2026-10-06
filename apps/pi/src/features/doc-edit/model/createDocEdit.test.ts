@@ -120,6 +120,30 @@ describe('createDocEdit (план 2c §3.2)', () => {
     expect(t.edited()).toHaveLength(1)
   })
 
+  it('отказ без своего редактора (↺, уход во время сохранения) — $unsaved «Изменения не сохранены: …»; отказ открытого редактора — строкой у него', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    const bad = (message: string) => new ApiError(400, { type: 'urn:katran:validation', title: 'Правка отклонена', status: 400, errors: [{ path: 'now', code: 'VALIDATION', message }] }, message)
+    // ↺ — редактора нет
+    t.fire(allSettled(edit.model.submit, { scope, params: { key: 'u1:refOut', initial: 'ref1', draft: '' } }))
+    saves[0]!.fail(bad('Референс не может быть пустым'))
+    await t.settle()
+    expect(scope.getState(edit.$unsaved)).toEqual({ count: 1, text: 'Изменения не сохранены: Референс не может быть пустым' })
+    // отказ открытого редактора того же ключа — только $saveError
+    await saveField(t)
+    saves[1]!.fail(bad('Строка 2: недопустимый символ'))
+    await t.settle()
+    expect(scope.getState(edit.model.$saveError)).toBe('Строка 2: недопустимый символ')
+    expect(scope.getState(edit.$unsaved).count).toBe(1)
+    // уход во время сохранения: редактор закрыт — отказ объявляется (409 — текстом конфликта)
+    t.fire(allSettled(edit.model.save, { scope }))
+    t.fire(allSettled(edit.model.requestLeave, { scope, params: { scope: 'u1:', next: { kind: 'close', slot: 'a' } } }))
+    expect(scope.getState(edit.model.$editing)).toBeNull()
+    saves[2]!.fail(new ApiError(409, { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 }, 'Документ изменили'))
+    await t.settle()
+    expect(scope.getState(edit.$unsaved)).toEqual({ count: 2, text: 'Изменения не сохранены: Документ изменили — откройте заново' })
+  })
+
   it('409 → $saveError CONFLICT_TEXT, conflict { id }, редактор и черновик на месте', async () => {
     const t = setup()
     const { edit, scope, saves } = t

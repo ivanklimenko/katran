@@ -113,4 +113,14 @@ describe('useEditContexts (план 2c §3.2)', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Изменения сохранены'))
     expect(ctx.d1?.editing).toBeNull()
   })
+
+  it('отказ ↺ — объявление «Изменения не сохранены: …» в живой области', async () => {
+    const { ctx } = setup(async () => {
+      throw new ApiError(400, { type: 'urn:katran:validation', title: 'Правка отклонена', errors: [{ path: 'now', code: 'VALIDATION', message: 'Не тот формат' }] }, 'Правка отклонена: Не тот формат')
+    })
+    expect(screen.getByRole('status')).toHaveTextContent('')
+    act(() => { ctx.d1!.revert('refOut', 'REF2', 'REF1') })
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Изменения не сохранены: Не тот формат'))
+    expect(ctx.d1?.saveError).toBeNull()
+  })
 })

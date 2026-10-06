@@ -9,7 +9,8 @@ import { DISCARD_VIEW, editKey, editScope, targetOf, type DocEdit } from '../mod
  * Контексты правки по документам (план 2c §3.2): деталка получает EditContext своего документа, не зная о модели.
  * Состояние редактора (цель, черновик, ошибки, Prompt) видно только документу, которому принадлежит ключ открытого редактора.
  * Команды cancel/save/onConfirm действуют только из документа, которому принадлежат редактор и Prompt.
- * Рост $savedCount — объявление «Изменения сохранены» в живой области (на монтировании — без объявления).
+ * Рост $savedCount — объявление «Изменения сохранены» в живой области (на монтировании — без объявления); рост $unsaved — его текст
+ * «Изменения не сохранены: …» (отказ ↺ и отказ после ухода из редактора).
  *
  * commitView получает initial модели (нормализованное текущее) и черновик как он есть, без нормализации: запрос уйдёт с
  * normalize(черновик). Для единственной цели с Prompt «commit» — даты валютирования ГГГГ-ММ-ДД из DateInput — это одно и то же.
@@ -19,8 +20,8 @@ export function useEditContexts<D extends { id: string }>(
   commitView: (target: string, was: EditValue, now: EditValue) => EditConfirmView,
 ): (docId: string) => EditContext {
   const { model } = edit
-  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount] = useUnit([
-    model.$editing, model.$drafts, model.$errors, model.$saving, model.$saveError, model.$confirm, edit.$accounts, edit.$savedCount,
+  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount, unsaved] = useUnit([
+    model.$editing, model.$drafts, model.$errors, model.$saving, model.$saveError, model.$confirm, edit.$accounts, edit.$savedCount, edit.$unsaved,
   ])
   const [open, change, cancel, save, submit, confirmResult, loadAccounts] = useUnit([
     model.open, model.change, model.cancel, model.save, model.submit, model.confirmResult, edit.loadAccounts,
@@ -32,6 +33,11 @@ export function useEditContexts<D extends { id: string }>(
     if (savedCount > seen.current) announce('Изменения сохранены')
     seen.current = savedCount
   }, [savedCount, announce])
+  const seenUnsaved = useRef(unsaved.count)
+  useEffect(() => {
+    if (unsaved.count > seenUnsaved.current) announce(unsaved.text)
+    seenUnsaved.current = unsaved.count
+  }, [unsaved, announce])
 
   return useCallback((docId: string): EditContext => {
     const scope = editScope(docId)
