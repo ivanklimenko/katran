@@ -91,33 +91,36 @@ describe('EditHistory: решение второй руки и rejected (спе�
   ]
   const open = async () => { await userEvent.click(screen.getByRole('button', { name: 'История' })) }
 
-  it('обработчики заданы, последняя pending — «Утвердить» и «Отклонить» только в последней записи; клик вызывает обработчик', async () => {
+  it('обработчики заданы, последняя pending — «Утвердить» и «Отклонить» в сводке без раскрытия; клик вызывает обработчик', async () => {
     const onConfirm = vi.fn()
     const onReject = vi.fn()
     renderK(<EditHistory entries={pendingLast} label="поля 57" onConfirm={onConfirm} onReject={onReject} />)
-    await open()
-    const [first, last] = within(screen.getByRole('list')).getAllByRole('listitem')
-    expect(within(first!).queryAllByRole('button')).toHaveLength(0)
-    expect(within(last!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Утвердить', 'Отклонить'])
-    await userEvent.click(within(last!).getByRole('button', { name: 'Утвердить' }))
+    expect(screen.queryByRole('list')).toBeNull()
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Утвердить', 'Отклонить', 'История'])
+    await userEvent.click(screen.getByRole('button', { name: 'Утвердить' }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
-    await userEvent.click(within(last!).getByRole('button', { name: 'Отклонить' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Отклонить' }))
     expect(onReject).toHaveBeenCalledTimes(1)
   })
 
-  it('подписи — свойствами confirmLabel/rejectLabel; задан один обработчик — одна кнопка', async () => {
-    renderK(<EditHistory entries={pendingLast} label="поля 57" onReject={vi.fn()} rejectLabel="Вернуть" confirmLabel="Принять" />)
+  it('при раскрытии истории второй пары кнопок нет — в записях кнопок нет', async () => {
+    renderK(<EditHistory entries={pendingLast} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
     await open()
-    const last = within(screen.getByRole('list')).getAllByRole('listitem')[1]!
-    expect(within(last).getAllByRole('button').map((b) => b.textContent)).toEqual(['Вернуть'])
+    expect(within(screen.getByRole('list')).queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getAllByRole('button', { name: 'Утвердить' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Отклонить' })).toHaveLength(1)
   })
 
-  it('последняя confirmed — кнопок нет; обработчики не заданы — кнопок нет', async () => {
+  it('подписи — свойствами confirmLabel/rejectLabel; задан один обработчик — одна кнопка', () => {
+    renderK(<EditHistory entries={pendingLast} label="поля 57" onReject={vi.fn()} rejectLabel="Вернуть" confirmLabel="Принять" />)
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Вернуть', 'История'])
+  })
+
+  it('последняя confirmed — кнопок решения нет; обработчики не заданы — кнопок решения нет', () => {
     const { rerender } = renderK(<EditHistory entries={entries.slice(0, 1)} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
-    await open()
-    expect(within(screen.getByRole('list')).queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['История'])
     rerender(<EditHistory entries={pendingLast} label="поля 57" />)
-    expect(within(screen.getByRole('list')).queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['История'])
   })
 
   it('rejected: бейдж «отклонено» (bad), подсказка «Отклонил(а) …», строка «Причина: …», примечание автора', async () => {
@@ -135,11 +138,12 @@ describe('EditHistory: решение второй руки и rejected (спе�
     expect(badge.closest('[data-k-tip]')).toHaveAttribute('data-k-tip', 'Отклонил(а) Смирнова Е. В., 23.09.2026 10:00')
     expect(within(item).getByText('Причина: BIC не по справочнику')).toBeInTheDocument()
     expect(within(item).getByText('Полное наименование филиала')).toBeInTheDocument()
-    expect(within(item).queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Свернуть историю'])
   })
 
-  it('axe без нарушений для истории с кнопками', async () => {
+  it('axe без нарушений для истории с кнопками (свёрнутой и раскрытой)', async () => {
     const { container } = renderK(<EditHistory entries={pendingLast} label="поля 57" onConfirm={vi.fn()} onReject={vi.fn()} />)
+    expect(await axe(container)).toHaveNoViolations()
     await open()
     expect(await axe(container)).toHaveNoViolations()
   })

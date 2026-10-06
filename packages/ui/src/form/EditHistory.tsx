@@ -63,19 +63,13 @@ function DiffLine({ line }: { line: EditDiffLine }) {
   )
 }
 
-function Entry({ entry, decision }: { entry: EditHistoryEntry; decision?: Decision | undefined }) {
+function Entry({ entry }: { entry: EditHistoryEntry }) {
   return (
     <li className={s.hlItem} data-status={entry.status}>
       <div className={s.hlHead}>
         <b className={s.hlWho}>{entry.who}</b>
         <span className={s.hlTime}>{entry.when}</span>
         <Badge entry={entry} />
-        {decision && (
-          <span className={s.hlActs}>
-            {decision.onConfirm && <Button size="s" onClick={decision.onConfirm}>{decision.confirmLabel}</Button>}
-            {decision.onReject && <Button size="s" className={s.hlReject} onClick={decision.onReject}>{decision.rejectLabel}</Button>}
-          </span>
-        )}
       </div>
       {entry.note && <div className={s.hlNote}>{entry.note}</div>}
       {entry.status === 'rejected' && entry.reason && <div className={s.hlNote}>Причина: {entry.reason}</div>}
@@ -92,7 +86,8 @@ function Entry({ entry, decision }: { entry: EditHistoryEntry; decision?: Decisi
  * Аудит правок поля (эталон histBlock, .hs/.hl, index.html:222–240, 967–979): сводка — число правок с русским склонением,
  * участники без повторов, бейдж последней записи и кнопка «История»; по ней — таймлайн записей с диффом «было → стало».
  * Свёрнуто по умолчанию, состояние своё. Пустой список — ничего.
- * Вторая рука (спека 2d §2.1): заданы onConfirm/onReject и последняя запись pending — у неё кнопки решения;
+ * Вторая рука (спека 2d §2.1, §4.1; Ruling R7): заданы onConfirm/onReject и последняя запись pending — кнопки решения
+ * в сводке рядом с её бейджем, видны без раскрытия истории; в списке не дублируются (одна пара на блок);
  * rejected — бейдж «отклонено», подсказка «Отклонил(а) …», причина строкой.
  */
 export function EditHistory({
@@ -112,12 +107,18 @@ export function EditHistory({
         <span className={s.hsCount}>{editCountLabel(entries.length)}</span>
         <span className={s.hsWho}>{people.join(', ')}</span>
         <SummaryBadge status={last.status} />
+        {decision && (
+          <span className={s.hsActs}>
+            {decision.onConfirm && <Button size="s" onClick={decision.onConfirm}>{decision.confirmLabel}</Button>}
+            {decision.onReject && <Button size="s" className={s.hsReject} onClick={decision.onReject}>{decision.rejectLabel}</Button>}
+          </span>
+        )}
         <button type="button" className={s.hsToggle} aria-expanded={open} aria-controls={list} onClick={() => setOpen(!open)}>
           {open ? 'Свернуть историю' : 'История'}
         </button>
       </div>
       <ol id={list} className={s.hl} aria-label={`История изменений ${label}`} hidden={!open}>
-        {open && entries.map((e, i) => <Entry key={i} entry={e} decision={i === entries.length - 1 ? decision : undefined} />)}
+        {open && entries.map((e, i) => <Entry key={i} entry={e} />)}
       </ol>
     </div>
   )
