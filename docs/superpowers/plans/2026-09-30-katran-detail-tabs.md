@@ -236,7 +236,7 @@ docs/STATE.md · docs/superpowers/specs/*                                       
 - Consumes: `main` со слиянием 2a (`fda9f91`) и спекой 2b (`f08e522`).
 - Produces: ветка `feat/detail-tabs`, базовые числа тестов в леджере (на `f08e522`: `tokens` 16, `ui` 295, `effector` 49, `apps/pi` 135 — всего 495; e2e `apps/pi` 40/40).
 
-- [ ] **Step 1: `main` содержит 2a и спеку 2b.**
+- [x] **Step 1: `main` содержит 2a и спеку 2b.**
 
 ```bash
 cd /Users/shaman/_CODE/VTB/katran
@@ -246,7 +246,7 @@ git status --short
 
 Expected: `OK`. `git status --short` пуст, кроме этого плана, если контроллер ещё не закоммитил его в `main` (план коммитит контроллер до Step 2; иначе план не попадёт в ветку). Если `fda9f91` или `f08e522` не предки `main` — **остановиться**: план идёт после 2a и спеки 2b.
 
-- [ ] **Step 2: worktree и ветка.**
+- [x] **Step 2: worktree и ветка.**
 
 ```bash
 cd /Users/shaman/_CODE/VTB/katran
@@ -257,7 +257,7 @@ git log --oneline -1
 
 Expected: `Preparing worktree (new branch 'feat/detail-tabs')`, последний коммит — вершина `main`. Дальше все задачи — в `/Users/shaman/_CODE/VTB/katran/.worktrees/detail-tabs`; в основной checkout не коммитить.
 
-- [ ] **Step 3: зависимости и проверка.**
+- [x] **Step 3: зависимости и проверка.**
 
 ```bash
 cd /Users/shaman/_CODE/VTB/katran/.worktrees/detail-tabs
@@ -267,9 +267,9 @@ pnpm check
 
 Expected: `pnpm install` без ошибок (lockfile не меняется: `git status --short` пуст); `pnpm check` зелёный — в выводе `packages/tokens test: Tests 16 passed`, `packages/ui test: Tests 295 passed`, `packages/effector test: Tests 49 passed`, `apps/pi test: Tests 135 passed`, `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет`. Числа — в леджер как базу. Если числа другие (в `main` успело попасть что-то ещё) — записать фактические и считать от них; если `check` красный — остановиться.
 
-- [ ] **Step 4: e2e на переднем плане.** `pnpm --filter pi e2e` (в фоне не запускать, дождаться) — `40 passed`. Число — в леджер.
+- [x] **Step 4: e2e на переднем плане.** `pnpm --filter pi e2e` (в фоне не запускать, дождаться) — `40 passed`. Число — в леджер.
 
-- [ ] **Step 5: сверка имён, на которые опираются Task 1–3.** Открыть и убедиться, что совпадает (если нет — записать в леджер фактическое имя и использовать его во всех задачах):
+- [x] **Step 5: сверка имён, на которые опираются Task 1–3.** Открыть и убедиться, что совпадает (если нет — записать в леджер фактическое имя и использовать его во всех задачах):
   - `packages/ui/src/compat/useStableId.ts` — `export const useStableId: () => string`;
   - `packages/ui/src/tooltip/TooltipLayer.tsx` — тултип кита по атрибуту `data-k-tip` (делегирование `pointerover`/`focusin` с корня провайдера), `data-k-tip-if="truncated"` — только при обрезке;
   - `packages/ui/src/value/Tag.tsx` — `tone: 'neutral' | 'opt' | 'mt' | 'warn' | 'ok'` (`mt` — это «`Tag mono`» спеки §2: моно 600, как `.tag.mt` эталона; нового варианта план не вводит);
@@ -279,7 +279,7 @@ Expected: `pnpm install` без ошибок (lockfile не меняется: `g
   - `packages/tokens/src/generate.test.ts` — тест «`«Общие данные» деталки: строка поля 27, …`»;
   - корневой `package.json` — `gen:check` = `pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts` (сравнение с **индексом**: сгенерированные токены добавлять в индекс до `pnpm check`, см. Task 2–3);
   - CHANGELOG кита — корневой `CHANGELOG.md` (файла `packages/ui/CHANGELOG.md` нет; карта файлов плана называет его для Task 13 — писать в корневой).
-- [ ] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — пусто (рабочая копия равна эталону). Иначе — остановиться: замер Task 1 идёт только по `e065bfb`.
+- [x] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — пусто (рабочая копия равна эталону). Иначе — остановиться: замер Task 1 идёт только по `e065bfb`.
 
 ---
 
@@ -295,8 +295,8 @@ Expected: `pnpm install` без ошибок (lockfile не меняется: `g
 - Produces: решения владельца 30.09 — В-Д6 «а» (Д29 → класс C), R13 «закрывает деталку» — записаны в `detail-drift.md` и STATE; раздел «2b» сверки — пункты Д31–Д42 (все класса C, известны заранее по спеке §6 и решениям Task 2–3).
 - Consumes: стенд `/Users/shaman/_CODE/VTB/pi-constructor` на `e065bfb` (Task 0 Step 6); `@playwright/test` из `apps/pi`.
 
-- [ ] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — `e065bfb 2026-09-28 18:38:28 +0300`; `git log -1 --format='%h %ci'` в worktree — хеш `feat/detail-tabs` до кода 2b (в леджер, идёт в шапку раздела «2b»).
-- [ ] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
+- [x] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — `e065bfb 2026-09-28 18:38:28 +0300`; `git log -1 --format='%h %ci'` в worktree — хеш `feat/detail-tabs` до кода 2b (в леджер, идёт в шапку раздела «2b»).
+- [x] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
 
 ```ts
 import { defineConfig } from '@playwright/test'
@@ -412,8 +412,8 @@ STAND rub: {"ed244":{"ah":25,"xl":16.7,"xlCss":{"font-size":"11.5px","line-heigh
 ```
 
 Скриншоты `stand-statuses.png`, `stand-tasks.png`, `stand-linked.png`, `stand-ed244.png` — в `apps/pi/test-results/…/` (для сверки вида в Task 12; каталог в `.gitignore`, скопировать в леджер). Если число расходится с «Interfaces» больше чем на 0.5 px — в документ записать фактическое, в леджер — пометку для задачи, которая вводит токен (Task 3 — `tt-*`, Task 2 — `badge-*`, Task 4 — `kv-row`, `ah-row`, Task 5 — строка кода) и для e2e Task 12.
-- [ ] **Step 3: убрать временное.** `rm -r apps/pi/e2e-stand`; `git status --short` не показывает `apps/pi/e2e-stand` (результаты — в `apps/pi/test-results`, git-ignored).
-- [ ] **Step 4: решения владельца в `docs/reference/detail-drift.md`.** Точечные правки (старый текст → новый):
+- [x] **Step 3: убрать временное.** `rm -r apps/pi/e2e-stand`; `git status --short` не показывает `apps/pi/e2e-stand` (результаты — в `apps/pi/test-results`, git-ignored).
+- [x] **Step 4: решения владельца в `docs/reference/detail-drift.md`.** Точечные правки (старый текст → новый):
   1. В «Сводке» строку класса C
 
      `` | C | 25 | разведение жестов в `DataGrid`, стек без дублей, плотность вместо zoom, действия-заглушки, контраст меток и статусов, фокус при открытии и закрытии, Esc из ячейки грида, пункты по решениям владельца В-Д1…В-Д4 (Д7, Д18, Д19, Д14); решение В-Д5 (токены `dt-*`) — о раскладке кита, пункта сверки у него нет | ``
@@ -426,7 +426,7 @@ STAND rub: {"ed244":{"ah":25,"xl":16.7,"xlCss":{"font-size":"11.5px","line-heigh
   4. В строке **Д29** колонку «Кл.» `В-Д6` заменить на `C`, последнюю ячейку — на `Решено 30.09: «а» — как сейчас (В-Д6): ширина drawer растёт с плотностью; при 125 % на окне уже 2000 px B уходит за левый край — принято`.
   5. Пункт `- **В-Д6.** Открыт (Д29). …` заменить целиком на: `` - **В-Д6.** Решено 2026-09-30: вариант «а» — как сейчас. Ширина drawer масштабируется вместе с плотностью (при 125 % — 1000 px, A и B вместе — 2000 px; на окне уже 2000 px B уходит за левый край) — так же по коду и на эталоне с `zoom`. Токен `drawer` и `DrawerStack` не меняются. Д29 — класс C. `` и сразу после него добавить пункт: `- **R13** (журнал исполнения 2a, финальное ревью M-a). Решено 2026-09-30: «закрывает деталку». Esc в ячейке грида при открытой деталке (а после В-Д4 она открыта почти всегда) закрывает верхний drawer по стеку наложений, а не возвращает фокус в ячейку — как сейчас; без деталки Esc, как прежде, возвращает фокус в ячейку (Д26). Пункт уходит из техдолга STATE §7 в решения.`
   6. В «Не проверено» пункт `` - Экраны 2b–2d — сверяются в начале своих подсрезов против того же коммита `e065bfb`. `` заменить на `` - Экраны 2c–2d — сверяются в начале своих подсрезов против того же коммита `e065bfb`; 2b — раздел «2b» ниже. ``
-- [ ] **Step 5: раздел «2b» в `docs/reference/detail-drift.md`.** Последний раздел документа — заголовок `## 2b–2d — сверяются в начале своих подсрезов против того же коммита` и абзац под ним — заменить целиком на текст ниже (числа замера — фактические из Step 2; `<хеш>` и `<дата>` — из Step 1):
+- [x] **Step 5: раздел «2b» в `docs/reference/detail-drift.md`.** Последний раздел документа — заголовок `## 2b–2d — сверяются в начале своих подсрезов против того же коммита` и абзац под ним — заменить целиком на текст ниже (числа замера — фактические из Step 2; `<хеш>` и `<дата>` — из Step 1):
 
 ```md
 ## 2b — остальные вкладки
@@ -500,7 +500,7 @@ STAND rub: {"ed244":{"ah":25,"xl":16.7,"xlCss":{"font-size":"11.5px","line-heigh
 ```
 
   Если замер Step 2 дал другие числа — поправить столбец «Эталон» в «Замере эталона 2b» и (при расхождении больше 0.5 px) — пометку в «Токен кита (план)».
-- [ ] **Step 6: STATE.** В `docs/STATE.md`:
+- [x] **Step 6: STATE.** В `docs/STATE.md`:
   1. §6 — пункт `- **Открытые решения владельца (30.09):** В-Д6 — … Работу не блокируют; нужны к 2b.` заменить целиком на: `` - **Решения владельца (30.09):** В-Д6 — «а»: ширина drawer растёт с плотностью, как сейчас (Д29 — класс C, `docs/reference/detail-drift.md`); R13 — «закрывает деталку»: Esc в ячейке грида при открытой деталке закрывает верхний drawer по стеку наложений, как сейчас (пункт снят из §7 «Esc и наложения»). Открытых решений владельца нет. ``
   2. §7, пункт «**Сверка, класс D**»: предложение `Открытый вопрос владельцу — В-Д6 (Д29): ширина drawer растёт с плотностью, при 125 % B уходит за левый край окна уже 2000 px.` заменить на `В-Д6 решён 30.09 («а», Д29 — класс C).`
   3. §7, пункт «**Esc и наложения:**»: хвост `; Esc в гриде при постоянно открытой деталке (В-Д4) закрывает её, а не возвращает фокус в ячейку — вопрос владельцу (R13, финальное ревью M-a).` заменить на `. Esc в гриде при открытой деталке закрывает её — решение владельца R13 от 30.09 (§6), не долг.`
@@ -508,7 +508,7 @@ STAND rub: {"ed244":{"ah":25,"xl":16.7,"xlCss":{"font-size":"11.5px","line-heigh
   5. §10, строка «Деталка валюты и рубля (`index.html`)»: `Д29 — открытый вопрос В-Д6; 2b–2d сверяются в начале своих подсрезов против того же коммита` заменить на `Д29 — C по решению В-Д6 «а» (30.09); 2b — раздел «2b» (замер вкладок: таблица 24, шапка 22, «ключ–значение» 24, раскрываемая строка 26, аккордеон 25, бейдж 18; C 12, Task 1 плана 2b); 2c–2d сверяются в начале своих подсрезов против того же коммита`.
 
   Проверка: `grep -n "В-Д6\|R13" docs/STATE.md docs/reference/detail-drift.md` — ни одного «открыт»/«вопрос владельцу» у В-Д6 и R13; `grep -c "^| Д3[1-9]\|^| Д4[0-2]" docs/reference/detail-drift.md` — `12`.
-- [ ] **Step 7: проверка и commit.** `pnpm lint` — зелёный (после удаления `e2e-stand`; документы линт не трогает). `git status --short` — только два документа.
+- [x] **Step 7: проверка и commit.** `pnpm lint` — зелёный (после удаления `e2e-stand`; документы линт не трогает). `git status --short` — только два документа.
 
 ```bash
 git add docs/reference/detail-drift.md docs/STATE.md
@@ -549,7 +549,7 @@ StatusBadge(props: StatusBadgeProps): JSX.Element
   - «`Tag mono`» спеки §2 — существующий `Tag tone="mt"` (моно 600, как `.tag.mt`); новых вариантов `Tag` задача не вводит.
 - Produces (токены): `badge-dot` 6, `badge-py` 2, `badge-px` 7, `badge-gap` 5, `r-badge` 10.
 
-- [ ] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes`, после строки `'dt-dir': 62, … 'dt-label-l': 250,`, добавить:
+- [x] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes`, после строки `'dt-dir': 62, … 'dt-label-l': 250,`, добавить:
 
 ```ts
   // бейдж статуса вкладок деталки (эталон .st, index.html:105–107): точка 6, отступы 2 × 7, зазор точки 5, радиус пилюли 10
@@ -573,7 +573,7 @@ StatusBadge(props: StatusBadgeProps): JSX.Element
 ```
 
   Run: `pnpm gen && pnpm --filter @katran/tokens test` — `pnpm gen` пишет «tokens.css и tokens.ts обновлены»; тесты PASS: `Tests 17 passed` (16 + 1; контраст `ink2`/`bad-soft` — 8.3 в светлой, 9.3 в тёмной теме).
-- [ ] **Step 2: тесты форматтеров (падают).** Создать `packages/ui/src/format/time.test.ts`:
+- [x] **Step 2: тесты форматтеров (падают).** Создать `packages/ui/src/format/time.test.ts`:
 
 ```ts
 import { formatDuration, formatTimestamp, timestampDiff } from './time'
@@ -670,7 +670,7 @@ describe('formatDuration', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- src/format/time.test.ts` — FAIL: `Failed to resolve import "./time"`.
-- [ ] **Step 3: форматтеры.** Создать `packages/ui/src/format/time.ts`:
+- [x] **Step 3: форматтеры.** Создать `packages/ui/src/format/time.ts`:
 
 ```ts
 const p2 = (n: number) => String(n).padStart(2, '0')
@@ -762,7 +762,7 @@ export * from './clipboard'
 ```
 
   Run: `pnpm --filter @katran/ui test -- src/format/time.test.ts` — PASS: `Tests 15 passed`.
-- [ ] **Step 4: тесты компонентов (падают).** Создать `packages/ui/src/value/Timestamp.test.tsx`:
+- [x] **Step 4: тесты компонентов (падают).** Создать `packages/ui/src/value/Timestamp.test.tsx`:
 
 ```tsx
 import { screen } from '@testing-library/react'
@@ -825,7 +825,7 @@ describe('StatusBadge', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- src/value/Timestamp.test.tsx src/value/StatusBadge.test.tsx` — FAIL: модули `./Timestamp`, `./StatusBadge` не найдены.
-- [ ] **Step 5: компоненты.** Создать `packages/ui/src/value/Timestamp.tsx`:
+- [x] **Step 5: компоненты.** Создать `packages/ui/src/value/Timestamp.tsx`:
 
 ```tsx
 import { formatTimestamp } from '../format/time'
@@ -964,8 +964,8 @@ export { StatusBadge, type StatusBadgeProps, type BadgeTone } from './StatusBadg
 ```
 
   (`src/index.ts` уже экспортирует `./format` и `./value` — правки не нужно.)
-- [ ] **Step 6: запуск.** `pnpm --filter @katran/ui test -- src/format/time.test.ts src/value` — PASS (15 + 4 + 2 новых и прежние `Value.test.tsx`). `pnpm --filter @katran/ui test` — `Tests 316 passed` (295 + 21).
-- [ ] **Step 7: проверка.** Сгенерированные токены сравниваются `gen:check` с индексом — сначала добавить файлы задачи в индекс, потом проверка:
+- [x] **Step 6: запуск.** `pnpm --filter @katran/ui test -- src/format/time.test.ts src/value` — PASS (15 + 4 + 2 новых и прежние `Value.test.tsx`). `pnpm --filter @katran/ui test` — `Tests 316 passed` (295 + 21).
+- [x] **Step 7: проверка.** Сгенерированные токены сравниваются `gen:check` с индексом — сначала добавить файлы задачи в индекс, потом проверка:
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/contrast.rules.ts packages/tokens/src/generate.test.ts packages/ui/src/format/time.ts packages/ui/src/format/time.test.ts packages/ui/src/format/index.ts packages/ui/src/value/Timestamp.tsx packages/ui/src/value/Timestamp.test.tsx packages/ui/src/value/StatusBadge.tsx packages/ui/src/value/StatusBadge.test.tsx packages/ui/src/value/Value.module.css packages/ui/src/value/index.ts
@@ -973,7 +973,7 @@ pnpm check
 ```
 
   Expected: зелёный; `tokens` 17, `ui` 316, `effector` 49, `apps/pi` 135; `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет` (`inline-flex` с `gap` — Chromium 84+).
-- [ ] **Step 8: commit.** CHANGELOG — в Task 13 (карта файлов плана).
+- [x] **Step 8: commit.** CHANGELOG — в Task 13 (карта файлов плана).
 
 ```bash
 git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m "ui: formatTimestamp, formatDuration, timestampDiff, Timestamp, StatusBadge — время и бейджи вкладок деталки"
@@ -1016,7 +1016,7 @@ MiniTable<T>(props: MiniTableProps<T>): JSX.Element
 - Produces (токены, эталон `.tt/.tbar/.ld/.tk`, index.html:299–342, замер Task 1): `tt-row` 24, `tt-head` 22, `tt-row-x` 26 (раскрываемая строка и полоса `toolbar`), `tt-num` 22, `tt-chev` 14, `tt-gap` 10 (зазор колонок и боковой отступ строки), `tt-empty` 14, `tt-panel-pt` 6. Строки — `box-sizing: border-box` (нижняя граница входит в высоту, как у эталона). Проверено при написании плана статической разметкой на собранном `ui.css` в Chromium: шапка 22, строка 24, раскрываемая 26, бейдж 18, полоса 26; e2e на `apps/pi` — Task 12.
 - Разметка для e2e Task 12 и тестов приложения: таблица — `[role="table"]` с именем `label`; строка тела — `[role="rowgroup"]:last-child > [role="row"]`; раскрываемая — атрибут `data-k-xrow="<rowKey>"`.
 
-- [ ] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes`, после строки `'badge-dot': 6, …` (Task 2), добавить:
+- [x] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes`, после строки `'badge-dot': 6, …` (Task 2), добавить:
 
 ```ts
   // таблица вкладок деталки MiniTable (эталон .tt/.ld/.tk, index.html:299–342): строка 24, шапка 22, раскрываемая строка 26,
@@ -1035,7 +1035,7 @@ MiniTable<T>(props: MiniTableProps<T>): JSX.Element
 ```
 
   Run: `pnpm gen && pnpm --filter @katran/tokens test` — PASS: `Tests 18 passed`. Если замер Task 1 дал другие высоты (больше 0.5 px) — числа токенов взять из замера и поправить ожидания в тесте.
-- [ ] **Step 2: тесты (падают).** Создать `packages/ui/src/table/MiniTable.test.tsx`:
+- [x] **Step 2: тесты (падают).** Создать `packages/ui/src/table/MiniTable.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -1239,7 +1239,7 @@ describe('MiniTable', () => {
 ```
 
   Run: `pnpm --filter @katran/ui test -- src/table` — FAIL: `Failed to resolve import "./MiniTable"`.
-- [ ] **Step 3: компонент.** Создать `packages/ui/src/table/MiniTable.tsx`:
+- [x] **Step 3: компонент.** Создать `packages/ui/src/table/MiniTable.tsx`:
 
 ```tsx
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
@@ -1401,7 +1401,7 @@ export { MiniTable, type MiniColumn, type MiniTableProps } from './MiniTable'
 ```
 
   В `packages/ui/src/index.ts` после строки `export * from './form'` добавить `export * from './table'`.
-- [ ] **Step 4: стили.** Создать `packages/ui/src/table/MiniTable.module.css` (правило «последняя строка без нижней границы» стоит после `.xrow` и `.panel` — иначе stylelint `no-descending-specificity`; отрицательный `margin` для этого не годится — голые `px` вне `border*` запрещены):
+- [x] **Step 4: стили.** Создать `packages/ui/src/table/MiniTable.module.css` (правило «последняя строка без нижней границы» стоит после `.xrow` и `.panel` — иначе stylelint `no-descending-specificity`; отрицательный `margin` для этого не годится — голые `px` вне `border*` запрещены):
 
 ```css
 /* компактная таблица вкладок деталки (эталон .tt/.tbar/.ld/.tk, index.html:299–342) */
@@ -1544,8 +1544,8 @@ export { MiniTable, type MiniColumn, type MiniTableProps } from './MiniTable'
 }
 ```
 
-- [ ] **Step 5: запуск.** `pnpm --filter @katran/ui test -- src/table` — PASS: `Tests 15 passed`. `pnpm --filter @katran/ui test` — `Tests 331 passed` (316 + 15).
-- [ ] **Step 6: проверка.**
+- [x] **Step 5: запуск.** `pnpm --filter @katran/ui test -- src/table` — PASS: `Tests 15 passed`. `pnpm --filter @katran/ui test` — `Tests 331 passed` (316 + 15).
+- [x] **Step 6: проверка.**
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/generate.test.ts packages/ui/src/table/MiniTable.tsx packages/ui/src/table/MiniTable.module.css packages/ui/src/table/MiniTable.test.tsx packages/ui/src/table/index.ts packages/ui/src/index.ts
@@ -1553,7 +1553,7 @@ pnpm check
 ```
 
   Expected: зелёный; `tokens` 18, `ui` 331, `effector` 49, `apps/pi` 135; eslint без замечаний `jsx-a11y` (обработчик клика строки — `addEventListener` в эффекте, как слой тултипов), stylelint без замечаний, `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет` (`:not(.open)` с одним простым селектором и `:nth-last-child` — Chromium 88 есть).
-- [ ] **Step 7: commit.** CHANGELOG — в Task 13.
+- [x] **Step 7: commit.** CHANGELOG — в Task 13.
 
 ```bash
 git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m "ui: MiniTable — компактная таблица вкладок деталки: колонки с шириной по плотности, «№», пустое состояние, раскрываемые строки с клавиатуры и мышью"
@@ -1585,7 +1585,7 @@ KeyValueList(props: KeyValueListProps): JSX.Element
 - Produces (разметка для e2e и тестов приложения): строка списка в одну колонку — `div[data-kv="<key>"]` c `dt`/`dd`; пустое значение — `dd[data-empty]`.
 - Produces (токены, эталон `.xg/.xr/.kvs`, `index.html:281–291, 343–345`, и `.au .ah`, 329): `kv-row` 24, `kv-px` 10, `kv-gap` 14, `kvs-gap` 1, `fs-kv` 11.5, `fs-kvs` 12 (им же — кегль моно-заголовка `Disclosure`), `ah-row` 25.
 
-- [ ] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes` (после строк Task 3) добавить:
+- [x] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes` (после строк Task 3) добавить:
 
 ```ts
   // список «ключ–значение» вкладок деталки (спека 2b §2, эталон .xg/.xr/.kvs, index.html:281–291, 343–345): строка 24,
@@ -1610,7 +1610,7 @@ KeyValueList(props: KeyValueListProps): JSX.Element
   Run: `pnpm gen && pnpm --filter @katran/tokens test`
   Expected: `tokens.css` и `tokens.ts` перегенерированы (в `git diff` — семь новых: `--k-kv-*`, `--k-kvs-gap`, `--k-fs-kv*`, `--k-ah-row`); тесты токенов PASS, включая «каждый размерный токен объявлен ровно один раз».
 
-- [ ] **Step 2: тесты `KeyValueList` (падают).** Создать `packages/ui/src/form/KeyValueList.test.tsx`:
+- [x] **Step 2: тесты `KeyValueList` (падают).** Создать `packages/ui/src/form/KeyValueList.test.tsx`:
 
 ```tsx
 import { screen, within } from '@testing-library/react'
@@ -1710,7 +1710,7 @@ describe('KeyValueList (спека 2b §2)', () => {
   Run: `pnpm --filter @katran/ui test -- src/form/KeyValueList`
   Expected: FAIL — `Failed to resolve import "./KeyValueList"`.
 
-- [ ] **Step 3: `KeyValueList`.** Создать `packages/ui/src/form/KeyValueList.tsx`:
+- [x] **Step 3: `KeyValueList`.** Создать `packages/ui/src/form/KeyValueList.tsx`:
 
 ```tsx
 import { Fragment, type CSSProperties, type ReactNode } from 'react'
@@ -1787,7 +1787,7 @@ export function KeyValueList({ items, title, labelWidth, columns = 1 }: KeyValue
 export { KeyValueList, type KeyValueItem, type KeyValueListProps } from './KeyValueList'
 ```
 
-- [ ] **Step 4: стили.** Дописать в конец `packages/ui/src/form/Form.module.css`:
+- [x] **Step 4: стили.** Дописать в конец `packages/ui/src/form/Form.module.css`:
 
 ```css
 /* список «ключ–значение» вкладок деталки (спека 2b §2, эталон .xg/.xr/.kvs, index.html:281–291, 343–345) */
@@ -1881,7 +1881,7 @@ export { KeyValueList, type KeyValueItem, type KeyValueListProps } from './KeyVa
   Run: `pnpm --filter @katran/ui test -- src/form/KeyValueList`
   Expected: PASS (9).
 
-- [ ] **Step 5: тесты управляемого раскрытия `ConfigForm` (падают).** В `packages/ui/src/form/ConfigForm.test.tsx` первой строкой добавить `import { useState } from 'react'`, в конец файла дописать:
+- [x] **Step 5: тесты управляемого раскрытия `ConfigForm` (падают).** В `packages/ui/src/form/ConfigForm.test.tsx` первой строкой добавить `import { useState } from 'react'`, в конец файла дописать:
 
 ```tsx
 describe('ConfigForm — управляемое раскрытие (спека 2b §3.3, техдолг M-g)', () => {
@@ -1966,7 +1966,7 @@ describe('ConfigForm — управляемое раскрытие (спека 2
   Run: `pnpm --filter @katran/ui test -- src/form/ConfigForm`
   Expected: FAIL — 4 из 6 новых («expanded задаёт…», «управляемый режим…», «без expanded…», «…переживает размонтирование…»); «без хозяина…» и axe проходят, прежние 10 тестов 2a — PASS.
 
-- [ ] **Step 6: `ConfigForm`.** Заменить `packages/ui/src/form/ConfigForm.tsx` целиком (изменения против 2a: два пропса, набор `keys` вместо прямого чтения `open`/`sections`, `commit` — своё состояние только без `expanded`, колбэк — всегда; разметка не меняется):
+- [x] **Step 6: `ConfigForm`.** Заменить `packages/ui/src/form/ConfigForm.tsx` целиком (изменения против 2a: два пропса, набор `keys` вместо прямого чтения `open`/`sections`, `commit` — своё состояние только без `expanded`, колбэк — всегда; разметка не меняется):
 
 ```tsx
 import { Fragment, useState, type ReactNode } from 'react'
@@ -2159,7 +2159,7 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
 }
 ```
 
-- [ ] **Step 7: `Disclosure` — `mono` и `emptyText` (тесты, затем код).** В `packages/ui/src/form/Disclosure.test.tsx` перед тестом «без нарушений axe» вставить:
+- [x] **Step 7: `Disclosure` — `mono` и `emptyText` (тесты, затем код).** В `packages/ui/src/form/Disclosure.test.tsx` перед тестом «без нарушений axe» вставить:
 
 ```tsx
   it('mono — класс моноширинного заголовка; без него заголовок прежний', () => {
@@ -2282,7 +2282,7 @@ export function Disclosure({ title, aside, count, open, defaultOpen = false, onO
   Run: `pnpm --filter @katran/ui test -- src/form/Disclosure`
   Expected: PASS (9).
 
-- [ ] **Step 8: запуск.**
+- [x] **Step 8: запуск.**
 
   Run: `pnpm --filter @katran/ui test -- src/form/`
   Expected: PASS — 4 файла, 41 тест (`ConfigForm` 16, `KeyValueList` 9, `Disclosure` 9, `FieldRow` 7).
@@ -2293,7 +2293,7 @@ export function Disclosure({ title, aside, count, open, defaultOpen = false, onO
   Run: `pnpm check`
   Expected: зелёный (приложения `apps/pi`/`apps/demo` не передают новые пропсы `ConfigForm` и `Disclosure` — поведение «Общих» прежнее).
 
-- [ ] **Step 9: commit.**
+- [x] **Step 9: commit.**
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/generate.test.ts \
@@ -2332,7 +2332,7 @@ layoutXml(src: string): CodeLine[] | null       // code/xml.ts; null — не р
 - Produces (токены, эталон `pre.sw` / `.sw.xml`, `index.html:347–361`): `code-pt` 6, `code-px` 10, `code-pl` 28, `code-gutter` 46, `code-num` 30. Межстрочный 1.45 — безразмерный, в CSS числом.
 - Уточнения против эталона (класс C в `detail-drift.md` заводит Task 13, если сочтёт нужным): битый XML — сырой текст **по строкам** с номерами (на эталоне один блок с номером 1); элемент без атрибутов, чья «голова» длиннее 92 (глубина ≥ 45), выводится строкой тега (на эталоне строка тега терялась); подсветка JSON — лексером по проверенному `JSON.parse` тексту, а не регулярками эталона (регулярки эталона красят числа внутри строк вида `"1250000,00"` и слово `true` внутри строки — тест «число в строке и true в ключе»).
 
-- [ ] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes` (после строки Task 4) добавить:
+- [x] **Step 1: токены.** В `packages/tokens/src/tokens.src.ts` в конец объекта `sizes` (после строки Task 4) добавить:
 
 ```ts
   // просмотр кода вкладок деталки (спека 2b §2, эталон pre.sw / .sw.xml, index.html:347–361): отступы блока 6 / 10 / 28,
@@ -2353,7 +2353,7 @@ layoutXml(src: string): CodeLine[] | null       // code/xml.ts; null — не р
   Run: `pnpm gen && pnpm --filter @katran/tokens test`
   Expected: пять новых `--k-code-*` в `tokens.css`; тесты токенов PASS.
 
-- [ ] **Step 2: тесты разборщиков (падают).** Создать `packages/ui/src/code/json.test.ts`:
+- [x] **Step 2: тесты разборщиков (падают).** Создать `packages/ui/src/code/json.test.ts`:
 
 ```ts
 import { tokenizeJson } from './json'
@@ -2546,7 +2546,7 @@ describe('layoutXml (эталон xmlHtml, XML_LINE=92)', () => {
   Run: `pnpm --filter @katran/ui test -- src/code/`
   Expected: FAIL — `Failed to resolve import "./json"` (`./swift`, `./xml`).
 
-- [ ] **Step 3: типы и разборщики.** Создать `packages/ui/src/code/types.ts`:
+- [x] **Step 3: типы и разборщики.** Создать `packages/ui/src/code/types.ts`:
 
 ```ts
 /** Кусок подсвеченного текста: kind — класс подсветки, '' — без подсветки. Рендер — только React-элементы, текст экранирует React. */
@@ -2729,7 +2729,7 @@ export function layoutXml(src: string): CodeLine[] | null {
   Run: `pnpm --filter @katran/ui test -- src/code/`
   Expected: PASS — `json` 5, `swift` 4, `xml` 11.
 
-- [ ] **Step 4: тесты `CodeView` (падают).** Создать `packages/ui/src/code/CodeView.test.tsx` (отсутствие `innerHTML` проверяется дважды: поведенчески — `<img onerror>` и `<script>` из данных остаются текстом на всех языках, — и шпионом на сеттере `Element.prototype.innerHTML`: через него React 17 применяет `dangerouslySetInnerHTML`; проверено — шпион ловит `dangerouslySetInnerHTML`):
+- [x] **Step 4: тесты `CodeView` (падают).** Создать `packages/ui/src/code/CodeView.test.tsx` (отсутствие `innerHTML` проверяется дважды: поведенчески — `<img onerror>` и `<script>` из данных остаются текстом на всех языках, — и шпионом на сеттере `Element.prototype.innerHTML`: через него React 17 применяет `dangerouslySetInnerHTML`; проверено — шпион ловит `dangerouslySetInnerHTML`):
 
 ```tsx
 import { screen } from '@testing-library/react'
@@ -2863,7 +2863,7 @@ describe('CodeView (спека 2b §2)', () => {
   Run: `pnpm --filter @katran/ui test -- src/code/CodeView`
   Expected: FAIL — `Failed to resolve import "./CodeView"`.
 
-- [ ] **Step 5: `CodeView`.** Создать `packages/ui/src/code/CodeView.tsx`. Роль области задана константой `REGION`: правило `jsx-a11y/no-noninteractive-tabindex` (recommended, `allowExpressionValues: true`) пропускает роль-выражение, а `role="region"` литералом с `tabIndex={0}` — ошибка; `eslint-disable` запрещён Global Constraints, а фокусируемость прокручиваемой области требуется спекой и axe (`scrollable-region-focusable`).
+- [x] **Step 5: `CodeView`.** Создать `packages/ui/src/code/CodeView.tsx`. Роль области задана константой `REGION`: правило `jsx-a11y/no-noninteractive-tabindex` (recommended, `allowExpressionValues: true`) пропускает роль-выражение, а `role="region"` литералом с `tabIndex={0}` — ошибка; `eslint-disable` запрещён Global Constraints, а фокусируемость прокручиваемой области требуется спекой и axe (`scrollable-region-focusable`).
 
 ```tsx
 import { useMemo, type CSSProperties } from 'react'
@@ -3065,7 +3065,7 @@ export type { CodeLine, CodeToken } from './types'
 export * from './code'
 ```
 
-- [ ] **Step 6: запуск.**
+- [x] **Step 6: запуск.**
 
   Run: `pnpm --filter @katran/ui test -- src/code/`
   Expected: PASS — 4 файла, 31 тест (`CodeView` 11, `json` 5, `swift` 4, `xml` 11).
@@ -3079,7 +3079,7 @@ export * from './code'
   Run: `pnpm check`
   Expected: зелёный, включая `check:target`: `es-check` Chromium 88 по `packages/ui/dist/ui.js` (в коде нет `.at`, `replaceAll`, `Object.hasOwn`; `flatMap`, `Array.from`, `catch` без параметра — есть в 88) и `check-css-target` по `ui.css` (`counter-*`, `user-select`, `overflow-wrap: anywhere`, единица `ch` — есть в 88).
 
-- [ ] **Step 7: commit.**
+- [x] **Step 7: commit.**
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/generate.test.ts \
@@ -3128,7 +3128,7 @@ fxDocTrail(row, i, rows): Record<FxTrailTab, unknown>;  rubDocTrail(row, i, rows
 
   Маршрут `GET /grids/{gridId}/documents/{id}/tabs/{tab}`: неизвестный грид → 404 «Неизвестный грид»; у грида нет вкладок или `tab` не из его набора → 404 «Неизвестная вкладка»; регулятор `?fail=tab` → 500 на любой вкладке, `?fail=tab:<id>` → 500 только на вкладке `<id>`; неизвестный документ → 404 «Документ не найден». `id` и `tab` в пути декодируются. `?fail=detail` вкладки не трогает, `?fail=tab` не трогает деталь (регулятор — та же строка `?fail=…`, `params.ts` не меняется, кроме комментария).
 
-- [ ] **Step 1: тесты портов и `remoteTab` (падают).** В `apps/pi/src/shared/api/ports.test.ts` в конец `describe('createGridPorts')` (перед закрывающей `})`) добавить:
+- [x] **Step 1: тесты портов и `remoteTab` (падают).** В `apps/pi/src/shared/api/ports.test.ts` в конец `describe('createGridPorts')` (перед закрывающей `})`) добавить:
 
 ```ts
   const noteTab = (raw: unknown, path: string) => ({ text: str(obj(raw, path), 'text', path) })
@@ -3195,7 +3195,7 @@ describe('remoteTab', () => {
 
   Run: `pnpm --filter pi test -- ports remoteTab` — FAIL (`tabFx` нет, `./remoteTab` не найден).
 
-- [ ] **Step 2: порты.** Заменить `apps/pi/src/shared/api/ports.ts` целиком:
+- [x] **Step 2: порты.** Заменить `apps/pi/src/shared/api/ports.ts` целиком:
 
 ```ts
 import { createEffect, type Effect } from 'effector'
@@ -3263,7 +3263,7 @@ export function createGridPorts<Row, D>(
 export { createGridPorts, type DetailParser, type DetailPort, type GridPorts, type GridPortsConfig, type TabParser, type TabPort, type TabQuery } from './ports'
 ```
 
-- [ ] **Step 3: виды вкладок в `shared/lib/detail`.** В `apps/pi/src/shared/lib/detail/types.ts` перед `/** Всё доменное, что виджет деталки получает от сущности …` вставить:
+- [x] **Step 3: виды вкладок в `shared/lib/detail`.** В `apps/pi/src/shared/lib/detail/types.ts` перед `/** Всё доменное, что виджет деталки получает от сущности …` вставить:
 
 ```ts
 /** Контекст вида вкладки (спека 2b §3.3): что вкладка может сделать, не зная о виджете. */
@@ -3324,7 +3324,7 @@ export { remoteTab } from './remoteTab'
 
   Run: `pnpm --filter pi test -- ports remoteTab` — PASS.
 
-- [ ] **Step 4: тесты фейка (падают).** В `apps/pi/src/app/fake/server.test.ts` после `const search = …` добавить:
+- [x] **Step 4: тесты фейка (падают).** В `apps/pi/src/app/fake/server.test.ts` после `const search = …` добавить:
 
 ```ts
 const get = (url: string): HttpRequest => ({ method: 'GET', url })
@@ -3369,7 +3369,7 @@ const tabbed = (failing?: string) => createFakeServer(
 
   Run: `pnpm --filter pi test -- server` — FAIL (нет маршрута вкладок, опции `tabs`).
 
-- [ ] **Step 5: фейк — грид и маршрут.** В `apps/pi/src/app/fake/grid.ts` заменить типы `FakeGrid`, `FakeGridOptions` и хвост `fakeGrid` (от `const toDetail = opts.detail` до конца функции):
+- [x] **Step 5: фейк — грид и маршрут.** В `apps/pi/src/app/fake/grid.ts` заменить типы `FakeGrid`, `FakeGridOptions` и хвост `fakeGrid` (от `const toDetail = opts.detail` до конца функции):
 
 ```ts
 /** Один грид фейкового сервера: данные, колонки (ключи сортировки) и каталог. Наружу — только JSON контракта. */
@@ -3447,7 +3447,7 @@ const TAB = /^\/grids\/([^/]+)\/documents\/([^/]+)\/tabs\/([^/]+)$/
 /** Регуляторы стенда в адресе: ?slow=N — задержка ровно N мс (иначе 0,25–0,65 с); ?fail=search|facets|meta|detail — отказ 500; ?fail=tab — 500 на любой вкладке деталки, ?fail=tab:<id> — только на вкладке <id>. */
 ```
 
-- [ ] **Step 6: фейк — наборы вкладок реестров (заглушки данных).** Создать `apps/pi/src/app/fake/fx-docs.trail.ts`:
+- [x] **Step 6: фейк — наборы вкладок реестров (заглушки данных).** Создать `apps/pi/src/app/fake/fx-docs.trail.ts`:
 
 ```ts
 /** Нелокальные вкладки валютного реестра — набор GET …/tabs/{tab} (FX_TABS без main и extra, спека 2b §3.1). */
@@ -3497,8 +3497,8 @@ export const fakeGrids: Record<string, FakeGrid> = {
 }
 ```
 
-- [ ] **Step 7: запуск.** `pnpm --filter pi test -- ports remoteTab server` — PASS (+4 портов, +2 `remoteTab`, +4 сервера). `pnpm --filter pi test` — PASS целиком (фейк 2a не изменился: `detail` с двумя параметрами совместим с новой сигнатурой). `pnpm check` — зелёный.
-- [ ] **Step 8: commit.**
+- [x] **Step 7: запуск.** `pnpm --filter pi test -- ports remoteTab server` — PASS (+4 портов, +2 `remoteTab`, +4 сервера). `pnpm --filter pi test` — PASS целиком (фейк 2a не изменился: `detail` с двумя параметрами совместим с новой сигнатурой). `pnpm check` — зелёный.
+- [x] **Step 8: commit.**
 
 ```bash
 git add apps/pi/src/shared/api/ports.ts apps/pi/src/shared/api/ports.test.ts apps/pi/src/shared/api/index.ts apps/pi/src/shared/lib/detail/types.ts apps/pi/src/shared/lib/detail/remoteTab.ts apps/pi/src/shared/lib/detail/remoteTab.test.ts apps/pi/src/shared/lib/detail/index.ts apps/pi/src/app/fake/grid.ts apps/pi/src/app/fake/server.ts apps/pi/src/app/fake/server.test.ts apps/pi/src/app/fake/params.ts apps/pi/src/app/fake/grids.ts apps/pi/src/app/fake/fx-docs.trail.ts apps/pi/src/app/fake/rub-docs.trail.ts
@@ -3540,7 +3540,7 @@ fxTxId(i: number): string;  rubScenario(row: RubDoc): string;  rubCorrAcc(i: num
 
   `tabsOff` в katran — **ключи** вкладок (`'notif'`, `'mpu'`), не подписи, как у стенда (`'Нотификации'`); сохраняется. Порядок — порядок набора реестра.
 
-- [ ] **Step 1: `toneOf` (тест падает).** Создать `apps/pi/src/entities/doc-trail/model/tone.test.ts`:
+- [x] **Step 1: `toneOf` (тест падает).** Создать `apps/pi/src/entities/doc-trail/model/tone.test.ts`:
 
 ```ts
 import { toneOf } from './tone'
@@ -3598,7 +3598,7 @@ export function toneOf(code: string): BadgeTone {
 
   Run: `pnpm --filter pi test -- tone` — PASS (3).
 
-- [ ] **Step 2: типы.** Создать `apps/pi/src/entities/doc-trail/model/types.ts`:
+- [x] **Step 2: типы.** Создать `apps/pi/src/entities/doc-trail/model/types.ts`:
 
 ```ts
 /** Данные вкладок деталки — история обработки документа, общая для валюты и рубля (спека 2b §3.2). Имена бека держит api/trail.mapper.ts. */
@@ -3637,7 +3637,7 @@ export type SourceTexts = Record<string, string>
 export type TrailTabId = 'statuses' | 'compliance' | 'linked' | 'tasks' | 'notif' | 'source' | 'ed244' | 'stream' | 'mpu' | 'audit'
 ```
 
-- [ ] **Step 3: тесты мапперов (падают).** Создать `apps/pi/src/entities/doc-trail/api/trail.mapper.test.ts`:
+- [x] **Step 3: тесты мапперов (падают).** Создать `apps/pi/src/entities/doc-trail/api/trail.mapper.test.ts`:
 
 ```ts
 import { ApiError, type Obj } from '../../../shared/api'
@@ -3726,7 +3726,7 @@ describe('мапперы doc-trail (примеры pi-api.md)', () => {
 
   Run: `pnpm --filter pi test -- trail.mapper` — FAIL (модулей нет).
 
-- [ ] **Step 4: пример ответов.** Создать `apps/pi/src/entities/doc-trail/api/trail.example.ts` (значения — эталон `DOCS[0]`, `index.html:767–866`, и ED244 первого рублёвого документа, `index.html:895–906`; обезличены, вымышлены; время — без зоны):
+- [x] **Step 4: пример ответов.** Создать `apps/pi/src/entities/doc-trail/api/trail.example.ts` (значения — эталон `DOCS[0]`, `index.html:767–866`, и ED244 первого рублёвого документа, `index.html:895–906`; обезличены, вымышлены; время — без зоны):
 
 ```ts
 import type { TrailTabId } from '../model/types'
@@ -3839,7 +3839,7 @@ export const TRAIL_EXAMPLES: Record<TrailTabId, unknown> = {
 }
 ```
 
-- [ ] **Step 5: мапперы и публичный API.** Создать `apps/pi/src/entities/doc-trail/api/trail.mapper.ts`:
+- [x] **Step 5: мапперы и публичный API.** Создать `apps/pi/src/entities/doc-trail/api/trail.mapper.ts`:
 
 ```ts
 import { arr, contractError, num, obj, oneOf, str, strOrNull, type Obj, type TabParser } from '../../../shared/api'
@@ -3987,7 +3987,7 @@ export { TRAIL_PARSERS } from '../api/trail.mapper'
 
   Run: `pnpm --filter pi test -- trail.mapper tone` — PASS (8 + 3).
 
-- [ ] **Step 6: фейк — общие помощники.** В `apps/pi/src/app/fake/fx-docs.data.ts` строку `function rng(seed: number) {` заменить на `export function rng(seed: number) {` (ГПСЧ фейка — для идентификаторов вкладок). Создать `apps/pi/src/app/fake/trail.data.ts`:
+- [x] **Step 6: фейк — общие помощники.** В `apps/pi/src/app/fake/fx-docs.data.ts` строку `function rng(seed: number) {` заменить на `export function rng(seed: number) {` (ГПСЧ фейка — для идентификаторов вкладок). Создать `apps/pi/src/app/fake/trail.data.ts`:
 
 ```ts
 import { rng } from './fx-docs.data'
@@ -4051,7 +4051,7 @@ export const isEmptyTab = (body: unknown): boolean => Object.values(body as Reco
 export const tabsOffOf = (ids: readonly string[], trail: Record<string, unknown>): string[] => ids.filter((t) => isEmptyTab(trail[t]))
 ```
 
-- [ ] **Step 7: фейк — данные вкладок валюты и рубля.** Заменить `apps/pi/src/app/fake/fx-docs.trail.ts` целиком:
+- [x] **Step 7: фейк — данные вкладок валюты и рубля.** Заменить `apps/pi/src/app/fake/fx-docs.trail.ts` целиком:
 
 ```ts
 import type { FxDoc } from '../../entities/fx-doc'
@@ -4450,7 +4450,7 @@ export function rubDocTrail(row: RubDoc, i: number, rows: readonly RubDoc[]): Re
 }
 ```
 
-- [ ] **Step 8: `tabsOff` детали — по данным вкладок.** В `apps/pi/src/app/fake/fx-docs.detail.ts`:
+- [x] **Step 8: `tabsOff` детали — по данным вкладок.** В `apps/pi/src/app/fake/fx-docs.detail.ts`:
   - после строки `import type { FxDoc } from '../../entities/fx-doc'` добавить:
 
 ```ts
@@ -4498,7 +4498,7 @@ export function makeRubDocDetail(row: RubDoc, i: number, rows: readonly RubDoc[]
 
   (`pad` в `rub-docs.detail.ts` остаётся — нужен УИП.) Вызовы с двумя аргументами поправить: в `apps/pi/src/app/fake/contract.test.ts` строку `const details = rows.map((row, i) => makeRubDocDetail(row, i))` заменить на `const details = rows.map((row, i) => makeRubDocDetail(row, i, rows))`; в `apps/pi/src/app/details.a11y.test.tsx` `makeFxDocDetail(rows[i]!, i)` → `makeFxDocDetail(rows[i]!, i, rows)` и `makeRubDocDetail(rows[i]!, i)` → `makeRubDocDetail(rows[i]!, i, rows)`.
 
-- [ ] **Step 9: контрактные тесты вкладок.** В `apps/pi/src/app/fake/contract.test.ts` заменить блок импортов целиком:
+- [x] **Step 9: контрактные тесты вкладок.** В `apps/pi/src/app/fake/contract.test.ts` заменить блок импортов целиком:
 
 ```ts
 import { allSettled, fork, type Effect } from 'effector'
@@ -4613,8 +4613,8 @@ describe('контракт вкладок (спека 2b §3.1, §3.5): порт
 })
 ```
 
-- [ ] **Step 10: запуск и границы.** `pnpm --filter pi test -- tone trail.mapper contract server details.a11y` — PASS (+3 `toneOf`, +8 мапперов, +8 контрактных; a11y деталки — без изменений поведения). `pnpm --filter pi test` — PASS целиком. `pnpm lint` — чисто: зоны FSD для `entities/doc-trail` построены по каталогу автоматически (`doc-trail` импортирует только `shared/api` через `index.ts` и `@katran/ui`; `app/fake` — `entities/doc-trail/index.ts`; `@x/fx-doc.ts` и `@x/rub-doc.ts` пока никем не импортируются — это допустимо, `import-x` неиспользуемые модули не проверяет). Проверка зоны вручную (временная строка, не коммитить): добавить в `apps/pi/src/entities/doc-trail/model/tone.ts` строку `import '../../fx-doc/model/fxDoc'`, `pnpm lint` → ошибка `FSD: entities/doc-trail не импортирует соседа fx-doc (только через fx-doc/@x/doc-trail.ts)`; строку удалить. `pnpm check` — зелёный.
-- [ ] **Step 11: commit.**
+- [x] **Step 10: запуск и границы.** `pnpm --filter pi test -- tone trail.mapper contract server details.a11y` — PASS (+3 `toneOf`, +8 мапперов, +8 контрактных; a11y деталки — без изменений поведения). `pnpm --filter pi test` — PASS целиком. `pnpm lint` — чисто: зоны FSD для `entities/doc-trail` построены по каталогу автоматически (`doc-trail` импортирует только `shared/api` через `index.ts` и `@katran/ui`; `app/fake` — `entities/doc-trail/index.ts`; `@x/fx-doc.ts` и `@x/rub-doc.ts` пока никем не импортируются — это допустимо, `import-x` неиспользуемые модули не проверяет). Проверка зоны вручную (временная строка, не коммитить): добавить в `apps/pi/src/entities/doc-trail/model/tone.ts` строку `import '../../fx-doc/model/fxDoc'`, `pnpm lint` → ошибка `FSD: entities/doc-trail не импортирует соседа fx-doc (только через fx-doc/@x/doc-trail.ts)`; строку удалить. `pnpm check` — зелёный.
+- [x] **Step 11: commit.**
 
 ```bash
 git add apps/pi/src/entities/doc-trail/index.ts apps/pi/src/entities/doc-trail/@x/fx-doc.ts apps/pi/src/entities/doc-trail/@x/rub-doc.ts apps/pi/src/entities/doc-trail/model/types.ts apps/pi/src/entities/doc-trail/model/tone.ts apps/pi/src/entities/doc-trail/model/tone.test.ts apps/pi/src/entities/doc-trail/api/trail.mapper.ts apps/pi/src/entities/doc-trail/api/trail.mapper.test.ts apps/pi/src/entities/doc-trail/api/trail.example.ts apps/pi/src/app/fake/trail.data.ts apps/pi/src/app/fake/fx-docs.trail.ts apps/pi/src/app/fake/rub-docs.trail.ts apps/pi/src/app/fake/fx-docs.data.ts apps/pi/src/app/fake/fx-docs.detail.ts apps/pi/src/app/fake/rub-docs.detail.ts apps/pi/src/app/fake/contract.test.ts apps/pi/src/app/details.a11y.test.tsx
@@ -4709,7 +4709,7 @@ StreamTab(props: TrailTabProps<StreamEvent[]>): JSX.Element
 - Produces (внутри слайса, `ui/lib.ts`): `STUB = 'Действие будет в 2d'`, `SLOW_MS = 30000`, `toggleKey(keys, key, open)`, `keysLabel(n)`, `codeLanguage(text)`; `ui/parts.tsx`: `Nil`, `LinkButton`, `TrailEmpty`; `ui/testing.tsx`: `TEST_DOC_ID`, `renderTab(view, init?)`, `shown(text)`, `toggles()`.
 - Consumes: `MiniTable`, `MiniColumn` (Task 3; ожидается `role="table"` с доступным именем `label`, строки — `role="row"`, шапка — строка таблицы, при всех `header === ''` шапки нет; раскрываемая строка — не кнопка: переключатель — кнопка-шеврон в последней ячейке с `aria-expanded`/`aria-controls` и именем «Раскрыть {rowLabel}»/«Свернуть {rowLabel}» (`rowLabel?: (row, index) => string`; без него — «Раскрыть строку N»); клик по свободному месту строки тоже переключает, по `a`/`button` внутри — нет; `onExpandedChange` отдаёт новый полный список ключей, новый ключ — в конце), `StatusBadge`, `Timestamp`, `formatTimestamp`, `formatDuration` (Task 2), `KeyValueList`, `KeyValueItem` (Task 4; пустое значение — «—» и «не заполнено» для скринридера), `Tag`, `StatusDot`, `Button` (кит 2a); `TabContext` с `docId` (Task 6, `shared/lib/detail`); типы `StatusEvent`, `Compliance`, `DocTask`, `DocNotification`, `StreamEvent` (`model/types.ts`) и `toneOf` (`model/tone.ts`) — Task 7.
 
-- [ ] **Step 1: токен колонки времени истории задачи.** В `packages/tokens/src/tokens.src.ts` в объекте `sizes` после строки с `'dt-dir': 62, …` добавить строку:
+- [x] **Step 1: токен колонки времени истории задачи.** В `packages/tokens/src/tokens.src.ts` в объекте `sizes` после строки с `'dt-dir': 62, …` добавить строку:
 
 ```ts
   // вкладки истории документа (эталон .tk .hist, index.html:336): колонка времени в истории задачи
@@ -4719,7 +4719,7 @@ StreamTab(props: TrailTabProps<StreamEvent[]>): JSX.Element
   Run: `pnpm gen && pnpm --filter @katran/tokens test`
   Expected: PASS; в `packages/tokens/src/tokens.css` появилась строка `--k-dt-hist: calc(70px * var(--k-density));`.
 
-- [ ] **Step 2: обвязка тестов вкладок.** Создать `apps/pi/src/entities/doc-trail/ui/testing.tsx`:
+- [x] **Step 2: обвязка тестов вкладок.** Создать `apps/pi/src/entities/doc-trail/ui/testing.tsx`:
 
 ```tsx
 import { screen } from '@testing-library/react'
@@ -4770,7 +4770,7 @@ export const shown = (text: string | RegExp): boolean => {
 export const toggles = (): HTMLElement[] => screen.getAllByRole('button', { name: /^(Раскрыть|Свернуть)/ })
 ```
 
-- [ ] **Step 3: тесты вкладок (падают).** Создать `apps/pi/src/entities/doc-trail/ui/tabs1.test.tsx`:
+- [x] **Step 3: тесты вкладок (падают).** Создать `apps/pi/src/entities/doc-trail/ui/tabs1.test.tsx`:
 
 ```tsx
 import { screen, within } from '@testing-library/react'
@@ -5035,7 +5035,7 @@ describe('StreamTab (эталон streamHtml)', () => {
   Run: `pnpm --filter pi test -- doc-trail/ui/tabs1`
   Expected: FAIL — `Failed to resolve import "./ComplianceTab"` (модулей вкладок ещё нет).
 
-- [ ] **Step 4: помощники, общие блоки, стили.** Создать `apps/pi/src/entities/doc-trail/ui/lib.ts`:
+- [x] **Step 4: помощники, общие блоки, стили.** Создать `apps/pi/src/entities/doc-trail/ui/lib.ts`:
 
 ```ts
 import type { CodeLanguage } from '@katran/ui'
@@ -5259,7 +5259,7 @@ export function TrailEmpty({ text }: { text: string }) {
 }
 ```
 
-- [ ] **Step 5: Статусы.** Создать `apps/pi/src/entities/doc-trail/ui/StatusesTab.tsx`:
+- [x] **Step 5: Статусы.** Создать `apps/pi/src/entities/doc-trail/ui/StatusesTab.tsx`:
 
 ```tsx
 import { MiniTable, Tag, Timestamp, formatDuration, timestampDiff, type MiniColumn } from '@katran/ui'
@@ -5309,7 +5309,7 @@ export function StatusesTab({ data }: TrailTabProps<StatusEvent[]>) {
 }
 ```
 
-- [ ] **Step 6: Комплаенс.** Создать `apps/pi/src/entities/doc-trail/ui/ComplianceTab.tsx`:
+- [x] **Step 6: Комплаенс.** Создать `apps/pi/src/entities/doc-trail/ui/ComplianceTab.tsx`:
 
 ```tsx
 import { KeyValueList, MiniTable, StatusBadge, Timestamp, type KeyValueItem, type MiniColumn } from '@katran/ui'
@@ -5390,7 +5390,7 @@ export function ComplianceTab({ data, ctx }: TrailTabProps<Compliance | null>) {
 }
 ```
 
-- [ ] **Step 7: Задачи.** Создать `apps/pi/src/entities/doc-trail/ui/TasksTab.tsx`:
+- [x] **Step 7: Задачи.** Создать `apps/pi/src/entities/doc-trail/ui/TasksTab.tsx`:
 
 ```tsx
 import { Fragment } from 'react'
@@ -5462,7 +5462,7 @@ export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
 }
 ```
 
-- [ ] **Step 8: Нотификации и Стриминг.** Создать `apps/pi/src/entities/doc-trail/ui/NotificationsTab.tsx`:
+- [x] **Step 8: Нотификации и Стриминг.** Создать `apps/pi/src/entities/doc-trail/ui/NotificationsTab.tsx`:
 
 ```tsx
 import { Button, MiniTable, StatusBadge, Tag, Timestamp, type MiniColumn } from '@katran/ui'
@@ -5530,7 +5530,7 @@ export function StreamTab({ data }: TrailTabProps<StreamEvent[]>) {
 }
 ```
 
-- [ ] **Step 9: публичный API.** В конец `apps/pi/src/entities/doc-trail/index.ts` (создан в Task 7) дописать:
+- [x] **Step 9: публичный API.** В конец `apps/pi/src/entities/doc-trail/index.ts` (создан в Task 7) дописать:
 
 ```ts
 export type { TrailTabProps } from './ui/lib'
@@ -5541,7 +5541,7 @@ export { NotificationsTab } from './ui/NotificationsTab'
 export { StreamTab } from './ui/StreamTab'
 ```
 
-- [ ] **Step 10: запуск.**
+- [x] **Step 10: запуск.**
 
   Run: `pnpm --filter pi test -- doc-trail`
   Expected: PASS — `tabs1.test.tsx` 27 тестов, плюс тесты Task 7 (`tone`, `trail.mapper`).
@@ -5549,7 +5549,7 @@ export { StreamTab } from './ui/StreamTab'
   Run: `pnpm check`
   Expected: зелёный (stylelint: в `trail.module.css` только `var(--k-*)`, `px` — в `border*`/`outline*`; eslint: `ui` импортирует кит, `shared/lib/detail`, `shared/lib/test` (только `testing.tsx`) и свою `model`; `gen:check` — `tokens.css`/`tokens.ts` закоммичены вместе с `tokens.src.ts`).
 
-- [ ] **Step 11: commit.**
+- [x] **Step 11: commit.**
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts apps/pi/src/entities/doc-trail/index.ts apps/pi/src/entities/doc-trail/ui/lib.ts apps/pi/src/entities/doc-trail/ui/parts.tsx apps/pi/src/entities/doc-trail/ui/testing.tsx apps/pi/src/entities/doc-trail/ui/trail.module.css apps/pi/src/entities/doc-trail/ui/StatusesTab.tsx apps/pi/src/entities/doc-trail/ui/ComplianceTab.tsx apps/pi/src/entities/doc-trail/ui/TasksTab.tsx apps/pi/src/entities/doc-trail/ui/NotificationsTab.tsx apps/pi/src/entities/doc-trail/ui/StreamTab.tsx apps/pi/src/entities/doc-trail/ui/tabs1.test.tsx
@@ -5578,7 +5578,7 @@ TRAIL_VIEWS: Record<TrailTabId, RemoteTabView>                  // ui/views.ts; 
 - Ключи раскрытия в `ctx.expanded`: «Связанные» — `docId`; MPU — `id` сообщения; «Аудит» — имя секции; «Исходный текст» — ключ исходника. Аккордеоны — управляемый `Disclosure` (`open` + `onOpenChange`), новый ключ — в конец (`toggleKey`).
 - Consumes: всё из Task 8 (`lib.ts`, `parts.tsx`, `testing.tsx`, `trail.module.css`); `CodeView` (Task 5; `role="region"` с именем `label`), `Disclosure` с `mono` и `emptyText` (Task 4), `CopyValue` (кит 2a); `toneOf` с `DONE → ok` (Task 7); `remoteTab`, `RemoteTabView` (Task 6); `LinkedDoc`, `LinkedParty`, `LinkedPosting`, `MpuMessage`, `AuditSections`, `SourceTexts`, `TrailTabId`, `TRAIL_PARSERS`, `TRAIL_EXAMPLES` (Task 7; последние два — только в тесте).
 
-- [ ] **Step 1: тесты (падают).** Создать `apps/pi/src/entities/doc-trail/ui/tabs2.test.tsx`:
+- [x] **Step 1: тесты (падают).** Создать `apps/pi/src/entities/doc-trail/ui/tabs2.test.tsx`:
 
 ```tsx
 import { screen, within } from '@testing-library/react'
@@ -5807,7 +5807,7 @@ describe('TRAIL_VIEWS — контракт с TRAIL_PARSERS', () => {
   Run: `pnpm --filter pi test -- doc-trail/ui/tabs2`
   Expected: FAIL — `Failed to resolve import "./AuditTab"`.
 
-- [ ] **Step 2: стили.** В конец `apps/pi/src/entities/doc-trail/ui/trail.module.css` дописать:
+- [x] **Step 2: стили.** В конец `apps/pi/src/entities/doc-trail/ui/trail.module.css` дописать:
 
 ```css
 /* Связанные (эталон .ld/.ldb/.kvs/.two-t, index.html:325–333) и MPU (карточка .ldb + .ah swiftText) */
@@ -5864,7 +5864,7 @@ describe('TRAIL_VIEWS — контракт с TRAIL_PARSERS', () => {
 }
 ```
 
-- [ ] **Step 3: Связанные.** Создать `apps/pi/src/entities/doc-trail/ui/LinkedTab.tsx`:
+- [x] **Step 3: Связанные.** Создать `apps/pi/src/entities/doc-trail/ui/LinkedTab.tsx`:
 
 ```tsx
 import { CopyValue, KeyValueList, MiniTable, StatusBadge, Tag, Timestamp, formatAmount, formatDate, type KeyValueItem, type MiniColumn } from '@katran/ui'
@@ -5979,7 +5979,7 @@ export function LinkedTab({ data, ctx }: TrailTabProps<LinkedDoc[]>) {
 }
 ```
 
-- [ ] **Step 4: MPU, Аудит, Исходный текст.** Создать `apps/pi/src/entities/doc-trail/ui/MpuTab.tsx`:
+- [x] **Step 4: MPU, Аудит, Исходный текст.** Создать `apps/pi/src/entities/doc-trail/ui/MpuTab.tsx`:
 
 ```tsx
 import { CodeView, CopyValue, Disclosure, KeyValueList, StatusBadge, Tag, Timestamp, type KeyValueItem } from '@katran/ui'
@@ -6108,7 +6108,7 @@ export function SourceTab({ data, ctx }: TrailTabProps<SourceTexts>) {
 }
 ```
 
-- [ ] **Step 5: таблица видов.** Создать `apps/pi/src/entities/doc-trail/ui/views.ts`:
+- [x] **Step 5: таблица видов.** Создать `apps/pi/src/entities/doc-trail/ui/views.ts`:
 
 ```ts
 import { createElement } from 'react'
@@ -6144,7 +6144,7 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
 }
 ```
 
-- [ ] **Step 6: публичный API.** В конец `apps/pi/src/entities/doc-trail/index.ts` дописать:
+- [x] **Step 6: публичный API.** В конец `apps/pi/src/entities/doc-trail/index.ts` дописать:
 
 ```ts
 export { LinkedTab } from './ui/LinkedTab'
@@ -6154,7 +6154,7 @@ export { SourceTab } from './ui/SourceTab'
 export { TRAIL_VIEWS } from './ui/views'
 ```
 
-- [ ] **Step 7: запуск.**
+- [x] **Step 7: запуск.**
 
   Run: `pnpm --filter pi test -- doc-trail`
   Expected: PASS — `tabs2.test.tsx` 19 тестов, `tabs1.test.tsx` 27, тесты Task 7.
@@ -6165,7 +6165,7 @@ export { TRAIL_VIEWS } from './ui/views'
   Run: `grep -rn "innerHTML" apps/pi/src/entities/doc-trail`
   Expected: пусто.
 
-- [ ] **Step 8: commit.**
+- [x] **Step 8: commit.**
 
 ```bash
 git add apps/pi/src/entities/doc-trail/index.ts apps/pi/src/entities/doc-trail/ui/trail.module.css apps/pi/src/entities/doc-trail/ui/LinkedTab.tsx apps/pi/src/entities/doc-trail/ui/MpuTab.tsx apps/pi/src/entities/doc-trail/ui/AuditTab.tsx apps/pi/src/entities/doc-trail/ui/SourceTab.tsx apps/pi/src/entities/doc-trail/ui/views.ts apps/pi/src/entities/doc-trail/ui/tabs2.test.tsx
@@ -6199,7 +6199,7 @@ fxExtraView: LocalTabView<FxDocDetail>
 - Produces (порты): `fxDocPorts.tabFx` / `rubDocPorts.tabFx` с `parseTab` — парсеры `doc-trail` ровно по нелокальным вкладкам `FX_TABS` / `RUB_TABS` (валюта без `ed244`, рубль без `source`; вкладка без парсера → `contractError` до запроса, Task 6).
 - Consumes: `KeyValueList`, `KeyValueItem` (Task 4), `FieldTag`, `CopyValue`, `formatDate`, `formatAmount` (кит 2a); `LocalTabView` (Task 6); `createGridPorts` с `parseTab`, `TabParser` (Task 6, `shared/api`); `TRAIL_PARSERS`, `TrailTabId` (Task 7).
 
-- [ ] **Step 1: тест (падает).** Создать `apps/pi/src/entities/fx-doc/ui/ExtraTab.test.tsx`:
+- [x] **Step 1: тест (падает).** Создать `apps/pi/src/entities/fx-doc/ui/ExtraTab.test.tsx`:
 
 ```tsx
 import { screen } from '@testing-library/react'
@@ -6295,7 +6295,7 @@ describe('ExtraTab', () => {
   Run: `pnpm --filter pi test -- ExtraTab`
   Expected: FAIL — `Failed to resolve import "../model/extra"`.
 
-- [ ] **Step 2: модель «Доп. полей».** Создать `apps/pi/src/entities/fx-doc/model/extra.ts`:
+- [x] **Step 2: модель «Доп. полей».** Создать `apps/pi/src/entities/fx-doc/model/extra.ts`:
 
 ```ts
 import { formatAmount, formatDate } from '@katran/ui'
@@ -6359,7 +6359,7 @@ export function fxExtraGroups(d: FxDocDetail): ExtraGroup[] {
 }
 ```
 
-- [ ] **Step 3: вид.** Создать `apps/pi/src/entities/fx-doc/ui/extra.module.css`:
+- [x] **Step 3: вид.** Создать `apps/pi/src/entities/fx-doc/ui/extra.module.css`:
 
 ```css
 /* «Доп. поля» валюты (эталон .xr .kv/.lbl/.diffd, index.html:283–295): части значения в строке */
@@ -6478,7 +6478,7 @@ export { ExtraTab, fxExtraView } from './ui/ExtraTab'
   Run: `pnpm --filter pi test -- ExtraTab`
   Expected: PASS — 10 тестов.
 
-- [ ] **Step 4: парсеры вкладок в портах реестров.** Соседние парсеры берутся только через `doc-trail/@x/fx-doc.ts` и `doc-trail/@x/rub-doc.ts` (созданы в Task 7: `TRAIL_PARSERS`, `TrailTabId`).
+- [x] **Step 4: парсеры вкладок в портах реестров.** Соседние парсеры берутся только через `doc-trail/@x/fx-doc.ts` и `doc-trail/@x/rub-doc.ts` (созданы в Task 7: `TRAIL_PARSERS`, `TrailTabId`).
 
   Заменить содержимое `apps/pi/src/entities/fx-doc/api/ports.ts`:
 
@@ -6518,7 +6518,7 @@ for (const { id } of RUB_TABS) {
 export const rubDocPorts = createGridPorts({ gridId: 'rub-docs', parseRow: parseRubDoc, parseDetail: parseRubDocDetail, parseTab })
 ```
 
-- [ ] **Step 5: контрактная цепочка вкладок.** В `apps/pi/src/app/fake/contract.test.ts` импорты сущностей заменить на
+- [x] **Step 5: контрактная цепочка вкладок.** В `apps/pi/src/app/fake/contract.test.ts` импорты сущностей заменить на
 
 ```ts
 import { FX_TABS, FX_TYPES, fxDocPorts } from '../../entities/fx-doc'
@@ -6557,7 +6557,7 @@ describe('контракт вкладок (спека 2b §3.1): порт рее
 })
 ```
 
-- [ ] **Step 6: запуск.**
+- [x] **Step 6: запуск.**
 
   Run: `pnpm --filter pi test -- ExtraTab contract fx-doc rub-doc`
   Expected: PASS — `ExtraTab.test.tsx` 10, новый блок `contract.test.ts` 2, прежние тесты `fx-doc` / `rub-doc` / `contract` без изменений.
@@ -6565,7 +6565,7 @@ describe('контракт вкладок (спека 2b §3.1): порт рее
   Run: `pnpm check`
   Expected: зелёный (eslint: `fx-doc` и `rub-doc` берут `doc-trail` только через `@x/fx-doc.ts` / `@x/rub-doc.ts`; stylelint: `extra.module.css` — только токены).
 
-- [ ] **Step 7: commit.**
+- [x] **Step 7: commit.**
 
 ```bash
 git add apps/pi/src/entities/fx-doc/model/extra.ts apps/pi/src/entities/fx-doc/ui/ExtraTab.tsx apps/pi/src/entities/fx-doc/ui/extra.module.css apps/pi/src/entities/fx-doc/ui/ExtraTab.test.tsx apps/pi/src/entities/fx-doc/index.ts apps/pi/src/entities/fx-doc/api/ports.ts apps/pi/src/entities/rub-doc/api/ports.ts apps/pi/src/app/fake/contract.test.ts
@@ -6602,7 +6602,7 @@ type Detail<D> = { …2a…; retryTab: EventCallable<DrawerSlot>; $expanded: Sto
 6. **M-g.** `ConfigForm` «Общих» получает `expanded = $expanded[`${id}:main`]` и `onExpandedChange` → `setExpanded`. До первого изменения ключа нет → `expanded={undefined}` — форма берёт свои умолчания (семантика Task 4: без `expanded` — внутреннее состояние, `onExpandedChange` отдаёт полный список раскрытых). То же правило у `TabContext.expanded`: `null` — вид берёт свои умолчания.
 7. **Заглушка** для вкладки без вида — нейтральная «Вкладка «…» не подключена»: для `fx`/`rub` недостижима (Task 12 проверяет полноту `tabViews`), но виджет общий.
 
-- [ ] **Step 1: модель — тесты (падают).** В `apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts` заменить строку импорта
+- [x] **Step 1: модель — тесты (падают).** В `apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts` заменить строку импорта
 
 ```ts
 import { ApiError } from '../../../shared/api'
@@ -6844,7 +6844,7 @@ describe('createDetail: ленивые вкладки (спека 2b §3.3)', ()
   Run: `pnpm --filter pi test -- createDetail`
   Expected: FAIL — `tabFx`/`localTabs` не входят в `DetailConfig`, у слота нет `tabView`, нет `retryTab`, `$expanded`, `setExpanded`.
 
-- [ ] **Step 2: модель — реализация.** Заменить `apps/pi/src/widgets/doc-detail/lib/createDetail.ts` целиком:
+- [x] **Step 2: модель — реализация.** Заменить `apps/pi/src/widgets/doc-detail/lib/createDetail.ts` целиком:
 
 ```ts
 import { attach, combine, createEvent, createStore, merge, sample, type Effect, type EventCallable, type Store } from 'effector'
@@ -7095,7 +7095,7 @@ export { DocDetail, type DocDetailProps } from './ui/DocDetail'
   Run: `pnpm --filter pi test -- createDetail`
   Expected: PASS — 27 (15 из 2a + 12 новых).
 
-- [ ] **Step 3: компонент — тесты (падают).** Заменить `apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx` целиком (тесты 2a сохранены; тест «будет в срезе 2b» заменён — заглушки больше нет):
+- [x] **Step 3: компонент — тесты (падают).** Заменить `apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx` целиком (тесты 2a сохранены; тест «будет в срезе 2b» заменён — заглушки больше нет):
 
 ```tsx
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -7433,7 +7433,7 @@ describe('DocDetail: вкладки 2b (спека 2b §3.3, §4)', () => {
   Run: `pnpm --filter pi test -- DocDetail`
   Expected: FAIL — нет «Доп. поля документа …», нет `tab-skeleton`, заглушка прежняя.
 
-- [ ] **Step 4: компонент — реализация.** Заменить `apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx` целиком:
+- [x] **Step 4: компонент — реализация.** Заменить `apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx` целиком:
 
 ```tsx
 import { useEffect, useRef, useState } from 'react'
@@ -7682,13 +7682,13 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDet
   Run: `pnpm --filter pi test -- doc-detail`
   Expected: PASS — `createDetail.test.ts` 27, `DocDetail.test.tsx` 19.
 
-- [ ] **Step 5: запуск и граница.**
+- [x] **Step 5: запуск и граница.**
   Run: `pnpm --filter pi test` — PASS (все файлы `apps/pi`; `app/details.a11y.test.tsx` 2a проходит без изменений — вкладка «Общие» и `tabFx` не передан).
   Run: `grep -rn "entities" apps/pi/src/widgets/doc-detail` — пусто (виджет сущностей не знает; eslint-зона `doc-detail → entities` это же проверяет в `pnpm lint`).
   Run: `pnpm check` — зелёный.
   e2e в этой задаче не запускается: сценарий 2a «Статусы — будет в срезе 2b» в `apps/pi/e2e/detail.spec.ts` правит Task 12 вместе с новым `detail-tabs.spec.ts`.
 
-- [ ] **Step 6: commit.**
+- [x] **Step 6: commit.**
 
 ```bash
 git add apps/pi/src/widgets/doc-detail/lib/createDetail.ts apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx apps/pi/src/widgets/doc-detail/ui/DocDetail.test.tsx apps/pi/src/widgets/doc-detail/index.ts
@@ -7713,7 +7713,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - **e2e без сети.** Фейк работает внутри страницы (`requestFx.use(createFakeServer(...))`, `app/transport.ts`), сетевых запросов нет — перехватывать Playwright'ом нечего. Поэтому: «переключение не перезапрашивает» проверяется **взведённым регулятором**: после загрузки вкладки в адрес ставится `?fail=tab` (`history.replaceState`, без перезагрузки — `failing()` фейка читает `location.search` на каждом запросе); любой новый запрос вкладки дал бы ошибку, её нет — запроса не было; контроль — вкладка не из кэша при том же регуляторе падает. «Повтор после снятия регулятора» — тем же `replaceState` без `fail`, затем «Повторить».
 - **Д28 в jsdom не проверяется** (каскад CSS-модулей jsdom не видит, Global Constraints) — только вычисленные стили в e2e. Попутно `registry.spec.ts` B1 смотрит приглушение на записи **без** метки: после Д28 метка сильнее состояния, а автооткрытие (В-Д4) может пометить первую заблокированную запись.
 
-- [ ] **Step 1: тесты страниц и a11y (падают).** В `apps/pi/src/pages/fx-docs/model/registry.model.test.ts` заменить импорты:
+- [x] **Step 1: тесты страниц и a11y (падают).** В `apps/pi/src/pages/fx-docs/model/registry.model.test.ts` заменить импорты:
 
 ```ts
 import { allSettled, fork } from 'effector'
@@ -7927,7 +7927,7 @@ describe('a11y вкладок деталки на данных фейка (сп�
   Run: `pnpm --filter pi test -- registry.model details.a11y`
   Expected: FAIL — нет `FX_LOCAL_TABS`/`RUB_LOCAL_TABS`, `ui/detailDomain.ts`, экспортов страниц.
 
-- [ ] **Step 2: домены страниц.** Создать `apps/pi/src/pages/fx-docs/ui/detailDomain.ts`:
+- [x] **Step 2: домены страниц.** Создать `apps/pi/src/pages/fx-docs/ui/detailDomain.ts`:
 
 ```ts
 import { TRAIL_VIEWS, type TrailTabId } from '../../../entities/doc-trail'
@@ -7963,7 +7963,7 @@ for (const t of RUB_TABS) if (isTrail(t.id)) tabViews[t.id] = TRAIL_VIEWS[t.id]
 export const rubDetailDomain: DetailDomain<RubDocDetail, RubDoc> = { ...rubDocDetailDomain, tabViews }
 ```
 
-- [ ] **Step 3: модели и экраны страниц.** В `apps/pi/src/pages/fx-docs/model/registry.model.ts` заменить строки
+- [x] **Step 3: модели и экраны страниц.** В `apps/pi/src/pages/fx-docs/model/registry.model.ts` заменить строки
 
 ```ts
 /** Деталка экрана — на том же жизненном цикле: уход с экрана закрывает оба drawer'а и чистит кэш (спека 2a §5). */
@@ -8022,7 +8022,7 @@ export { rubDetailDomain } from './ui/detailDomain'
   Expected: PASS — `registry.model.test.ts` fx 5 (2 + 3), rub 5 (2 + 3); `details.a11y.test.tsx` 4 (2 из 2a + 2 новых).
   Run: `pnpm --filter pi test` — PASS.
 
-- [ ] **Step 4: Д28 в ките.** В `packages/ui/src/grid/Grid.module.css` заменить блок
+- [x] **Step 4: Д28 в ките.** В `packages/ui/src/grid/Grid.module.css` заменить блок
 
 ```css
 /* состояния записи (эталон 1d57ded): значения приглушены переопределением тонов внутри записи — классы значений не адресуются */
@@ -8082,7 +8082,7 @@ export { rubDetailDomain } from './ui/detailDomain'
   Run: `pnpm lint` — зелёный (stylelint `no-descending-specificity` не срабатывает: новые селекторы специфичнее прежних и стоят на их местах).
   Run: `pnpm --filter @katran/ui test` — PASS (поведенческих изменений в jsdom нет).
 
-- [ ] **Step 5: сценарий 2a про заглушку.** В `apps/pi/e2e/detail.spec.ts`, тест «вкладки: в полосе 800 px не помещаются все …», заменить последние две строки
+- [x] **Step 5: сценарий 2a про заглушку.** В `apps/pi/e2e/detail.spec.ts`, тест «вкладки: в полосе 800 px не помещаются все …», заменить последние две строки
 
 ```ts
   await dw.getByRole('tab', { name: 'Статусы' }).click()
@@ -8101,7 +8101,7 @@ export { rubDetailDomain } from './ui/detailDomain'
   await expect(dw.getByText(/будет в срезе 2b/)).toHaveCount(0)
 ```
 
-- [ ] **Step 6: e2e вкладок.**
+- [x] **Step 6: e2e вкладок.**
   1. **Разметка для замера.** Строка «ключ–значение» — `[data-kv]` (элемент строки `KeyValueList` в одну колонку, Task 4; «Комплаенс» никогда не в `tabsOff`, его группы — в одну колонку); таблицы и раскрываемые строки `MiniTable` — по ролям (`table`, `row`, `columnheader`, `cell`; переключатель раскрытия — кнопка с `aria-expanded` в последней ячейке, высота — у её строки). Своей разметки задача не добавляет.
   2. Создать `apps/pi/e2e/detail-tabs.spec.ts` (числа `REF` — из Task 1, `detail-drift.md` раздел «2b», «Замер эталона»; если замер дал другие — подставить их):
 
@@ -8349,14 +8349,14 @@ test('Д28: метка открытой записи сильнее состоя
 })
 ```
 
-- [ ] **Step 7: e2e — запуск (передний план, дождаться).**
+- [x] **Step 7: e2e — запуск (передний план, дождаться).**
   Run: `pnpm --filter pi e2e -- detail-tabs`
   Expected: PASS — 10 (высоты ×2, «Связанные» → B ×2, скриншоты ×2, `?fail=tab:audit`, кэш, `?hostile`, Д28).
   Run: `pnpm --filter pi e2e`
   Expected: PASS — 50 (прежние 40 с правками Step 4–5 + 10 новых).
   Аннотации `geometry` (высоты, в том числе `?hostile`) и `Д28` — записать в леджер: они идут в `detail-drift.md` (Task 13). Скриншоты `tab-<route>-<id>.png` (в `apps/pi/test-results/…`) положить рядом со скриншотами эталона Task 1 и сравнить глазами; расхождения вида — новые пункты класса D в `detail-drift.md` (Task 13). Если высота вне допуска — сначала сверить токен строки в ките (Task 3–4) с замером Task 1, `REF` не подгонять.
-- [ ] **Step 8: проверка в браузере — делает контроллер.** `pnpm --filter pi dev` (5185): `#/fx-docs` — открыть документ, пройти все вкладки: скелетон на медленном `?slow=1500`, данные; «Связанные» — клик по ID открывает B; раскрыть строку «Задач», уйти на «Статусы» и вернуться — раскрыто; раскрыть поле в «Общих», уйти и вернуться — раскрыто (M-g); `?fail=tab:audit` — ошибка во вкладке, шапка жива; `#/rub-docs` — ED244 (XML), рублёвые счета и `SC_NCB_*` в статусах; тёмная тема — бейджи статусов, подсветка кода; заблокированная и неактивная записи, открытые в деталке, — полоса и фон метки (Д28); консоль без ошибок. Исполнитель этот шаг пропускает (правило контроллера, R14 плана `apps/pi`).
-- [ ] **Step 9: проверка и commit.** `pnpm check` — зелёный.
+- [x] **Step 8: проверка в браузере — делает контроллер.** `pnpm --filter pi dev` (5185): `#/fx-docs` — открыть документ, пройти все вкладки: скелетон на медленном `?slow=1500`, данные; «Связанные» — клик по ID открывает B; раскрыть строку «Задач», уйти на «Статусы» и вернуться — раскрыто; раскрыть поле в «Общих», уйти и вернуться — раскрыто (M-g); `?fail=tab:audit` — ошибка во вкладке, шапка жива; `#/rub-docs` — ED244 (XML), рублёвые счета и `SC_NCB_*` в статусах; тёмная тема — бейджи статусов, подсветка кода; заблокированная и неактивная записи, открытые в деталке, — полоса и фон метки (Д28); консоль без ошибок. Исполнитель этот шаг пропускает (правило контроллера, R14 плана `apps/pi`).
+- [x] **Step 9: проверка и commit.** `pnpm check` — зелёный.
 
 ```bash
 git add apps/pi/src/pages/fx-docs/ui/detailDomain.ts apps/pi/src/pages/fx-docs/model/registry.model.ts apps/pi/src/pages/fx-docs/model/registry.model.test.ts apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx apps/pi/src/pages/fx-docs/index.ts apps/pi/src/pages/rub-docs/ui/detailDomain.ts apps/pi/src/pages/rub-docs/model/registry.model.ts apps/pi/src/pages/rub-docs/model/registry.model.test.ts apps/pi/src/pages/rub-docs/ui/RubDocsPage.tsx apps/pi/src/pages/rub-docs/index.ts apps/pi/src/app/details.a11y.test.tsx packages/ui/src/grid/Grid.module.css apps/pi/e2e/detail-tabs.spec.ts apps/pi/e2e/detail.spec.ts apps/pi/e2e/registry.spec.ts
@@ -8373,7 +8373,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 **Interfaces:**
 - Consumes: подраздел `#### Для pi-api.md` из Task 7 этого плана (состав ответа каждой вкладки и примеры — из `TRAIL_EXAMPLES`); `FX_DETAIL_EXAMPLE` после Task 10 (если деталь валюты расширена референсами и `vd`); аннотации e2e Task 12 (`geometry`, `Д28`, `screenshots`) и сравнение скриншотов; раздел «2b» `detail-drift.md` (Task 1); ответы В-Д6 и R13 (спека 2b §1.3); итоговые решения Task 11 (п. 1–7) и Task 12.
 
-- [ ] **Step 1: `docs/reference/pi-api.md`.**
+- [x] **Step 1: `docs/reference/pi-api.md`.**
   1. В §1 после 1.4 — новый подраздел:
 
 ```markdown
@@ -8402,7 +8402,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
   6. §6 «Что не проверяет фейковый сервер» — пункт: «Вкладки (`…/tabs/{tab}`, раздел 8) строятся детерминированно по `id` документа из общих словарей стенда (`apps/pi/src/app/fake/trail.data.ts`, `fx-docs.trail.ts`, `rub-docs.trail.ts`); `tabsOff` детали считается по тем же генераторам; метод запроса не проверяется. Регуляторы `?fail=tab` (500 на любой вкладке) и `?fail=tab:<id>` (только на одной) — только у фейка».
   Run: `for t in statuses compliance linked tasks notif source ed244 stream mpu audit; do grep -q "### 8\..*\`$t\`" docs/reference/pi-api.md || echo "нет раздела 8 для $t"; done`
   Expected: пусто (у каждой нелокальной вкладки — свой подраздел 8.K с ключом в заголовке).
-- [ ] **Step 2: `docs/guides/pi-usage.md`.**
+- [x] **Step 2: `docs/guides/pi-usage.md`.**
   1. §13, второй абзац («В 2a содержимое есть только у вкладки «Общие данные»…») заменить: «С среза 2b все вкладки показывают содержимое: «Общие данные» и «Доп. поля» (валюта) — из детали, остальные грузятся лениво отдельным запросом (`GET …/documents/{id}/tabs/{tab}`, `pi-api.md` §1.5 и §8). Связанный документ открывается по клику на его ID в drawer B. Кнопки вкладок и действия лейна — заглушки до 2d (раздел 13.5)». Ссылку на спеку дополнить: «2b — `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md`».
   2. §13.0 — таблица «Файл · Что поменялось» дополняется строками 2b: `shared/api/ports.ts` — `parseTab` в `createGridPorts`, порт `tabFx`, типы `TabQuery`, `TabParser`, `TabPort`; `shared/lib/detail/*` — `TabContext`, `TabView`, `LocalTabView`, `RemoteTabView`, `remoteTab`, `DetailDomain.tabViews`; `entities/fx-doc/api/ports.ts`, `entities/rub-doc/api/ports.ts` — `parseTab` из `TRAIL_PARSERS` по набору вкладок реестра; `entities/fx-doc` — `ExtraTab`, `fxExtraView` (и поля детали, если расширялась); `widgets/doc-detail/*` — `tabFx`, `localTabs`, `retryTab`, `$expanded`, `setExpanded`, виды вкладок; `pages/*/model/registry.model.ts` — `FX_LOCAL_TABS`/`RUB_LOCAL_TABS`, `tabFx` в `createDetail`; `pages/*/ui/detailDomain.ts` (новый) и `pages/*/ui/*Page.tsx` — домен с `tabViews`. Абзац «Новые папки — целиком» — `entities/doc-trail/` (с `@x/fx-doc.ts`, `@x/rub-doc.ts`); «Кит нужен свежий» — дополнить новыми компонентами 2b: `MiniTable`, `StatusBadge`, `Timestamp`, `KeyValueList`, `CodeView`, `formatTimestamp`, `formatDuration`, `Tag` `mono`, `ConfigForm` `expanded`/`onExpandedChange`.
   3. §13.1 — таблица «Где · Что»: строка `widgets/doc-detail` дополняется ленивыми вкладками (кэш `id:tab`, свои скелетон/ошибка/«Повторить», раскрытие по документу в `$expanded`); новая строка `entities/doc-trail` — «история обработки документа, общая для обоих реестров: типы вкладок, `toneOf`, мапперы `TRAIL_PARSERS`, примеры `TRAIL_EXAMPLES`, виды `TRAIL_VIEWS` (Статусы, Комплаенс, Связанные, Задачи, Нотификации, Исходный текст / ED244, Стриминг, MPU, Аудит); соседям — `TRAIL_PARSERS` через `@x`»; строка `shared/lib/detail` — `TabContext`, `TabView`, `remoteTab`. Блок кода `DetailConfig`/`DetailSlot`/`Detail` заменить на актуальный из `apps/pi/src/widgets/doc-detail/lib/createDetail.ts` (поля `tabFx`, `localTabs`, `tabView`, `retryTab`, `$expanded`, `setExpanded`, `$quiet`, `open: EventCallable<DrawerOpen>`). Список компонентов кита — дополнить блоками 2b.
@@ -8430,34 +8430,34 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
      Пример кода в пункте — сверить с фактическим `apps/pi/src/entities/doc-trail/ui/views.ts` (Task 9) и взять оттуда одну строку дословно.
   6. §13.6 — пункт e2e дополнить: «`apps/pi/e2e/detail-tabs.spec.ts` — высоты строк вкладок против эталона ± 2 (таблица 24, шапка 22, «ключ–значение» 24, раскрываемая строка 26), «Связанный» → B, ошибка вкладки и «Повторить», кэш вкладок, `?hostile`». Пункт «Контрактный тест» — блоки вкладок (`…/tabs/{tab}`: 200, 404, 500 по `?fail=tab` и `?fail=tab:<id>`).
   7. §10, чек-лист — пункт: «[ ] Вкладки деталки открываются, `GET …/documents/{id}/tabs/{tab}` вашего бека проходит контрактный тест; `tabsOff` детали совпадает с пустотой вкладок»; в пункте про регуляторы — `?fail=tab` и `?fail=tab:<id>`.
-- [ ] **Step 3: `apps/pi/README.md`.** В таблицу регуляторов после `?fail=detail` — строки: «`?fail=tab` | любая вкладка деталки (`GET …/documents/{id}/tabs/{tab}`) отвечает `500` — ошибка внутри вкладки с «Повторить», шапка и другие вкладки работают» и «`?fail=tab:<id>` | `500` только на вкладке `<id>` (`?fail=tab:audit`)».
-- [ ] **Step 4: `docs/reference/detail-drift.md`.** Раздел «2b» (создан Task 1):
+- [x] **Step 3: `apps/pi/README.md`.** В таблицу регуляторов после `?fail=detail` — строки: «`?fail=tab` | любая вкладка деталки (`GET …/documents/{id}/tabs/{tab}`) отвечает `500` — ошибка внутри вкладки с «Повторить», шапка и другие вкладки работают» и «`?fail=tab:<id>` | `500` только на вкладке `<id>` (`?fail=tab:audit`)».
+- [x] **Step 4: `docs/reference/detail-drift.md`.** Раздел «2b» (создан Task 1):
   1. Таблица сверки — у каждого пункта колонка «katran» из плана в факт: «сделано в Task N (`<коммит>`)» или класс с описанием; итоговые классы — A (совпадает), B (решение владельца — В-Д6 «а», R13 «закрывает деталку»), C (намеренное: чистые данные рубля; `tabsOff` по данным; задержка с воротами 400 мс вместо 700; состояние ошибки вкладки; «Связанный» открывается в B; вкладка из `tabsOff` не рендерится ни при каких условиях — спека 2b §6), D (расхождение вида с предложением) — для каждого пункта ровно один класс.
   2. «Замер эталона» 2b — колонка «кит (e2e Task 12)» с числами аннотаций `geometry` обоих реестров и `?hostile` (шапка таблицы, строка, «ключ–значение», раскрываемая строка); разница с эталоном — отдельной колонкой.
   3. Скриншоты Task 12 Step 7 против скриншотов эталона Task 1 — расхождения вида новыми строками класса D с предложением; совпавшие вкладки перечислить одной строкой «сверено глазами: …».
   4. Д28 (раздел 2a) — класс D → «сделано в Task 12 (`<коммит>`), e2e `detail-tabs.spec.ts` «Д28»: полоса `val`, фон `val-soft`, без штриховки» с вычисленными значениями из аннотации `Д28`.
   5. «Вопросы владельцу» — В-Д6 и R13: ответы с датой 30.09.2026 (спека 2b §1.3); Д29 — класс C по В-Д6 «а».
-- [ ] **Step 5: спеки.**
+- [x] **Step 5: спеки.**
   - `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md`: в шапке «Статус: …» заменить на «Статус: **исполнено** планом `docs/superpowers/plans/2026-09-30-katran-detail-tabs.md` (<дата слияния>); согласовано с владельцем по разделам 30.09 (…прежний текст решений…)». В §3.3 — абзац «Уточнено при исполнении (план 2b, Task 11)»: вкладка грузится независимо от детали (эндпоинт самостоятелен; вкладку, выбранную до загрузки и оказавшуюся в `tabsOff`, `DocDetail` переводит на «Общие» — техдолг M-f закрыт); триггер — смена записи слота (`setTab`, сдвиг B в A), открытие всегда на «Общих»; `retryTab(slot)` вместо `retryTab({ slot, tab })` — повторяется активная вкладка слота; `tabViews` — объекты `TabView` (`local`/`remote`, `remoteTab`) вместо функций, `ctx` — `docId`, `openDocument`, `announce`, `expanded`, `setExpanded`; повторный выбор вкладки с ошибкой — новый запрос; раскрытие — `$expanded` по ключу `id:tab`, у «Общих» — управляемый `ConfigForm` (техдолг M-g закрыт). В §3.4 — «виды собирает страница (`pages/*/ui/detailDomain.ts`), `localTabs` — константы моделей страниц». В §5 — «e2e без сети: фейк внутри страницы, отсутствие перезапроса проверяется взведённым `?fail=tab`».
   - `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`: §1.1, пункт вкладок — «остальные — срез 2b (исполнен, спека `2026-09-30-katran-detail-tabs-design.md`)»; §4.3 — после описания `createDetail` одна фраза «расширен в 2b: `tabFx`, `localTabs`, `tabView`, `retryTab`, `$expanded`».
   - `docs/superpowers/specs/2026-09-23-katran-design.md`: §3.1 (перечень модулей `@katran/ui`) — модули `table` (`MiniTable`), `code` (`CodeView`); в `value` — `StatusBadge`, `Timestamp` (`Tag mono` спеки — существующий `Tag tone="mt"`); в `form` — `KeyValueList`, `ConfigForm` с управляемым раскрытием; в `format` — `formatTimestamp`, `formatDuration`. §5.2 — после абзаца про 2a: «**2b исполнен** (вкладки): `MiniTable` (строка 24, шапка 22, раскрываемая 26), `StatusBadge`, `Timestamp`, `KeyValueList` (строка 24), `CodeView` (JSON, SWIFT, XML — подсветка React-элементами, без `innerHTML`), форматтеры времени; в `apps/pi` — сущность `doc-trail`, ленивый эндпоинт вкладок (предложение)». §11 — строка «2b–2d»: «2b — исполнен (спека `2026-09-30-katran-detail-tabs-design.md`, план `2026-09-30-katran-detail-tabs.md`); 2c, 2d — впереди».
   - `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`: §4 (раскладка) — `entities/doc-trail` (соседям — `@x/fx-doc.ts`, `@x/rub-doc.ts`), `pages/*/ui/detailDomain.ts`; §5.2 — порты сущностей получают `parseTab` и `tabFx`; §5.3 — маршрут `…/tabs/{tab}` фейка, регуляторы `?fail=tab`, `?fail=tab:<id>`, `tabsOff` по данным; §9 — `pi-usage.md` §13.7 и `pi-api.md` §1.5, §8.
-- [ ] **Step 6: `docs/STATE.md`.**
+- [x] **Step 6: `docs/STATE.md`.**
   - §1 — строка о возможностях `apps/pi`: деталка на просмотр со всеми вкладками (срезы 2a, 2b).
   - §5 «Карта проекта»: `packages/ui/src` — `value/` + `StatusBadge`, `Timestamp`; `form/` + `KeyValueList`, `ConfigForm` с `expanded`; новые `table/ (MiniTable — срез 2b)`, `code/ (CodeView, токенизаторы json/swift/xml — срез 2b)`; `format/` — `formatTimestamp`, `formatDuration`. `apps/pi/src` — `widgets/doc-detail` (… + ленивые вкладки, кэш `id:tab`, раскрытие по документу; срез 2b), `entities/doc-trail` (история обработки: типы, `toneOf`, `TRAIL_PARSERS`, `TRAIL_EXAMPLES`, `TRAIL_VIEWS`; соседям через `@x`; срез 2b), `entities/fx-doc` — `ExtraTab`, `pages/*/ui/detailDomain.ts`, `shared/api` — `createGridPorts` с `parseTab`, `shared/lib/detail` — `TabContext`, `TabView`, `remoteTab`, фейк — `trail.data.ts`, `fx-docs.trail.ts`, `rub-docs.trail.ts`. `apps/pi/e2e` — `detail-tabs.spec.ts` (высоты вкладок против эталона, «Связанный» → B, `?fail=tab:audit`, кэш, `?hostile`, Д28, скриншоты; срез 2b). `docs/reference` — `pi-api.md` §1.5, §8; `detail-drift.md` раздел «2b». Список исполненных планов — + «2b «вкладки деталки»».
   - §6 «Состояние»: новый пункт «**План 2b «Остальные вкладки деталки» исполнен целиком**, ветка `feat/detail-tabs` (worktree `katran/.worktrees/detail-tabs`, от `main` `f08e522`), спека — `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md`, план — `docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, 14 задач (0–13). Проверки: `pnpm check` зелёный, тестов <число из вывода `pnpm test` по пакетам: tokens, ui, effector, pi>, e2e 50/50.» Пункт «Открытые решения владельца (30.09): В-Д6 … R13 …» — удалить (решения приняты, спека 2b §1.3; фиксируются в §7 и `detail-drift.md`).
   - §7 «Техдолг»: заголовок — «Техдолг (после плана 2b)». Удалить: из пункта «Объём среза, не дефекты» — «вкладки кроме «Общих данных» — состояние «будет в срезе 2b»»; из пункта «Сверка, класс D» — Д28; из пункта «Esc и наложения» — фразу про Esc в гриде при открытой деталке (R13): решение владельца «закрывает деталку, как сейчас» переносится одной строкой в §3 «Архитектурные решения» или в `detail-drift.md` «Вопросы владельцу» (уже сделано Step 4.5); из пункта «`Tabs` с переполнением» — «вкладка из `tabsOff`, выбранная до загрузки, остаётся выбранной после (финальное ревью M-f)» и «`TabPanel` сбрасывает раскрытие полей при переключении вкладок (M-g)»; из пункта «`createDetail`» — «нет теста минимальной длительности скелетона в виджете (M4)» (закрыт тестом скелетона вкладки, Task 11). Добавить: «Кнопки вкладок («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — заглушки с `announce` до 2d»; «Связанный документ другого реестра не открывается — межреестровая навигация вне 2b (спека 2b §8)»; «Эндпоинт вкладок — предложение владельцу контракта `vtb-filters`, форма ответа — черновик до согласования»; «Вкладка без вида, но не в `localTabs`, запрашивается впустую (виджет не знает видов в модели; для `fx`/`rub` недостижимо — полноту проверяют тесты страниц)»; техдолг из ревью задач 2–12 (леджер SDD) — по пункту на находку уровня M.
   - §9 «Следующий шаг»: «**Срез 2b «Остальные вкладки деталки» слит в `main`** (`<коммит слияния>`, <дата>). Следующий — **срез 2c: правка** (правка полей, аудит поля, саджест, `Prompt`, `DateInput`, перезапрос реестра после действий): brainstorming → спека-дельта → план → subagent-driven-development; первая задача плана — сверка правки против того же замороженного эталона `e065bfb` (`detail-drift.md`, раздел «2c»). Готово для него: раскрытие и состояние вкладок в модели (`$expanded`), `ConfigForm` с управляемым раскрытием, `FieldDef.kind` `party`/`bank` и `FieldDef.width` ждут правки (§7).»
   - §10 — ссылка на `detail-drift.md` раздел «2b» с итогом сверки (число пунктов по классам).
-- [ ] **Step 7: `CHANGELOG.md`.** В «0.1.0 — в работе» — пункт:
+- [x] **Step 7: `CHANGELOG.md`.** В «0.1.0 — в работе» — пункт:
 
 ```markdown
 - Срез 2b «Остальные вкладки деталки» (`@katran/ui`): **добавлено** — модуль `table`: `MiniTable` (колонки с шириной в px при плотности 1, `numbered`, пустое состояние, раскрываемые строки мышью и Enter/Space с `aria-expanded`, клик по ссылке или кнопке внутри строки её не раскрывает, управляемое `expanded`/`onExpandedChange` или `defaultExpanded`, полоса `toolbar`); модуль `code`: `CodeView` (JSON, SWIFT, XML; подсветка — React-элементы из токенов, без `innerHTML`; XML — отступ по глубине, атрибуты в строку до 92 символов, номера строк вне копирования и скринридера, битый XML — сырой текст; фокусируемая область с прокруткой клавиатурой); `StatusBadge` (`ok`/`bad`/`wait`/`neutral`), `Timestamp` (время с приглушёнными миллисекундами, полное — тултипом), `KeyValueList` (группа «ключ–значение», пустое — «—», для скринридера «не заполнено», одна или две колонки); форматтеры `formatTimestamp`, `formatDuration`; `Tag` — вариант `mono`; новые токены высот строк и шрифта кода. **Изменено** — `ConfigForm`: управляемое раскрытие `expanded`/`onExpandedChange` (без пропсов — как раньше); `DataGrid`: метка открытой в деталке записи сильнее состояния — у заблокированной и неактивной записи полоса и фон метки не приглушаются и не штрихуются (Д28). `apps/pi`: все вкладки деталки валюты и рубля с ленивой загрузкой по вкладке (`GET /grids/{gridId}/documents/{id}/tabs/{tab}` — предложение в контракт), сущность `doc-trail`, связанный документ открывается в B, фейк вкладок и `?fail=tab`, `?fail=tab:<id>`.
 ```
 
   Названия и составы сверить с фактическими экспортами `packages/ui/src/index.ts` (Task 2–5): чего нет в экспорте — в пункт не писать.
-- [ ] **Step 8: проверка `pi-usage.md` «с нуля» — делает контроллер.** Свежий субагент получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: как добавить вкладку, что править, если бек отдаёт вкладку иначе, как проверить. Неясности — фикс-раундом этой задачи. Исполнитель субагентов не запускает (правило контроллера, R18 плана `apps/pi`).
-- [ ] **Step 9: проверка и commit.**
+- [x] **Step 8: проверка `pi-usage.md` «с нуля» — делает контроллер.** Свежий субагент получает только `docs/guides/pi-usage.md` и репозиторий и отвечает: как добавить вкладку, что править, если бек отдаёт вкладку иначе, как проверить. Неясности — фикс-раундом этой задачи. Исполнитель субагентов не запускает (правило контроллера, R18 плана `apps/pi`).
+- [x] **Step 9: проверка и commit.**
   Run: `grep -rn "будет в срезе 2b" docs apps/pi/src apps/pi/e2e` — пусто (кроме исторических планов 2a в `docs/superpowers/plans/`, их не править).
   Run: `pnpm check` — зелёный.
 

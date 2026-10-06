@@ -77,7 +77,7 @@ docs/reference/suggest-proposal.md, спеки, CHANGELOG.md, README.md, docs/ST
 **Interfaces:**
 - Produces (`@katran/ui`): типы `IsoDay`, `IsoMinute`, `DateValue`, `DateFormat`; функции `isValidDay`, `isValidMinute`, `daysInMonth`, `makeDay`, `dayOf`, `timeOf`, `addDays`, `addMonths`, `startOfMonth`, `endOfMonth`, `weekday`, `monthGrid`, `todayLocal`, `compareDates`, `withTime`, `datePartOf`, `maskDateText`, `parseDateText`, `formatDateText`, `isComplete`, `isoMinuteStart`, `isoMinuteEnd`, `isoDayStart`, `isoDayEnd`; `DatePreset`, `PRESET_TODAY`, `PRESET_YESTERDAY`, `PRESET_LAST3`, `PRESET_LAST7`, `PRESET_LAST30`, `PRESET_THIS_MONTH`, `PRESET_LAST_MONTH`, `QUICK_PRESETS`, `DEFAULT_PRESETS`, `presetMatches`; внутренние `MONTHS`, `MONTHS_GEN`, `WEEKDAYS_SHORT`, `WEEKDAYS_FULL`.
 
-- [ ] **Step 1: Токены.** В `sizes` файла `packages/tokens/src/tokens.src.ts` после строки `'filter-field': 220, // минимальная ширина поля панели фильтров` добавить:
+- [x] **Step 1: Токены.** В `sizes` файла `packages/tokens/src/tokens.src.ts` после строки `'filter-field': 220, // минимальная ширина поля панели фильтров` добавить:
 
 ```ts
   // поля ввода фильтров (спека 2026-09-30): ячейка календаря, колонка пресетов периода,
@@ -87,7 +87,7 @@ docs/reference/suggest-proposal.md, спеки, CHANGELOG.md, README.md, docs/ST
 
 Run: `pnpm gen && pnpm gen:check` → без диффа после регенерации; `tokens.css` и `tokens.ts` в коммит.
 
-- [ ] **Step 2: Тест помощников.** `packages/ui/src/date/dateStr.test.ts`:
+- [x] **Step 2: Тест помощников.** `packages/ui/src/date/dateStr.test.ts`:
 
 ```ts
 import {
@@ -218,7 +218,7 @@ describe('переход на летнее время (America/New_York, 08.03.2
 
 Run: `pnpm --filter @katran/ui exec vitest run src/date/dateStr.test.ts` → FAIL (модуля нет).
 
-- [ ] **Step 3: Реализация.** `packages/ui/src/date/dateStr.ts`:
+- [x] **Step 3: Реализация.** `packages/ui/src/date/dateStr.ts`:
 
 ```ts
 /** Даты как строки (спека 2026-09-30 §3): ISO-строки не разбираются через new Date(string) — разбор строки без зоны
@@ -403,7 +403,7 @@ export const isoDayEnd = (day: IsoDay): string => isoMinuteEnd(`${day}T23:59`)
 
 `matchAll` есть в Chromium 73+ — допустим.
 
-- [ ] **Step 4: Пресеты и словари.** `packages/ui/src/date/ruNames.ts`:
+- [x] **Step 4: Пресеты и словари.** `packages/ui/src/date/ruNames.ts`:
 
 ```ts
 /** Названия по-русски — словарь кита (Intl.DateTimeFormat не используется: Chromium 88, единый вид). */
@@ -478,9 +478,9 @@ export * from './presets'
 
 В `packages/ui/src/index.ts` после `export * from './format'` добавить `export * from './date'`. Проверить, что имена не конфликтуют с `format/` (`formatDate`, `formatDateTimeShort`, `formatDateTimeFull` — другие имена; `dayOf`/`timeOf` в `format/` нет): `grep -rn "export.*\b\(dayOf\|timeOf\|makeDay\|addDays\)\b" packages/ui/src` — только `date/`.
 
-- [ ] **Step 5: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS (если `vi.stubEnv('TZ', …)` не меняет зону в этой версии Node — заменить на `process.env.TZ = tz` в `beforeEach` и вернуть исходное в `afterEach`; так уже сделано в тестах `format/date.test.ts` плана 4 — посмотреть и повторить их способ). `pnpm check` → зелёный.
+- [x] **Step 5: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS (если `vi.stubEnv('TZ', …)` не меняет зону в этой версии Node — заменить на `process.env.TZ = tz` в `beforeEach` и вернуть исходное в `afterEach`; так уже сделано в тестах `format/date.test.ts` плана 4 — посмотреть и повторить их способ). `pnpm check` → зелёный.
 
-- [ ] **Step 6: Commit** — `Даты: помощники над строками без зоны, формат-шаблон, пресеты периода, токены полей ввода`.
+- [x] **Step 6: Commit** — `Даты: помощники над строками без зоны, формат-шаблон, пресеты периода, токены полей ввода`.
 
 ---
 
@@ -494,7 +494,7 @@ export * from './presets'
 - Consumes: `dateStr`, `ruNames` (Task 1), `IconButton` (`packages/ui/src/button`).
 - Produces: `Calendar`, `CalendarProps` (спека §3.3): `{ month; onMonthChange; value?; range?; onPick; min?; max?; today?; label?; autoFocus?; onHoverDay? }`.
 
-- [ ] **Step 1: Тест.** `packages/ui/src/date/Calendar.test.tsx`:
+- [x] **Step 1: Тест.** `packages/ui/src/date/Calendar.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -575,7 +575,7 @@ describe('Calendar', () => {
 
 Run: `pnpm --filter @katran/ui exec vitest run src/date/Calendar.test.tsx` → FAIL.
 
-- [ ] **Step 2: Реализация.** `packages/ui/src/date/Calendar.tsx`:
+- [x] **Step 2: Реализация.** `packages/ui/src/date/Calendar.tsx`:
 
 ```tsx
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
@@ -701,7 +701,7 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
 
 `data-*={flag || undefined}` в DOM даёт `data-edge="true"` — тест проверяет `'true'`.
 
-- [ ] **Step 3: Стили.** `packages/ui/src/date/Date.module.css` (этот файл дополняют задачи 3 и 4):
+- [x] **Step 3: Стили.** `packages/ui/src/date/Date.module.css` (этот файл дополняют задачи 3 и 4):
 
 ```css
 .cal {
@@ -792,9 +792,9 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
 
 `packages/ui/src/date/index.ts` дополнить: `export { Calendar, type CalendarProps } from './Calendar'`.
 
-- [ ] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS; `pnpm check` → зелёный.
+- [x] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 5: Commit** — `Calendar: сетка месяца по WAI-ARIA grid — клавиатура, листание, диапазон, min/max`.
+- [x] **Step 5: Commit** — `Calendar: сетка месяца по WAI-ARIA grid — клавиатура, листание, диапазон, min/max`.
 
 ---
 
@@ -809,7 +809,7 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
 - Consumes: `Calendar` (Task 2), `dateStr`, `DatePreset` (Task 1), `Input.module.css` (классы `field`, `sizeS`, `sizeM`, `invalid`, `input`), `Button`, `IconButton`, `Popover`.
 - Produces: `PopoverProps.role?: 'dialog' | 'menu' | 'presentation'`, `PopoverProps.returnFocus?: RefObject<HTMLElement | null>`; `DateInput`, `DateInputProps` (спека §3.5); внутренние `MaskedDateField` (forwardRef на `<input>`, пропы `value, onChange, format, min?, max?, onInvalidChange?, id?, aria-label?, placeholder?, disabled?, className?`), `TimeField` (`value: 'чч:мм' | ''`, `onChange`, `label`), `placeholderOf(format)`.
 
-- [ ] **Step 1: `Popover`.** В `packages/ui/src/overlay/Popover.tsx`:
+- [x] **Step 1: `Popover`.** В `packages/ui/src/overlay/Popover.tsx`:
   - в `PopoverProps` тип `role` → `'dialog' | 'menu' | 'presentation' | undefined` с JSDoc «presentation — всплывающий список комбобокса: роль несёт сам `listbox` внутри»;
   - новый проп `/** Куда вернуть фокус при закрытии; по умолчанию anchor (для полей с обёрткой-якорем — само поле). */ returnFocus?: RefObject<HTMLElement | null> | undefined`;
   - в эффекте фокуса: `const returnTo = (returnFocus ?? anchor).current`; в зависимости эффекта добавить `returnFocus` и `role`;
@@ -818,7 +818,7 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
 
 В `Overlay.test.tsx` добавить тесты: `Popover` с `anchor` на `<span>` и `returnFocus` на `<input>` — после Escape фокус на `<input>`; с `role="presentation"` у панели нет `aria-label` и роли `dialog` (`screen.queryByRole('dialog')` — null), а при закрытии фокус остаётся там, где был (фокус на кнопке вне поповера, `open` → `false` — `document.activeElement` — та же кнопка).
 
-- [ ] **Step 2: Тест `DateInput`.** `packages/ui/src/date/DateInput.test.tsx`:
+- [x] **Step 2: Тест `DateInput`.** `packages/ui/src/date/DateInput.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -923,7 +923,7 @@ describe('DateInput', () => {
 
 Run → FAIL.
 
-- [ ] **Step 3: Поле с маской и поле времени.** `packages/ui/src/date/MaskedDateField.tsx`:
+- [x] **Step 3: Поле с маской и поле времени.** `packages/ui/src/date/MaskedDateField.tsx`:
 
 ```tsx
 import { forwardRef, useEffect, useRef, useState } from 'react'
@@ -1021,7 +1021,7 @@ export function TimeField({ value, onChange, label }: { value: string; onChange:
 
 `maskDateText` с шаблоном `HH:mm` работает — токены любые (Task 1).
 
-- [ ] **Step 4: `DateInput`.** `packages/ui/src/date/DateInput.tsx`:
+- [x] **Step 4: `DateInput`.** `packages/ui/src/date/DateInput.tsx`:
 
 ```tsx
 import { useRef, useState } from 'react'
@@ -1111,7 +1111,7 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
 
 Если `IconButton` не пробрасывает `aria-haspopup`/`aria-expanded` (он принимает `ButtonProps` через `...rest` — проверить `packages/ui/src/button/IconButton.tsx`), атрибуты дойдут до `<button>`; иначе — добавить в `IconButton` проброс остальных пропов.
 
-- [ ] **Step 5: Стили.** В конец `packages/ui/src/date/Date.module.css`:
+- [x] **Step 5: Стили.** В конец `packages/ui/src/date/Date.module.css`:
 
 ```css
 /* поле даты: обёртка для строки горячих кнопок под полем */
@@ -1148,9 +1148,9 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
 
 `packages/ui/src/date/index.ts`: `export { DateInput, type DateInputProps } from './DateInput'`.
 
-- [ ] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date src/overlay` → PASS без предупреждений `act`; `pnpm check` → зелёный.
+- [x] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date src/overlay` → PASS без предупреждений `act`; `pnpm check` → зелёный.
 
-- [ ] **Step 7: Commit** — `DateInput: маска по шаблону формата, время, календарь в поповере, горячие кнопки; Popover — returnFocus и роль presentation`.
+- [x] **Step 7: Commit** — `DateInput: маска по шаблону формата, время, календарь в поповере, горячие кнопки; Popover — returnFocus и роль presentation`.
 
 ---
 
@@ -1164,7 +1164,7 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
 - Consumes: `Calendar`, `MaskedDateField`, `TimeField`, `CalIcon` (Task 2–3), `QUICK_PRESETS`, `DEFAULT_PRESETS`, `presetMatches` (Task 1).
 - Produces: `DateRange`, `DateRangeProps`, `DateRangeValue = { from: DateValue; to: DateValue }` (спека §3.6).
 
-- [ ] **Step 1: Тест.** `packages/ui/src/date/DateRange.test.tsx`:
+- [x] **Step 1: Тест.** `packages/ui/src/date/DateRange.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -1258,7 +1258,7 @@ describe('DateRange', () => {
 
 Run → FAIL.
 
-- [ ] **Step 2: Реализация.** `packages/ui/src/date/DateRange.tsx`:
+- [x] **Step 2: Реализация.** `packages/ui/src/date/DateRange.tsx`:
 
 ```tsx
 import { useRef, useState } from 'react'
@@ -1369,7 +1369,7 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
 }
 ```
 
-- [ ] **Step 3: Стили.** В конец `Date.module.css`:
+- [x] **Step 3: Стили.** В конец `Date.module.css`:
 
 ```css
 /* поля «с» и «по» делят рамку поровну и сжимаются в узкой колонке */
@@ -1431,9 +1431,9 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
 
 `packages/ui/src/date/index.ts`: `export { DateRange, type DateRangeProps, type DateRangeValue } from './DateRange'`.
 
-- [ ] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS; `pnpm check` → зелёный.
+- [x] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/date` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 5: Commit** — `DateRange: период с календарём двумя кликами, пресетами в поповере, горячими кнопками и временем`.
+- [x] **Step 5: Commit** — `DateRange: период с календарём двумя кликами, пресетами в поповере, горячими кнопками и временем`.
 
 ---
 
@@ -1447,7 +1447,7 @@ export function DateRange({ value, onChange, time = false, format = 'DD.MM.YYYY'
 - Consumes: `Popover` с `role="presentation"` (Task 3), `useStableId`, `IconButton`, `Input.module.css`, тип `Scalar` (`packages/ui/src/filters/types.ts`, только `import type`).
 - Produces: `Option = { value: Scalar; label: string; hint?: string | undefined }`, `filterOptions(options, query)`, `sameScalar(a, b)`; внутренние `Listbox`, `ListboxProps`, `optionId(listId, i)`, иконки `Cross`, `Chevron`; `SearchSelect`, `SearchSelectProps` (спека §4.2).
 
-- [ ] **Step 1: Тест помощников.** `packages/ui/src/select/options.test.ts`:
+- [x] **Step 1: Тест помощников.** `packages/ui/src/select/options.test.ts`:
 
 ```ts
 import { filterOptions, sameScalar } from './options'
@@ -1472,7 +1472,7 @@ describe('options', () => {
 })
 ```
 
-- [ ] **Step 2: Помощники и список.** `packages/ui/src/select/options.ts`:
+- [x] **Step 2: Помощники и список.** `packages/ui/src/select/options.ts`:
 
 ```ts
 import type { Scalar } from '../filters/types'
@@ -1562,7 +1562,7 @@ export function Listbox({ id, label, options, active, isSelected, multi, onPick,
 
 `onKeyDown` у пункта — для правила `jsx-a11y/click-events-have-key-events`: пункты не получают фокус (клавиатура — у поля), обработчик ничего не ломает.
 
-- [ ] **Step 3: Тест `SearchSelect`.** `packages/ui/src/select/SearchSelect.test.tsx`:
+- [x] **Step 3: Тест `SearchSelect`.** `packages/ui/src/select/SearchSelect.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -1658,7 +1658,7 @@ describe('SearchSelect', () => {
 
 Run: `pnpm --filter @katran/ui exec vitest run src/select` → FAIL.
 
-- [ ] **Step 4: Реализация.** `packages/ui/src/select/SearchSelect.tsx`:
+- [x] **Step 4: Реализация.** `packages/ui/src/select/SearchSelect.tsx`:
 
 ```tsx
 import { useRef, useState, type KeyboardEvent } from 'react'
@@ -1778,7 +1778,7 @@ export function SearchSelect({ options, value, onChange, placeholder = 'Не в�
 }
 ```
 
-- [ ] **Step 5: Стили и экспорт.** `packages/ui/src/select/Select.module.css`:
+- [x] **Step 5: Стили и экспорт.** `packages/ui/src/select/Select.module.css`:
 
 ```css
 .selField {
@@ -1905,9 +1905,9 @@ export { SearchSelect, type SearchSelectProps } from './SearchSelect'
 
 В `packages/ui/src/index.ts` после `export * from './date'` добавить `export * from './select'`.
 
-- [ ] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/select` → PASS; `pnpm check` → зелёный.
+- [x] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/select` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 7: Commit** — `SearchSelect: одно значение из справочника — WAI-ARIA combobox с поиском или кнопкой, Listbox как общая основа списков`.
+- [x] **Step 7: Commit** — `SearchSelect: одно значение из справочника — WAI-ARIA combobox с поиском или кнопкой, Listbox как общая основа списков`.
 
 ---
 
@@ -1921,7 +1921,7 @@ export { SearchSelect, type SearchSelectProps } from './SearchSelect'
 - Consumes: `Listbox`, `Cross`, `Chevron`, `optionId`, `filterOptions`, `sameScalar` (Task 5), `Input` (`packages/ui/src/input`), `Button`, `IconButton`, `Popover`.
 - Produces: `MultiSelect`, `MultiSelectProps` (спека §4.3): `{ options; value: Scalar[]; onChange; placeholder?; maxChips?; max?; disabled?; size?; id?; 'aria-label'? }`.
 
-- [ ] **Step 1: Тест.** `packages/ui/src/select/MultiSelect.test.tsx`:
+- [x] **Step 1: Тест.** `packages/ui/src/select/MultiSelect.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -2003,7 +2003,7 @@ describe('MultiSelect', () => {
 
 Run → FAIL.
 
-- [ ] **Step 2: Реализация.** `packages/ui/src/select/MultiSelect.tsx`:
+- [x] **Step 2: Реализация.** `packages/ui/src/select/MultiSelect.tsx`:
 
 ```tsx
 import { useRef, useState, type KeyboardEvent } from 'react'
@@ -2119,7 +2119,7 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
 }
 ```
 
-- [ ] **Step 3: Стили и экспорт.** В конец `Select.module.css`:
+- [x] **Step 3: Стили и экспорт.** В конец `Select.module.css`:
 
 ```css
 .multiField {
@@ -2198,9 +2198,9 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
 
 Проверить контраст новых пар по правилам токенов (`packages/tokens/src/contrast.rules.ts`): `ink` на `val-soft`, `ink2` на `paper` — уже покрыты; новых пар «цвет на цвете» не добавляется.
 
-- [ ] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/select` → PASS; `pnpm check` → зелёный.
+- [x] **Step 4: Прогон.** `pnpm --filter @katran/ui exec vitest run src/select` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 5: Commit** — `MultiSelect: несколько значений из справочника — чипы с «+N», поиск, отметки, «Выбрано N · Очистить», предел выбора`.
+- [x] **Step 5: Commit** — `MultiSelect: несколько значений из справочника — чипы с «+N», поиск, отметки, «Выбрано N · Очистить», предел выбора`.
 
 ---
 
@@ -2214,7 +2214,7 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
 - Consumes: `Listbox`, `Cross`, `optionId` (Task 5), `Popover` (`role="presentation"`), `useStableId`, `IconButton`, `Input.module.css`.
 - Produces: `TagMode = 'values' | 'phrases'`, `splitTags(text, mode)`, `takeTags(text, mode) → { tags, rest }`, `mergeTags(current, add, mode, max) → { value, added, dropped }`, `TAG_LIMIT = { values: 500, phrases: 20 }`; `TagInput`, `TagInputProps` (спека §5).
 
-- [ ] **Step 1: Тест разбора.** `packages/ui/src/tag/parseTags.test.ts`:
+- [x] **Step 1: Тест разбора.** `packages/ui/src/tag/parseTags.test.ts`:
 
 ```ts
 import { mergeTags, splitTags, takeTags } from './parseTags'
@@ -2259,7 +2259,7 @@ describe('mergeTags', () => {
 })
 ```
 
-- [ ] **Step 2: Реализация разбора.** `packages/ui/src/tag/parseTags.ts`:
+- [x] **Step 2: Реализация разбора.** `packages/ui/src/tag/parseTags.ts`:
 
 ```ts
 /** Разбор ввода TagInput (спека §5): values — ID, номера, коды; phrases — текст для поиска по вхождению. */
@@ -2337,7 +2337,7 @@ export function mergeTags(current: string[], add: string[], mode: TagMode, max: 
 
 Run: `pnpm --filter @katran/ui exec vitest run src/tag/parseTags.test.ts` → PASS.
 
-- [ ] **Step 3: Тест `TagInput`.** `packages/ui/src/tag/TagInput.test.tsx`:
+- [x] **Step 3: Тест `TagInput`.** `packages/ui/src/tag/TagInput.test.tsx`:
 
 ```tsx
 import { useState } from 'react'
@@ -2448,7 +2448,7 @@ describe('TagInput', () => {
 
 Run → FAIL.
 
-- [ ] **Step 4: Реализация.** `packages/ui/src/tag/TagInput.tsx`:
+- [x] **Step 4: Реализация.** `packages/ui/src/tag/TagInput.tsx`:
 
 ```tsx
 import { useRef, useState, type KeyboardEvent } from 'react'
@@ -2595,7 +2595,7 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
 
 `fireEvent.paste` в jsdom передаёт `clipboardData` из объекта инициализации — тест выше на это полагается. `key={v}` у чипов уникален: повторы в значении отсекает `mergeTags`.
 
-- [ ] **Step 5: Стили.** `packages/ui/src/tag/Tag.module.css`:
+- [x] **Step 5: Стили.** `packages/ui/src/tag/Tag.module.css`:
 
 ```css
 .tagBox {
@@ -2704,9 +2704,9 @@ export { TagInput, type TagInputProps } from './TagInput'
 
 В `packages/ui/src/index.ts` после `export * from './select'` — `export * from './tag'`.
 
-- [ ] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/tag` → PASS; `pnpm check` → зелёный.
+- [x] **Step 6: Прогон.** `pnpm --filter @katran/ui exec vitest run src/tag` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 7: Commit** — `TagInput: списки значений и фраз чипами — разделители по режиму, разбор вставки и кавычек, предел, клавиатура по чипам, подсказки`.
+- [x] **Step 7: Commit** — `TagInput: списки значений и фраз чипами — разделители по режиму, разбор вставки и кавычек, предел, клавиатура по чипам, подсказки`.
 
 ---
 
@@ -2719,7 +2719,7 @@ export { TagInput, type TagInputProps } from './TagInput'
 - Produces (`@katran/ui`): `FilterField.defaultOp?: Condition['op'] | undefined`, `FilterField.suggest?: boolean | undefined`, `SuggestState = { field: string; query: string; items: string[]; loading: boolean }`.
 - Produces (`@katran/effector`): `SuggestQuery = { field: string; query: string; filter: Filter; limit: number }`, реэкспорт `SuggestState`; `SuggestConfig = { fetchFx: Effect<SuggestQuery, string[]>; delay?; minChars?; limit? }`; `FiltersModelConfig.suggest?`; `FiltersModel.setField: EventCallable<{ field: string; conditions: Condition[] }>`, `.suggest: EventCallable<{ field: string; query: string }>`, `.closeSuggest: EventCallable<void>`, `.$suggest: Store<SuggestState | null>`; `FiltersBinding` += `setField`, `suggest: SuggestState | null`, `onSuggest`, `onSuggestClose`.
 
-- [ ] **Step 1: Типы.** В `packages/ui/src/filters/types.ts` у `FilterField` после `group?` добавить:
+- [x] **Step 1: Типы.** В `packages/ui/src/filters/types.ts` у `FilterField` после `group?` добавить:
 
 ```ts
   /** Оператор по умолчанию (defaultOperator контракта §6): у STRING и NUMBER `IN` включает ввод списка значений. */
@@ -2742,7 +2742,7 @@ export type SuggestState = { field: string; query: string; items: string[]; load
 export type SuggestQuery = { field: string; query: string; filter: Filter; limit: number }
 ```
 
-- [ ] **Step 2: Тесты модели.** В `packages/effector/src/createFiltersModel.test.ts` (в шапку: `import { allSettled, createEffect, fork } from 'effector'`, `import type { Condition, SuggestQuery } from './types'`) добавить:
+- [x] **Step 2: Тесты модели.** В `packages/effector/src/createFiltersModel.test.ts` (в шапку: `import { allSettled, createEffect, fork } from 'effector'`, `import type { Condition, SuggestQuery } from './types'`) добавить:
 
 ```ts
 describe('setField: несколько условий на поле (контракт §4.4 — AND)', () => {
@@ -2865,7 +2865,7 @@ describe('подсказки', () => {
 
 Run: `pnpm --filter @katran/effector exec vitest run` → FAIL.
 
-- [ ] **Step 3: Реализация.** В `packages/effector/src/createFiltersModel.ts`:
+- [x] **Step 3: Реализация.** В `packages/effector/src/createFiltersModel.ts`:
   - импорт: `import { attach, combine, createEffect, createEvent, createStore, is, sample, type Effect, type EventCallable, type Store } from 'effector'`, типы — `Condition, Filter, FilterMeta, Scalar, SuggestQuery, SuggestState` из `./types`;
   - добавить тип конфигурации и расширить типы модели:
 
@@ -2987,9 +2987,9 @@ export function useFilters(m: FiltersModel): FiltersBinding {
 
 `packages/effector/src/index.ts`: экспорт `type SuggestConfig` рядом с `createFiltersModel`.
 
-- [ ] **Step 4: Прогон.** `pnpm --filter @katran/effector exec vitest run` → PASS (вывод без необработанных отказов: ошибка `fetchFx` в тесте ловится `requestFx.fail`); `pnpm check` → зелёный.
+- [x] **Step 4: Прогон.** `pnpm --filter @katran/effector exec vitest run` → PASS (вывод без необработанных отказов: ошибка `fetchFx` в тесте ловится `requestFx.fail`); `pnpm check` → зелёный.
 
-- [ ] **Step 5: Commit** — `Модель фильтров: setField — несколько условий на поле, подсказки с бека — задержка, отсечение устаревших ответов, suggestFx приложения`.
+- [x] **Step 5: Commit** — `Модель фильтров: setField — несколько условий на поле, подсказки с бека — задержка, отсечение устаревших ответов, suggestFx приложения`.
 
 ---
 
@@ -3010,7 +3010,7 @@ export type FieldRaw =
   | { kind: 'enum'; value: Scalar[] }                   // ENUM
 ```
 
-- [ ] **Step 1: Тест логики полей.** Заменить `packages/ui/src/filters/fieldOps.test.ts`:
+- [x] **Step 1: Тест логики полей.** Заменить `packages/ui/src/filters/fieldOps.test.ts`:
 
 ```ts
 import { conditionsFrom, draftOf, fieldControl, fieldMax, rangeToDisabled } from './fieldOps'
@@ -3097,7 +3097,7 @@ describe('draftOf', () => {
 })
 ```
 
-- [ ] **Step 2: Реализация.** Заменить `packages/ui/src/filters/fieldOps.ts`:
+- [x] **Step 2: Реализация.** Заменить `packages/ui/src/filters/fieldOps.ts`:
 
 ```ts
 import { dayOf, isoDayEnd, isoDayStart, isoMinuteEnd, isoMinuteStart, type DateValue } from '../date/dateStr'
@@ -3236,7 +3236,7 @@ export function conditionsFrom(f: FilterField, raw: FieldRaw): Condition[] {
 
 Проверить, что `isoDayStart`/`isoDayEnd` больше никто не импортирует из `./fieldOps`: `grep -rn "fieldOps" packages apps --include=*.ts --include=*.tsx` (в zsh — через `grep -rn "fieldOps" packages apps`).
 
-- [ ] **Step 3: Тест чипов.** В `packages/ui/src/filters/opLabels.test.ts` добавить:
+- [x] **Step 3: Тест чипов.** В `packages/ui/src/filters/opLabels.test.ts` добавить:
 
 ```ts
 import { fieldChip } from './opLabels'
@@ -3277,7 +3277,7 @@ describe('fieldChip', () => {
 })
 ```
 
-- [ ] **Step 4: Реализация чипов.** В конец `packages/ui/src/filters/opLabels.ts`:
+- [x] **Step 4: Реализация чипов.** В конец `packages/ui/src/filters/opLabels.ts`:
 
 ```ts
 import { datePartOf, formatDateText, withTime, type DateFormat } from '../date/dateStr'
@@ -3339,9 +3339,9 @@ export const describeField = (fieldId: string, conditions: Condition[], meta?: F
 
 Проверка единообразия: `fieldChip` для одного условия не-даты даёт `full === describeCondition(c)` — имена кнопок ✕ в существующих тестах панели не меняются.
 
-- [ ] **Step 5: Прогон.** `pnpm --filter @katran/ui exec vitest run src/filters/fieldOps.test.ts src/filters/opLabels.test.ts` → PASS. Тесты `FilterPanel.test.tsx` на этом шаге могут падать — `FilterField` ещё старый (импорт удалённых `isoDayStart`/`conditionFrom`); `FilterField.tsx` переписывает задача 10. Чтобы `pnpm check` оставался зелёным на коммите этой задачи, в `FilterField.tsx` временно заменить импорт `conditionFrom, draftOf, fieldOp, type RawValue` на локальные копии этих функций из прежней версии `fieldOps.ts` (скопировать тела в конец `FilterField.tsx` с комментарием «временно, до задачи 10»). Задача 10 удалит копии.
+- [x] **Step 5: Прогон.** `pnpm --filter @katran/ui exec vitest run src/filters/fieldOps.test.ts src/filters/opLabels.test.ts` → PASS. Тесты `FilterPanel.test.tsx` на этом шаге могут падать — `FilterField` ещё старый (импорт удалённых `isoDayStart`/`conditionFrom`); `FilterField.tsx` переписывает задача 10. Чтобы `pnpm check` оставался зелёным на коммите этой задачи, в `FilterField.tsx` временно заменить импорт `conditionFrom, draftOf, fieldOp, type RawValue` на локальные копии этих функций из прежней версии `fieldOps.ts` (скопировать тела в конец `FilterField.tsx` с комментарием «временно, до задачи 10»). Задача 10 удалит копии.
 
-- [ ] **Step 6: Commit** — `Фильтры: контрол поля по типу и defaultOp, условия из списков, фраз, периодов и справочников, чип по всем условиям поля`.
+- [x] **Step 6: Commit** — `Фильтры: контрол поля по типу и defaultOp, условия из списков, фраз, периодов и справочников, чип по всем условиям поля`.
 
 ---
 
@@ -3355,9 +3355,9 @@ export const describeField = (fieldId: string, conditions: Condition[], meta?: F
 - Consumes: всё из задач 1–9.
 - Produces: `FilterPanelProps` += `onSetField?: ((p: { field: string; conditions: Condition[] }) => void) | undefined`, `suggest?: SuggestState | null | undefined`, `onSuggest?: ((p: { field: string; query: string }) => void) | undefined`, `onSuggestClose?: (() => void) | undefined`, `dateFormat?: DateFormat | undefined`; `DateRangeProps.toDisabled?: boolean | undefined`.
 
-- [ ] **Step 1: `DateRange.toDisabled`.** Добавить проп `/** Поле «по» недоступно — у поля нет BETWEEN (спека §6.2). */ toDisabled?: boolean | undefined`; второй `MaskedDateField` — `disabled={disabled || toDisabled}`; при `toDisabled` клик по второму дню в календаре не ставит «по»: в `pick` первая строка — `if (toDisabled) { onChange({ from: d, to: '' }); close(); return }`. Тест в `DateRange.test.tsx`: `toDisabled` — поле «по» `disabled`, выбор дня в календаре ставит только «с» и закрывает поповер.
+- [x] **Step 1: `DateRange.toDisabled`.** Добавить проп `/** Поле «по» недоступно — у поля нет BETWEEN (спека §6.2). */ toDisabled?: boolean | undefined`; второй `MaskedDateField` — `disabled={disabled || toDisabled}`; при `toDisabled` клик по второму дню в календаре не ставит «по»: в `pick` первая строка — `if (toDisabled) { onChange({ from: d, to: '' }); close(); return }`. Тест в `DateRange.test.tsx`: `toDisabled` — поле «по» `disabled`, выбор дня в календаре ставит только «с» и закрывает поповер.
 
-- [ ] **Step 2: Тест панели.** В `packages/ui/src/filters/FilterPanel.test.tsx` заменить хост и дополнить тесты. Хост с `setField`:
+- [x] **Step 2: Тест панели.** В `packages/ui/src/filters/FilterPanel.test.tsx` заменить хост и дополнить тесты. Хост с `setField`:
 
 ```tsx
 import { useState } from 'react'
@@ -3492,7 +3492,7 @@ describe('FilterPanel: контролы по типам', () => {
 
 Run: `pnpm --filter @katran/ui exec vitest run src/filters` → FAIL.
 
-- [ ] **Step 3: `FilterField`.** Заменить `packages/ui/src/filters/FilterField.tsx` (временные копии из задачи 9 удаляются):
+- [x] **Step 3: `FilterField`.** Заменить `packages/ui/src/filters/FilterField.tsx` (временные копии из задачи 9 удаляются):
 
 ```tsx
 import { useEffect, useRef, useState } from 'react'
@@ -3610,7 +3610,7 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
 
 `caption` у групп (период, справочники) — видимая подпись; доступное имя контролы получают своим `aria-label`, поэтому `<label>` там не нужен.
 
-- [ ] **Step 4: `FilterPanel`.** В `packages/ui/src/filters/FilterPanel.tsx`:
+- [x] **Step 4: `FilterPanel`.** В `packages/ui/src/filters/FilterPanel.tsx`:
   - импорт: `fieldChip` вместо `describeCondition, conditionParts`; `type DateFormat` из `../date/dateStr`; `type SuggestState` из `./types`;
   - пропы из **Produces**; значение по умолчанию `dateFormat = 'DD.MM.YYYY'`;
   - вместо `edit`/`discard` — `setField`:
@@ -3653,9 +3653,9 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
 
 Отдельного CSS для ширины не нужно: `.fieldBox` — `display: grid`, его дочерние элементы (корни `DateRange`/`TagInput` с `display: inline-grid` и поля `SearchSelect`/`MultiSelect` с `display: inline-flex`) блокифицируются как элементы сетки и растягиваются на ширину колонки (`justify-self: normal`). Ширину проверяет e2e задачи 13.
 
-- [ ] **Step 5: Прогон и починка потребителей.** `pnpm --filter @katran/ui exec vitest run` → PASS. `pnpm --filter pi exec vitest run` — тесты `apps/pi`, которые выбирали значение нативного `select` панели или вводили дату в `input[type=date]`, переписать на новые контролы (роли `combobox`/`option`, поля «…, с»/«…, по»), сохранив проверяемый смысл. `pnpm check` → зелёный.
+- [x] **Step 5: Прогон и починка потребителей.** `pnpm --filter @katran/ui exec vitest run` → PASS. `pnpm --filter pi exec vitest run` — тесты `apps/pi`, которые выбирали значение нативного `select` панели или вводили дату в `input[type=date]`, переписать на новые контролы (роли `combobox`/`option`, поля «…, с»/«…, по»), сохранив проверяемый смысл. `pnpm check` → зелёный.
 
-- [ ] **Step 6: Commit** — `FilterPanel: контролы по типу поля — списки и фразы чипами, период с горячими кнопками, мультиселект, подсказки; чип и счётчик по полю, формат дат панели`.
+- [x] **Step 6: Commit** — `FilterPanel: контролы по типу поля — списки и фразы чипами, период с горячими кнопками, мультиселект, подсказки; чип и счётчик по полю, формат дат панели`.
 
 ---
 
@@ -3667,7 +3667,7 @@ export function FilterField({ field, draft, epoch, onSet, dateFormat, suggest, o
 **Interfaces:**
 - Consumes: `DateInput`, `DateRange`, `SearchSelect`, `MultiSelect`, `TagInput`, `PRESET_TODAY`, `PRESET_YESTERDAY`, `type DateValue`, `type DateRangeValue`, `type Scalar`, `type Option` из `@katran/ui`.
 
-- [ ] **Step 1: Разделы.** В `InputsPage.tsx` после раздела `Select` добавить (состояния — в `useState` страницы; данные — вымышленные):
+- [x] **Step 1: Разделы.** В `InputsPage.tsx` после раздела `Select` добавить (состояния — в `useState` страницы; данные — вымышленные):
 
 ```tsx
 const STATUSES: Option[] = ['В работе', 'К экспорту', 'В обработке', 'Ошибка', 'Отложенный', 'Экспортирован', 'Невалидный', 'Отказ', 'Обработан']
@@ -3752,9 +3752,9 @@ function TagsDemo() {
 }
 ```
 
-- [ ] **Step 2: Проверка в браузере.** Контроллер/исполнитель: `pnpm --filter demo build` → успешно; вручную (или скриптом Playwright в папке отчётов) открыть страницу «Поля ввода» демо (`/#/inputs`), обе темы: поповеры не выходят за экран, клавиатура проходит все поля. Скриншот — в отчёт, не в репозиторий.
+- [x] **Step 2: Проверка в браузере.** Контроллер/исполнитель: `pnpm --filter demo build` → успешно; вручную (или скриптом Playwright в папке отчётов) открыть страницу «Поля ввода» демо (`/#/inputs`), обе темы: поповеры не выходят за экран, клавиатура проходит все поля. Скриншот — в отчёт, не в репозиторий.
 
-- [ ] **Step 3: Прогон и commit.** `pnpm check` → зелёный. Commit — `Демо: витрина полей ввода — даты и период, справочники с поиском и мультивыбором, списки значений и фраз`.
+- [x] **Step 3: Прогон и commit.** `pnpm check` → зелёный. Commit — `Демо: витрина полей ввода — даты и период, справочники с поиском и мультивыбором, списки значений и фраз`.
 
 ---
 
@@ -3770,7 +3770,7 @@ function TagsDemo() {
 - Consumes: `SuggestQuery`, `SuggestConfig`, `FiltersBinding.setField/suggest/onSuggest/onSuggestClose` (Task 8), `FilterPanelProps.onSetField/suggest/onSuggest/onSuggestClose` (Task 10), `FilterField.defaultOp/suggest`.
 - Produces: `FieldDto.defaultOperator?`, `FieldDto.suggest?`; `SuggestBody = { filter: { conditions: Filter }; field: string; query: string; limit: number }`; `toSuggestBody(q: SuggestQuery): SuggestBody`; `fromSuggestResponse(body: unknown): string[]`; `GridPorts.suggestFx: Effect<SuggestQuery, string[], ApiError>`; `FakeGrid.suggest(b: SuggestBody)`; маршрут фейка `POST /grids/{gridId}/suggest`.
 
-- [ ] **Step 1: Тесты контракта.** В `grid-contract.test.ts`:
+- [x] **Step 1: Тесты контракта.** В `grid-contract.test.ts`:
 
 ```ts
   it('fromFilterMetaResponse: defaultOperator и suggest поля', () => {
@@ -3811,7 +3811,7 @@ function TagsDemo() {
 
 Run: `pnpm --filter pi exec vitest run src/shared/api src/app/fake` → FAIL.
 
-- [ ] **Step 2: Контракт и порт.** `grid-contract.ts`:
+- [x] **Step 2: Контракт и порт.** `grid-contract.ts`:
 
 ```ts
 export type FieldDto = {
@@ -3856,7 +3856,7 @@ export function fromSuggestResponse(body: unknown): string[] {
 
 и `suggestFx` — в оба `return`. `index.ts`: реэкспорт `SuggestBody`, `toSuggestBody`, `fromSuggestResponse` рядом с остальными из `grid-contract`. В `ports.test.ts` — тест: `suggestFx` шлёт `POST /grids/fx-docs/suggest` с телом `toSuggestBody` (по образцу соседнего теста `facetsFx`).
 
-- [ ] **Step 3: Фейковый сервер.** `meta.ts`:
+- [x] **Step 3: Фейковый сервер.** `meta.ts`:
 
 ```ts
 export type FieldOpts = { defaultOperator?: Condition['op'] | undefined; suggest?: boolean | undefined }
@@ -3919,18 +3919,18 @@ export const field = (id: string, label: string, type: FilterFieldType, dictiona
 
 (сохранить прочие свойства каталога — `groups`, `dictionaries` — как есть; поля `refIn`, `refOut`, `f52`, `purpose`, `reason` есть в строках `FxDoc`.) `rub-docs.data.ts`, `rubDocsMeta.fields`: `docNumber` — `{ defaultOperator: 'IN' }`, `toInn` — `{ defaultOperator: 'IN' }`, `fromName` и `toName` — `{ suggest: true }`.
 
-- [ ] **Step 4: Реестр и экран.** `createRegistry.ts`: `createFiltersModel({ meta: $meta, laneField: 'status', suggest: { fetchFx: ports.suggestFx } })`. `DocRegistry.tsx`: у `FilterPanel` добавить `onSetField={f.setField} suggest={f.suggest} onSuggest={f.onSuggest} onSuggestClose={f.onSuggestClose}`. В тестах, где порты собираются вручную (`DocRegistry.test.tsx` и другие — `grep -rn "facetsFx:" apps/pi/src`), добавить `suggestFx: createEffect(async () => [] as string[])`.
+- [x] **Step 4: Реестр и экран.** `createRegistry.ts`: `createFiltersModel({ meta: $meta, laneField: 'status', suggest: { fetchFx: ports.suggestFx } })`. `DocRegistry.tsx`: у `FilterPanel` добавить `onSetField={f.setField} suggest={f.suggest} onSuggest={f.onSuggest} onSuggestClose={f.onSuggestClose}`. В тестах, где порты собираются вручную (`DocRegistry.test.tsx` и другие — `grep -rn "facetsFx:" apps/pi/src`), добавить `suggestFx: createEffect(async () => [] as string[])`.
 
-- [ ] **Step 5: Документ для бека.** `docs/reference/pi-api.md`:
+- [x] **Step 5: Документ для бека.** `docs/reference/pi-api.md`:
   - §1.2 `filter-meta`: у поля — необязательные `defaultOperator` (контракт §6) и `suggest: boolean` (предложение, `docs/reference/suggest-proposal.md`); что они значат для панели: `IN` у STRING/NUMBER — ввод списка значений, `suggest` — подсказки при вводе;
   - новый §1.5 `POST /grids/{gridId}/suggest` (предложение): тело `{ filter, field, query, limit }`, ответ `{ items: string[] }`, семантика (различные значения по выборке `filter`, вхождение без учёта регистра, по убыванию частоты, `limit` 1–50), ошибки `400 SUGGEST_NOT_SUPPORTED` / `LIMIT_OUT_OF_RANGE`;
   - §4/§5: пример `fx-docs: suggest` (запрос и ответ, значения — из фейковых данных) и обновлённый пример `filter-meta` с `defaultOperator`/`suggest`;
   - §6 «Что не проверяет фейковый сервер»: смещение зоны в границах DATETIME не учитывается (сравнение строкой настенного времени); подсказки считаются по данным стенда.
   - Для сведения бека: фразы одного поля приходят несколькими условиями `CONTAINS` по этому полю (AND, контракт §4.4), списки ID — `IN` до 500 значений.
 
-- [ ] **Step 6: Прогон.** `pnpm --filter pi exec vitest run` → PASS; `pnpm check` → зелёный.
+- [x] **Step 6: Прогон.** `pnpm --filter pi exec vitest run` → PASS; `pnpm check` → зелёный.
 
-- [ ] **Step 7: Commit** — `apps/pi: defaultOperator и подсказки в каталоге полей, порт suggestFx и маршрут фейка, панель на новых контролах; документ для бека`.
+- [x] **Step 7: Commit** — `apps/pi: defaultOperator и подсказки в каталоге полей, порт suggestFx и маршрут фейка, панель на новых контролах; документ для бека`.
 
 ---
 
@@ -3942,7 +3942,7 @@ export const field = (id: string, label: string, type: FilterFieldType, dictiona
 **Interfaces:**
 - Consumes: экран валютного реестра `apps/pi` (`/#/fx-docs`) после задачи 12. Данные фейка: все документы валютного реестра созданы 23.09.2026 (`fx-docs.data.ts`, поле `created`).
 
-- [ ] **Step 1: Спека.** `apps/pi/e2e/filters.spec.ts`:
+- [x] **Step 1: Спека.** `apps/pi/e2e/filters.spec.ts`:
 
 ```ts
 import { expect, test, type Page } from '@playwright/test'
@@ -4071,9 +4071,9 @@ test('тёмная тема: поповер на paper темы, скриншо�
 
 Селекторы ячеек грида (`[data-col="id"] [class*="copy"]`) сверить с разметкой `apps/pi` (`widgets/doc-registry`, раскладка валютного реестра) и поправить под фактическую: нужен текст номера документа первых трёх записей.
 
-- [ ] **Step 2: Прогон на переднем плане.** `pnpm --filter pi e2e` → все тесты зелёные (прежние и новые); вывод — в отчёт. Если тест с буфером обмена в headless-Chromium не получает `clipboard-write` — заменить вставку на `page.dispatchEvent` события `paste` с `DataTransfer` (`const dt = new DataTransfer(); dt.setData('text', …)` в `evaluate`) и описать замену в отчёте.
+- [x] **Step 2: Прогон на переднем плане.** `pnpm --filter pi e2e` → все тесты зелёные (прежние и новые); вывод — в отчёт. Если тест с буфером обмена в headless-Chromium не получает `clipboard-write` — заменить вставку на `page.dispatchEvent` события `paste` с `DataTransfer` (`const dt = new DataTransfer(); dt.setData('text', …)` в `evaluate`) и описать замену в отчёте.
 
-- [ ] **Step 3: Commit** — `apps/pi e2e: поля фильтров — горячие кнопки и календарь периода, список номеров вставкой, фразы, подсказки, клавиатура справочника, высоты, тёмная тема`.
+- [x] **Step 3: Commit** — `apps/pi e2e: поля фильтров — горячие кнопки и календарь периода, список номеров вставкой, фразы, подсказки, клавиатура справочника, высоты, тёмная тема`.
 
 ---
 
@@ -4083,7 +4083,7 @@ test('тёмная тема: поповер на paper темы, скриншо�
 - Create: `docs/reference/suggest-proposal.md`
 - Modify: `docs/superpowers/specs/2026-09-23-katran-design.md`, `docs/superpowers/specs/2026-09-24-katran-slice1e-registry-design.md`, `docs/superpowers/specs/2026-09-30-katran-filter-inputs-design.md`, `CHANGELOG.md`, `README.md`, `docs/STATE.md`
 
-- [ ] **Step 1: Предложение в контракт.** `docs/reference/suggest-proposal.md` — для владельца контракта `vtb-filters`, по-русски, сухо, по разделам:
+- [x] **Step 1: Предложение в контракт.** `docs/reference/suggest-proposal.md` — для владельца контракта `vtb-filters`, по-русски, сухо, по разделам:
   1. **Зачем:** подсказки при вводе в текстовые поля фильтра (наименования, BIC, назначение, причина статуса) — пользователь выбирает существующее значение вместо угадывания написания.
   2. **`filter-meta`:** у поля необязательный `suggest: boolean` (по умолчанию `false`); бек включает там, где подсказки дешёвые (индекс по полю). Пример поля.
   3. **`POST /grids/{gridId}/suggest`:** тело `{ field, query, filter, limit }` с таблицей свойств и обязательности; ответ `{ items: string[] }`; семантика — различные значения поля среди записей, удовлетворяющих `filter` (применённые условия без условий по самому полю — фронт убирает их сам), содержащие `query` без учёта регистра, экранирование `%`/`_` как у `CONTAINS` (контракт §4.2); порядок — по убыванию частоты, при равенстве по алфавиту; `limit` 1–50, по умолчанию 10; права — как у `search`.
@@ -4093,16 +4093,16 @@ test('тёмная тема: поповер на paper темы, скриншо�
   7. **Дальше:** серверные справочники `LOOKUP` (§6.1 контракта) подключатся к тем же контролам тем же паттерном.
   Примеры запроса и ответа — из фейка `apps/pi` (`fx-docs`, поле `f50name`).
 
-- [ ] **Step 2: Спеки.**
+- [x] **Step 2: Спеки.**
   - Основная `2026-09-23-katran-design.md`: §5.1 — в инвентарь среза 1 добавить строку «Поля ввода фильтров: `DateInput`, `DateRange`, `SearchSelect`, `MultiSelect`, `TagInput` (спека 2026-09-30)»; §7.1 — абзац «Одна модель, два режима»: контролы simple-режима и выбор по типу поля и `defaultOp` — ссылка на спеку 2026-09-30 §6.2 (таблица оттуда не дублируется); §8.3 — `setField` (несколько условий на поле), подсказки (`suggest`, `closeSuggest`, `$suggest`, конфигурация `suggest`), правило `$lane` «ровно одно условие EQ по полю»; §8.4 — состав `FiltersBinding` с `setField`, `suggest`, `onSuggest`, `onSuggestClose`.
   - Спека 1e: §3 — правило `$lane` уточнено ссылкой на 2026-09-30 §6.3; §6.2 — абзац в начале: «Контролы полей и чипы переопределены спекой 2026-09-30 §6; текст ниже — исходный дизайн среза 1e».
   - Спека 2026-09-30: сверить с кодом и поправить расхождения, найденные при исполнении (API компонентов, имена, тексты чипов); в шапке — «исполнено планом 7».
 
-- [ ] **Step 3: CHANGELOG и README.** `CHANGELOG.md` — строка «План 7: поля ввода для фильтров — …» с составом (пять компонентов, `setField`, подсказки, панель по типам и `defaultOp`, чип и счётчик по полю, формат дат панели, `Popover` — `returnFocus` и роль `presentation`, `apps/pi` — `defaultOperator`, `suggest`, `suggestFx`); отдельно **Breaking** — у `FiltersModel`/`FiltersBinding` новые обязательные члены (рукописные моки дополнить); `GridPorts` в `apps/pi` — `suggestFx`; счётчик «Фильтры N» считает поля, а не условия; текст чипа периода «с … по» вместо «от … до»; ENUM в панели — мультиселект (`IN` при двух и больше). `README.md` — раздел «Поля ввода и фильтры»: короткие примеры `DateRange` с горячими кнопками и форматом, `MultiSelect`, `TagInput` в двух режимах, подключение подсказок (`createFiltersModel({ suggest: { fetchFx } })` + пропы `FilterPanel` из `useFilters`); примеры сверить с демо и `apps/pi` — имена пропов дословно.
+- [x] **Step 3: CHANGELOG и README.** `CHANGELOG.md` — строка «План 7: поля ввода для фильтров — …» с составом (пять компонентов, `setField`, подсказки, панель по типам и `defaultOp`, чип и счётчик по полю, формат дат панели, `Popover` — `returnFocus` и роль `presentation`, `apps/pi` — `defaultOperator`, `suggest`, `suggestFx`); отдельно **Breaking** — у `FiltersModel`/`FiltersBinding` новые обязательные члены (рукописные моки дополнить); `GridPorts` в `apps/pi` — `suggestFx`; счётчик «Фильтры N» считает поля, а не условия; текст чипа периода «с … по» вместо «от … до»; ENUM в панели — мультиселект (`IN` при двух и больше). `README.md` — раздел «Поля ввода и фильтры»: короткие примеры `DateRange` с горячими кнопками и форматом, `MultiSelect`, `TagInput` в двух режимах, подключение подсказок (`createFiltersModel({ suggest: { fetchFx } })` + пропы `FilterPanel` из `useFilters`); примеры сверить с демо и `apps/pi` — имена пропов дословно.
 
-- [ ] **Step 4: STATE.md.** §3 — решения: свои поля ввода без зависимостей на `Popover`; даты — строки без зоны, формат-шаблон; несколько условий на поле — `setField` (контракт §4.4, AND); подсказки — модель + `suggestFx` приложения; контрол поля — по типу и `defaultOp`. §5 — карта: `packages/ui/src/date/`, `select/`, `tag/`. §6 — план 7 исполнен (задачи, ревью, проверки с числами тестов и e2e). §7 — техдолг из ревью плана 7. §9 — следующий шаг по решению владельца (срез 2b деталки / advanced-фильтры / `LOOKUP`).
+- [x] **Step 4: STATE.md.** §3 — решения: свои поля ввода без зависимостей на `Popover`; даты — строки без зоны, формат-шаблон; несколько условий на поле — `setField` (контракт §4.4, AND); подсказки — модель + `suggestFx` приложения; контрол поля — по типу и `defaultOp`. §5 — карта: `packages/ui/src/date/`, `select/`, `tag/`. §6 — план 7 исполнен (задачи, ревью, проверки с числами тестов и e2e). §7 — техдолг из ревью плана 7. §9 — следующий шаг по решению владельца (срез 2b деталки / advanced-фильтры / `LOOKUP`).
 
-- [ ] **Step 5: Прогон и commit.** `git diff --check` чистый; `pnpm check` → зелёный. Commit — `Документы: предложение эндпоинта подсказок, спеки, CHANGELOG, README и состояние проекта после плана 7`.
+- [x] **Step 5: Прогон и commit.** `git diff --check` чистый; `pnpm check` → зелёный. Commit — `Документы: предложение эндпоинта подсказок, спеки, CHANGELOG, README и состояние проекта после плана 7`.
 
 ---
 

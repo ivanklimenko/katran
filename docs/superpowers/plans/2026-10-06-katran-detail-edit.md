@@ -376,7 +376,7 @@ docs/STATE.md · CHANGELOG.md (корень) · docs/superpowers/specs/2026-10-0
 - Consumes: `main` с `33269e4` (спека 2c) и `358b2d3` (слияние 2b); этот план закоммичен контроллером в `main` до Step 2.
 - Produces: ветка `feat/detail-edit`; база тестов в леджере (`tokens` 20, `ui` 622, `effector` 58, `apps/pi` 258 — всего 958; e2e 59); подтверждённые имена, на которые опираются задачи.
 
-- [ ] **Step 1: `main` содержит спеку 2c и 2b.**
+- [x] **Step 1: `main` содержит спеку 2c и 2b.**
 
 ```bash
 cd /Users/shaman/_CODE/VTB/katran
@@ -386,7 +386,7 @@ git status --short
 
 Expected: `OK`; `git status --short` пуст, кроме этого плана, если контроллер ещё не закоммитил его (тогда — закоммитить до Step 2). Иначе — остановиться.
 
-- [ ] **Step 2: worktree и ветка.**
+- [x] **Step 2: worktree и ветка.**
 
 ```bash
 cd /Users/shaman/_CODE/VTB/katran
@@ -396,9 +396,9 @@ cd .worktrees/detail-edit && git log --oneline -1
 
 Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `main`. Дальше все задачи — в `/Users/shaman/_CODE/VTB/katran/.worktrees/detail-edit`.
 
-- [ ] **Step 3: зависимости и проверка.** `pnpm install` (lockfile не меняется), `pnpm check`. Expected: `Tests 20 passed` (tokens), `622` (ui), `58` (effector), `258` (apps/pi), `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет`. Другие числа — записать фактические и считать от них; красный — остановиться.
-- [ ] **Step 4: e2e на переднем плане.** `pnpm --filter pi e2e` — `59 passed`.
-- [ ] **Step 5: сверка имён.** Открыть и убедиться (расхождение — фактическое имя в леджер и во все задачи):
+- [x] **Step 3: зависимости и проверка.** `pnpm install` (lockfile не меняется), `pnpm check`. Expected: `Tests 20 passed` (tokens), `622` (ui), `58` (effector), `258` (apps/pi), `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет`. Другие числа — записать фактические и считать от них; красный — остановиться.
+- [x] **Step 4: e2e на переднем плане.** `pnpm --filter pi e2e` — `59 passed`.
+- [x] **Step 5: сверка имён.** Открыть и убедиться (расхождение — фактическое имя в леджер и во все задачи):
   - `packages/ui/src/drawer/DrawerStack.tsx:19` — `OWN_ESCAPE = 'input, textarea, select, [contenteditable="true"], [role="menu"], [role="listbox"], [role="dialog"]:not([data-k-drawer])'`, слушатель Esc — `document` в фазе захвата; `Popover` ловит Esc тоже в захвате с `stopPropagation` (`overlay/Popover.tsx`);
   - `packages/ui/src/drawer/Drawer.module.css` — `.drawer { position: relative; overflow: hidden auto; … }`, `.badge { position: sticky }`; тесты стека — в `drawer/Drawer.test.tsx`;
   - `packages/ui/src/select/Listbox.tsx` — `ListboxProps.highlight`, `optionId`, выбор по делегированному `click`; `select/options.ts` — `Option = { value: Scalar; label: string; hint?: string | undefined }`, `filterOptions`;
@@ -412,7 +412,7 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
   - `apps/pi/src/app/fake/fx-docs.data.ts` — `makeFxDocs()[0]` первая запись реестра при пустой сортировке (`createGridModel` `$sort` = `[]`), её `type` — записать (Task 8 сидирует правку поля 57 на этот документ; MT199 — остановиться и спросить контроллера);
   - `eslint.config.js:10` — `LAYERS = ['app', 'pages', 'widgets', 'entities', 'shared']`, зона `widgets/doc-detail ← entities`;
   - `packages/tokens/src/tokens.src.ts` — нет имён `prompt-*`, `fe-*`, `sug-*`, `mark-dot`, `edit-dot`, `pen`, `h-inline`, `fs-edit`, `scrim`; генератор принимает цвет `#RRGGBBAA` (проверить `generate.ts`; не принимает — в леджер, Task 2 решает через контроллера).
-- [ ] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `status --short` пуст. Иначе — остановиться.
+- [x] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `status --short` пуст. Иначе — остановиться.
 
 ---
 
@@ -428,8 +428,8 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
 - Produces: числа эталона для токенов Task 2 и `REF` e2e Task 12. Ожидаемые по CSS эталона (Task 1 подтверждает или заменяет, расхождение > 0.5 px — фактическое число в леджер и в Task 2): **поле ввода редактора `.fe input` 21** (и строка `pre` «Как есть» 21), **кнопка опции `.opts button` 18 × мин. 22**, отступы `.fe` 7 / 9 / 8, `.box` 5 / 7, зазор колонок `.two` 10, **поле 20 исх / счёта / даты `.txted input`, `.acced input`, `.vdinp` 22**, **строка подсказки `.sug .si` 24**, ширина списка ≥ 320 (min 300), колонки строки 34 / 120, **коробка `Prompt` `.pr` 340**, отступы 16 / 16 / 12, радиус 8, **кнопка `Prompt` 30**, отступ кнопки 14, заголовок 600 14 / 1.35, note 12.5 / 1.45, **карандаш даты 17 × 17**, значок 12–13, **точка `.mark i` 6**, галочка 8 px, **точка угла `.cell.edited::after` 8**, точка таймлайна 8, кегль поля правки 12 моно.
 - Produces: раздел «2c» сверки — пункты Д49–Д60 класса C, известные до кода.
 
-- [ ] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` и `git log -1 --format='%h %ci'` в worktree — в шапку раздела и в леджер.
-- [ ] **Step 2: замер.** Конфиг — копия конфига Task 1 плана 2b (`docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, Task 1 Step 2: `baseURL` `http://localhost:5187`, `python3 -m http.server 5187 --directory /Users/shaman/_CODE/VTB/pi-constructor`, 1600 × 1000, `deviceScaleFactor` 1), помощники `h(page, sel)` и `css(page, sel, props, pseudo?)` — оттуда же. Сценарий `замер правки деталки стенда (2c)` на `#dw0` (первый валютный документ, у него сид правки поля 57), каждый шаг — ключ в объекте вывода:
+- [x] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` и `git log -1 --format='%h %ci'` в worktree — в шапку раздела и в леджер.
+- [x] **Step 2: замер.** Конфиг — копия конфига Task 1 плана 2b (`docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, Task 1 Step 2: `baseURL` `http://localhost:5187`, `python3 -m http.server 5187 --directory /Users/shaman/_CODE/VTB/pi-constructor`, 1600 × 1000, `deviceScaleFactor` 1), помощники `h(page, sel)` и `css(page, sel, props, pseudo?)` — оттуда же. Сценарий `замер правки деталки стенда (2c)` на `#dw0` (первый валютный документ, у него сид правки поля 57), каждый шаг — ключ в объекте вывода:
   1. `fe`: клик `#dw0 [data-no="57"] [data-act="edit"]` → `h('.fe input')`, `h('.fe pre')`, `h('.opts button')`, `css('.opts button', ['min-width'])`, `css('.fe', ['padding-top','padding-left','padding-bottom'])`, `css('.box', ['padding-top','padding-left'])`, `css('.fe .two', ['column-gap'])`, ширина `.fe` против ширины сетки `.fg`; ввести «ПРИВЕТ» в первую строку → текст `.fe [data-err]` (ожидается «Строка 1: недопустимые символы (только латиница, цифры и / - ? : ( ) . , ' +)»); скриншот `stand-editor.png`; «Отмена».
   2. `hist`: клик по ячейке 57 (раскрыть) → «История» `.hs-t` → `h('.hl li')`, `css('.hl li', ['width','height'], '::before')`, `css('.cell.edited', ['width','height'], '::after')`; скриншот `stand-history.png`.
   3. `ref`: клик первого `#dw0 [data-txtedit]` → `h('.txted input')`, `css('.txted input', ['font-size','font-family'])`; Esc.
@@ -439,8 +439,8 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
 
   Run: `cd apps/pi && pnpm exec playwright test -c e2e-stand/playwright.config.ts --reporter=line`
   Expected: `1 passed`, строка `STAND 2c:` без `null`; числа совпадают с «Interfaces» ± 0.5 (иначе — фактическое в леджер). Скриншоты — из `apps/pi/test-results/…` в `.superpowers/sdd/2026-10-06-katran-detail-edit/stand/` (git-ignored).
-- [ ] **Step 3: убрать временное.** `rm -r apps/pi/e2e-stand`; `git status --short` не показывает `e2e-stand`.
-- [ ] **Step 4: раздел «2c» в `detail-drift.md`.** Заменить раздел «2c–2d — сверяются…» двумя: «2c — правка» (шапка как у «2b»: эталон, katran до кода, дата, метод — адреса кода стенда, Playwright 1.63, 5187; «Сводка 2c»; «Замер эталона 2c» — таблица величин Step 2 с колонками «Токен кита» (Task 2) и «Кит (e2e Task 12)» = «—»; «Таблица сверки 2c»; «Не проверено (2c)») и «2d — сверяется в начале своего подсреза» (прежний текст про 2d). Пункты таблицы — класс C, колонка «katran» — «План: Task N»:
+- [x] **Step 3: убрать временное.** `rm -r apps/pi/e2e-stand`; `git status --short` не показывает `e2e-stand`.
+- [x] **Step 4: раздел «2c» в `detail-drift.md`.** Заменить раздел «2c–2d — сверяются…» двумя: «2c — правка» (шапка как у «2b»: эталон, katran до кода, дата, метод — адреса кода стенда, Playwright 1.63, 5187; «Сводка 2c»; «Замер эталона 2c» — таблица величин Step 2 с колонками «Токен кита» (Task 2) и «Кит (e2e Task 12)» = «—»; «Таблица сверки 2c»; «Не проверено (2c)») и «2d — сверяется в начале своего подсреза» (прежний текст про 2d). Пункты таблицы — класс C, колонка «katran» — «План: Task N»:
   - Д49 ↺ — новая правка «стало = исходное», история сохраняется (эталон удалял правку и историю) — в2, Task 7/9;
   - Д50 аудит 70/72 — блок аудита и «Было / Стало», как у остальных полей — в4, Task 9;
   - Д51 уход с несохранённым вводом (закрытие, сдвиг B→A, другой документ в слоте) — `Prompt` «Отменить правку?» — в3, Task 7/11;
@@ -454,8 +454,8 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
   - Д59 один редактор на экран (A и B вместе), а не на drawer — `createEditModel.$editing` (спека §2.2), Task 7;
   - Д60 после сохранения поле не раскрывается автоматически (эталон раскрывал строку) — решение плана: раскрытие — `$expanded` виджета, модель правки о нём не знает; аудит виден по раскрытию; Task 6.
   Сводка 2c: A 0, B 0, C 12, D 0. «Не проверено»: тёмная тема; ошибки сохранения и 409 (на эталоне нет).
-- [ ] **Step 5: STATE.** §9 — «Срез 2c в работе: план `docs/superpowers/plans/2026-10-06-katran-detail-edit.md`, ветка `feat/detail-edit`»; §10, строка деталки — «2a, 2b исполнены; 2c — сверка `detail-drift.md` «2c»».
-- [ ] **Step 6: проверка и коммит.** `pnpm check` зелёный (тесты не меняются).
+- [x] **Step 5: STATE.** §9 — «Срез 2c в работе: план `docs/superpowers/plans/2026-10-06-katran-detail-edit.md`, ветка `feat/detail-edit`»; §10, строка деталки — «2a, 2b исполнены; 2c — сверка `detail-drift.md` «2c»».
+- [x] **Step 6: проверка и коммит.** `pnpm check` зелёный (тесты не меняются).
 
 ```bash
 git add docs/reference/detail-drift.md docs/STATE.md
@@ -480,7 +480,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
   - `h-inline` 22, `fs-edit` 12, `sug-row` 24, `sug-w` 320, `sug-tag` 34, `sug-kind` 120;
   - `pen` 17, `mark-dot` 6, `fs-mark` 8, `edit-dot` 8.
 
-- [ ] **Step 1: падающие тесты.** `generate.test.ts`:
+- [x] **Step 1: падающие тесты.** `generate.test.ts`:
 
 ```ts
 it('правка деталки (спека 2c): Prompt 340 / 30, поле редактора 21, опция 18, поле на месте 22, подсказка 24, подложка', () => {
@@ -539,13 +539,13 @@ it('overlay — поверх панели вне прокручиваемого 
 })
 ```
 
-- [ ] **Step 2: прогон — падают.** `pnpm --filter @katran/tokens exec vitest run src/generate.test.ts` — FAIL (нет `--k-prompt-w`); `pnpm --filter @katran/ui exec vitest run src/overlay/Prompt.test.tsx src/drawer/Drawer.test.tsx` — FAIL (`Prompt` не экспортируется, нет `[data-part="scroll"]`).
-- [ ] **Step 3: токены.** Добавить в `tokens.src.ts` цвет `scrim` в `colorsLight`/`colorsDark` и размеры списка «Produces» одной группой с комментарием «правка деталки (спека 2c, эталон .fe/.opts/.txted/.acced/.sug/.pr/.mark, index.html:138–153, 202–245, 365–443; prompt.css)»; `pnpm gen`; `git add packages/tokens/src/tokens.css packages/tokens/src/tokens.ts`.
-- [ ] **Step 4: `Prompt(props: PromptProps): JSX.Element | null` и `PromptChange` в `overlay/Prompt.tsx`.** Без портала — рисуется там, куда его положили (в `Drawer.overlay`). Подложка: `position: absolute; inset: 0; background: var(--k-scrim); display: grid; place-items: center; padding: var(--k-sp-4); z-index: 1`, появление `opacity` за `var(--k-t-fast)`; коробка `width: min(var(--k-prompt-w), 100%)`, `padding: var(--k-sp-4) var(--k-sp-4) var(--k-sp-3)`, `border-radius: var(--k-r-l)`, `box-shadow: var(--k-shadow)`, подъём 6 px → 0; `prefers-reduced-motion` — без анимации. Кнопки — `Button` кита (`variant="primary"` у основной, у `danger` — модификатор цвета `bad`), высота `prompt-btn`. Фокус при открытии — `useEffect` по `open`; сохранённый `document.activeElement` возвращается в очистке (только если он ещё в DOM).
-- [ ] **Step 5: `DrawerProps.overlay` в `drawer/Drawer.tsx`.** Корень `.drawer`: `overflow: hidden`; новый `.scroll` (`height: 100%; overflow: hidden auto; box-sizing: border-box`) с меткой, шапкой и `children`, `data-part="scroll"`; `overlay` — после `.scroll`. Фокус, `returnFocus`, `focusKey` — без изменений.
-- [ ] **Step 6: прогон — зелёные.** Те же команды — PASS; `pnpm check` зелёный: tokens **+1**, ui **≈ +9** (Prompt 8, Drawer 1).
-- [ ] **Step 7: e2e деталки на переднем плане.** `pnpm --filter pi exec playwright test e2e/detail.spec.ts e2e/geometry.spec.ts` — всё зелёное (перенос прокрутки во внутренний блок геометрию не меняет).
-- [ ] **Step 8: коммит.**
+- [x] **Step 2: прогон — падают.** `pnpm --filter @katran/tokens exec vitest run src/generate.test.ts` — FAIL (нет `--k-prompt-w`); `pnpm --filter @katran/ui exec vitest run src/overlay/Prompt.test.tsx src/drawer/Drawer.test.tsx` — FAIL (`Prompt` не экспортируется, нет `[data-part="scroll"]`).
+- [x] **Step 3: токены.** Добавить в `tokens.src.ts` цвет `scrim` в `colorsLight`/`colorsDark` и размеры списка «Produces» одной группой с комментарием «правка деталки (спека 2c, эталон .fe/.opts/.txted/.acced/.sug/.pr/.mark, index.html:138–153, 202–245, 365–443; prompt.css)»; `pnpm gen`; `git add packages/tokens/src/tokens.css packages/tokens/src/tokens.ts`.
+- [x] **Step 4: `Prompt(props: PromptProps): JSX.Element | null` и `PromptChange` в `overlay/Prompt.tsx`.** Без портала — рисуется там, куда его положили (в `Drawer.overlay`). Подложка: `position: absolute; inset: 0; background: var(--k-scrim); display: grid; place-items: center; padding: var(--k-sp-4); z-index: 1`, появление `opacity` за `var(--k-t-fast)`; коробка `width: min(var(--k-prompt-w), 100%)`, `padding: var(--k-sp-4) var(--k-sp-4) var(--k-sp-3)`, `border-radius: var(--k-r-l)`, `box-shadow: var(--k-shadow)`, подъём 6 px → 0; `prefers-reduced-motion` — без анимации. Кнопки — `Button` кита (`variant="primary"` у основной, у `danger` — модификатор цвета `bad`), высота `prompt-btn`. Фокус при открытии — `useEffect` по `open`; сохранённый `document.activeElement` возвращается в очистке (только если он ещё в DOM).
+- [x] **Step 5: `DrawerProps.overlay` в `drawer/Drawer.tsx`.** Корень `.drawer`: `overflow: hidden`; новый `.scroll` (`height: 100%; overflow: hidden auto; box-sizing: border-box`) с меткой, шапкой и `children`, `data-part="scroll"`; `overlay` — после `.scroll`. Фокус, `returnFocus`, `focusKey` — без изменений.
+- [x] **Step 6: прогон — зелёные.** Те же команды — PASS; `pnpm check` зелёный: tokens **+1**, ui **≈ +9** (Prompt 8, Drawer 1).
+- [x] **Step 7: e2e деталки на переднем плане.** `pnpm --filter pi exec playwright test e2e/detail.spec.ts e2e/geometry.spec.ts` — всё зелёное (перенос прокрутки во внутренний блок геометрию не меняет).
+- [x] **Step 8: коммит.**
 
 ```bash
 git add packages/tokens/src/tokens.src.ts packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/generate.test.ts \
@@ -566,7 +566,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: `StatusBadge`, токены `mark-dot`, `fs-mark`, `edit-dot` (Task 2).
 - Produces: `EditMark`, `EditMarkProps`, `EditStatus`; `diffFieldValues`, `diffText`, `editCountLabel`, `EditDiffLine`; `EditHistory`, `EditHistoryEntry`, `EditHistoryProps` — сигнатуры в контракте.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // diff.test.ts
@@ -603,10 +603,10 @@ it('пустой дифф — «без изменений»; пустой спи
 it('axe без нарушений в раскрытом виде', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter @katran/ui exec vitest run src/form/diff.test.ts src/value/EditMark.test.tsx src/form/EditHistory.test.tsx`) — модули не найдены.
-- [ ] **Step 3: реализация.** `diffFieldValues(was, now)`: опция — если `(was.opt ?? '') !== (now.opt ?? '')` (пустая в выводе — `''`), счёт — так же по `acc`, строки — по `k < max(len)`, отличающиеся. `editCountLabel`: `n % 10 === 1 && n % 100 !== 11` → «изменение», `n % 10 ∈ 2..4 && n % 100 ∉ 12..14` → «изменения», иначе «изменений». `EditMark` и `EditHistory` — по контракту; CSS — `Edit.module.css`/`Value.module.css` по эталону `.hs/.hl/.mark` (index.html:138–153, 222–240) токенами; бейджи — `StatusBadge` (`ok` / `wait`), тултип бейджа записи — `data-k-tip` на обёртке.
-- [ ] **Step 4: прогон — зелёные; `pnpm check`.** ui **≈ +11**.
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter @katran/ui exec vitest run src/form/diff.test.ts src/value/EditMark.test.tsx src/form/EditHistory.test.tsx`) — модули не найдены.
+- [x] **Step 3: реализация.** `diffFieldValues(was, now)`: опция — если `(was.opt ?? '') !== (now.opt ?? '')` (пустая в выводе — `''`), счёт — так же по `acc`, строки — по `k < max(len)`, отличающиеся. `editCountLabel`: `n % 10 === 1 && n % 100 !== 11` → «изменение», `n % 10 ∈ 2..4 && n % 100 ∉ 12..14` → «изменения», иначе «изменений». `EditMark` и `EditHistory` — по контракту; CSS — `Edit.module.css`/`Value.module.css` по эталону `.hs/.hl/.mark` (index.html:138–153, 222–240) токенами; бейджи — `StatusBadge` (`ok` / `wait`), тултип бейджа записи — `data-k-tip` на обёртке.
+- [x] **Step 4: прогон — зелёные; `pnpm check`.** ui **≈ +11**.
+- [x] **Step 5: коммит.**
 
 ```bash
 git add packages/ui/src/value/EditMark.tsx packages/ui/src/value/EditMark.test.tsx packages/ui/src/value/Value.module.css packages/ui/src/value/index.ts \
@@ -627,7 +627,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: `Listbox`, `optionId`, `Popover` (`role="presentation"`), `Tag`, токены `h-inline`, `fs-edit`, `sug-*` (Task 2).
 - Produces: `SuggestInput`, `SuggestInputProps`; `Option.tag` — контракт.
 
-- [ ] **Step 1: падающие тесты.** Набор — 7 счетов `40817840100050017762`…, `match = (o, q) => String(o.value).includes(q)`, `sanitize = (t) => t.replace(/\D/g, '')`; обёртка с `onKeyDown`-журналом и `KatranProvider`.
+- [x] **Step 1: падающие тесты.** Набор — 7 счетов `40817840100050017762`…, `match = (o, q) => String(o.value).includes(q)`, `sanitize = (t) => t.replace(/\D/g, '')`; обёртка с `onKeyDown`-журналом и `KatranProvider`.
 
 ```ts
 it('до max строк и хвост «ещё N — уточните номер» вне listbox', () => {
@@ -654,10 +654,10 @@ it('status вместо списка; hint и keysHint под полем; tag р
 it('фокус в поле при монтировании; axe без нарушений', async () => { /* toHaveFocus(); axe */ })
 ```
 
-- [ ] **Step 2: прогон — падает** (`pnpm --filter @katran/ui exec vitest run src/select/SuggestInput.test.tsx`).
-- [ ] **Step 3: `SuggestInput(props: SuggestInputProps): JSX.Element`.** Каркас — как `SearchSelect` с полем (`role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`), но список открыт всё время, `active` по умолчанию `-1`; выдача `shown = options.filter((o) => match(o, sanitize(value)))`, в `Listbox` — `shown.slice(0, max)` с `highlight={sanitize(value)}`; хвост и `status` — внутри поповера после `Listbox`. `Popover.onClose` → `onCancel` (Esc в захвате со `stopPropagation` — до `DrawerStack` и до родителя). Поле — моно `fs-edit`, высота `h-inline`, рамка `val`, при ошибке — `bad`. Строка списка — сетка `minmax(0,1fr) var(--k-sug-tag) var(--k-sug-kind)`, `min-height: var(--k-sug-row)`, поповер `min-width: max(100%, var(--k-sug-w))`.
-- [ ] **Step 4: прогон — зелёный; `pnpm check`.** ui **≈ +10**; `SearchSelect.test.tsx` и `MultiSelect.test.tsx` зелёные (у `Option` без `tag` вид прежний).
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падает** (`pnpm --filter @katran/ui exec vitest run src/select/SuggestInput.test.tsx`).
+- [x] **Step 3: `SuggestInput(props: SuggestInputProps): JSX.Element`.** Каркас — как `SearchSelect` с полем (`role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`), но список открыт всё время, `active` по умолчанию `-1`; выдача `shown = options.filter((o) => match(o, sanitize(value)))`, в `Listbox` — `shown.slice(0, max)` с `highlight={sanitize(value)}`; хвост и `status` — внутри поповера после `Listbox`. `Popover.onClose` → `onCancel` (Esc в захвате со `stopPropagation` — до `DrawerStack` и до родителя). Поле — моно `fs-edit`, высота `h-inline`, рамка `val`, при ошибке — `bad`. Строка списка — сетка `minmax(0,1fr) var(--k-sug-tag) var(--k-sug-kind)`, `min-height: var(--k-sug-row)`, поповер `min-width: max(100%, var(--k-sug-w))`.
+- [x] **Step 4: прогон — зелёный; `pnpm check`.** ui **≈ +10**; `SearchSelect.test.tsx` и `MultiSelect.test.tsx` зелёные (у `Option` без `tag` вид прежний).
+- [x] **Step 5: коммит.**
 
 ```bash
 git add packages/ui/src/select/SuggestInput.tsx packages/ui/src/select/SuggestInput.test.tsx packages/ui/src/select/options.ts \
@@ -677,7 +677,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: `FieldValue`, `Button`, токены `fe-*`, `opt-*`, `fs-edit` (Task 2).
 - Produces: `FieldEditor`, `FieldEditorProps` — контракт.
 
-- [ ] **Step 1: падающие тесты.** Пропсы-основа: `tag='57'`, `name='Банк получателя'`, `original={ opt: 'A', lines: ['VOSTOCHNY KREDIT BANK', 'VKRBRU8KXXX'] }`, `lines=4`, `width=35`, `opts=['A','B','C','D']`, `rule='4 строк по 35 символов, набор SWIFT X'`.
+- [x] **Step 1: падающие тесты.** Пропсы-основа: `tag='57'`, `name='Банк получателя'`, `original={ opt: 'A', lines: ['VOSTOCHNY KREDIT BANK', 'VKRBRU8KXXX'] }`, `lines=4`, `width=35`, `opts=['A','B','C','D']`, `rule='4 строк по 35 символов, набор SWIFT X'`.
 
 ```ts
 it('заголовок, две колонки, счётчики «Как есть» и живой', () => {
@@ -700,10 +700,10 @@ it('подвал: rule, «Отмена», «Сохранить»', () => { /* �
 it('axe без нарушений', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падает** (`pnpm --filter @katran/ui exec vitest run src/form/FieldEditor.test.tsx`).
-- [ ] **Step 3: `FieldEditor(props: FieldEditorProps): JSX.Element`.** Разметка — `editor()` эталона (index.html:981–994) на `<section aria-label>` + `<h6>`; поля — нативные `<input>` (не `Input` кита: высота `fe-line`, нижняя граница `line2`, фокус — `val` и `hover`), `value.lines` дополняются `''` до `lines`; изменение строки k → `onChange({ ...value, lines: next })` без обрезки (нормализация — у модели); «Как есть» — `<pre>` строк `original.lines`, дополненных до N, чипы опций исходного (`span`, у исходной — `data-on`), у стороны — «Счёт / IBAN» + `original.acc ?? '—'` и «Наименование / адрес»; `aria-invalid` и `aria-describedby` (строка ошибки) у полей при `error`.
-- [ ] **Step 4: прогон — зелёный; `pnpm check`.** ui **≈ +9**.
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падает** (`pnpm --filter @katran/ui exec vitest run src/form/FieldEditor.test.tsx`).
+- [x] **Step 3: `FieldEditor(props: FieldEditorProps): JSX.Element`.** Разметка — `editor()` эталона (index.html:981–994) на `<section aria-label>` + `<h6>`; поля — нативные `<input>` (не `Input` кита: высота `fe-line`, нижняя граница `line2`, фокус — `val` и `hover`), `value.lines` дополняются `''` до `lines`; изменение строки k → `onChange({ ...value, lines: next })` без обрезки (нормализация — у модели); «Как есть» — `<pre>` строк `original.lines`, дополненных до N, чипы опций исходного (`span`, у исходной — `data-on`), у стороны — «Счёт / IBAN» + `original.acc ?? '—'` и «Наименование / адрес»; `aria-invalid` и `aria-describedby` (строка ошибки) у полей при `error`.
+- [x] **Step 4: прогон — зелёный; `pnpm check`.** ui **≈ +9**.
+- [x] **Step 5: коммит.**
 
 ```bash
 git add packages/ui/src/form/FieldEditor.tsx packages/ui/src/form/FieldEditor.test.tsx packages/ui/src/form/Edit.module.css packages/ui/src/form/index.ts
@@ -722,7 +722,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: `IconButton`, `defaultPresent`, токены `pen`, `edit-dot`.
 - Produces: `FieldDef.editable`, `FieldEdit`, `FormEdit`, `ConfigFormProps.edit`, `FieldRowProps.editable/editing/onEdit/edit`, `OWN_ESCAPE` с `[role="alertdialog"], [data-k-edit]` — контракт.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // FieldRow.test.tsx
@@ -757,10 +757,10 @@ it('Esc внутри [data-k-edit] (на кнопке) и внутри alertdial
 })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter @katran/ui exec vitest run src/form/FieldRow.test.tsx src/form/ConfigForm.test.tsx src/drawer/Drawer.test.tsx`).
-- [ ] **Step 3: реализация.** `FieldRow`: карандаш — `IconButton size="s"` соседом строки-кнопки внутри `.cell` (CSS: `opacity: 0`, видим при `.cell:hover` и `:focus-within`; у текстового поля — `position: absolute` в правом верхнем углу), `data-edited` при `edit?.changed` (фон `warn-row`, рамка `warn`, угловая точка `::after` `edit-dot`, `.main` — `warn`), `data-k-tip={edit.tip}` на ячейке, скрытый `<span class={s.sr}>изменено: {tip}</span>` в строке; раскрытие (`.full`): `Было:`/`Стало:` (`present(tag, edit.was).full` / `present(tag, value).full`), затем `edit.audit`, затем кнопка «✎ Изменить» при `editable`; правимое пустое поле раскрытия не имеет — только карандаш. Возврат фокуса — `useEffect` по переходу `editing` true → false: фокус на карандаш, если `document.activeElement` — `body` или внутри ячейки. `ConfigForm`: `edit.renderEditor(edit.editing)` в `<div data-part="editor" class={s.editor}>` (`grid-column: 1 / -1`) — в `grid()` после `Fragment` строки, содержащей тег, у текстового — после его ячейки; в `cell()` — `editable={edit?.can(tag)}`, `editing={edit?.editing === tag}`, `onEdit={() => edit?.onEdit(tag)}`, `edit={edit?.state(tag)}`. `DrawerStack`: `OWN_ESCAPE` + `, [role="alertdialog"], [data-k-edit]` и комментарий.
-- [ ] **Step 4: прогон — зелёные; `pnpm check`.** ui **≈ +9**; e2e не нужен (без `edit` вид прежний — тесты 2a/2b зелёные).
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter @katran/ui exec vitest run src/form/FieldRow.test.tsx src/form/ConfigForm.test.tsx src/drawer/Drawer.test.tsx`).
+- [x] **Step 3: реализация.** `FieldRow`: карандаш — `IconButton size="s"` соседом строки-кнопки внутри `.cell` (CSS: `opacity: 0`, видим при `.cell:hover` и `:focus-within`; у текстового поля — `position: absolute` в правом верхнем углу), `data-edited` при `edit?.changed` (фон `warn-row`, рамка `warn`, угловая точка `::after` `edit-dot`, `.main` — `warn`), `data-k-tip={edit.tip}` на ячейке, скрытый `<span class={s.sr}>изменено: {tip}</span>` в строке; раскрытие (`.full`): `Было:`/`Стало:` (`present(tag, edit.was).full` / `present(tag, value).full`), затем `edit.audit`, затем кнопка «✎ Изменить» при `editable`; правимое пустое поле раскрытия не имеет — только карандаш. Возврат фокуса — `useEffect` по переходу `editing` true → false: фокус на карандаш, если `document.activeElement` — `body` или внутри ячейки. `ConfigForm`: `edit.renderEditor(edit.editing)` в `<div data-part="editor" class={s.editor}>` (`grid-column: 1 / -1`) — в `grid()` после `Fragment` строки, содержащей тег, у текстового — после его ячейки; в `cell()` — `editable={edit?.can(tag)}`, `editing={edit?.editing === tag}`, `onEdit={() => edit?.onEdit(tag)}`, `edit={edit?.state(tag)}`. `DrawerStack`: `OWN_ESCAPE` + `, [role="alertdialog"], [data-k-edit]` и комментарий.
+- [x] **Step 4: прогон — зелёные; `pnpm check`.** ui **≈ +9**; e2e не нужен (без `edit` вид прежний — тесты 2a/2b зелёные).
+- [x] **Step 5: коммит.**
 
 ```bash
 git add packages/ui/src/form/types.ts packages/ui/src/form/FieldRow.tsx packages/ui/src/form/ConfigForm.tsx packages/ui/src/form/Form.module.css \
@@ -781,7 +781,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: effector 23 (`attach`, `createStore`, `sample`, `combine`).
 - Produces: `createEditModel` и типы контракта; правила — «Правила модели» контракта.
 
-- [ ] **Step 1: падающие тесты.** Основа:
+- [x] **Step 1: падающие тесты.** Основа:
 
 ```ts
 type D = { lines: string[] }
@@ -839,10 +839,10 @@ it('requestLeave: в scope с грязным — $confirm discard; false — н�
 it('reset: всё к начальному', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падает** (`pnpm --filter @katran/effector exec vitest run src/createEditModel.test.ts`) — модуля нет.
-- [ ] **Step 3: `createEditModel<Draft, Result, Next = void, Fail extends Error = Error>(cfg): EditModel<…>` в `createEditModel.ts`.** Своя копия транспорта `attach({ effect: cfg.saveFx, mapParams: (p: SaveQuery<Draft> & { visit: number }) => ({ key: p.key, draft: p.draft, initial: p.initial }) })`; визит — стор, растёт на `reset`; ожидающее действие после `Prompt` — внутренний стор `$pending: { kind: 'open'; key; initial } | { kind: 'leave'; next } | { kind: 'commit' } | null`; `$errors` — `combine($drafts, …)` через `validate`; `$dirty` — `combine($editing, $drafts)`. Порядок: `.on` до `sample`, читающих те же сторы (Global Constraints). Экспорт из `index.ts` — функция и все типы контракта.
-- [ ] **Step 4: прогон — зелёный; `pnpm check`.** effector **≈ +16**.
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падает** (`pnpm --filter @katran/effector exec vitest run src/createEditModel.test.ts`) — модуля нет.
+- [x] **Step 3: `createEditModel<Draft, Result, Next = void, Fail extends Error = Error>(cfg): EditModel<…>` в `createEditModel.ts`.** Своя копия транспорта `attach({ effect: cfg.saveFx, mapParams: (p: SaveQuery<Draft> & { visit: number }) => ({ key: p.key, draft: p.draft, initial: p.initial }) })`; визит — стор, растёт на `reset`; ожидающее действие после `Prompt` — внутренний стор `$pending: { kind: 'open'; key; initial } | { kind: 'leave'; next } | { kind: 'commit' } | null`; `$errors` — `combine($drafts, …)` через `validate`; `$dirty` — `combine($editing, $drafts)`. Порядок: `.on` до `sample`, читающих те же сторы (Global Constraints). Экспорт из `index.ts` — функция и все типы контракта.
+- [x] **Step 4: прогон — зелёный; `pnpm check`.** effector **≈ +16**.
+- [x] **Step 5: коммит.**
 
 ```bash
 git add packages/effector/src/createEditModel.ts packages/effector/src/createEditModel.test.ts packages/effector/src/index.ts
@@ -868,7 +868,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Сид: документ `seedId` (`grids.ts` передаёт `makeFxDocs()[0].id`), цель `field:57`, база — `{ opt: 'A', lines: [f57name, f57] }`: запись 1 — `Кузнецов Д. А.`, `${created[0..10]}T09:15:00`, `now` = `{ opt: 'A', lines: [f57name, f57.slice(0, 8) + '2KD'] }`, `note: 'BIC филиала по справочнику'`, `confirmed`, `by: 'Смирнова Е. В.'`, `at` — `T09:40:00`; запись 2 — `Иванова М. П.`, `T10:42:00`, `now` = `{ opt: 'A', lines: [(f57name + ' BRANCH').slice(0, 35), f57.slice(0, 8) + '2KD'] }`, `note: 'Полное наименование филиала'`, `pending` (index.html:827–829).
 - `server.ts`: `EDITS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits$/` (только `POST`), `ACCOUNTS = /…\/accounts$/` (только `GET`, `side` из `req.query?.side`); проверять **до** `DOCUMENT`; `failing() === 'edit'` / `'accounts'` — 500; `conflicting() === 'edit'` — 409 до проверки `was`; `when = opts.now?.() ?? локальное «ГГГГ-ММ-ДДTчч:мм:00»`. `params.ts`: `conflicting: () => new URLSearchParams(location.search).get('conflict')`, описание регуляторов в комментарии дополнить.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // edit-ports.test.ts
@@ -902,10 +902,10 @@ it('valueDate — запись сразу confirmed, by = who; меняется 
 it('accounts kt — CLIENT_ACCOUNTS по валюте документа; dt — BANK_ACCOUNTS; side=x — 400', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/shared/api/edit-ports.test.ts src/entities/fx-doc/api/detail.mapper.test.ts src/app/fake/server.test.ts src/app/fake/contract.test.ts`).
-- [ ] **Step 3: реализация.** `createEditPorts<D>(cfg): EditPorts<D>` и `fromAccountsResponse` — в `edit-ports.ts` по образцу `ports.ts` (вызов `requestFx` внутри обработчика, `encodeURIComponent(id)`). Типы `shared/lib/detail/types.ts` — по контракту (`PromptTone`, `FormEdit` — `import type` из `@katran/ui`; `DrawerSlot`, `DrawerOpen` — из `@katran/effector`; `AccountItem` — из `../../api`). `entities/fx-doc/model/edit.ts` — типы и `fieldTarget`/`currentOf`/`originalOf`/`isChanged`/`sameEditValue`; маппер — `parseEdits(raw, path)` (`EditValue`: строка или объект как `parseSwiftValue`; `status` — `oneOf(['pending','confirmed'])`; `note`/`by`/`at` — `strOrNull`); `detail.example.ts` — `edits` с одной правкой поля 57 (форма для pi-api). `api/ports.ts` — `fxEditPorts`. Фейк — по «Решениям фейка».
-- [ ] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +14**; `details.a11y.test.tsx` и тесты 2a/2b зелёные (`edits: {}` у всех документов, кроме сида).
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/shared/api/edit-ports.test.ts src/entities/fx-doc/api/detail.mapper.test.ts src/app/fake/server.test.ts src/app/fake/contract.test.ts`).
+- [x] **Step 3: реализация.** `createEditPorts<D>(cfg): EditPorts<D>` и `fromAccountsResponse` — в `edit-ports.ts` по образцу `ports.ts` (вызов `requestFx` внутри обработчика, `encodeURIComponent(id)`). Типы `shared/lib/detail/types.ts` — по контракту (`PromptTone`, `FormEdit` — `import type` из `@katran/ui`; `DrawerSlot`, `DrawerOpen` — из `@katran/effector`; `AccountItem` — из `../../api`). `entities/fx-doc/model/edit.ts` — типы и `fieldTarget`/`currentOf`/`originalOf`/`isChanged`/`sameEditValue`; маппер — `parseEdits(raw, path)` (`EditValue`: строка или объект как `parseSwiftValue`; `status` — `oneOf(['pending','confirmed'])`; `note`/`by`/`at` — `strOrNull`); `detail.example.ts` — `edits` с одной правкой поля 57 (форма для pi-api). `api/ports.ts` — `fxEditPorts`. Фейк — по «Решениям фейка».
+- [x] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +14**; `details.a11y.test.tsx` и тесты 2a/2b зелёные (`edits: {}` у всех документов, кроме сида).
+- [x] **Step 5: коммит.**
 
 ```bash
 git add apps/pi/src/shared/api/edit-ports.ts apps/pi/src/shared/api/edit-ports.test.ts apps/pi/src/shared/api/index.ts \
@@ -938,7 +938,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - `fxCommitView('valueDate', was, now)` → `{ title: 'Утвердить новую дату валютирования?', note: <PromptChange was={formatDate(was)} now={formatDate(now)} />, okLabel: 'Утвердить', cancelLabel: 'Отмена', tone: 'neutral' }`.
 - `edit === null` (рубль, тесты 2a/2b) — все виды как в 2b, без карандашей.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // rules.test.ts
@@ -987,10 +987,10 @@ it('axe без нарушений: открытый редактор поля и
 it('400 VALIDATION: бек повторяет правила — кириллица в поле 57', async () => { /* problem.errors[0] = { path: 'now', code: 'VALIDATION', message: 'Строка 1: недопустимые символы (…)' } */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/entities/fx-doc src/app/fake/server.test.ts`).
-- [ ] **Step 3: реализация.** `swift.ts`: `editable: true` у `50`, `52`, `56`, `57`, `59`, `70`, `72` (комментарий «срез 2c» заменить на адрес FIELDS 597–620). Правила — `rules.ts` (`validateSwiftField` — по сырому черновику: набор X ASCII, поэтому прописные после нормализации той же длины; `validateRefOut` — по `trim().toUpperCase()` значения, регулярки txtCommit эталона `/^[A-Z0-9\/\-?:().,'+ ]{1,16}$/` и `/^\/|\/$|\/\//`; `X = /^[A-Z0-9\/\-\?:\(\)\.,'\+ ]*$/i` с проверкой по строке; порядок ошибок: по строкам — длина, затем набор; затем счёт; затем «Всего n символов, максимум N·W»; первая); `fxEditableTargets` — обход схемы профиля (`grid`, `text`, `seqB`) с `FX_FIELDS[база].editable`. Виды — `ui/edit.tsx` по «Решениям видов», стили — `ui/edit.module.css` токенами Task 2. `fxHero`/`fxBlock` получают `edit: EditContext | null` и рисуют виды правки только при `edit !== null`. `fxDocDetailDomain.formEdit = fxFormEdit`. Фейк: `grids.ts` передаёт `createFxEditStore({ seedId, validate: (target, now) => validateFxEdit(target, now as EditValue) })` и цели `fxEditableTargets` (app видит entities).
-- [ ] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +17**.
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/entities/fx-doc src/app/fake/server.test.ts`).
+- [x] **Step 3: реализация.** `swift.ts`: `editable: true` у `50`, `52`, `56`, `57`, `59`, `70`, `72` (комментарий «срез 2c» заменить на адрес FIELDS 597–620). Правила — `rules.ts` (`validateSwiftField` — по сырому черновику: набор X ASCII, поэтому прописные после нормализации той же длины; `validateRefOut` — по `trim().toUpperCase()` значения, регулярки txtCommit эталона `/^[A-Z0-9\/\-?:().,'+ ]{1,16}$/` и `/^\/|\/$|\/\//`; `X = /^[A-Z0-9\/\-\?:\(\)\.,'\+ ]*$/i` с проверкой по строке; порядок ошибок: по строкам — длина, затем набор; затем счёт; затем «Всего n символов, максимум N·W»; первая); `fxEditableTargets` — обход схемы профиля (`grid`, `text`, `seqB`) с `FX_FIELDS[база].editable`. Виды — `ui/edit.tsx` по «Решениям видов», стили — `ui/edit.module.css` токенами Task 2. `fxHero`/`fxBlock` получают `edit: EditContext | null` и рисуют виды правки только при `edit !== null`. `fxDocDetailDomain.formEdit = fxFormEdit`. Фейк: `grids.ts` передаёт `createFxEditStore({ seedId, validate: (target, now) => validateFxEdit(target, now as EditValue) })` и цели `fxEditableTargets` (app видит entities).
+- [x] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +17**.
+- [x] **Step 5: коммит.**
 
 ```bash
 git add apps/pi/src/entities/fx-doc/model/rules.ts apps/pi/src/entities/fx-doc/model/rules.test.ts apps/pi/src/entities/fx-doc/model/swift.ts \
@@ -1019,7 +1019,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - `useEditContexts(edit, commitView)`: `useUnit` по `$editing`, `$drafts`, `$errors`, `$saving`, `$saveError`, `$confirm`, `$accounts`, `$savedCount` и событиям; возвращает `(docId) => EditContext`: `editing`/`draft`/`error`/`saveError` — только если ключ открытого редактора начинается с `editScope(docId)`; `confirm` — `DISCARD_VIEW` для `discard`, `commitView(target, initial, draft)` для `commit` — только для своего документа; `open(target, current)` → `model.open({ key: editKey(docId, target), initial: current })`; `revert(target, current, original)` → `model.submit({ key, initial: current, draft: original })`. Рост `$savedCount` → `announce('Изменения сохранены')` (`useEffect`, без объявления на монтировании).
 - Линт: `LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared']`; зона «сверх слоёв» `{ target: widgets/doc-detail, from: features, message: 'FSD: doc-detail получает правку контекстом EditContext (спека 2c §3.2)' }`.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // createDocEdit.test.ts (порты — createEffect-заглушки, lifecycle — createPageLifecycle)
@@ -1039,11 +1039,11 @@ it('confirm: discard — DISCARD_VIEW, commit — commitView(target, initial, dr
 it('после сохранения — объявление «Изменения сохранены» в живой области', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/features`).
-- [ ] **Step 3: реализация** по «Решениям». `index.ts` экспортирует всё из «Produces».
-- [ ] **Step 4: проверка линта границ.** Временно добавить в `apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx` строку `import { editKey } from '../../../features/doc-edit'` → `pnpm lint` падает с «FSD: doc-detail получает правку контекстом EditContext (спека 2c §3.2)»; временно в `apps/pi/src/entities/fx-doc/index.ts` — `export { editKey } from '../../features/doc-edit'` → «FSD: entities не импортирует features». Обе строки убрать; `pnpm lint` зелёный.
-- [ ] **Step 5: прогон — зелёные; `pnpm check`.** pi **≈ +9**.
-- [ ] **Step 6: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/features`).
+- [x] **Step 3: реализация** по «Решениям». `index.ts` экспортирует всё из «Produces».
+- [x] **Step 4: проверка линта границ.** Временно добавить в `apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx` строку `import { editKey } from '../../../features/doc-edit'` → `pnpm lint` падает с «FSD: doc-detail получает правку контекстом EditContext (спека 2c §3.2)»; временно в `apps/pi/src/entities/fx-doc/index.ts` — `export { editKey } from '../../features/doc-edit'` → «FSD: entities не импортирует features». Обе строки убрать; `pnpm lint` зелёный.
+- [x] **Step 5: прогон — зелёные; `pnpm check`.** pi **≈ +9**.
+- [x] **Step 6: коммит.**
 
 ```bash
 git add eslint.config.js apps/pi/src/features/doc-edit/model/createDocEdit.ts apps/pi/src/features/doc-edit/model/createDocEdit.test.ts \
@@ -1068,7 +1068,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - `reloadDetail(id)`: если `id` не грузится — `loadFx({ id, visit })`; кэш не трогается до ответа (слот остаётся `ready`, скелетона нет); ответ — тот же путь, что у обычной загрузки.
 - `DocDetail`: `editOf?.(view.id) ?? null` → `edit`; `domain.renderHero(d, id, edit)`, `domain.renderBlock(d, id, edit)`, `ConfigForm edit={edit && domain.formEdit ? domain.formEdit(d, edit) : undefined}`; `Drawer overlay={edit?.confirm ? <Prompt open {...edit.confirm} onResult={edit.onConfirm} /> : undefined}`.
 
-- [ ] **Step 1: падающие тесты.**
+- [x] **Step 1: падающие тесты.**
 
 ```ts
 // createDetail.test.ts
@@ -1089,10 +1089,10 @@ it('editOf: Prompt контекста — в drawer своего докумен�
 it('editOf: renderHero/renderBlock получают контекст, ConfigForm — formEdit; без editOf — null и без formEdit', () => { /* домен-заглушка с vi.fn() */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/widgets/doc-detail`).
-- [ ] **Step 3: реализация** по «Решениям»; `index.ts` — без новых имён (типы `Detail`/`DetailConfig` уже экспортируются).
-- [ ] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +8**; страницы ещё без `guard` и `editOf` — тесты страниц и a11y зелёные.
-- [ ] **Step 5: коммит.**
+- [x] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/widgets/doc-detail`).
+- [x] **Step 3: реализация** по «Решениям»; `index.ts` — без новых имён (типы `Detail`/`DetailConfig` уже экспортируются).
+- [x] **Step 4: прогон — зелёные; `pnpm check`.** pi **≈ +8**; страницы ещё без `guard` и `editOf` — тесты страниц и a11y зелёные.
+- [x] **Step 5: коммит.**
 
 ```bash
 git add apps/pi/src/widgets/doc-detail/lib/createDetail.ts apps/pi/src/widgets/doc-detail/lib/createDetail.test.ts \
@@ -1125,7 +1125,7 @@ sample({ clock: docEdit.conflict, fn: ({ id }) => id, target: detail.reloadDetai
 
 `registry.model.ts`: `createDetail({ …, guard: true })`. `FxDocsPage`: `const editOf = useEditContexts(docEdit, fxCommitView)` → `<DocDetail editOf={editOf} … />`. `pages/rub-docs` не меняется.
 
-- [ ] **Step 1: падающие тесты страницы.**
+- [x] **Step 1: падающие тесты страницы.**
 
 ```ts
 // registry.model.test.ts
@@ -1137,9 +1137,9 @@ it('409: деталь перезапрошена, редактор открыт 
 it('валюта: открытый редактор поля 57 и Prompt даты валютирования — axe без нарушений', async () => { /* … */ })
 ```
 
-- [ ] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/pages/fx-docs src/app/details.a11y.test.tsx`).
-- [ ] **Step 3: реализация** по «Связям»; прогон — зелёные; `pnpm check` зелёный: pi **≈ +5**.
-- [ ] **Step 4: e2e.** `apps/pi/e2e/detail-edit.spec.ts` — помощники `dialogs`, `openBtn`, `still`, `ready`, `setQuery`, `start` — как в `detail-tabs.spec.ts`; `REF` — числа Task 1:
+- [x] **Step 2: прогон — падают** (`pnpm --filter pi exec vitest run src/pages/fx-docs src/app/details.a11y.test.tsx`).
+- [x] **Step 3: реализация** по «Связям»; прогон — зелёные; `pnpm check` зелёный: pi **≈ +5**.
+- [x] **Step 4: e2e.** `apps/pi/e2e/detail-edit.spec.ts` — помощники `dialogs`, `openBtn`, `still`, `ready`, `setQuery`, `start` — как в `detail-tabs.spec.ts`; `REF` — числа Task 1:
 
 ```ts
 // Замер эталона e065bfb (Task 1, detail-drift.md «2c»): Chromium 1600×1000, 100 %
@@ -1158,7 +1158,7 @@ const TOL = 2
 8. `рубль: карандашей нет`.
 
 Run: `pnpm --filter pi exec playwright test e2e/detail-edit.spec.ts` на переднем плане — `8 passed`; затем полный `pnpm --filter pi e2e` — **59 + 8 = 67 passed**. Расхождение геометрии больше `TOL` — не править допуск: найти причину (токен Task 2 или CSS вида) и исправить; числа и скриншоты — в леджер для Task 13.
-- [ ] **Step 5: коммит.**
+- [x] **Step 5: коммит.**
 
 ```bash
 git add apps/pi/src/pages/fx-docs/model/edit.model.ts apps/pi/src/pages/fx-docs/model/registry.model.ts apps/pi/src/pages/fx-docs/model/registry.model.test.ts \
@@ -1177,11 +1177,11 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 - Consumes: факты Task 1–12 (хеши, числа e2e, скриншоты из леджера).
 - Produces: документы среза 2c.
 
-- [ ] **Step 1: `pi-api.md`.** §1.7 `POST /grids/{gridId}/documents/{id}/edits` (предложение): тело `{ target, was, now }`, цели и формы `EditValue`, ответ — деталь целиком, ошибки `400 VALIDATION` (бек повторяет правила — таблица ошибок дословно), `409 CONFLICT`, `403`, `404`; утверждение `POST …/edits/{target}/confirm` — задел 2d, только описание. §1.8 `GET /grids/{gridId}/documents/{id}/accounts?side=kt|dt` (предложение): `{ items: [{ account, ccy, kind }] }`, Кт — карточка клиента по валюте документа (10–15), Дт — счета банка; фронт фильтрует и показывает до 5. §2 — `409`. §6 — что фейк не проверяет (права `403`, конкурентные правки разных пользователей, память сбрасывается перезагрузкой). §7.2 — поле `edits`; новый §7.6 «Правки в детали» — `FxEdit`, `FxHistEntry`, статусы ставит бек, дата валютирования подтверждается автором (`confirmed`, `by = who`), пересчёт маршрута после `accKt` (`edits.route`, `who: 'система'`); примеры — из фейка (сид поля 57, ответ после `accKt`).
-- [ ] **Step 2: `detail-drift.md` «2c».** Колонку «katran» пунктов Д49–Д60 перевести в факт (задача и коммит); «Замер эталона 2c» — колонка «Кит (e2e Task 12)» и Δ; новые расхождения по скриншотам Task 12 против `stand-*.png` — пункты Д61+ с классом; сводка — итоговые числа.
-- [ ] **Step 3: гайды.** `pi-usage.md` — подключение правки во внутреннем приложении: `createEditPorts` сущности, `features/doc-edit` (`createDocEdit`), `createDetail({ guard: true })`, связи страницы (`edit.model.ts`), `DocDetail editOf`; регуляторы фейка `?fail=edit`, `?fail=accounts`, `?conflict=edit`. `effector-fsd.md` — слой `features` в `apps/pi` теперь есть: живой пример `features/doc-edit` вместо иллюстрации `features/pi-annul` (абзац про «в `apps/pi` такой фичи нет» — заменить), правило «виджет получает правку контекстом, фичу не импортирует».
-- [ ] **Step 4: STATE, CHANGELOG, спека.** STATE: §5 карта (`features/doc-edit`, `createEditModel`, `Prompt`, `FieldEditor`, `SuggestInput`, `EditMark`, `EditHistory`), §6 (2c исполнен в ветке), §7 техдолг (что отложено: Д27 рубля остаётся, «Утвердить» — 2d, автораскрытие после сохранения — Д60), §8 грабли (новые из леджера), §9 следующий шаг — 2d, §10 строка деталки; итоговые числа тестов и e2e. `CHANGELOG.md` — раздел среза 2c: кит (`Prompt`, `Drawer.overlay`, `EditMark`, `EditHistory`, `diffFieldValues`, `SuggestInput`, `Option.tag`, `FieldEditor`, `ConfigForm.edit`, `OWN_ESCAPE`, `createEditModel`, токены) и `apps/pi`. Спека: статус «утверждена владельцем 06.10; исполнена в `feat/detail-edit`».
-- [ ] **Step 5: проверка и коммит.** `pnpm check` зелёный.
+- [x] **Step 1: `pi-api.md`.** §1.7 `POST /grids/{gridId}/documents/{id}/edits` (предложение): тело `{ target, was, now }`, цели и формы `EditValue`, ответ — деталь целиком, ошибки `400 VALIDATION` (бек повторяет правила — таблица ошибок дословно), `409 CONFLICT`, `403`, `404`; утверждение `POST …/edits/{target}/confirm` — задел 2d, только описание. §1.8 `GET /grids/{gridId}/documents/{id}/accounts?side=kt|dt` (предложение): `{ items: [{ account, ccy, kind }] }`, Кт — карточка клиента по валюте документа (10–15), Дт — счета банка; фронт фильтрует и показывает до 5. §2 — `409`. §6 — что фейк не проверяет (права `403`, конкурентные правки разных пользователей, память сбрасывается перезагрузкой). §7.2 — поле `edits`; новый §7.6 «Правки в детали» — `FxEdit`, `FxHistEntry`, статусы ставит бек, дата валютирования подтверждается автором (`confirmed`, `by = who`), пересчёт маршрута после `accKt` (`edits.route`, `who: 'система'`); примеры — из фейка (сид поля 57, ответ после `accKt`).
+- [x] **Step 2: `detail-drift.md` «2c».** Колонку «katran» пунктов Д49–Д60 перевести в факт (задача и коммит); «Замер эталона 2c» — колонка «Кит (e2e Task 12)» и Δ; новые расхождения по скриншотам Task 12 против `stand-*.png` — пункты Д61+ с классом; сводка — итоговые числа.
+- [x] **Step 3: гайды.** `pi-usage.md` — подключение правки во внутреннем приложении: `createEditPorts` сущности, `features/doc-edit` (`createDocEdit`), `createDetail({ guard: true })`, связи страницы (`edit.model.ts`), `DocDetail editOf`; регуляторы фейка `?fail=edit`, `?fail=accounts`, `?conflict=edit`. `effector-fsd.md` — слой `features` в `apps/pi` теперь есть: живой пример `features/doc-edit` вместо иллюстрации `features/pi-annul` (абзац про «в `apps/pi` такой фичи нет» — заменить), правило «виджет получает правку контекстом, фичу не импортирует».
+- [x] **Step 4: STATE, CHANGELOG, спека.** STATE: §5 карта (`features/doc-edit`, `createEditModel`, `Prompt`, `FieldEditor`, `SuggestInput`, `EditMark`, `EditHistory`), §6 (2c исполнен в ветке), §7 техдолг (что отложено: Д27 рубля остаётся, «Утвердить» — 2d, автораскрытие после сохранения — Д60), §8 грабли (новые из леджера), §9 следующий шаг — 2d, §10 строка деталки; итоговые числа тестов и e2e. `CHANGELOG.md` — раздел среза 2c: кит (`Prompt`, `Drawer.overlay`, `EditMark`, `EditHistory`, `diffFieldValues`, `SuggestInput`, `Option.tag`, `FieldEditor`, `ConfigForm.edit`, `OWN_ESCAPE`, `createEditModel`, токены) и `apps/pi`. Спека: статус «утверждена владельцем 06.10; исполнена в `feat/detail-edit`».
+- [x] **Step 5: проверка и коммит.** `pnpm check` зелёный.
 
 ```bash
 git add docs/reference/pi-api.md docs/reference/detail-drift.md docs/guides/pi-usage.md docs/guides/effector-fsd.md docs/STATE.md CHANGELOG.md \
