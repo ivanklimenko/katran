@@ -80,16 +80,22 @@ const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
   return next
 }
 
-type Load = { id: string; visit: number }
+/** epoch — эпоха документа при запросе: растёт с каждым replaceDetail, ответ прежней эпохи — доправочный. */
+type Load = { id: string; visit: number; epoch: number }
 /** Запрос ухода из документа docId: что сделать, если пользователь не держит правку. */
 type LeaveRequest = { docId: string; intent: LeaveIntent }
 type CloseIntent = Extract<LeaveIntent, { kind: 'close' }>
 type OpenIntent = Extract<LeaveIntent, { kind: 'open' }>
-type TabLoad = TabQuery & { visit: number }
+type TabLoad = TabQuery & { visit: number; epoch: number }
 type Visit = { opened: boolean; visit: number }
+type Epochs = Record<string, number>
 const tabKey = (id: string, tab: string) => `${id}:${tab}`
 /** Ответ своего визита экрана: пришедший после ухода или от прошлого визита не принимается. */
 const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.opened && params.visit === cur.visit
+/** Ответ своего визита и эпохи документа: летевший до replaceDetail не возвращает в кэш данные до правки. */
+const fresh = (cur: Visit & { epoch: Epochs }, x: { params: { id: string; visit: number; epoch: number } }) =>
+  mine(cur, x) && x.params.epoch === (cur.epoch[x.params.id] ?? 0)
+const entryOf = (st: DrawerStackState, id: string): DrawerEntry | null => (st.a?.id === id ? st.a : st.b?.id === id ? st.b : null)
 
 /**
  * Деталка экрана (спека 2a §4.3, 2b §3.3): стек A/B кита, загрузка документа по слоту и кэш по id, ленивая загрузка
@@ -114,43 +120,49 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   const $focus = createStore<Record<string, number>>({})
   const $quiet = createStore<Record<string, true>>({})
 
+  // --- правка (план 2c, Р5): ответ сохранения в кэш, перезапрос по 409 ---
+  const replaceDetail = createEvent<{ id: string; detail: D }>()
+  const reloadDetail = createEvent<string>()
+  // ответ сохранения после ухода с экрана не пишется: при возврате деталь запросится заново (Review Focus 1)
+  const replaced = sample({ clock: replaceDetail, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, x) => x })
+  // эпоха документа: запросы детали и вкладок, ушедшие до replaceDetail, своими ответами кэш не трогают
+  const $epoch = createStore<Epochs>({}).on(replaced, (m, { id }) => ({ ...m, [id]: (m[id] ?? 0) + 1 }))
+  const epochOf = (m: Epochs, id: string) => m[id] ?? 0
+  const currentEpoch = { ...current, epoch: $epoch }
+
   sample({
     clock: stack.opened,
-    source: { cache: $cache, loading: $loading, visit: $visit },
+    source: { cache: $cache, loading: $loading, visit: $visit, epoch: $epoch },
     filter: ({ cache, loading }, { id }) => !(id in cache) && !(id in loading),
-    fn: ({ visit }, { id }): Load => ({ id, visit }),
+    fn: ({ visit, epoch }, { id }): Load => ({ id, visit, epoch: epochOf(epoch, id) }),
     target: loadFx,
   })
   sample({
     clock: retry,
-    source: { st: stack.$stack, loading: $loading, visit: $visit },
+    source: { st: stack.$stack, loading: $loading, visit: $visit, epoch: $epoch },
     filter: ({ st, loading }, slot) => { const e = st[slot]; return e !== null && !(e.id in loading) },
-    fn: ({ st, visit }, slot): Load => ({ id: st[slot]?.id ?? '', visit }),
+    fn: ({ st, visit, epoch }, slot): Load => { const id = st[slot]?.id ?? ''; return { id, visit, epoch: epochOf(epoch, id) } },
     target: loadFx,
   })
 
-  // ответ после ухода с экрана и ответ прошлого визита не принимаются: при возврате деталь запросится заново
-  const done = sample({ clock: loadFx.done, source: current, filter: mine, fn: (_, x) => x })
-  const failed = sample({ clock: loadFx.fail, source: current, filter: mine, fn: (_, x) => x })
+  // ответ после ухода с экрана и ответ прошлого визита не принимаются: при возврате деталь запросится заново;
+  // ответ прежней эпохи (ушёл до replaceDetail) — доправочный: ни в кэш, ни в ошибки; finally — по визиту, загрузку снимает
+  const done = sample({ clock: loadFx.done, source: currentEpoch, filter: fresh, fn: (_, x) => x })
+  const failed = sample({ clock: loadFx.fail, source: currentEpoch, filter: fresh, fn: (_, x) => x })
   const settled = sample({ clock: loadFx.finally, source: current, filter: mine, fn: (_, x) => x })
   $loading.on(loadFx, (l, { id }) => ({ ...l, [id]: true })).on(settled, (l, { params }) => without(l, params.id))
   $errors.on(loadFx, (e, { id }) => without(e, id))
   $cache.on(done, (c, { params, result }) => ({ ...c, [params.id]: result }))
   $errors.on(failed, (e, { params, error }) => ({ ...e, [params.id]: error.message }))
 
-  // --- правка (план 2c, Р5): ответ сохранения в кэш, перезапрос по 409 ---
-  const replaceDetail = createEvent<{ id: string; detail: D }>()
-  const reloadDetail = createEvent<string>()
-  // ответ сохранения после ухода с экрана не пишется: при возврате деталь запросится заново (Review Focus 1)
-  const replaced = sample({ clock: replaceDetail, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, x) => x })
   $cache.on(replaced, (c, { id, detail }) => ({ ...c, [id]: detail }))
   $errors.on(replaced, (e, { id }) => without(e, id))
   // кэш не трогается до ответа: слот остаётся ready со старой деталью; ответ — общий путь done/failed
   sample({
     clock: reloadDetail,
-    source: { opened: lifecycle.$opened, loading: $loading, visit: $visit },
+    source: { opened: lifecycle.$opened, loading: $loading, visit: $visit, epoch: $epoch },
     filter: ({ opened, loading }, id) => opened && !(id in loading),
-    fn: ({ visit }, id): Load => ({ id, visit }),
+    fn: ({ visit, epoch }, id): Load => ({ id, visit, epoch: epochOf(epoch, id) }),
     target: loadFx,
   })
 
@@ -165,7 +177,8 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   const $tabLoading = createStore<Record<string, true>>({})
   const $expanded = createStore<Record<string, string[]>>({})
   $expanded.on(setExpanded, (m, { id, tab, keys }) => ({ ...m, [tabKey(id, tab)]: keys }))
-  // новая деталь — вкладки документа устарели: кэш и ошибки `${id}:*` сбрасываются (раскрытое остаётся)
+  // новая деталь — вкладки документа устарели: кэш, ошибки и загрузки `${id}:*` сбрасываются (раскрытое остаётся);
+  // летящий запрос вкладки прежней эпохи доживёт, но его ответ отбросит fresh, а need() сразу отправит свежий
   const dropDoc = <T,>(m: Record<string, T>, id: string): Record<string, T> => {
     const keys = Object.keys(m).filter((k) => k.startsWith(`${id}:`))
     if (keys.length === 0) return m
@@ -175,6 +188,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   }
   $tabCache.on(replaced, (c, { id }) => dropDoc(c, id))
   $tabErrors.on(replaced, (e, { id }) => dropDoc(e, id))
+  $tabLoading.on(replaced, (l, { id }) => dropDoc(l, id))
 
   if (tabFx) {
     // своя копия порта, как у детали; порту уходит только { id, tab }
@@ -186,36 +200,40 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
       const k = tabKey(e.id, e.tab)
       return !(k in cache) && !(k in loading)
     }
-    const load = (e: DrawerEntry | null, visit: number): TabLoad => ({ id: e?.id ?? '', tab: e?.tab ?? '', visit })
+    const load = (e: DrawerEntry | null, visit: number, epoch: Epochs): TabLoad => {
+      const id = e?.id ?? ''
+      return { id, tab: e?.tab ?? '', visit, epoch: epochOf(epoch, id) }
+    }
     // вкладка стала активной в слоте: setTab, открытие, сдвиг B в A. $a/$b обновляются только при смене своей записи —
     // открытие B и переключение вкладки в B запись A не трогают. Деталь не ждём: эндпоинт вкладки самостоятелен (§3.1)
     sample({
       clock: merge([stack.$a.updates, stack.$b.updates]),
-      source: { cache: $tabCache, loading: $tabLoading, visit: $visit },
+      source: { cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
       filter: need,
-      fn: ({ visit }, e) => load(e, visit),
+      fn: ({ visit, epoch }, e) => load(e, visit, epoch),
       target: loadTabFx,
     })
     // replaceDetail: активная нелокальная вкладка этого документа — заново (кэш уже сброшен редьюсером выше)
     sample({
       clock: replaced,
-      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit },
-      filter: (src, { id }) => need(src, src.st.a?.id === id ? src.st.a : src.st.b?.id === id ? src.st.b : null),
-      fn: ({ st, visit }, { id }) => load(st.a?.id === id ? st.a : st.b, visit),
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
+      filter: (src, { id }) => need(src, entryOf(src.st, id)),
+      fn: ({ st, visit, epoch }, { id }) => load(entryOf(st, id), visit, epoch),
       target: loadTabFx,
     })
     sample({
       clock: retryTab,
-      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit },
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
       filter: (src, slot) => need(src, src.st[slot]),
-      fn: ({ st, visit }, slot) => load(st[slot], visit),
+      fn: ({ st, visit, epoch }, slot) => load(st[slot], visit, epoch),
       target: loadTabFx,
     })
     // счётчик визитов — тот же, что у детали; внутри визита дубли исключает карта загрузок,
     // а ответ другой вкладки при быстром переключении ложится в кэш своего ключа
-    const tabDone = sample({ clock: loadTabFx.done, source: current, filter: mine, fn: (_, x) => x })
-    const tabFailed = sample({ clock: loadTabFx.fail, source: current, filter: mine, fn: (_, x) => x })
-    const tabSettled = sample({ clock: loadTabFx.finally, source: current, filter: mine, fn: (_, x) => x })
+    // эпоха и на finally: загрузку ключа после replaceDetail держит уже новый запрос — старый её не снимает
+    const tabDone = sample({ clock: loadTabFx.done, source: currentEpoch, filter: fresh, fn: (_, x) => x })
+    const tabFailed = sample({ clock: loadTabFx.fail, source: currentEpoch, filter: fresh, fn: (_, x) => x })
+    const tabSettled = sample({ clock: loadTabFx.finally, source: currentEpoch, filter: fresh, fn: (_, x) => x })
     $tabLoading
       .on(loadTabFx, (l, p) => ({ ...l, [tabKey(p.id, p.tab)]: true }))
       .on(tabSettled, (l, { params }) => without(l, tabKey(params.id, params.tab)))
@@ -293,6 +311,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $focus.reset(lifecycle.pageClosed)
   $quiet.reset(lifecycle.pageClosed)
   $shift.reset(lifecycle.pageClosed)
+  $epoch.reset(lifecycle.pageClosed)
   $tabCache.reset(lifecycle.pageClosed)
   $tabErrors.reset(lifecycle.pageClosed)
   $tabLoading.reset(lifecycle.pageClosed)

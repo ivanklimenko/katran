@@ -364,6 +364,7 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
     within(prompt).getByRole('button', { name: 'Продолжить правку' }).focus()
     await userEvent.keyboard('{Escape}')
     expect(onConfirm).toHaveBeenCalledTimes(2)
+    expect(onConfirm).toHaveBeenLastCalledWith(false)
     expect([...names()].sort()).toEqual(['Платёжная инструкция № 417', 'Платёжная инструкция № 418'])
     await userEvent.click(within(prompt).getByRole('button', { name: 'Отменить правку' }))
     expect(onConfirm).toHaveBeenLastCalledWith(true)
