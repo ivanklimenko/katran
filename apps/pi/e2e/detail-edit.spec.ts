@@ -105,7 +105,10 @@ test(`геометрия правки против эталона ± ${TOL}`, as
     return { w: p.getBoundingClientRect().width, pad: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft] }
   })
   const field = (await box(acc)).width
-  geo.sug = { rows: sug, pop, field }
+  // список привязан к полю со строкой подсказки (Д63): подсказка видна целиком над списком
+  const hint = await box(page.getByText(/^Только из карточки клиента · USD · \d+ сч\.$/))
+  const listTop = (await list.evaluate((el) => (el.closest('[role="presentation"]') as HTMLElement).getBoundingClientRect().top))
+  geo.sug = { rows: sug, pop, field, hintBottom: hint.y + hint.height, listTop }
   await page.screenshot({ path: test.info().outputPath('edit-suggest.png') })
   await page.keyboard.press('Escape')
 
@@ -146,7 +149,9 @@ test(`геометрия правки против эталона ± ${TOL}`, as
   test.info().annotations.push({ type: 'geometry', description: JSON.stringify(geo) })
   near(geo.refOut as number, REF.inline)
   near(geo.acc as number, REF.inline)
+  expect(sug.length).toBeGreaterThan(0)
   for (const h of sug) near(h, REF.sug)
+  expect(listTop, JSON.stringify(geo.sug)).toBeGreaterThanOrEqual(hint.y + hint.height)
   expect(pop.pad).toEqual(['0px', '0px', '0px', '0px'])
   // список не уже поля и 320 (min-width кита); шире — по содержимому: 20 цифр счёта не уходят под тег валюты,
   // как на эталоне при ширине ровно 320 (замер в аннотации, расхождение — в леджер Task 13)
@@ -156,6 +161,7 @@ test(`геометрия правки против эталона ± ${TOL}`, as
   expect(Math.abs((geo.editW as number) - grid)).toBeLessThanOrEqual(0.5)
   near(geo.editW as number, LAYOUT.editW)
   near(geo.foot as number, LAYOUT.foot)
+  expect(rows.length).toBeGreaterThan(0)
   for (const h of rows) near(h, LAYOUT.field)
   const pr = geo.prompt as { box: { width: number }; btn: number }
   near(pr.box.width, REF.promptW)
@@ -178,6 +184,10 @@ test('поле 57: сид — изменено и «2 изменения»; ки
   await line1.fill('ПРИВЕТ')
   await expect(ed.getByText("Строка 1: недопустимые символы (только латиница, цифры и / - ? : ( ) . , ' +)")).toBeVisible()
   await expect(ed.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
+  // подсвечена только виноватая строка (Д64): aria-invalid у «Строка 1», у «Строка 2» — нет
+  await expect(line1).toHaveAttribute('aria-invalid', 'true')
+  await expect(ed.getByRole('textbox', { name: 'Строка 2' })).not.toHaveAttribute('aria-invalid', /.*/)
+  await page.screenshot({ path: test.info().outputPath('edit-editor-error.png') })
 
   await line1.fill('NEW BANK LONDON')
   await expect(ed.getByRole('button', { name: 'Сохранить' })).toBeEnabled()
@@ -364,6 +374,45 @@ test('?conflict=edit — «Документ изменили — откройт�
   await expect(ed).toHaveCount(0)
   await expect(dw.locator('[data-field="57"] > button[aria-expanded]')).toContainText('RETRY LINE')
   await expect.poll(() => said(page)).toContain('Изменения сохранены')
+})
+
+test('20 исх с черновиком: Tab из поля и Esc — Prompt «Отменить правку?»; клик по его кнопкам не отменяет правку раньше ответа', async ({ page }) => {
+  await start(page)
+  const dw = await open(page, USD)
+  await dw.getByRole('button', { name: 'Изменить 20 исх' }).click()
+  const input = dw.getByRole('textbox', { name: '20 исх' })
+  await input.fill('DRAFT1')
+  const ask = dw.getByRole('alertdialog', { name: 'Отменить правку?' })
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Escape')
+  await expect(ask).toBeVisible()
+  await settle(dw)
+  // «Продолжить правку» мышью — правка на месте с черновиком (C1: mousedown по Prompt — не «клик вне»)
+  await ask.getByRole('button', { name: 'Продолжить правку' }).click()
+  await expect(ask).toHaveCount(0)
+  await expect(input).toHaveValue('DRAFT1')
+  // «Отменить правку» мышью — уход выполняется: деталка закрыта, запросов правки нет
+  await input.focus()
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Escape')
+  await expect(ask).toBeVisible()
+  await ask.getByRole('button', { name: 'Отменить правку' }).click()
+  await expect(dialogs(page)).toHaveCount(0)
+  expect(await reqs(page, EDIT)).toBe(0)
+})
+
+/** Заблокированная запись фейка (i % 11 === 2) — третья в реестре, № 811306. */
+const LOCKED = 3
+
+test('заблокированный документ — только просмотр: ни карандашей, ни ↺, ни редакторов (Д66)', async ({ page }) => {
+  await start(page)
+  await expect(openBtn(page, LOCKED)).toHaveAccessibleName(/только для просмотра/)
+  const dw = await open(page, LOCKED)
+  await expect(dw).toHaveAccessibleName(/811306/)
+  await expect(dw.locator('[data-field="57"]')).toBeVisible()
+  await expect(dw.getByRole('button', { name: /^(Редактировать поле|Изменить|Вернуть исходное)/ })).toHaveCount(0)
+  await expect(dw.locator('[data-k-edit]')).toHaveCount(0)
+  await page.screenshot({ path: test.info().outputPath('edit-locked.png') })
 })
 
 test('рубль: карандашей нет', async ({ page }) => {
