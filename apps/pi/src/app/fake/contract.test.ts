@@ -374,9 +374,10 @@ describe('контракт правки fx-docs (план 2c): порт → requ
     const full = { opt: 'A', lines: [`${row.f57name} BRANCH`.slice(0, 35), `${row.f57.slice(0, 8)}2KD`] }
     expect(d.edits['field:57']).toEqual({
       now: full,
+      canConfirm: false,
       hist: [
-        { who: 'Кузнецов Д. А.', when: `${day}T09:15:00`, was, now: bic, note: 'BIC филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: `${day}T09:40:00` },
-        { who: 'Иванова М. П.', when: `${day}T10:42:00`, was: bic, now: full, note: 'Полное наименование филиала', status: 'pending', by: null, at: null },
+        { who: 'Кузнецов Д. А.', when: `${day}T09:15:00`, was, now: bic, note: 'BIC филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: `${day}T09:40:00`, reason: null },
+        { who: 'Иванова М. П.', when: `${day}T10:42:00`, was: bic, now: full, note: 'Полное наименование филиала', status: 'pending', by: null, at: null, reason: null },
       ],
     })
     expect(d.fields['57']).toEqual(full)
@@ -389,7 +390,7 @@ describe('контракт правки fx-docs (план 2c): порт → requ
     const next = { opt: 'A', lines: [row.f57name, row.f57] }
     const after = await save(sc, row.id, 'field:57', currentOf(d, 'field:57'), next)
     expect(after.edits['field:57']?.hist.map((h) => [h.who, h.status])).toEqual([['Кузнецов Д. А.', 'confirmed'], ['Иванова М. П.', 'pending'], ['Вы', 'pending']])
-    expect(after.edits['field:57']?.hist[2]).toEqual({ who: 'Вы', when: WHEN, was: full, now: next, note: null, status: 'pending', by: null, at: null })
+    expect(after.edits['field:57']?.hist[2]).toEqual({ who: 'Вы', when: WHEN, was: full, now: next, note: null, status: 'pending', by: null, at: null, reason: null })
     // откат к исходному: маркера нет, история сохранена
     expect(isChanged(after, 'field:57')).toBe(false)
     expect(await detail(sc, row.id)).toEqual(after)
@@ -404,8 +405,8 @@ describe('контракт правки fx-docs (план 2c): порт → requ
     const at0 = ROUTES.findIndex((r) => r.acc === d0.routeAcc)
     const r1 = ROUTES[at0 < 0 ? 0 : (at0 + 1) % ROUTES.length]!
     expect(d1).toMatchObject({ routeType: r1.type, routeAcc: r1.acc, routeRecv: r1.recv, routeDesc: r1.desc, routeText: r1.text })
-    expect(d1.edits.accKt?.hist).toEqual([{ who: 'Вы', when: WHEN, was: d0.accKt, now: items[0]!.acc, note: null, status: 'pending', by: null, at: null }])
-    expect(d1.edits.route).toEqual({ now: null, hist: [{ who: 'система', when: WHEN, was: routeOf(d0), now: routeOf(d1), note: null, status: 'confirmed', by: 'система', at: WHEN }] })
+    expect(d1.edits.accKt?.hist).toEqual([{ who: 'Вы', when: WHEN, was: d0.accKt, now: items[0]!.acc, note: null, status: 'pending', by: null, at: null, reason: null }])
+    expect(d1.edits.route).toEqual({ now: null, canConfirm: false, hist: [{ who: 'система', when: WHEN, was: routeOf(d0), now: routeOf(d1), note: null, status: 'confirmed', by: 'система', at: WHEN, reason: null }] })
     // вторая смена Кт — снова следующий по кругу
     const d2 = await save(sc, usd.id, 'accKt', d1.accKt, items[1]!.acc)
     const r2 = ROUTES[(ROUTES.indexOf(r1) + 1) % ROUTES.length]!
@@ -437,7 +438,7 @@ describe('контракт правки fx-docs (план 2c): порт → requ
     const d1 = await save(sc, usd.id, 'valueDate', d0.valueDates[0], '2026-09-25')
     expect(d1.valueDates).toEqual(['2026-09-25', d0.valueDates[1], d0.valueDates[2], d0.valueDates[3]])
     const [h] = d1.edits.valueDate!.hist
-    expect(h).toEqual({ who: 'Вы', when: WHEN, was: d0.valueDates[0], now: '2026-09-25', note: null, status: 'confirmed', by: 'Вы', at: WHEN })
+    expect(h).toEqual({ who: 'Вы', when: WHEN, was: d0.valueDates[0], now: '2026-09-25', note: null, status: 'confirmed', by: 'Вы', at: WHEN, reason: null })
     expect(h!.by).toBe(h!.who)
     // 20 исх: обычная запись pending
     const d2 = await save(sc, usd.id, 'refOut', d1.refOut ?? '', 'OUT0000001')

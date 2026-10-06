@@ -98,12 +98,12 @@ export function createFxEditStore(cfg: FakeEditStoreConfig): FakeEditStore {
     seed(id, detail)
     const out: Detail = { ...detail }
     const fields: Record<string, unknown> = { ...((detail.fields ?? {}) as Record<string, unknown>) }
-    const edits: Record<string, { now: EditValue | null; hist: HistDto[] }> = {}
+    const edits: Record<string, { now: EditValue | null; canConfirm: boolean; hist: HistDto[] }> = {}
     for (const [target, hist] of hists.get(id) ?? []) {
       const copy = hist.map((h) => ({ ...h }))
-      if (target === 'route') { edits.route = { now: null, hist: copy }; continue }
+      if (target === 'route') { edits.route = { now: null, canConfirm: false, hist: copy }; continue }
       const now = last(hist)!.now
-      edits[target] = { now, hist: copy }
+      edits[target] = { now, canConfirm: false, hist: copy }
       if (target.startsWith(FIELD)) fields[target.slice(FIELD.length)] = now
       else if (target === 'valueDate') out.valueDates = [now, ...(detail.valueDates as string[]).slice(1)]
       else out[target] = now

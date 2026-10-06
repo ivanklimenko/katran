@@ -13,7 +13,7 @@ import { fxCommitView } from './edit'
 
 const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
 const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
-  who: 'Вы', when: '2026-09-23T11:05:00', was: '', now: '', note: null, status: 'pending', by: null, at: null, ...p,
+  who: 'Вы', when: '2026-09-23T11:05:00', was: '', now: '', note: null, status: 'pending', by: null, at: null, reason: null, ...p,
 })
 const ctx = (p: Partial<EditContext> = {}): EditContext => ({
   docId: d.id, editing: null, draft: null, error: null, saving: false, saveError: null, confirm: null,
@@ -77,7 +77,7 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(edit.cancel).toHaveBeenCalledTimes(2)
     unmount()
 
-    const changed: FxDocDetail = { ...d, refOut: 'FX1', edits: { refOut: { now: 'FX1', hist: [entry({ was: '', now: 'FX1' })] } } }
+    const changed: FxDocDetail = { ...d, refOut: 'FX1', edits: { refOut: { now: 'FX1', canConfirm: false, hist: [entry({ was: '', now: 'FX1' })] } } }
     const view = ctx()
     renderEdit(changed, view)
     expect(screen.getByRole('img', { name: 'Было — · Вы, 23.09.2026 11:05' })).toBeInTheDocument()
@@ -107,7 +107,7 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
   it('заблокированный документ — только просмотр: ни карандашей, ни ↺, ни редакторов; маркеры и аудит на месте (Д66)', async () => {
     const locked: FxDocDetail = {
       ...d, lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' }, refOut: 'FX1',
-      edits: { ...d.edits, refOut: { now: 'FX1', hist: [entry({ was: '', now: 'FX1' })] } },
+      edits: { ...d.edits, refOut: { now: 'FX1', canConfirm: false, hist: [entry({ was: '', now: 'FX1' })] } },
     }
     // даже при «открытом» редакторе в модели — вид его не рисует
     for (const editing of [null, 'refOut', 'accKt', 'valueDate', 'field:57']) {
@@ -168,8 +168,8 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     const changed: FxDocDetail = {
       ...d, accKt: '40817840200050017763',
       edits: {
-        accKt: { now: '40817840200050017763', hist: [entry({ was: d.accKt, now: '40817840200050017763' })] },
-        route: { now: null, hist: [entry({ who: 'система', was, now: 'NOSTRO 30114840900000000517 → BCLHLV22XXX', status: 'confirmed', by: 'система', at: '2026-09-23T11:05:00' })] },
+        accKt: { now: '40817840200050017763', canConfirm: false, hist: [entry({ was: d.accKt, now: '40817840200050017763' })] },
+        route: { now: null, canConfirm: false, hist: [entry({ who: 'система', was, now: 'NOSTRO 30114840900000000517 → BCLHLV22XXX', status: 'confirmed', by: 'система', at: '2026-09-23T11:05:00' })] },
       },
     }
     const { unmount } = renderEdit(changed, ctx())
@@ -207,7 +207,7 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
 
     const moved = (status: FxHistEntry['status']): FxDocDetail => ({
       ...d, valueDates: ['2026-09-24', '2026-09-23', '2026-09-23', '2026-09-23'],
-      edits: { valueDate: { now: '2026-09-24', hist: [entry({ was: '2026-09-23', now: '2026-09-24', status, by: status === 'confirmed' ? 'Вы' : null, at: status === 'confirmed' ? '2026-09-23T11:06:00' : null })] } },
+      edits: { valueDate: { now: '2026-09-24', canConfirm: false, hist: [entry({ was: '2026-09-23', now: '2026-09-24', status, by: status === 'confirmed' ? 'Вы' : null, at: status === 'confirmed' ? '2026-09-23T11:06:00' : null })] } },
     })
     const { unmount: un2 } = renderEdit(moved('confirmed'), ctx())
     const mark = screen.getByRole('img', { name: 'Изменено: было 23.09.2026 · Вы, 23.09.2026 11:05 · утверждено Вы, 23.09.2026 11:06' })
@@ -245,7 +245,7 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     unmount()
     const moved: FxDocDetail = {
       ...d, valueDates: ['2026-09-24', '2026-09-23', '2026-09-23', '2026-09-23'],
-      edits: { valueDate: { now: '2026-09-24', hist: [entry({ was: '2026-09-23', now: '2026-09-24', status: 'confirmed' })] } },
+      edits: { valueDate: { now: '2026-09-24', canConfirm: false, hist: [entry({ was: '2026-09-23', now: '2026-09-24', status: 'confirmed' })] } },
     }
     renderEdit(moved, ctx())
     expect(screen.getByRole('img', { name: 'Изменено: было 23.09.2026 · Вы, 23.09.2026 11:05 · утверждено' })).toBeInTheDocument()

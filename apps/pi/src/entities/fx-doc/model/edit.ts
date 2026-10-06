@@ -2,10 +2,10 @@ import type { EditStatus } from '@katran/ui'
 import type { EditValue } from '../../../shared/api'
 import type { FxDocDetail } from './detail'
 
-/** Запись истории правки цели (план 2c §3.1): when/at — ISO без зоны до минут; by/at — кто и когда утвердил. */
-export type FxHistEntry = { who: string; when: string; was: EditValue; now: EditValue; note: string | null; status: EditStatus; by: string | null; at: string | null }
-/** Правка цели: now — текущее значение после правок (null у 'route' — маршрут меняет бек), hist — от первой записи к последней. */
-export type FxEdit = { now: EditValue | null; hist: FxHistEntry[] }
+/** Запись истории правки цели (план 2c §3.1): when/at — ISO без зоны до минут; by/at — кто и когда утвердил или отклонил (status 'rejected'); reason — причина отклонения, иначе null. */
+export type FxHistEntry = { who: string; when: string; was: EditValue; now: EditValue; note: string | null; status: EditStatus; by: string | null; at: string | null; reason: string | null }
+/** Правка цели: now — текущее значение после правок (null у 'route' — маршрут меняет бек), hist — от первой записи к последней, canConfirm — можно ли текущему пользователю утвердить последнюю запись (ставит бек). */
+export type FxEdit = { now: EditValue | null; canConfirm: boolean; hist: FxHistEntry[] }
 
 /** Цель правки поля SWIFT: '57' → 'field:57', 'B.57' → 'field:B.57'. */
 export const fieldTarget = (tag: string): string => `field:${tag}`

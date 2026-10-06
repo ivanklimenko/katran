@@ -30,15 +30,28 @@ describe('parseFxDocDetail (пример pi-api.md)', () => {
   const histRoute = { who: 'система', when: '2026-09-22T10:00:00', was: 'NOSTRO 1 → A', now: 'LORO 2 → B', status: 'confirmed', by: 'система', at: '2026-09-22T10:00:00' }
   it('edits: цели, история, статусы; нет поля — {}; чужой статус — contractError', () => {
     const d = parseFxDocDetail({ ...ex, edits: { 'field:57': { now: { opt: 'A', lines: ['X'] }, hist: [hist1] }, route: { now: null, hist: [histRoute] } } }, 'ответ')
-    expect(d.edits['field:57']?.hist[0]).toEqual({ who: 'Кузнецов Д. А.', when: '2026-09-22T09:15:00', was: { opt: 'A', lines: ['A1'] }, now: { opt: 'A', lines: ['X'] }, note: 'BIC филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-22T09:40:00' })
+    expect(d.edits['field:57']?.hist[0]).toEqual({ who: 'Кузнецов Д. А.', when: '2026-09-22T09:15:00', was: { opt: 'A', lines: ['A1'] }, now: { opt: 'A', lines: ['X'] }, note: 'BIC филиала по справочнику', status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-22T09:40:00', reason: null })
     expect(d.edits['field:57']?.now).toEqual({ opt: 'A', lines: ['X'] })
     // маршрут: now = null, значения истории — строки; note/by/at без значения — null
-    expect(d.edits.route).toEqual({ now: null, hist: [{ ...histRoute, note: null }] })
+    expect(d.edits.route).toEqual({ now: null, canConfirm: false, hist: [{ ...histRoute, note: null, reason: null }] })
     expect(parseFxDocDetail({ ...ex, edits: undefined }, 'ответ').edits).toEqual({})
     expect(() => parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: [{ ...hist1, status: 'done' }] } } }, 'ответ')).toThrow(/edits\.refOut\.hist\[0\]\.status/)
     expect(() => parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: 'x' } } }, 'ответ')).toThrow('ответ.edits.refOut.hist: ожидался массив')
     expect(() => parseFxDocDetail({ ...ex, edits: { 'field:57': { now: { lines: 'X' }, hist: [] } } }, 'ответ')).toThrow('ответ.edits.field:57.now.lines: ожидался массив')
     expect(() => parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: [{ ...hist1, was: 5 }] } } }, 'ответ')).toThrow('ответ.edits.refOut.hist[0].was: ожидался объект')
+  })
+  it('canConfirm: нет ключа — false; boolean — как есть; не boolean — contractError с путём', () => {
+    const e = (extra: object) => ({ ...ex, edits: { 'field:57': { now: { lines: ['X'] }, hist: [hist1], ...extra } } })
+    expect(parseFxDocDetail(e({}), 'ответ').edits['field:57']?.canConfirm).toBe(false)
+    expect(parseFxDocDetail(e({ canConfirm: true }), 'ответ').edits['field:57']?.canConfirm).toBe(true)
+    expect(() => parseFxDocDetail(e({ canConfirm: 'yes' }), 'ответ')).toThrow('ответ.edits.field:57.canConfirm: ожидалось true или false')
+  })
+  it('rejected и reason: статус разбирается, reason — строка или null; чужой статус — ошибка с путём', () => {
+    const rej = { ...hist1, status: 'rejected', reason: 'Не тот BIC' }
+    const d = parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: [rej] } } }, 'ответ')
+    expect(d.edits.refOut?.hist[0]).toMatchObject({ status: 'rejected', reason: 'Не тот BIC' })
+    expect(parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: [{ ...rej, reason: undefined }] } } }, 'ответ').edits.refOut?.hist[0]?.reason).toBeNull()
+    expect(() => parseFxDocDetail({ ...ex, edits: { refOut: { now: 'A', hist: [{ ...hist1, status: 'denied' }] } } }, 'ответ')).toThrow('ответ.edits.refOut.hist[0].status: недопустимое значение «denied»')
   })
   it('пример pi-api: правка поля 57 — две записи, now = fields[57], поле изменено', () => {
     const d = parseFxDocDetail(ex, 'ответ')
@@ -61,13 +74,13 @@ describe('parseFxDocDetail (пример pi-api.md)', () => {
     expect(originalOf(base, 'refOut')).toBe('')
     expect(isChanged(base, 'refOut')).toBe(false)
     // правка 20 исх: исходное — was первой записи
-    const entry = { who: 'Вы', when: '2026-09-23T11:00:00', was: '', now: 'OUT1', note: null, status: 'pending' as const, by: null, at: null }
-    const edited = { ...base, refOut: 'OUT1', edits: { refOut: { now: 'OUT1', hist: [entry] } } }
+    const entry = { who: 'Вы', when: '2026-09-23T11:00:00', was: '', now: 'OUT1', note: null, status: 'pending' as const, by: null, at: null, reason: null }
+    const edited = { ...base, refOut: 'OUT1', edits: { refOut: { now: 'OUT1', canConfirm: false, hist: [entry] } } }
     expect(currentOf(edited, 'refOut')).toBe('OUT1')
     expect(originalOf(edited, 'refOut')).toBe('')
     expect(isChanged(edited, 'refOut')).toBe(true)
     // откат: текущее снова исходное, история остаётся — isChanged false
-    const reverted = { ...edited, refOut: '', edits: { refOut: { now: '', hist: [entry, { ...entry, was: 'OUT1', now: '' }] } } }
+    const reverted = { ...edited, refOut: '', edits: { refOut: { now: '', canConfirm: false, hist: [entry, { ...entry, was: 'OUT1', now: '' }] } } }
     expect(reverted.edits.refOut.hist).toHaveLength(2)
     expect(isChanged(reverted, 'refOut')).toBe(false)
     // дата валютирования — первая из четырёх

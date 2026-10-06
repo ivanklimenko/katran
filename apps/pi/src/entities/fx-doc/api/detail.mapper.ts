@@ -1,4 +1,4 @@
-import { arr, contractError, obj, oneOf, str, strArr, strOrNull, type EditValue } from '../../../shared/api'
+import { arr, bool, contractError, obj, oneOf, str, strArr, strOrNull, type EditValue } from '../../../shared/api'
 import { parseTxs } from '../../posting/@x/fx-doc'
 import type { FxDocDetail, SwiftValue } from '../model/detail'
 import type { FxEdit, FxHistEntry } from '../model/edit'
@@ -32,9 +32,10 @@ function parseHistEntry(raw: unknown, path: string): FxHistEntry {
     was: parseEditValue(o.was, `${path}.was`),
     now: parseEditValue(o.now, `${path}.now`),
     note: strOrNull(o, 'note', path),
-    status: oneOf(o, 'status', ['pending', 'confirmed'] as const, path),
+    status: oneOf(o, 'status', ['pending', 'confirmed', 'rejected'] as const, path),
     by: strOrNull(o, 'by', path),
     at: strOrNull(o, 'at', path),
+    reason: strOrNull(o, 'reason', path),
   }
 }
 
@@ -48,6 +49,7 @@ function parseEdits(raw: unknown, path: string): Record<string, FxEdit> {
     const e = obj(o[target], p)
     out[target] = {
       now: e.now === null || e.now === undefined ? null : parseEditValue(e.now, `${p}.now`),
+      canConfirm: bool(e, 'canConfirm', p),
       hist: arr(e.hist, `${p}.hist`).map((h, i) => parseHistEntry(h, `${p}.hist[${i}]`)),
     }
   }

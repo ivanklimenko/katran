@@ -135,7 +135,7 @@ describe('фейковый сервер: правка детали (план 2c)
     expect(before.edits).toEqual({})
     const after = (await s(post(editUrl(doc.id), { target: 'field:57', was: bank57, now: next57 }))) as Detail
     expect(after.fields['57']).toEqual(next57)
-    expect(after.edits['field:57']).toEqual({ now: next57, hist: [{ who: 'Вы', when: '2026-10-06T12:30:00', was: bank57, now: next57, status: 'pending' }] })
+    expect(after.edits['field:57']).toEqual({ now: next57, canConfirm: false, hist: [{ who: 'Вы', when: '2026-10-06T12:30:00', was: bank57, now: next57, status: 'pending' }] })
     expect(await s(get(`/grids/fx/documents/${doc.id}`))).toEqual(after)
     // «стало» = текущее — 200 без новой записи
     const same = (await s(post(editUrl(doc.id), { target: 'field:57', was: next57, now: next57 }))) as Detail
