@@ -77,7 +77,7 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   // повторный open того же ключа, open при Prompt или при запросе в полёте was не подменяет (иначе обход 409)
   const $was = createStore<Record<string, EditValue>>({})
   // сырое значение последнего open — ждёт, пока модель откроет этот ключ (сразу или после «Отменить правку» в Prompt)
-  const $openRaw = createStore<{ key: string; raw: EditValue } | null>(null).on(open, (_, { key, initial }) => ({ key, raw: initial }))
+  const $openRaw = createStore<{ key: string; raw: EditValue } | null>(null)
 
   const saveFx = attach({
     source: $was,
@@ -92,6 +92,12 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
     confirmSave: (k) => cfg.confirmTargets.includes(targetOf(k)),
     errorText,
   })
+  // open при открытом Prompt модель игнорирует — ждущее ответа Prompt открытие не подменяется (условие модели confirm === null);
+  // объявлено раньше пересылки в inner.open: $confirm читается до того, как модель задаст вопрос Prompt этим же open
+  $openRaw.on(
+    sample({ clock: open, source: inner.$confirm, filter: (c) => c === null, fn: (_, o) => o }),
+    (_, { key, initial }) => ({ key, raw: initial }),
+  )
   sample({ clock: open, fn: ({ key, initial }) => ({ key, initial: cfg.normalize(targetOf(key), initial) }), target: inner.open })
   const accepted = sample({
     clock: inner.$editing.updates,

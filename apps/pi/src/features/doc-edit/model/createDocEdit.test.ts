@@ -93,6 +93,23 @@ describe('createDocEdit (план 2c §3.2)', () => {
     await t.settle()
   })
 
+  it('open при открытом Prompt модель игнорирует — was остаётся от открытия, ждущего ответа Prompt', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:field:57', initial: lines('bank ag') } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:field:57', draft: lines('X') } })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref 1 ' } })
+    // Prompt «Отменить правку?» открыт — этот open модель игнорирует
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:field:70', initial: lines('payment') } })
+    await allSettled(edit.model.confirmResult, { scope, params: true })
+    expect(scope.getState(edit.model.$editing)?.key).toBe('u1:refOut')
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    t.fire(allSettled(edit.model.save, { scope }))
+    expect(saves[0]?.params).toEqual({ id: 'u1', target: 'refOut', was: 'ref 1 ', now: 'REF2' })
+    saves[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+  })
+
   it('↺ (submit): was — текущее как пришло, now — нормализованное исходное', async () => {
     const t = setup()
     const { edit, scope, saves } = t
