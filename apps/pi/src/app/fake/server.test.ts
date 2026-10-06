@@ -35,6 +35,13 @@ describe('фейковый сервер', () => {
   it('facets: счётчики по полю', async () => {
     expect(await server(post('/grids/docs/facets', { filter: { conditions: [] }, field: 'status' }))).toEqual([{ value: 'ERROR', count: 2 }, { value: 'DONE', count: 1 }])
   })
+  it('observe: каждый запрос — до задержки и регуляторов, и отказной тоже', async () => {
+    const seen: HttpRequest[] = []
+    const watched = createFakeServer({ docs: fakeGrid(rows, columns, meta) }, { observe: (r) => seen.push(r), failing: () => 'search' })
+    await watched({ method: 'GET', url: '/grids/docs/filter-meta' })
+    await expect(watched(post('/grids/docs/search', search()))).rejects.toBeInstanceOf(ApiError)
+    expect(seen.map((r) => `${r.method} ${r.url}`)).toEqual(['GET /grids/docs/filter-meta', 'POST /grids/docs/search'])
+  })
   it('filter-meta: DTO как есть', async () => {
     expect(await server({ method: 'GET', url: '/grids/docs/filter-meta' })).toEqual(meta)
   })

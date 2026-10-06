@@ -9,6 +9,8 @@ export type FakeServerOptions = {
   conflicting?: (() => string | null) | undefined
   /** Время правки: ISO без зоны до минут; по умолчанию — локальное «сейчас». */
   now?: (() => string) | undefined
+  /** Каждый пришедший запрос — до задержки и регуляторов: транспорт стенда в странице, сеть его не видит (e2e считает запросы). */
+  observe?: ((req: HttpRequest) => void) | undefined
 }
 
 const ROUTE = /^\/grids\/([^/]+)\/(search|facets|suggest|filter-meta)$/
@@ -42,6 +44,7 @@ function validate(meta: FilterMetaDto, conditions: Filter, size: number | null):
 /** Обработчик requestFx на контракте vtb-filters: JSON на входе и выходе, ошибки — Problem Details через toApiError, как у настоящего клиента. */
 export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServerOptions = {}) {
   return async (req: HttpRequest): Promise<unknown> => {
+    opts.observe?.(req)
     const delay = opts.delayMs?.() ?? 0
     if (delay > 0) await new Promise((r) => setTimeout(r, delay))
     const tabRoute = TAB.exec(req.url)
