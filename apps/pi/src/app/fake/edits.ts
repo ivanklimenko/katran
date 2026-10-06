@@ -123,13 +123,14 @@ export function createFxEditStore(cfg: FakeEditStoreConfig): FakeEditStore {
     const shape = isField ? 'объект { opt?, acc?, lines }' : 'строка'
     if (!isEditValue(was) || (typeof was === 'string') === isField) return invalid('was', `was — ${shape}`)
     if (!isEditValue(now) || (typeof now === 'string') === isField) return invalid('now', `now — ${shape}`)
-    const error = cfg.validate?.(target, now) ?? null
+    // откат («стало = исходное», в2, спека §4) принимается всегда: исходное могло быть пустым (20 исх), вне правил или вне справочника
+    const revert = sameEditValue(now, original(id, detail, target))
+    const error = revert ? null : cfg.validate?.(target, now) ?? null
     if (error !== null) return invalid('now', error)
-    if (target === 'accDt' || target === 'accKt') {
+    if (!revert && (target === 'accDt' || target === 'accKt')) {
       const side = target === 'accKt' ? 'kt' : 'dt'
-      // откат («стало = исходное», в2) принимается всегда: исходного счёта может не быть в справочнике
       const inList = accountsOf(side).some((a) => a.ccy === detail.currency && a.acc === now)
-      if (!inList && !sameEditValue(now, original(id, detail, target))) return invalid('now', side === 'kt' ? NOT_CLIENT : NOT_BANK)
+      if (!inList) return invalid('now', side === 'kt' ? NOT_CLIENT : NOT_BANK)
     }
     const cur = current(id, detail, target)
     if (!sameEditValue(was, cur)) return conflict()

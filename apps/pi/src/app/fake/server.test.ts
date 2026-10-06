@@ -181,6 +181,17 @@ describe('фейковый сервер: правка детали (план 2c)
     expect((await s(post(editUrl(doc.id), { target: 'valueDate', was: vd, now: 'завтра' })).catch((e: unknown) => e) as ApiError).status).toBe(400)
     expect((await s(post(editUrl(doc.id), { target: 'refOut', was: doc.refOut ?? '', now: '/REF' })).catch((e: unknown) => e) as ApiError).status).toBe(400)
   })
+  it('↺ к пустому исходному 20 исх принимается: откат не проверяется правилами (спека §4)', async () => {
+    const rows = makeFxDocs()
+    const id = rows.find((r) => r.refOut === null)!.id
+    const s = createFakeServer({ fx: fakeGrid(rows, [], fxDocsMeta, { detail: makeFxDocDetail, edits: createFxDocsEditStore(null) }) }, { now: () => '2026-10-06T12:30:00' })
+    const original = ((await s(get(`/grids/fx/documents/${id}`))) as { refOut: string | null }).refOut ?? ''
+    expect(original).toBe('')
+    await s(post(editUrl(id), { target: 'refOut', was: '', now: 'FX1' }))
+    const back = (await s(post(editUrl(id), { target: 'refOut', was: 'FX1', now: '' }))) as Detail & { refOut: string }
+    expect(back.refOut).toBe('')
+    expect(back.edits.refOut?.hist).toHaveLength(2)
+  })
   it('?fail=edit и ?fail=accounts — 500 только у своего маршрута', async () => {
     const accUrl = `/grids/fx/documents/${doc.id}/accounts`
     const body = { target: 'field:57', was: bank57, now: next57 }

@@ -169,6 +169,25 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     })
   })
 
+  it('дата валютирования: ошибка сохранения и 409 — строкой у поля (aria-live)', () => {
+    renderEdit(d, ctx({ editing: 'valueDate', draft: '2026-09-24', saveError: 'Документ изменили — откройте заново' }))
+    const line = screen.getByText('Документ изменили — откройте заново')
+    expect(line).toHaveAttribute('aria-live', 'polite')
+    expect(line.closest('[data-k-edit]')).not.toBeNull()
+  })
+
+  it('счёт: пока справочник грузится, без «· 0 сч.»; «утверждено» без хвостового пробела при пустых by/at', () => {
+    const { unmount } = renderEdit(d, ctx({ editing: 'accKt' }))
+    expect(screen.queryByText(/0 сч\./)).toBeNull()
+    unmount()
+    const moved: FxDocDetail = {
+      ...d, valueDates: ['2026-09-24', '2026-09-23', '2026-09-23', '2026-09-23'],
+      edits: { valueDate: { now: '2026-09-24', hist: [entry({ was: '2026-09-23', now: '2026-09-24', status: 'confirmed' })] } },
+    }
+    renderEdit(moved, ctx())
+    expect(screen.getByRole('img', { name: 'Изменено: было 23.09.2026 · Вы, 23.09.2026 11:05 · утверждено' })).toBeInTheDocument()
+  })
+
   it('закрытие правки 20 исх возвращает фокус на карандаш', () => {
     const { rerender } = renderEdit(d, ctx({ editing: 'refOut', draft: '' }))
     const edit = ctx()

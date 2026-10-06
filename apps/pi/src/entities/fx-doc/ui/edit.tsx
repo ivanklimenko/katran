@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   Button, DateInput, EditHistory, EditMark, FieldEditor, IconButton, PromptChange, SuggestInput, diffFieldValues, formatDate,
-  formatDateTimeMinutes, type DateValue, type EditHistoryEntry, type FieldValue, type FormEdit, type Option,
+  formatDateTimeMinutes, useStableId, type DateValue, type EditHistoryEntry, type FieldValue, type FormEdit, type Option,
 } from '@katran/ui'
 import type { AccountSide, EditValue } from '../../../shared/api'
 import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
@@ -20,8 +20,6 @@ import e from './edit.module.css'
 
 const Pen = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
 
-let seq = 0
-const useLocalId = (prefix: string) => useState(() => `${prefix}-${++seq}`)[0]
 const lastOf = (hist: FxHistEntry[]): FxHistEntry | undefined => hist[hist.length - 1]
 const whoWhen = (h: FxHistEntry) => `${h.who}, ${formatDateTimeMinutes(h.when)}`
 const asField = (v: EditValue | null | undefined): FieldValue => (v && typeof v !== 'string' ? v : { lines: [] })
@@ -72,7 +70,7 @@ function Revert({ d, edit, target }: { d: FxDocDetail; edit: EditContext; target
 function RefOutEditor({ edit }: { edit: EditContext }) {
   const box = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
-  const hintId = useLocalId('fx-ref-hint')
+  const hintId = useStableId()
   const cancel = useLatest(edit.cancel)
   const message = edit.error ?? edit.saveError
   // открытие — фокус и выделение (эталон :1456)
@@ -156,7 +154,7 @@ function AccountEditor({ d, edit, side }: { d: FxDocDetail; edit: EditContext; s
       <SuggestInput
         aria-label={`Счёт ${cfg.label}`} placeholder="20 цифр" options={options} value={q} onChange={setQ}
         match={byDigits} sanitize={digits} emptyText={(query) => cfg.empty(d.currency, query)} notInListText={cfg.notInList}
-        hint={edit.saveError ?? cfg.hint(d.currency, items.length)} keysHint="↑↓ Enter · Esc" status={status}
+        hint={edit.saveError ?? (slot?.state === 'ready' ? cfg.hint(d.currency, items.length) : undefined)} keysHint="↑↓ Enter · Esc" status={status}
         onCommit={(o) => { edit.change(String(o.value)); edit.save() }} onCancel={edit.cancel}
       />
     </div>
@@ -204,6 +202,7 @@ function ValueDateEditor({ d, edit }: { d: FxDocDetail; edit: EditContext }) {
   const box = useRef<HTMLSpanElement>(null)
   useEffect(() => { box.current?.querySelector('input')?.focus() }, [])
   const current = asText(currentOf(d, 'valueDate'))
+  const message = edit.error ?? edit.saveError
   // поле держит и неполный ввод (маска отдаёт ''), черновик модели — только полная дата: иначе набор сбрасывался бы к черновику
   const [value, setValue] = useState<DateValue>(asText(edit.draft))
   const onChange = (v: DateValue) => {
@@ -225,6 +224,8 @@ function ValueDateEditor({ d, edit }: { d: FxDocDetail; edit: EditContext }) {
     <span ref={box} role="presentation" className={e.vdEdit} data-k-edit="" onKeyDown={onKeyDown}>
       <DateInput aria-label="Дата валютирования" size="s" min={d.created.slice(0, 10)} value={value} onChange={onChange} />
       <Button size="s" className={e.vdx} onClick={edit.cancel}>Отмена</Button>
+      {/* ошибка проверки, сохранения и 409 «Документ изменили — откройте заново» (спека §4, Review Focus 2) */}
+      <span className={[e.vdErr, e.bad].join(' ')} aria-live="polite">{message ?? ''}</span>
     </span>
   )
 }
@@ -234,7 +235,7 @@ function valueDateMark(d: FxDocDetail): { tip: string; status: FxHistEntry['stat
   const last = lastOf(d.edits.valueDate?.hist ?? [])
   if (!last || !isChanged(d, 'valueDate')) return null
   const by = [last.by, last.at && formatDateTimeMinutes(last.at)].filter(Boolean).join(', ')
-  const state = last.status === 'confirmed' ? ` · утверждено ${by}` : ' · ожидает утверждения'
+  const state = last.status === 'confirmed' ? ` · утверждено${by ? ` ${by}` : ''}` : ' · ожидает утверждения'
   return { tip: `Изменено: было ${formatDate(asText(originalOf(d, 'valueDate')))} · ${whoWhen(last)}${state}`, status: last.status }
 }
 

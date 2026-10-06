@@ -31,9 +31,9 @@
   vertical-align: middle;
 }
 
-.pen.pen:focus,
-.rv.rv:focus,
-.vdPen.vdPen:focus,
+.pen.pen:focus-visible,
+.rv.rv:focus-visible,
+.vdPen.vdPen:focus-visible,
 .col:hover .pen,
 .col:hover .rv,
 [data-part="hero"]:hover .vdPen {
@@ -114,6 +114,12 @@
   border-color: transparent;
   background: none;
   color: var(--k-muted);
+}
+
+/* строка ошибки правки даты — справа от «Отмена», не переносится */
+.vdErr {
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  white-space: nowrap;
 }
 
 /* маршрут, пересчитанный после смены Кт: заголовок warn */
