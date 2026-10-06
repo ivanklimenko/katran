@@ -67,6 +67,42 @@ describe('createDocEdit (план 2c §3.2)', () => {
     expect(scope.getState(edit.model.$editing)).toBeNull()
   })
 
+  it('was — текущее принятого моделью open: повторный open того же ключа и отклонённый Prompt его не подменяют', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:field:57', initial: lines('bank ag') } })
+    // ключ уже открыт — модель open игнорирует; was остаётся от принятого открытия
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:field:57', initial: lines('bank ag 2') } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:field:57', draft: lines('Bank AG', 'Zurich') } })
+    // грязный черновик: open другого ключа — Prompt; отказ — открытие не принято
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    await allSettled(edit.model.confirmResult, { scope, params: false })
+    t.fire(allSettled(edit.model.save, { scope }))
+    expect(saves[0]?.params).toEqual({ id: 'u1', target: 'field:57', was: lines('bank ag'), now: lines('BANK AG', 'ZURICH') })
+    saves[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+    // открытие после «Отменить правку» в Prompt принимается — was этого открытия
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:field:57', initial: lines('bank ag') } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:field:57', draft: lines('X') } })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref 1 ' } })
+    await allSettled(edit.model.confirmResult, { scope, params: true })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    t.fire(allSettled(edit.model.save, { scope }))
+    expect(saves[1]?.params).toEqual({ id: 'u1', target: 'refOut', was: 'ref 1 ', now: 'REF2' })
+    saves[1]!.ok({ id: 'u1', rev: 3 })
+    await t.settle()
+  })
+
+  it('↺ (submit): was — текущее как пришло, now — нормализованное исходное', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    t.fire(allSettled(edit.model.submit, { scope, params: { key: 'u1:field:70', initial: lines('payment ok'), draft: lines('invoice 1') } }))
+    expect(saves.map((s) => s.params)).toEqual([{ id: 'u1', target: 'field:70', was: lines('payment ok'), now: lines('INVOICE 1') }])
+    saves[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+    expect(t.edited()).toHaveLength(1)
+  })
+
   it('409 → $saveError CONFLICT_TEXT, conflict { id }, редактор и черновик на месте', async () => {
     const t = setup()
     const { edit, scope, saves } = t
@@ -92,6 +128,15 @@ describe('createDocEdit (план 2c §3.2)', () => {
     await t.settle()
     expect(scope.getState(edit.model.$saveError)).toBe('Строка 2: недопустимый символ')
     expect(t.conflicts()).toEqual([])
+  })
+
+  it('400 с пустым текстом ошибки — не пустая строка', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    await saveField(t)
+    saves[0]!.fail(new ApiError(400, { type: 'urn:katran:validation', title: 'Правка отклонена', status: 400, errors: [{ path: 'now', code: 'VALIDATION', message: '' }] }, ''))
+    await t.settle()
+    expect(scope.getState(edit.model.$saveError)).toBe('Не удалось сохранить изменения')
   })
 
   it('valueDate — Prompt commit перед запросом; refOut — без', async () => {
@@ -146,6 +191,15 @@ describe('createDocEdit (план 2c §3.2)', () => {
     await allSettled(edit.model.cancel, { scope })
     await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'REF' } })
     expect(loads).toHaveLength(2)
+  })
+
+  it('счета не грузятся, пока экран закрыт', async () => {
+    const t = setup()
+    const { edit, scope, loads } = t
+    await allSettled(edit.loadAccounts, { scope, params: { id: 'u1', side: 'kt' } })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:accDt', initial: '30110840700000001842' } })
+    expect(loads).toHaveLength(0)
+    expect(scope.getState(edit.$accounts)).toEqual({})
   })
 
   it('ответ счетов после ухода с экрана не пишется; pageClosed — reset модели и счетов', async () => {

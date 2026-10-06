@@ -48,8 +48,10 @@ export const DISCARD_VIEW: EditConfirmView = {
   tone: 'danger',
 }
 
+/** Отказ без текста — общий текст, не пустая строка под редактором. */
+const SAVE_FAILED = 'Не удалось сохранить изменения'
 /** Текст отказа сохранения: 409 — CONFLICT_TEXT, иначе первая ошибка problem.errors (без префикса «Правка отклонена: …»), иначе message. */
-const errorText = (e: ApiError): string => (e.status === 409 ? CONFLICT_TEXT : e.problem?.errors?.[0]?.message ?? e.message)
+const errorText = (e: ApiError): string => (e.status === 409 ? CONFLICT_TEXT : e.problem?.errors?.[0]?.message || e.message || SAVE_FAILED)
 /** Сторона справочника счетов по цели правки; не счёт — null. */
 const sideOf = (target: string): AccountSide | null => (target === 'accDt' ? 'dt' : target === 'accKt' ? 'kt' : null)
 const accKey = (q: AccountsQuery) => `${q.id}:${q.side}`
@@ -71,10 +73,11 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   const { ports, lifecycle } = cfg
   const open = createEvent<{ key: string; initial: EditValue }>()
   const submit = createEvent<{ key: string; initial: EditValue; draft: EditValue }>()
-  // текущее как пришло с бека, по ключу правки — для was запроса
+  // текущее как пришло с бека, по ключу правки — для was запроса. Пишется только для принятого моделью действия:
+  // повторный open того же ключа, open при Prompt или при запросе в полёте was не подменяет (иначе обход 409)
   const $was = createStore<Record<string, EditValue>>({})
-    .on(open, (m, { key, initial }) => ({ ...m, [key]: initial }))
-    .on(submit, (m, { key, initial }) => ({ ...m, [key]: initial }))
+  // сырое значение последнего open — ждёт, пока модель откроет этот ключ (сразу или после «Отменить правку» в Prompt)
+  const $openRaw = createStore<{ key: string; raw: EditValue } | null>(null).on(open, (_, { key, initial }) => ({ key, raw: initial }))
 
   const saveFx = attach({
     source: $was,
@@ -90,6 +93,22 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
     errorText,
   })
   sample({ clock: open, fn: ({ key, initial }) => ({ key, initial: cfg.normalize(targetOf(key), initial) }), target: inner.open })
+  const accepted = sample({
+    clock: inner.$editing.updates,
+    source: $openRaw,
+    filter: (pending, editing) => pending !== null && editing !== null && editing.key === pending.key,
+    fn: (pending) => pending as { key: string; raw: EditValue },
+  })
+  $was.on(accepted, (m, { key, raw }) => ({ ...m, [key]: raw }))
+  $openRaw.reset(accepted)
+  // ↺: модель примет submit, только если запроса в полёте нет; ключ открытого редактора хранит was своего открытия
+  const submitted = sample({
+    clock: submit,
+    source: { saving: inner.$saving, editing: inner.$editing },
+    filter: ({ saving, editing }, { key }) => !saving && (editing === null || editing.key !== key),
+    fn: (_, x) => x,
+  })
+  $was.on(submitted, (m, { key, initial }) => ({ ...m, [key]: initial }))
   sample({ clock: submit, fn: ({ key, initial, draft }) => ({ key, initial: cfg.normalize(targetOf(key), initial), draft }), target: inner.submit })
   const model: EditModel<EditValue, D, LeaveIntent, ApiError> = { ...inner, open, submit }
 
@@ -115,8 +134,9 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   // грузим, если справочника нет или он с ошибкой (повтор); готовый и грузящийся — без запроса
   sample({
     clock: loadAccounts,
-    source: { accounts: $accounts, visit: $visit },
-    filter: ({ accounts }, q) => accounts[accKey(q)] === undefined || accounts[accKey(q)]?.state === 'error',
+    source: { accounts: $accounts, visit: $visit, opened: lifecycle.$opened },
+    // экран закрыт — не грузим: ответ всё равно не был бы принят
+    filter: ({ accounts, opened }, q) => opened && (accounts[accKey(q)] === undefined || accounts[accKey(q)]?.state === 'error'),
     fn: ({ visit }, q): AccLoad => ({ id: q.id, side: q.side, visit }),
     target: loadFx,
   })
@@ -131,6 +151,7 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   // уход с экрана — редактор, черновики и справочники сбрасываются; ответы прошлого визита модель не примет
   sample({ clock: lifecycle.pageClosed, target: inner.reset })
   $was.reset(lifecycle.pageClosed)
+  $openRaw.reset(lifecycle.pageClosed)
 
   return { model, $accounts, loadAccounts, docEdited, conflict, $savedCount }
 }

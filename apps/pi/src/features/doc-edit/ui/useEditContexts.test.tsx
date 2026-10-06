@@ -74,6 +74,24 @@ describe('useEditContexts (план 2c §3.2)', () => {
     expect(ctx.d2?.editing).toBe('refOut')
   })
 
+  it('cancel, save и onConfirm чужого документа не трогают редактор и Prompt другого', async () => {
+    const saves: EditQuery[] = []
+    const { ctx } = setup(async (q) => { saves.push(q); return { id: q.id, rev: 2 } })
+    act(() => { ctx.d1!.open('valueDate', '2026-10-06') })
+    act(() => { ctx.d1!.change('2026-10-07') })
+    act(() => { ctx.d2!.save() })
+    expect(ctx.d1?.confirm).toBeNull()
+    act(() => { ctx.d2!.cancel() })
+    expect(ctx.d1?.editing).toBe('valueDate')
+    act(() => { ctx.d1!.save() })
+    expect(ctx.d1?.confirm).not.toBeNull()
+    act(() => { ctx.d2!.onConfirm(true) })
+    expect(ctx.d1?.confirm).not.toBeNull()
+    expect(saves).toHaveLength(0)
+    act(() => { ctx.d1!.onConfirm(true) })
+    await waitFor(() => expect(saves).toHaveLength(1))
+  })
+
   it('после сохранения — объявление «Изменения сохранены» в живой области', async () => {
     let fail = true
     const { ctx } = setup(async (q) => {
