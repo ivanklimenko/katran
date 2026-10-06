@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUnit } from 'effector-react'
 import {
-  ConfigForm, Drawer, DrawerStack, ErrorState, IconButton, LinkValue, Menu, Skeleton, StatusDot, TabPanel, Tabs, Tag,
+  ConfigForm, Drawer, DrawerStack, ErrorState, IconButton, LinkValue, Menu, Prompt, Skeleton, StatusDot, TabPanel, Tabs, Tag,
   useKatran, useLoadingGate, type DrawerStackItem,
 } from '@katran/ui'
-import type { DetailAction, DetailDomain, DetailSummary, RemoteTabView, TabContext } from '../../../shared/lib/detail'
+import type { DetailAction, DetailDomain, DetailSummary, EditContext, RemoteTabView, TabContext } from '../../../shared/lib/detail'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
 import s from './DocDetail.module.css'
@@ -17,6 +17,11 @@ export type DocDetailProps<D, Row> = {
   rowOf?: ((id: string) => Row | null) | undefined
   /** Куда вернуть фокус при закрытии: кнопка открытия записи, её нет — грид (gridFocusTarget кита). */
   returnFocus?: ((id: string) => HTMLElement | null) | undefined
+  /**
+   * Правка документа по id (план 2c §3.4): контекст уходит видам домена (renderHero/renderBlock, formEdit для ConfigForm),
+   * его confirm — Prompt в слое overlay drawer этого документа. Нет — только просмотр, как в 2b.
+   */
+  editOf?: ((docId: string) => EditContext) | undefined
 }
 
 type OnAction = (a: DetailAction, form?: string) => void
@@ -116,10 +121,11 @@ type BodyProps<D, Row> = {
   onMainExpanded: (keys: string[]) => void
   onRetry: () => void
   onRetryTab: () => void
+  edit: EditContext | null
 }
 
 /** Содержимое панели. Монтируется только у активной вкладки (TabPanel), поэтому view.tabView — её состояние. */
-function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpanded, onMainExpanded, onRetry, onRetryTab }: BodyProps<D, Row>) {
+function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpanded, onMainExpanded, onRetry, onRetryTab, edit }: BodyProps<D, Row>) {
   const first = tabId === domain.tabs[0]?.id
   const tv = first ? undefined : domain.tabViews?.[tabId]
   // нелокальная вкладка не зависит от загрузки детали: свой запрос, свои скелетон и ошибка
@@ -139,24 +145,26 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
       value={(tag) => domain.value(d, tag)}
       present={domain.present}
       optionLabels={domain.optionLabels}
-      renderHero={(id) => domain.renderHero(d, id)}
-      renderBlock={(id) => domain.renderBlock(d, id)}
+      renderHero={(id) => domain.renderHero(d, id, edit)}
+      renderBlock={(id) => domain.renderBlock(d, id, edit)}
       renderSection={renderSection ? (id) => renderSection(d, id) : undefined}
       // M-g: раскрытое — в модели по `${id}:main`; до первого изменения undefined — форма берёт свои умолчания
       expanded={mainExpanded}
       onExpandedChange={onMainExpanded}
+      edit={edit && domain.formEdit ? domain.formEdit(d, edit) : undefined}
     />
   )
 }
 
 type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey, quiet }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, focusKey, quiet }: PaneProps<D, Row>) {
   const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
     detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
   ])
   const { announce } = useKatran()
   const skeleton = useLoadingGate(view.state === 'loading')
+  const edit = editOf?.(view.id) ?? null
   const row = view.data === null && rowOf ? rowOf(view.id) : null
   const summary = view.data !== null ? domain.summary(view.data) : row !== null ? domain.rowSummary(row) : null
   const label = summary?.label ?? domain.title
@@ -190,6 +198,8 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
       focusKey={focusKey}
       // R10: автооткрытие (quiet) фокус не забирает — он остаётся в реестре, как на стенде
       initialFocus={!quiet}
+      // Prompt правки этого документа («Отменить правку?», дата валютирования) — поверх панели, только этого drawer
+      overlay={edit?.confirm ? <Prompt open {...edit.confirm} onResult={edit.onConfirm} /> : undefined}
     >
       <Lane summary={summary} actions={domain.actions} onAction={onAction} />
       <div className={s.tabs} data-part="tabs">
@@ -216,6 +226,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
             onMainExpanded={(keys) => setExpanded({ id: view.id, tab: t.id, keys })}
             onRetry={() => retry(view.slot)}
             onRetryTab={() => retryTab(view.slot)}
+            edit={edit}
           />
         </TabPanel>
       ))}
@@ -224,7 +235,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, focusKey
 }
 
 /** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
-export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDetailProps<D, Row>) {
+export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
@@ -233,7 +244,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus }: DocDet
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
       })
     }
   }

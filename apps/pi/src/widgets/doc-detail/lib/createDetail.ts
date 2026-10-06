@@ -1,6 +1,7 @@
-import { attach, combine, createEvent, createStore, merge, sample, type Effect, type EventCallable, type Store } from 'effector'
+import { attach, combine, createEvent, createStore, merge, sample, split, type Effect, type Event, type EventCallable, type Store } from 'effector'
 import { createDrawerStackModel, type DrawerEntry, type DrawerOpen, type DrawerSlot, type DrawerStackModel, type DrawerStackState } from '@katran/effector'
 import type { ApiError, TabQuery } from '../../../shared/api'
+import type { LeaveIntent } from '../../../shared/lib/detail'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type DetailSlotState = 'loading' | 'ready' | 'error'
@@ -25,6 +26,11 @@ export type DetailConfig<D> = {
   lifecycle: PageLifecycle
   /** Вкладка только что открытого документа; по умолчанию 'main'. */
   firstTab?: string | undefined
+  /**
+   * Охрана ухода (план 2c, Р6): true — close, closeTop и open, уводящие документ из слота, не меняют стек, а дают
+   * leaveRequested; уход выполняет leave (его зовёт тот, кто спросил «Отменить правку?»). Нет — как в 2b, стек сразу.
+   */
+  guard?: boolean | undefined
 }
 export type Detail<D> = {
   stack: DrawerStackModel
@@ -52,6 +58,20 @@ export type Detail<D> = {
    */
   $expanded: Store<Record<string, string[]>>
   setExpanded: EventCallable<{ id: string; tab: string; keys: string[] }>
+  /**
+   * Ответ сохранения правки — в кэш без перезапроса (план 2c §3.4); только при открытом экране. Ошибка детали снимается,
+   * кэш и ошибки вкладок `${id}:*` сбрасываются, активная нелокальная вкладка этого id перезапрашивается (если уже не грузится).
+   */
+  replaceDetail: EventCallable<{ id: string; detail: D }>
+  /** Перезапрос детали по id (Р5, 409): кэш остаётся до ответа — слот ready со старой деталью, без скелетона; уже грузящийся — без запроса. */
+  reloadDetail: EventCallable<string>
+  /**
+   * Уход из документа при guard (Р6): close/closeTop с документом в слоте, open в слот, занятый другим документом.
+   * Охрана решений не принимает: спрашивать ли (черновик, сохранение в полёте — без вопроса), решает потребитель.
+   */
+  leaveRequested: Event<{ docId: string; intent: LeaveIntent }>
+  /** Выполнить уход: close(slot) или open(…) стека — мимо охраны. */
+  leave: EventCallable<LeaveIntent>
 }
 
 const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
@@ -61,6 +81,10 @@ const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => {
 }
 
 type Load = { id: string; visit: number }
+/** Запрос ухода из документа docId: что сделать, если пользователь не держит правку. */
+type LeaveRequest = { docId: string; intent: LeaveIntent }
+type CloseIntent = Extract<LeaveIntent, { kind: 'close' }>
+type OpenIntent = Extract<LeaveIntent, { kind: 'open' }>
 type TabLoad = TabQuery & { visit: number }
 type Visit = { opened: boolean; visit: number }
 const tabKey = (id: string, tab: string) => `${id}:${tab}`
@@ -114,6 +138,22 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $cache.on(done, (c, { params, result }) => ({ ...c, [params.id]: result }))
   $errors.on(failed, (e, { params, error }) => ({ ...e, [params.id]: error.message }))
 
+  // --- правка (план 2c, Р5): ответ сохранения в кэш, перезапрос по 409 ---
+  const replaceDetail = createEvent<{ id: string; detail: D }>()
+  const reloadDetail = createEvent<string>()
+  // ответ сохранения после ухода с экрана не пишется: при возврате деталь запросится заново (Review Focus 1)
+  const replaced = sample({ clock: replaceDetail, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, x) => x })
+  $cache.on(replaced, (c, { id, detail }) => ({ ...c, [id]: detail }))
+  $errors.on(replaced, (e, { id }) => without(e, id))
+  // кэш не трогается до ответа: слот остаётся ready со старой деталью; ответ — общий путь done/failed
+  sample({
+    clock: reloadDetail,
+    source: { opened: lifecycle.$opened, loading: $loading, visit: $visit },
+    filter: ({ opened, loading }, id) => opened && !(id in loading),
+    fn: ({ visit }, id): Load => ({ id, visit }),
+    target: loadFx,
+  })
+
   // --- вкладки (спека 2b §3.3) ---
   const localTabs = cfg.localTabs ?? ['main']
   const tabFx = cfg.tabFx
@@ -125,6 +165,16 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   const $tabLoading = createStore<Record<string, true>>({})
   const $expanded = createStore<Record<string, string[]>>({})
   $expanded.on(setExpanded, (m, { id, tab, keys }) => ({ ...m, [tabKey(id, tab)]: keys }))
+  // новая деталь — вкладки документа устарели: кэш и ошибки `${id}:*` сбрасываются (раскрытое остаётся)
+  const dropDoc = <T,>(m: Record<string, T>, id: string): Record<string, T> => {
+    const keys = Object.keys(m).filter((k) => k.startsWith(`${id}:`))
+    if (keys.length === 0) return m
+    const next = { ...m }
+    for (const k of keys) delete next[k]
+    return next
+  }
+  $tabCache.on(replaced, (c, { id }) => dropDoc(c, id))
+  $tabErrors.on(replaced, (e, { id }) => dropDoc(e, id))
 
   if (tabFx) {
     // своя копия порта, как у детали; порту уходит только { id, tab }
@@ -144,6 +194,14 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
       source: { cache: $tabCache, loading: $tabLoading, visit: $visit },
       filter: need,
       fn: ({ visit }, e) => load(e, visit),
+      target: loadTabFx,
+    })
+    // replaceDetail: активная нелокальная вкладка этого документа — заново (кэш уже сброшен редьюсером выше)
+    sample({
+      clock: replaced,
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit },
+      filter: (src, { id }) => need(src, src.st.a?.id === id ? src.st.a : src.st.b?.id === id ? src.st.b : null),
+      fn: ({ st, visit }, { id }) => load(st.a?.id === id ? st.a : st.b, visit),
       target: loadTabFx,
     })
     sample({
@@ -185,6 +243,49 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     return Object.keys(keep).length === Object.keys(q).length ? q : keep
   })
 
+  // --- охрана ухода (план 2c, Р6) ---
+  const leave = createEvent<LeaveIntent>()
+  const leaveRequested = createEvent<LeaveRequest>()
+  const leaving = split(leave, { close: (i): i is CloseIntent => i.kind === 'close', open: (i): i is OpenIntent => i.kind === 'open' })
+  sample({ clock: leaving.close, fn: (i) => i.slot, target: stack.close })
+  sample({ clock: leaving.open, fn: (i) => i.open, target: stack.open })
+  let open = stack.open
+  let close = stack.close
+  let closeTop = stack.closeTop
+  if (cfg.guard) {
+    open = createEvent<DrawerOpen>()
+    close = createEvent<DrawerSlot>()
+    closeTop = createEvent<void>()
+    // close: документ в слоте — запрос ухода; пустой слот — ничего
+    sample({
+      clock: close,
+      source: stack.$stack,
+      filter: (st, slot) => st[slot] !== null,
+      fn: (st, slot): LeaveRequest => ({ docId: st[slot]?.id ?? '', intent: { kind: 'close', slot } }),
+      target: leaveRequested,
+    })
+    // closeTop (Esc): тот же путь для верхнего слота
+    sample({ clock: closeTop, source: stack.$top, filter: (top: DrawerSlot | null): top is DrawerSlot => top !== null, target: close })
+    // open: уже открытый (любой слот) — в стек сразу (фокус); иначе слот назначения — как place стека; занят другим — запрос ухода
+    const decided = sample({
+      clock: open,
+      source: stack.$stack,
+      fn: (st, p) => {
+        if (st.a?.id === p.id || st.b?.id === p.id) return { p, occupant: null }
+        const e = st[p.secondary && st.a ? 'b' : 'a']
+        return { p, occupant: e ? e.id : null }
+      },
+    })
+    sample({ clock: decided, filter: ({ occupant }) => occupant === null, fn: ({ p }) => p, target: stack.open })
+    sample({
+      clock: decided,
+      filter: ({ occupant }) => occupant !== null,
+      fn: ({ p, occupant }): LeaveRequest => ({ docId: occupant ?? '', intent: { kind: 'open', open: p } }),
+      target: leaveRequested,
+    })
+  }
+
+  // уход с экрана — без охраны
   sample({ clock: lifecycle.pageClosed, target: stack.closeAll })
   $cache.reset(lifecycle.pageClosed)
   $errors.reset(lifecycle.pageClosed)
@@ -230,7 +331,8 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
 
   return {
     stack, $slots, $marks, $focus, $quiet,
-    open: stack.open, close: stack.close, closeTop: stack.closeTop, setTab: stack.setTab, retry,
+    open, close, closeTop, setTab: stack.setTab, retry,
     retryTab, $expanded, setExpanded,
+    replaceDetail, reloadDetail, leaveRequested, leave,
   }
 }

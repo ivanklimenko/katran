@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { createEffect } from 'effector'
 import { ApiError, type TabQuery } from '../../../shared/api'
-import { remoteTab, type DetailDomain, type DetailSummary, type LocalTabView } from '../../../shared/lib/detail'
+import { remoteTab, type DetailDomain, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
 import { createDetail } from '../lib/createDetail'
@@ -60,6 +60,7 @@ const domain: DetailDomain<Doc, Doc> = {
 function setup(
   handler: (id: string) => Promise<Doc> = async (id) => rows.find((r) => r.id === id)!,
   tabHandler: (q: TabQuery) => Promise<unknown> = async (q) => ({ rows: [`${q.tab} ${q.id}`] }),
+  opts: { domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext } = {},
 ) {
   const detailFx = createEffect<string, Doc, ApiError>(handler)
   const tabFx = createEffect<TabQuery, unknown, ApiError>(tabHandler)
@@ -68,7 +69,7 @@ function setup(
   const utils = renderK(
     <>
       <button type="button">Кнопка открытия</button>
-      <DocDetail detail={detail} domain={domain} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
+      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
     </>,
   )
   act(() => { lifecycle.pageOpened() })
@@ -326,5 +327,75 @@ describe('DocDetail: вкладки 2b (спека 2b §3.3, §4)', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Связанные документы' }))
     await screen.findByRole('button', { name: 'Раскрыть' })
     expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+/** Контекст правки документа — заглушка с vi.fn(): виджет только передаёт его видам домена и рисует Prompt. */
+const editStub = (docId: string, over: Partial<EditContext> = {}): EditContext => ({
+  docId, editing: null, draft: null, error: null, saving: false, saveError: null, confirm: null,
+  onConfirm: vi.fn(), open: vi.fn(), change: vi.fn(), cancel: vi.fn(), save: vi.fn(), revert: vi.fn(),
+  accounts: () => null, retryAccounts: vi.fn(),
+  ...over,
+})
+
+describe('DocDetail: правка (план 2c, §3.4)', () => {
+  it('editOf: Prompt контекста — в drawer своего документа, поверх панели', async () => {
+    const onConfirm = vi.fn()
+    const ctx: Record<string, EditContext> = {
+      d1: editStub('d1', {
+        onConfirm,
+        confirm: { title: 'Отменить правку?', note: 'Несохранённые изменения будут потеряны.', okLabel: 'Отменить правку', cancelLabel: 'Продолжить правку', tone: 'danger' },
+      }),
+      d2: editStub('d2'),
+    }
+    const { open } = setup(undefined, undefined, { editOf: (id) => ctx[id] ?? editStub(id) })
+    open('d1')
+    open('d2', true)
+    expect(await screen.findAllByText('Блок b1')).toHaveLength(2)
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    const b = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
+    const prompt = within(a).getByRole('alertdialog', { name: 'Отменить правку?' })
+    expect(within(b).queryByRole('alertdialog')).toBeNull()
+    // поверх панели: слой overlay — вне прокручиваемых вкладок
+    expect(prompt.closest('[role="tabpanel"]')).toBeNull()
+    await userEvent.click(within(prompt).getByRole('button', { name: 'Продолжить правку' }))
+    expect(onConfirm).toHaveBeenLastCalledWith(false)
+    // Esc в Prompt — отказ; деталка не закрывается (OWN_ESCAPE кита)
+    within(prompt).getByRole('button', { name: 'Продолжить правку' }).focus()
+    await userEvent.keyboard('{Escape}')
+    expect(onConfirm).toHaveBeenCalledTimes(2)
+    expect([...names()].sort()).toEqual(['Платёжная инструкция № 417', 'Платёжная инструкция № 418'])
+    await userEvent.click(within(prompt).getByRole('button', { name: 'Отменить правку' }))
+    expect(onConfirm).toHaveBeenLastCalledWith(true)
+  })
+
+  it('editOf: renderHero/renderBlock получают контекст, ConfigForm — formEdit; без editOf — null и без formEdit', async () => {
+    const onEdit = vi.fn()
+    const make = () => ({
+      renderHero: vi.fn((d: Doc) => ({ label: 'Номер', value: d.num })),
+      renderBlock: vi.fn((_d: Doc, id: string) => <div>Блок {id}</div>),
+      formEdit: vi.fn(() => ({ can: (tag: string) => tag === '20', editing: null, onEdit, renderEditor: () => null, state: () => null })),
+    })
+    const withEdit = make()
+    const ctx = editStub('d1')
+    const first = setup(undefined, undefined, { domain: { ...domain, ...withEdit }, editOf: () => ctx })
+    first.open('d1')
+    expect(await screen.findByText('Блок b1')).toBeInTheDocument()
+    expect(withEdit.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', ctx)
+    expect(withEdit.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', ctx)
+    expect(withEdit.formEdit).toHaveBeenLastCalledWith(rows[0], ctx)
+    await userEvent.click(screen.getByRole('button', { name: 'Редактировать поле 20' }))
+    expect(onEdit).toHaveBeenCalledWith('20')
+    first.unmount()
+
+    const plain = make()
+    const second = setup(undefined, undefined, { domain: { ...domain, ...plain } })
+    second.open('d1')
+    expect(await screen.findByText('Блок b1')).toBeInTheDocument()
+    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null)
+    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null)
+    expect(plain.formEdit).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Редактировать поле 20' })).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 })
