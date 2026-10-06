@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
-import type { FieldDef, FieldPresenter, FieldValue, FormSchema, HeroCell, SectionContent, StatusTone } from '@katran/ui'
+import type { DrawerOpen, DrawerSlot } from '@katran/effector'
+import type { FieldDef, FieldPresenter, FieldValue, FormEdit, FormSchema, HeroCell, PromptTone, SectionContent, StatusTone } from '@katran/ui'
+import type { AccountItem, AccountSide, EditValue } from '../../api'
 
 /** Вкладка деталки (эталон TABS/TAB_KEY, index.html:647–648). */
 export type DetailTab = { id: string; label: string }
@@ -65,9 +67,42 @@ export type DetailDomain<D, Row> = {
   value: (d: D, tag: string) => FieldValue | null
   summary: (d: D) => DetailSummary
   rowSummary: (row: Row) => DetailSummary
-  renderHero: (d: D, id: string) => HeroCell
-  renderBlock: (d: D, id: string) => ReactNode
+  /** edit — правка этого документа (план 2c); нет (null или не передан) — только просмотр, как в 2b. Функции с двумя параметрами (рубль) совместимы. */
+  renderHero: (d: D, id: string, edit?: EditContext | null) => HeroCell
+  renderBlock: (d: D, id: string, edit?: EditContext | null) => ReactNode
   renderSection?: ((d: D, id: string) => SectionContent) | undefined
   /** Виды вкладок по id (спека 2b §3.3); нет вида — вкладка показывает заглушку 2a. */
   tabViews?: Record<string, TabView<D>> | undefined
+  /** Правка полей «Общих данных» в ConfigForm (план 2c); нет — поля только для просмотра. */
+  formEdit?: ((d: D, edit: EditContext) => FormEdit) | undefined
+}
+
+/** Уход из документа, который ждёт ответа на «Отменить правку?» (план 2c, Р6): закрыть слот или открыть другой документ. */
+export type LeaveIntent = { kind: 'close'; slot: DrawerSlot } | { kind: 'open'; open: DrawerOpen }
+/** Справочник счетов стороны документа: null у EditContext.accounts — ещё не запрашивался. */
+export type AccountsSlot = { state: 'loading' | 'ready' | 'error'; items: AccountItem[]; error: string | null }
+/** Текст Prompt правки (отмена черновика, подтверждение даты валютирования) — ложится на PromptProps кита. */
+export type EditConfirmView = { title: string; note?: ReactNode | undefined; okLabel: string; cancelLabel: string; tone: PromptTone }
+/** Правка одного документа для видов сущности (план 2c §3.2): состояние редактора и команды, без знания о модели. */
+export type EditContext = {
+  docId: string
+  /** Цель открытого редактора в этом документе ('field:57', 'refOut', 'accKt', 'valueDate'), иначе null. */
+  editing: string | null
+  draft: EditValue | null
+  /** Ошибка валидации черновика. */
+  error: string | null
+  saving: boolean
+  saveError: string | null
+  /** Prompt этого документа — его рисует DocDetail в Drawer.overlay. */
+  confirm: EditConfirmView | null
+  onConfirm: (ok: boolean) => void
+  open: (target: string, current: EditValue) => void
+  change: (draft: EditValue) => void
+  cancel: () => void
+  save: () => void
+  /** ↺: сохранение «стало = исходное» без редактора. */
+  revert: (target: string, current: EditValue, original: EditValue) => void
+  /** null — ещё не запрашивались. */
+  accounts: (side: AccountSide) => AccountsSlot | null
+  retryAccounts: (side: AccountSide) => void
 }

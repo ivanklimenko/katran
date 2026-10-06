@@ -11,8 +11,10 @@ export const FX_LOCAL_TABS = ['main', 'extra']
 /**
  * Деталка экрана — на том же жизненном цикле: уход с экрана закрывает оба drawer'а, чистит кэш детали и вкладок
  * и раскрытое (спека 2a §5, 2b §3.3). Остальные вкладки — лениво через tabFx.
+ * guard — охрана ухода (план 2c, Р6): закрытие и замена документа идут через leaveRequested; ответ даёт модель правки
+ * (edit.model.ts — без неё деталка не закрывается).
  */
-export const detail = createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle })
+export const detail = createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle, guard: true })
 // реестр о деталке не знает: открытие — через шов openRequested (спека apps/pi §7, спека 2a §4.4)
 sample({ clock: registry.openRequested, target: detail.open })
 

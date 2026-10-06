@@ -88,8 +88,9 @@
   visibility: hidden;
 }
 
-/* строка поля 27 с рамкой (эталон .cell, border-box) */
+/* строка поля 27 с рамкой (эталон .cell, border-box); relative — для карандаша текстового поля и точки правки */
 .cell {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -186,9 +187,14 @@
   color: var(--k-val);
 }
 
-/* полный текст раскрытого поля под значением (эталон .full) */
+/* раскрытие поля под значением: полный текст, аудит, «✎ Изменить» — с колонки значения (эталон .full/.hs/.ed, grid-column: 3 / -1) */
+.panel {
+  margin-left: calc(var(--k-field-tag) + var(--k-field-opt) + 2 * var(--k-field-gap));
+}
+
+/* полный текст раскрытого поля (эталон .full) */
 .full {
-  margin: 0 0 var(--k-sp-1) calc(var(--k-field-tag) + var(--k-field-opt) + 2 * var(--k-field-gap));
+  margin: 0 0 var(--k-sp-1);
   padding-top: var(--k-sp-1);
   border-top: 1px dashed var(--k-line);
   font: var(--k-fs-1) / var(--k-lh-1) var(--k-mono);
@@ -494,4 +500,126 @@
 .mono .bhBtn.bhBtn {
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* правка в «Общих данных» (спека 2c §2.1, эталон .pen/.cell.edited/.cell.editing/.ed/.fe, index.html:202–245, 427) */
+
+/* правимая строка сетки: строка-кнопка и карандаш-сосед — колонками, раскрытие — на всю ширину под ними */
+.editable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--k-pen);
+  gap: 0 var(--k-field-gap);
+  align-items: center;
+  align-content: center;
+}
+
+.editable > .panel {
+  grid-column: 1 / -1;
+}
+
+/* карандаш: значок 14 в кнопке 17, без рамки; виден при наведении на ячейку и в фокусе (двойной класс — выше .button/.ghost кита) */
+.pen.pen {
+  width: var(--k-pen);
+  height: var(--k-pen);
+  border-color: transparent;
+  border-radius: var(--k-r-s);
+  background: none;
+  color: var(--k-faint);
+  opacity: 0;
+}
+
+/* у текстового поля карандаш — в правом верхнем углу (эталон .cell.txt .pen: 4 / 6, отступ справа 24) */
+.textPen {
+  padding-right: var(--k-sp-6);
+}
+
+.text .pen {
+  position: absolute;
+  top: var(--k-sp-1);
+  right: calc(var(--k-sp-2) - var(--k-sp-1) / 2);
+}
+
+.cell:hover .pen,
+.cell:focus-within .pen,
+.cell[data-editing] .pen {
+  color: var(--k-muted);
+  opacity: 1;
+}
+
+.pen.pen:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--k-val-soft);
+  color: var(--k-val);
+}
+
+/* изменённое поле: фон warn-row, рамка, главное значение и текст 70/72 — warn, точка 8 в углу со сдвигом −3 */
+.cell[data-edited],
+.cell[data-edited]:hover {
+  border-color: var(--k-warn);
+  background: var(--k-warn-row);
+}
+
+.cell[data-edited] .main,
+.cell[data-edited] .pre {
+  color: var(--k-warn);
+}
+
+.cell[data-edited]::after {
+  content: '';
+  position: absolute;
+
+  /* сдвиг эталона −3 при точке 8 — в долях точки, чтобы масштабироваться с плотностью вместе с ней */
+  top: calc(var(--k-edit-dot) * -3 / 8);
+  right: calc(var(--k-edit-dot) * -3 / 8);
+  width: var(--k-edit-dot);
+  height: var(--k-edit-dot);
+  border-radius: 50%;
+  background: var(--k-warn);
+  box-shadow: 0 0 0 2px var(--k-paper);
+}
+
+/* ячейка с открытым редактором (эталон .cell.editing) */
+.cell[data-editing],
+.cell[data-editing]:hover {
+  border-color: var(--k-val);
+  box-shadow: inset 0 0 0 1px var(--k-val);
+}
+
+/* «✎ Изменить» в раскрытии (эталон .ed: 500 11, цвет val) */
+.ed {
+  display: block;
+  margin-bottom: calc(var(--k-sp-1) / 2);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-val);
+  cursor: pointer;
+}
+
+.ed:hover {
+  text-decoration: underline;
+}
+
+.ed:focus-visible {
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+/* панель правки текстового поля под текстом (решение в4): «Было / Стало», аудит, «✎ Изменить» */
+.textEdit {
+  margin-top: var(--k-sp-1);
+  padding-top: var(--k-sp-1);
+  border-top: 1px dashed var(--k-line);
+}
+
+.textEdit > .full {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* слот редактора — на всю ширину сетки полей (эталон .fe, grid-column: 1 / -1) */
+.editor {
+  grid-column: 1 / -1;
+  min-width: 0;
 }

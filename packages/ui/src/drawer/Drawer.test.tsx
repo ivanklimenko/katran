@@ -248,6 +248,22 @@ describe('Drawer / DrawerStack (спека 2a §3.1)', () => {
     })
   })
 
+  it('overlay — поверх панели вне прокручиваемого содержимого', () => {
+    renderK(<Drawer label="Д" title="Т" onClose={vi.fn()} overlay={<div data-testid="ov" />}><p>тело</p></Drawer>)
+    const scroll = screen.getByRole('dialog').querySelector('[data-part="scroll"]')
+    expect(scroll).toContainElement(screen.getByText('тело'))
+    expect(scroll).not.toContainElement(screen.getByTestId('ov'))
+    expect(screen.getByRole('dialog')).toContainElement(screen.getByTestId('ov'))
+  })
+
+  it('Esc внутри [data-k-edit] (на кнопке) и внутри alertdialog не закрывает drawer', async () => {
+    const onEscape = vi.fn()
+    renderK(<DrawerStack onEscape={onEscape} items={[{ key: 'a', slot: 'a', node: <div><section data-k-edit aria-label="р"><button>Опция A</button></section><div role="alertdialog" aria-label="п"><button>Отмена</button></div></div> }]} />)
+    screen.getByRole('button', { name: 'Опция A' }).focus(); await userEvent.keyboard('{Escape}')
+    screen.getByRole('button', { name: 'Отмена' }).focus(); await userEvent.keyboard('{Escape}')
+    expect(onEscape).not.toHaveBeenCalled()
+  })
+
   it('без нарушений axe (A и B)', async () => {
     const { container } = renderK(<Host start={{ a: 'd1', b: 'd2' }} />)
     expect(await axe(container)).toHaveNoViolations()

@@ -1,6 +1,7 @@
-import { contractError, obj, str, strArr, strOrNull } from '../../../shared/api'
+import { arr, contractError, obj, oneOf, str, strArr, strOrNull, type EditValue } from '../../../shared/api'
 import { parseTxs } from '../../posting/@x/fx-doc'
 import type { FxDocDetail, SwiftValue } from '../model/detail'
+import type { FxEdit, FxHistEntry } from '../model/edit'
 import { parseFxDoc } from './fxDoc.mapper'
 
 function parseSwiftValue(raw: unknown, path: string): SwiftValue {
@@ -15,6 +16,41 @@ function parseFields(raw: unknown, path: string): Record<string, SwiftValue> {
   const o = obj(raw, path)
   const out: Record<string, SwiftValue> = {}
   for (const tag of Object.keys(o)) out[tag] = parseSwiftValue(o[tag], `${path}.${tag}`)
+  return out
+}
+
+/** Значение правки: строка (20 исх, счета, дата, маршрут) или значение поля SWIFT. */
+function parseEditValue(raw: unknown, path: string): EditValue {
+  return typeof raw === 'string' ? raw : parseSwiftValue(raw, path)
+}
+
+function parseHistEntry(raw: unknown, path: string): FxHistEntry {
+  const o = obj(raw, path)
+  return {
+    who: str(o, 'who', path),
+    when: str(o, 'when', path),
+    was: parseEditValue(o.was, `${path}.was`),
+    now: parseEditValue(o.now, `${path}.now`),
+    note: strOrNull(o, 'note', path),
+    status: oneOf(o, 'status', ['pending', 'confirmed'] as const, path),
+    by: strOrNull(o, 'by', path),
+    at: strOrNull(o, 'at', path),
+  }
+}
+
+/** edits ответа: { [цель]: { now, hist } }; поля нет — правок нет. */
+function parseEdits(raw: unknown, path: string): Record<string, FxEdit> {
+  if (raw === undefined || raw === null) return {}
+  const o = obj(raw, path)
+  const out: Record<string, FxEdit> = {}
+  for (const target of Object.keys(o)) {
+    const p = `${path}.${target}`
+    const e = obj(o[target], p)
+    out[target] = {
+      now: e.now === null || e.now === undefined ? null : parseEditValue(e.now, `${p}.now`),
+      hist: arr(e.hist, `${p}.hist`).map((h, i) => parseHistEntry(h, `${p}.hist[${i}]`)),
+    }
+  }
   return out
 }
 
@@ -38,5 +74,6 @@ export function parseFxDocDetail(raw: unknown, path: string): FxDocDetail {
     txAt: str(o, 'txAt', path),
     txs: parseTxs(o.txs, `${path}.txs`),
     tabsOff: strArr(o.tabsOff, `${path}.tabsOff`),
+    edits: parseEdits(o.edits, `${path}.edits`),
   }
 }

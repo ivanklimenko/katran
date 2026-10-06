@@ -1,4 +1,5 @@
 import type { Tx } from '../../posting/@x/fx-doc'
+import type { FxEdit } from './edit'
 import type { FxDoc } from './fxDoc'
 
 /** Значение SWIFT-поля: буква опции, счёт (50/59), строки. Та же форма, что FieldValue кита. */
@@ -26,4 +27,6 @@ export type FxDocDetail = FxDoc & {
   txs: Tx[]
   /** Вкладки без данных (ключи FX_TABS) — вторая группа полосы. */
   tabsOff: string[]
+  /** Правки по цели (план 2c §3.1): 'field:<tag>' (с 'B.'), 'refOut', 'accDt', 'accKt', 'valueDate', 'route'; без правок — {}. Значения выше — уже текущие. */
+  edits: Record<string, FxEdit>
 }

@@ -1,0 +1,128 @@
+/* Правка «Общих данных» валюты (план 2c; эталон .txtrow/.txted/.accrow/.acced/.hero .vd/.blk.edited, index.html:138–153, 365–416) */
+
+/* значение строки с правкой: значение, маркер, ↺ и карандаш в строку */
+.val {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  min-width: 0;
+}
+
+.val > :first-child {
+  flex: 1;
+}
+
+/* карандаш и ↺ — прозрачны до наведения на колонку и в фокусе (эталон .msgs>div:hover .pen/.rv) */
+.pen.pen,
+.rv.rv,
+.vdPen.vdPen {
+  flex: none;
+  width: var(--k-pen);
+  height: var(--k-pen);
+  border-color: transparent;
+  border-radius: var(--k-r-s);
+  background: none;
+  color: var(--k-muted);
+  opacity: 0;
+}
+
+.vdPen.vdPen {
+  margin-left: var(--k-sp-1);
+  vertical-align: middle;
+}
+
+.pen.pen:focus-visible,
+.rv.rv:focus-visible,
+.vdPen.vdPen:focus-visible,
+.col:hover .pen,
+.col:hover .rv,
+[data-part="hero"]:hover .vdPen {
+  opacity: 1;
+}
+
+.pen.pen:hover:not(:disabled),
+.rv.rv:hover:not(:disabled),
+.vdPen.vdPen:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--k-val-soft);
+  color: var(--k-val);
+}
+
+/* правка на месте под строкой: 20 исх и счёт — во всю ширину колонки */
+.inline {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-top: var(--k-kvs-gap);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--k-h-inline);
+  padding: 0 var(--k-sp-1);
+  border: 1px solid var(--k-val);
+  border-radius: var(--k-r-s);
+  background: var(--k-paper);
+  font: 400 var(--k-fs-edit) / 1 var(--k-mono);
+  letter-spacing: 0.02em;
+  color: var(--k-ink);
+  text-transform: uppercase;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--k-val-soft);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--k-bad);
+}
+
+.hint {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--k-sp-2);
+  margin-top: var(--k-kvs-gap);
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}
+
+.bad {
+  color: var(--k-bad);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+}
+
+/* изменённое значение */
+.warn {
+  color: var(--k-warn);
+}
+
+/* дата валютирования в правке: поле и «Отмена» в строку */
+.vdEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--k-sp-1);
+  font-weight: 400;
+}
+
+.vdx.vdx {
+  border-color: transparent;
+  background: none;
+  color: var(--k-muted);
+}
+
+/* строка ошибки правки даты — справа от «Отмена», не переносится */
+.vdErr {
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  white-space: nowrap;
+}
+
+/* маршрут, пересчитанный после смены Кт: заголовок warn */
+.routeEdited h3 {
+  color: var(--k-warn);
+}

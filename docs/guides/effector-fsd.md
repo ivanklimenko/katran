@@ -31,30 +31,35 @@
 | Персональные настройки грида на беке (адаптер `persist`) | `entities/<настройки>` или `app` | не `shared`: адаптер знает пользователя |
 | Запуск приложения, общая реакция на 401, инвалидация между экранами | `app/model` | связывает несколько слоёв |
 
-Пример реестра — по образцу `apps/pi` (реестр `entities/fx-doc`, виджет `widgets/doc-registry`; `features/pi-annul` ниже — иллюстрация слоя, в `apps/pi` такой фичи нет, эндпоинт аннулирования не поставлен):
+Пример реестра — по образцу `apps/pi` (реестр `entities/fx-doc`, виджеты `widgets/doc-registry` и `widgets/doc-detail`, фича `features/doc-edit` — правка документа в деталке, срез 2c; дерево сокращено до файлов, о которых речь):
 
 ```txt
 src/
   entities/fx-doc/
     index.ts
-    api/ports.ts             # fxDocPorts: searchFx, facetsFx, filterMetaFx
+    api/ports.ts             # fxDocPorts: searchFx, facetsFx, filterMetaFx, detailFx, tabFx; fxEditPorts — правка (2c)
     api/fxDoc.mapper.ts      # parseFxDoc: строка content[] → FxDoc
     model/fxDoc.ts           # тип записи FxDoc
     ui/layout.tsx            # fxDocLayout — раскладка колонок и рендер ячеек
     ui/cells.module.css      # классы ячеек (двойные классы .num.num — перебить стиль кита)
-  features/pi-annul/
-    index.ts                 # piAnnulled, $$piAnnul
-    api/annul.ts
-    model/annul.model.ts
-    ui/annul-button.tsx
+    model/rules.ts           # validateFxEdit, normalizeFxEdit, fxEditableTargets — правила правки (домен)
+    ui/edit.tsx              # виды правки 20 исх, счетов, даты; formEdit для ConfigForm — по EditContext
+  features/doc-edit/
+    index.ts                 # createDocEdit, useEditContexts, editKey, editScope
+    model/createDocEdit.ts   # createEditModel кита + порты saveEditFx/accountsFx; факты docEdited, conflict
+    ui/useEditContexts.ts    # EditContext документа для деталки — из модели фичи
   widgets/doc-registry/
     index.ts
     lib/createRegistry.ts    # createFiltersModel + createGridModel + жизненный цикл экрана — раздел 3
     ui/DocRegistry.tsx
+  widgets/doc-detail/
+    lib/createDetail.ts      # стек A/B, загрузка, кэш; guard, leaveRequested/leave, replaceDetail, reloadDetail
+    ui/DocDetail.tsx         # editOf: (docId) => EditContext — правку получает контекстом
   pages/fx-docs/
     index.ts
-    model/registry.model.ts  # createPageLifecycle() + widgets/doc-registry:createRegistry(...)
-    ui/FxDocsPage.tsx
+    model/registry.model.ts  # createPageLifecycle() + createRegistry(...) + createDetail({ guard: true })
+    model/edit.model.ts      # createDocEdit(...) и связи фичи с деталкой и реестром
+    ui/FxDocsPage.tsx        # editOf = useEditContexts(docEdit, …) → <DocDetail editOf={editOf} />
 ```
 
 ## 3. Модели katran в приложении
@@ -116,28 +121,30 @@ sample({ clock: lifecycle.pageOpened, target: grid.refresh })
    sample({ clock: refreshRequested, filter: lifecycle.$opened, target: grid.refresh })
    ```
 
-   По тому же образцу — реакция страницы на событие фичи из другого слайса:
+   По тому же образцу — реакция страницы на факт фичи (`apps/pi/src/pages/fx-docs/model/edit.model.ts`): правка сохранена — реестр перезапрашивается через `refreshRequested`, гейт «экран открыт» уже внутри виджета:
 
    ```ts
-   sample({
-     clock: piAnnulled,
-     source: lifecycle.$opened,   // из createPageLifecycle или своего роутера
-     filter: Boolean,
-     target: grid.refresh,
-   })
+   // pages/fx-docs/model/edit.model.ts
+   export const docEdit = createDocEdit({ ports: fxEditPorts, validate: validateFxEdit, normalize: normalizeFxEdit, same: sameEditValue, confirmTargets: FX_CONFIRM_TARGETS, lifecycle })
+   sample({ clock: docEdit.docEdited, target: detail.replaceDetail })        // деталь из ответа — в кэш деталки
+   sample({ clock: docEdit.docEdited, target: registry.refreshRequested })   // строка реестра могла измениться
    ```
+
+   Если у виджета такого шва нет, гейт ставится на стороне страницы: `sample({ clock: fact, source: lifecycle.$opened, filter: Boolean, target: grid.refresh })`.
 
    Если после действия нужно обновить несколько экранов, это не реакции в каждой странице, а одна инвалидация в `app` или в сущности — каждый реестр слушает общее событие через свой `refreshRequested`.
 
 2. Состояние моделей katran (фильтры, выделение, страница) переживает размонтирование экрана. Если при уходе с экрана оно должно сбрасываться — это решение экрана: в `apps/pi` `createRegistry` снимает выделение при уходе безусловно (`sample({ clock: lifecycle.pageClosed, target: grid.clearSelection })`), а фильтры и сортировку намеренно оставляет — то же поведение, что у стенда-эталона (спека `2026-09-28-katran-pi-app-design.md` §7.2). Полный сброс экрана — `sample({ clock: pageClosed, target: [filters.reset, grid.clearSelection] })`.
 
-**Фича отдаёт факты, а не внутренности.** Публичный API фичи — UI, фасад `$$feature` и события-факты (`piAnnulled`), а не голый эффект, на `.done` которого подписывается страница. Иначе страница зависит от реализации фичи и не отличит «аннулировано» от «отменено пользователем».
+**Фича отдаёт факты, а не внутренности.** Публичный API фичи — фабрика или фасад, UI-связка и события-факты, а не голый эффект, на `.done` которого подписывается страница. Иначе страница зависит от реализации фичи и не отличит «сохранено» от «отказано» или «отменено пользователем». В `apps/pi` `createDocEdit` отдаёт факты `docEdited({ id, detail })` (бек принял правку) и `conflict({ id })` (`409`), а эффект сохранения — своя `attach`-копия порта внутри фичи, наружу не выходит:
 
 ```ts
-// features/pi-annul/index.ts
-export { AnnulButton } from './ui/annul-button'
-export { piAnnulled, $$piAnnul } from './model/annul.model'
+// features/doc-edit/index.ts
+export { CONFLICT_TEXT, DISCARD_VIEW, createDocEdit, editKey, editScope, type DocEdit, type DocEditConfig } from './model/createDocEdit'
+export { useEditContexts } from './ui/useEditContexts'
 ```
+
+**Виджет получает правку контекстом и фичу не импортирует.** Виджет (`widgets/doc-detail`) стоит выше фичи по слоям, но о конкретной фиче знать не должен — иначе деталка рубля, где правки нет, тянула бы правку валюты. Шов — тип в `shared/lib/detail`: `EditContext` (состояние редактора документа и команды `open`/`change`/`save`/`cancel`/`revert`) и `LeaveIntent`. Страница собирает контексты из модели фичи (`useEditContexts(docEdit, …)`) и передаёт виджету функцией `editOf: (docId) => EditContext`; виджет отдаёт контекст видам сущности (`renderHero`, `renderBlock`, `formEdit` домена). Обратная связь — тоже через страницу: виджет с `guard: true` сообщает `leaveRequested` о **любом** уходе из документа (×, Esc, замена документа в слоте, закрытие A при открытом B) — есть ли там правка и нужен ли вопрос, решает модель правки; страница пересылает запрос в модель фичи, а ответ модели (`leave`) — обратно в виджет. Без этой связи деталка с `guard: true` не закрывается вовсе. Так же в 2b вкладки получали `TabContext`. Правило держит линт: зона `widgets/doc-detail` ↛ `features` в `eslint.config.js` (`fsdZones`), рядом с `doc-detail` ↛ `entities`.
 
 **Ресурс не живёт в странице только потому, что первым его запросил экран.** Поиск документов и контракт фильтра нужны реестру, дашборду и деталке — место им в `entities/<документ>/api`. В `pages/<экран>/api` — только запросы, которые больше никому не нужны.
 
@@ -152,6 +159,7 @@ export { piAnnulled, $$piAnnul } from './model/annul.model'
 - [ ] Первый `refresh` — из события страницы, не разбросан по `useEffect`.
 - [ ] Каждая реакция страницы на чужое событие загейчена признаком «экран открыт».
 - [ ] Фичи экспортируют факты и фасад, а не эффекты и внутренние сторы.
+- [ ] Виджет не импортирует фичу: правка и действия приходят в него контекстом (тип в `shared`), связи — в модели страницы.
 - [ ] Поиск и контракт документа — в `entities`, а не в `pages`.
 - [ ] Модели разбиты по ответственности, не на `stores/events/effects`.
 - [ ] Нет пустых слоёв и сегментов.

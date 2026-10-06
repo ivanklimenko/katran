@@ -6,3 +6,7 @@ export {
   type FacetsBody, type FieldDto, type FilterMetaDto, type RowParser, type SearchBody, type SortDto, type SuggestBody,
 } from './grid-contract'
 export { createGridPorts, type DetailParser, type DetailPort, type GridPorts, type GridPortsConfig, type TabParser, type TabPort, type TabQuery } from './ports'
+export {
+  createEditPorts, fromAccountsResponse,
+  type AccountItem, type AccountSide, type AccountsQuery, type EditPorts, type EditQuery, type EditValue,
+} from './edit-ports'

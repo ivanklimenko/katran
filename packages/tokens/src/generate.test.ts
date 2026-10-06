@@ -77,6 +77,17 @@ describe('renderCss', () => {
     expect(css).toMatch(/--k-code-pl: calc\(28px \* var\(--k-density\)\)/)
   })
 
+  it('правка деталки (спека 2c): Prompt 340 / 30, поле редактора 21, опция 18, поле на месте 22, подсказка 24, подложка', () => {
+    expect(css).toMatch(/--k-prompt-w: calc\(340px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-prompt-btn: calc\(30px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-prompt-shift: calc\(6px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-fe-line: calc\(21px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-opt-btn: calc\(18px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-h-inline: calc\(22px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-sug-row: calc\(24px \* var\(--k-density\)\)/)
+    expect(css).toMatch(/--k-scrim: #141A2947/i)
+  })
+
   it('каждый размерный токен объявлен ровно один раз, каждый цвет — минимум трижды', () => {
     for (const key of Object.keys(source.sizes)) {
       expect.soft(css.split(`--k-${key}:`).length, `--k-${key}`).toBe(2)

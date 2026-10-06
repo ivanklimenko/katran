@@ -34,6 +34,7 @@ export const colors = {
     'st-okl': '#4E9E77',
     'st-grey': '#8A93A6',
     'st-letter-soft': '#141A29',
+    'scrim': '#141A2947',
   },
   dark: {
     'ground': '#0E121A',
@@ -69,6 +70,7 @@ export const colors = {
     'st-okl': '#8ADCB0',
     'st-grey': '#A7B0C2',
     'st-letter-soft': '#161B26',
+    'scrim': '#00000073',
   },
 } as const
 
@@ -168,6 +170,31 @@ export const sizes = {
   'code-pl': 28,
   'code-gutter': 46,
   'code-num': 30,
+  'prompt-w': 340,
+  'prompt-btn': 30,
+  'prompt-btn-px': 14,
+  'r-l': 8,
+  'fs-prompt': 14,
+  'prompt-shift': 6,
+  'fe-line': 21,
+  'fe-pt': 7,
+  'fe-px': 9,
+  'fe-pb': 8,
+  'fe-box-py': 5,
+  'fe-box-px': 7,
+  'fe-gap': 10,
+  'opt-btn': 18,
+  'opt-min': 22,
+  'h-inline': 22,
+  'fs-edit': 12,
+  'sug-row': 24,
+  'sug-w': 320,
+  'sug-tag': 34,
+  'sug-kind': 120,
+  'pen': 17,
+  'mark-dot': 6,
+  'fs-mark': 8,
+  'edit-dot': 8,
 } as const
 
 export const fonts = {

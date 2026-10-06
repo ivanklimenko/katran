@@ -1,7 +1,7 @@
 import type { Scalar } from '../filters/types'
 
-/** Вариант справочника: hint — приглушённо справа (код, BIC). */
-export type Option = { value: Scalar; label: string; hint?: string | undefined }
+/** Вариант справочника: hint — приглушённо справа (код, BIC, вид счёта); tag — метка между подписью и hint (валюта счёта). */
+export type Option = { value: Scalar; label: string; hint?: string | undefined; tag?: string | undefined }
 
 export const sameScalar = (a: Scalar, b: Scalar): boolean => a === b
 

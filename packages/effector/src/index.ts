@@ -5,3 +5,4 @@ export { createGridModel, type GridModel, type GridModelConfig, type GridPersist
 export { useGrid, type GridBinding } from './useGrid'
 export { useFilters, type FiltersBinding } from './useFilters'
 export { createDrawerStackModel, type DrawerEntry, type DrawerHit, type DrawerOpen, type DrawerSlot, type DrawerStackConfig, type DrawerStackModel, type DrawerStackState } from './createDrawerStackModel'
+export { createEditModel, type EditConfirm, type EditFailed, type EditModel, type EditModelConfig, type EditSaved, type LeaveRequest, type SaveQuery } from './createEditModel'
