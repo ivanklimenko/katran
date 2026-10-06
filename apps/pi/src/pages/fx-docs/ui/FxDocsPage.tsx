@@ -1,8 +1,10 @@
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { fxDocLayout } from '../../../entities/fx-doc'
+import { fxCommitView, fxDocLayout } from '../../../entities/fx-doc'
+import { useEditContexts } from '../../../features/doc-edit'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
+import { docEdit } from '../model/edit.model'
 import { detail, registry } from '../model/registry.model'
 import { fxDetailDomain } from './detailDomain'
 
@@ -12,6 +14,8 @@ const TITLE = 'Валютные документы'
 export function FxDocsPage({ note }: { note?: string | undefined }) {
   const { announce } = useKatran()
   const [rows, marks] = useUnit([registry.grid.$rows, detail.$marks])
+  // правка деталки (план 2c): контекст правки своего документа — деталка не знает о модели
+  const editOf = useEditContexts(docEdit, fxCommitView)
   return (
     <>
       <DocRegistry
@@ -33,6 +37,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
         domain={fxDetailDomain}
         rowOf={(id) => rows.find((r) => fxDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
+        editOf={editOf}
       />
     </>
   )
