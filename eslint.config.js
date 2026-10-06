@@ -7,7 +7,7 @@ import globals from 'globals'
 
 // FSD-границы apps/pi (docs/guides/effector-fsd.md, спека apps/pi §4): слои только вниз, чужой слайс — только публичный API
 const PI = './apps/pi/src'
-const LAYERS = ['app', 'pages', 'widgets', 'entities', 'shared']
+const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared']
 const dirsOf = (path) => (existsSync(path) ? readdirSync(path, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [])
 const slicesOf = (layer) => dirsOf(`${PI}/${layer}`)
 // у shared единица с публичным API — сегмент (api), а в lib — каждый подкаталог (lib/lifecycle, lib/test)
@@ -57,8 +57,9 @@ export default tseslint.config(
           { target: './packages/ui/src', from: './packages/effector', message: 'ui не импортирует effector' },
           { target: './packages/effector/src', from: './packages/ui/src', except: ['./index.ts'], message: 'effector импортирует из ui только типы через пакет' },
           ...fsdZones,
-          // сверх слоёв: деталка — общий виджет, домен получает пропсами (спека 2a §4.3)
+          // сверх слоёв: деталка — общий виджет, домен получает пропсами (спека 2a §4.3), правку — контекстом (спека 2c §3.2)
           { target: `${PI}/widgets/doc-detail`, from: `${PI}/entities`, message: 'FSD: doc-detail получает домен пропсами (спека 2a §4.3)' },
+          { target: `${PI}/widgets/doc-detail`, from: `${PI}/features`, message: 'FSD: doc-detail получает правку контекстом EditContext (спека 2c §3.2)' },
         ],
       }],
       'no-restricted-imports': ['error', { paths: [
