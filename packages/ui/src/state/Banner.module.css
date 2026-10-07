@@ -1,0 +1,49 @@
+/* Плашка состояния (спека 2e §2.1): во всю ширину, подложка тона, полоса тона слева 3 px (как уведомление действия 2d);
+   текст ink2 — пара бейджа статуса: ink2 на chip / ok-soft / warn-soft / bad-soft проходит 4,5 в обеих темах */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--k-h-ctl-l);
+  padding: var(--k-sp-1) var(--k-sp-2) var(--k-sp-1) var(--k-sp-3);
+  border-left: 3px solid var(--k-st-grey);
+  border-radius: var(--k-r-m);
+  background: var(--k-chip);
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.banner[data-tone="warn"] {
+  border-left-color: var(--k-st-warn);
+  background: var(--k-warn-soft);
+}
+
+.banner[data-tone="bad"] {
+  border-left-color: var(--k-st-bad);
+  background: var(--k-bad-soft);
+}
+
+.banner[data-tone="ok"] {
+  border-left-color: var(--k-st-ok);
+  background: var(--k-ok-soft);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  padding: var(--k-sp-1) 0;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--k-sp-2);
+}
+
+.close {
+  flex: none;
+  color: var(--k-ink2);
+}

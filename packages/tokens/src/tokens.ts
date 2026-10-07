@@ -195,6 +195,7 @@ export const sizes = {
   'mark-dot': 6,
   'fs-mark': 8,
   'edit-dot': 8,
+  'dialog-l': 640,
 } as const
 
 export const fonts = {

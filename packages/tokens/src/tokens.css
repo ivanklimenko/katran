@@ -176,6 +176,7 @@
   --k-mark-dot: calc(6px * var(--k-density));
   --k-fs-mark: calc(8px * var(--k-density));
   --k-edit-dot: calc(8px * var(--k-density));
+  --k-dialog-l: calc(640px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

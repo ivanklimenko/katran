@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Button, EmptyState, ErrorState, ProgressBar, Skeleton, dimClass, useLoadingGate } from '@katran/ui'
+import { Banner, Button, EmptyState, ErrorState, ProgressBar, Skeleton, dimClass, useLoadingGate } from '@katran/ui'
 import s from './Page.module.css'
 
 export function StatesPage() {
   const [loading, setLoading] = useState(false)
+  const [shown, setShown] = useState(true)
   const show = useLoadingGate(loading)
   const simulate = (ms: number) => { setLoading(true); setTimeout(() => setLoading(false), ms) }
   return (
@@ -19,6 +20,19 @@ export function StatesPage() {
       <h2 className={s.h2}>Пусто и ошибка</h2>
       <div className={s.row}><EmptyState title="По заданным условиям документов нет" action={{ label: 'Сбросить фильтр', onClick: () => {} }} /></div>
       <div className={s.row}><ErrorState title="Не удалось загрузить реестр" text="Сервис не ответил за 10 с" retry={() => {}} /></div>
+      <h2 className={s.h2}>Banner</h2>
+      <p className={s.note}>Плашка состояния во всю ширину: текст — в role="status", кнопки — вне него. По примеру на свойство.</p>
+      <div className={s.row} style={{ display: 'grid', gap: 'var(--k-sp-2)' }}>
+        <Banner tone="neutral">tone="neutral" — нейтральное сообщение</Banner>
+        <Banner tone="warn">tone="warn" — запрос ожидает утверждения</Banner>
+        <Banner tone="bad">tone="bad" — запрос отклонён</Banner>
+        <Banner tone="ok">tone="ok" — документ аннулирован</Banner>
+        <Banner tone="warn" actions={<><Button size="s">Утвердить</Button><Button size="s">Отклонить</Button></>}>actions — кнопки справа, вне статуса</Banner>
+        {shown
+          ? <Banner tone="bad" onClose={() => setShown(false)}>onClose — крестик «Закрыть»</Banner>
+          : <Button onClick={() => setShown(true)}>Показать плашку снова</Button>}
+        <Banner tone="neutral" onClose={() => undefined} closeLabel="Закрыть уведомление">closeLabel — подпись крестика «Закрыть уведомление»</Banner>
+      </div>
     </>
   )
 }
