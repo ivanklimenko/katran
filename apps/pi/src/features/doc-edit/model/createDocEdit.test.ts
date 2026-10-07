@@ -367,6 +367,17 @@ describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
     expect(scope.getState(edit.$decision).u1?.error).toBe('Причина длиннее 140 символов')
   })
 
+  it('отказ решения без текста — запасной текст, не пустая строка', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    confirms[0]!.fail(new ApiError(400, { type: 'urn:katran:validation', title: 'Правка не принята', status: 400, errors: [{ path: 'when', code: 'VALIDATION', message: '' }] }, ''))
+    await t.settle()
+    expect(scope.getState(edit.$decision).u1).toMatchObject({ busy: false, error: 'Не удалось выполнить действие' })
+  })
+
   it('409 — решение снято, conflict { id }, $decided «Правку уже обработали — данные обновлены»', async () => {
     const t = setup()
     const { edit, scope, confirms } = t

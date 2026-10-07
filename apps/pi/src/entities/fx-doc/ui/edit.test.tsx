@@ -18,8 +18,9 @@ const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
 const ctx = (p: Partial<EditContext> = {}): EditContext => ({
   docId: d.id, editing: null, draft: null, error: null, saving: false, saveError: null, confirm: null,
   onConfirm: vi.fn(), open: vi.fn(), change: vi.fn(), cancel: vi.fn(), save: vi.fn(), revert: vi.fn(),
-  accounts: vi.fn(() => null), retryAccounts: vi.fn(), ...p,
+  accounts: vi.fn(() => null), retryAccounts: vi.fn(),
   decision: null, canDecide: () => false, confirmEdit: vi.fn(), rejectEdit: vi.fn(), changeReason: vi.fn(), onDecision: vi.fn(),
+  ...p,
 })
 const renderEdit = (doc: FxDocDetail, edit: EditContext | null) => renderK(
   <ConfigForm schema={dom.schemaOf(doc)} fields={dom.fields} value={(t) => dom.value(doc, t)} present={dom.present}

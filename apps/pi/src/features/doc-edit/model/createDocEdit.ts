@@ -85,8 +85,10 @@ type AccLoad = AccountsQuery & { visit: number }
 type ConfirmRun = DecisionQuery & { visit: number }
 type RejectRun = RejectQuery & { visit: number }
 type DecisionAsk = { docId: string; target: string; when: string }
-/** Текст отказа решения (409 обрабатывается отдельно): первая ошибка problem.errors (400), иначе message. */
-const decisionErrorText = (e: ApiError): string => e.problem?.errors?.[0]?.message || e.message
+/** Отказ решения без текста — общий текст, не пустая строка в Prompt. */
+const DECISION_FAILED = 'Не удалось выполнить действие'
+/** Текст отказа решения (409 обрабатывается отдельно): первая ошибка problem.errors (400), иначе message, иначе DECISION_FAILED. */
+const decisionErrorText = (e: ApiError): string => e.problem?.errors?.[0]?.message || e.message || DECISION_FAILED
 const without = <T>(m: Record<string, T>, key: string): Record<string, T> => {
   const next = { ...m }
   delete next[key]
