@@ -1,4 +1,4 @@
-import { arr, contractError, obj, str, strArr, type Obj } from '../../../shared/api'
+import { arr, contractError, obj, parseAnnul, parseCanAnnul, str, strArr, type Obj } from '../../../shared/api'
 import { parseTxs } from '../../posting/@x/rub-doc'
 import type { RubDocDetail } from '../model/detail'
 import { AGENT_KEYS, BUDGET_ROWS, COLLECT_KEYS, ED107_KEYS, PURPOSE_EXTRA_ROWS, RUB_PARTY } from '../model/profiles'
@@ -45,5 +45,7 @@ export function parseRubDocDetail(raw: unknown, path: string): RubDocDetail {
     txAt: str(o, 'txAt', path),
     txs: parseTxs(o.txs, `${path}.txs`),
     tabsOff: strArr(o.tabsOff, `${path}.tabsOff`),
+    canAnnul: parseCanAnnul(o, path),
+    annul: parseAnnul(o.annul, `${path}.annul`),
   }
 }

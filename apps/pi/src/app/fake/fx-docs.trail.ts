@@ -192,9 +192,9 @@ export function fxDocTrail(row: FxDoc, i: number, rows: readonly FxDoc[]): Recor
     tasks: { tasks: tasks(row, i, b, who) },
     notif: {
       notifications: done ? [
-        { sentAt: stamp(b, 759), attempts: 3, status: 'TIMEOUT', responseCode: 'accepted' },
-        { sentAt: stamp(b, 99759), attempts: 1, status: 'OK', responseCode: 'confirmAck' },
-        { sentAt: stamp(b, 196759), attempts: 3, status: 'TIMEOUT', responseCode: 'confirmCrd' },
+        { id: 'n1', sentAt: stamp(b, 759), attempts: 3, status: 'TIMEOUT', responseCode: 'accepted' },
+        { id: 'n2', sentAt: stamp(b, 99759), attempts: 1, status: 'OK', responseCode: 'confirmAck' },
+        { id: 'n3', sentAt: stamp(b, 196759), attempts: 3, status: 'TIMEOUT', responseCode: 'confirmCrd' },
       ] : [],
     },
     source: { swiftMessage, outgoingSwiftMessage: outgoing(row) },

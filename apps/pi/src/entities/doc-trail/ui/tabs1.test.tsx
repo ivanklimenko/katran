@@ -47,9 +47,9 @@ const TASKS: DocTask[] = [
   },
 ]
 const NOTIF: DocNotification[] = [
-  { at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
-  { at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
-  { at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
+  { id: 'n1', at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
+  { id: 'n2', at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
+  { id: 'n3', at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
 ]
 const STREAM: StreamEvent[] = [
   { at: '2026-09-22T07:33:24.795', system: 'MSB', destination: 'Шина сообщений', event: 'fx_evt_credit_end', status: 'SENT', tries: 1 },

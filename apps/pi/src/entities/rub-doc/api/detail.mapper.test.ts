@@ -21,3 +21,22 @@ describe('parseRubDocDetail (пример pi-api.md)', () => {
     expect(() => parseRubDocDetail({ ...ex, prio: 2 }, 'ответ')).toThrow(ApiError)
   })
 })
+
+describe('canAnnul и annul детали', () => {
+  it('пример: canAnnul true, annul null', () => {
+    expect(parseRubDocDetail(ex, 'ответ')).toMatchObject({ canAnnul: true, annul: null })
+  })
+  it('деталь без canAnnul и annul (примеры 2d) → false и null', () => {
+    const old: Record<string, unknown> = { ...ex }
+    delete old.canAnnul
+    delete old.annul
+    expect(parseRubDocDetail(old, 'ответ')).toMatchObject({ canAnnul: false, annul: null })
+  })
+  it('annul разбирается; битые поля — ошибка с путём', () => {
+    const annul = { status: 'done', who: 'Кузнецов Д. А.', when: '2026-10-07T09:15:00', reason: 'Дубликат', by: null, at: null, rejectReason: null, canConfirm: false }
+    expect(parseRubDocDetail({ ...ex, canAnnul: false, annul }, 'ответ').annul).toEqual(annul)
+    expect(() => parseRubDocDetail({ ...ex, canAnnul: 1 }, 'ответ')).toThrow('ответ.canAnnul: ожидалось true или false')
+    expect(() => parseRubDocDetail({ ...ex, annul: { ...annul, canConfirm: undefined } }, 'ответ')).toThrow('ответ.annul.canConfirm')
+  })
+})
+

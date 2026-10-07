@@ -44,9 +44,9 @@ describe('мапперы doc-trail (примеры pi-api.md)', () => {
   })
   it('notif, stream, mpu: строки таблиц и сообщения', () => {
     expect(parseNotifications(ex.notif, 'ответ')).toEqual([
-      { at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
-      { at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
-      { at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
+      { id: 'n1', at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
+      { id: 'n2', at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
+      { id: 'n3', at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
     ])
     expect(parseStream(ex.stream, 'ответ')[2]).toEqual({ at: '2026-09-22T07:35:01.902', system: 'DWH', destination: 'Хранилище', event: 'fx_evt_finish', status: 'SENT', tries: 2 })
     const m = parseMpu(ex.mpu, 'ответ')
@@ -73,7 +73,8 @@ describe('мапперы doc-trail (примеры pi-api.md)', () => {
     expect(() => parseCompliance({ ...(ex.compliance as Obj), monitoring: null }, 'ответ')).toThrow('ответ.monitoring: ожидался объект')
     expect(() => parseLinked({ documents: [{ ...first('linked', 'documents'), debit: 'x' }] }, 'ответ')).toThrow('ответ.documents[0].debit: ожидался объект')
     expect(() => parseTasks({ tasks: [{ ...first('tasks', 'tasks'), status: 'CLOSED' }] }, 'ответ')).toThrow('ответ.tasks[0].status: недопустимое значение «CLOSED»')
-    expect(() => parseNotifications({ notifications: [{ sentAt: 'x', attempts: '3', status: 'OK', responseCode: 'c' }] }, 'ответ')).toThrow('ответ.notifications[0].attempts: ожидалось число')
+    expect(() => parseNotifications({ notifications: [{ id: 'n1', sentAt: 'x', attempts: '3', status: 'OK', responseCode: 'c' }] }, 'ответ')).toThrow('ответ.notifications[0].attempts: ожидалось число')
+    expect(() => parseNotifications({ notifications: [{ sentAt: 'x', attempts: 3, status: 'OK', responseCode: 'c' }] }, 'ответ')).toThrow('ответ.notifications[0].id: ожидалась строка')
     expect(() => parseMpu({ messages: [{ ...first('mpu', 'messages'), swiftText: null }] }, 'ответ')).toThrow('ответ.messages[0].swiftText: ожидалась строка')
     expect(() => parseAudit({ commonSection: 'x' }, 'ответ')).toThrow('ответ.commonSection: ожидался объект')
     expect(() => parseSourceTexts({ ED244: 42 }, 'ответ')).toThrow('ответ.ED244: ожидалась строка или null')

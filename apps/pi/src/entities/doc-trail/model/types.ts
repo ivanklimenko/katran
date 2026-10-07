@@ -24,7 +24,8 @@ export type LinkedDoc = {
 
 /** Задача: state — открыта / закрыта; tone — точка открытой задачи; история — включая закрытие. */
 export type DocTask = { id: string; state: 'open' | 'done'; tone: 'ok' | 'info' | 'warn'; type: string; at: string; text: string; who: string | null; history: { at: string; text: string }[] }
-export type DocNotification = { at: string; attempts: number; status: string; code: string }
+/** id — идентификатор строки в документе (уникален): адрес «Исходного сообщения» и переотправки одной нотификации. */
+export type DocNotification = { id: string; at: string; attempts: number; status: string; code: string }
 export type StreamEvent = { at: string; system: string; destination: string; event: string; status: string; tries: number }
 export type MpuMessage = { id: string; type: string; created: string; exportStatus: string; exported: string | null; receiver: string; docReference: string; docId: string; swift: string }
 /** Аудит: секция → объект как есть (показывается JSON). */

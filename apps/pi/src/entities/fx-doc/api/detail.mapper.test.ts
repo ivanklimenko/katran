@@ -98,3 +98,23 @@ describe('parseFxDocDetail (пример pi-api.md)', () => {
     expect(sameEditValue({ lines: ['X'] }, { lines: ['Y'] })).toBe(false)
   })
 })
+
+describe('canAnnul и annul детали', () => {
+  it('пример: canAnnul false, annul pending с canConfirm', () => {
+    const d = parseFxDocDetail(ex, 'ответ')
+    expect(d.canAnnul).toBe(false)
+    expect(d.annul).toEqual(ex.annul)
+    expect(d.annul).toMatchObject({ status: 'pending', by: null, canConfirm: true })
+  })
+  it('деталь без canAnnul и annul (примеры 2d) → false и null', () => {
+    const old: Record<string, unknown> = { ...ex }
+    delete old.canAnnul
+    delete old.annul
+    expect(parseFxDocDetail(old, 'ответ')).toMatchObject({ canAnnul: false, annul: null })
+  })
+  it('битые canAnnul и annul — ошибка с путём', () => {
+    expect(() => parseFxDocDetail({ ...ex, canAnnul: 'yes' }, 'ответ')).toThrow('ответ.canAnnul: ожидалось true или false')
+    expect(() => parseFxDocDetail({ ...ex, annul: { ...ex.annul, status: 'cancelled' } }, 'ответ')).toThrow('ответ.annul.status')
+  })
+})
+

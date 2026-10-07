@@ -1,4 +1,4 @@
-import { arr, bool, contractError, obj, oneOf, str, strArr, strOrNull, type EditValue } from '../../../shared/api'
+import { arr, bool, contractError, obj, oneOf, parseAnnul, parseCanAnnul, str, strArr, strOrNull, type EditValue } from '../../../shared/api'
 import { parseTxs } from '../../posting/@x/fx-doc'
 import type { FxDocDetail, SwiftValue } from '../model/detail'
 import type { FxEdit, FxHistEntry } from '../model/edit'
@@ -76,6 +76,8 @@ export function parseFxDocDetail(raw: unknown, path: string): FxDocDetail {
     txAt: str(o, 'txAt', path),
     txs: parseTxs(o.txs, `${path}.txs`),
     tabsOff: strArr(o.tabsOff, `${path}.tabsOff`),
+    canAnnul: parseCanAnnul(o, path),
+    annul: parseAnnul(o.annul, `${path}.annul`),
     edits: parseEdits(o.edits, `${path}.edits`),
   }
 }

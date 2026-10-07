@@ -40,6 +40,12 @@ export function bool(o: Obj, k: string, path: string, fallback = false): boolean
   if (typeof v !== 'boolean') throw contractError(`${path}.${k}: ожидалось true или false`)
   return v
 }
+/** Обязательный boolean: нет ключа или не boolean — ошибка (в отличие от bool с запасным значением). */
+export function reqBool(o: Obj, k: string, path: string): boolean {
+  const v = o[k]
+  if (typeof v !== 'boolean') throw contractError(`${path}.${k}: ожидалось true или false`)
+  return v
+}
 export function oneOf<T extends string>(o: Obj, k: string, values: readonly T[], path: string): T {
   const v = str(o, k, path)
   if (!(values as readonly string[]).includes(v)) throw contractError(`${path}.${k}: недопустимое значение «${v}»`)

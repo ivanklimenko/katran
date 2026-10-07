@@ -1,3 +1,4 @@
+import type { AnnulState } from '../../../shared/lib/detail'
 import type { Tx } from '../../posting/@x/fx-doc'
 import type { FxEdit } from './edit'
 import type { FxDoc } from './fxDoc'
@@ -27,6 +28,10 @@ export type FxDocDetail = FxDoc & {
   txs: Tx[]
   /** Вкладки без данных (ключи FX_TABS) — вторая группа полосы. */
   tabsOff: string[]
+  /** Можно ли аннулировать сейчас (спека 2e §3.1 п. 1); нет ключа в ответе — false. */
+  canAnnul: boolean
+  /** Аннулирование документа: null — не было (спека 2e §3.1 п. 2). */
+  annul: AnnulState | null
   /** Правки по цели (план 2c §3.1): 'field:<tag>' (с 'B.'), 'refOut', 'accDt', 'accKt', 'valueDate', 'route'; без правок — {}. Значения выше — уже текущие. */
   edits: Record<string, FxEdit>
 }
