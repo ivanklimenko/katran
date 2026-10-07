@@ -1,5 +1,5 @@
 import { trailViewsFor } from '../../../entities/doc-trail'
-import { FX_TABS, fxDocDetailDomain, fxExtraView, type FxDoc, type FxDocDetail } from '../../../entities/fx-doc'
+import { FX_TABS, fxDecisionFocus, fxDecisionNote, fxDocDetailDomain, fxExtraView, type FxDoc, type FxDocDetail } from '../../../entities/fx-doc'
 import type { DetailDomain, TabView } from '../../../shared/lib/detail'
 
 /**
@@ -9,4 +9,5 @@ import type { DetailDomain, TabView } from '../../../shared/lib/detail'
  */
 const tabViews: Record<string, TabView<FxDocDetail>> = { extra: fxExtraView, ...trailViewsFor(FX_TABS) }
 
-export const fxDetailDomain: DetailDomain<FxDocDetail, FxDoc> = { ...fxDocDetailDomain, tabViews }
+/** decisionNote — тело Prompt решения второй руки (план 2d): его рисует виджет, текст цели знает сущность; decisionFocus — карандаш цели после решения. */
+export const fxDetailDomain: DetailDomain<FxDocDetail, FxDoc> = { ...fxDocDetailDomain, tabViews, decisionNote: fxDecisionNote, decisionFocus: fxDecisionFocus }

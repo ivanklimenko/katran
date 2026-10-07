@@ -90,3 +90,95 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* лейн и уведомление запасной ссылки под ним (поверх содержимого вкладки, только этого drawer) */
+.laneBox {
+  position: relative;
+}
+
+/* уведомления под лейном (действие, запасная ссылка) — столбиком, поверх содержимого вкладки */
+.under {
+  position: absolute;
+  top: 100%;
+  right: var(--k-sp-2);
+  left: var(--k-dw-pad);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+  margin-top: var(--k-sp-1);
+}
+
+.link,
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  padding: var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+  box-shadow: var(--k-shadow);
+  font-size: var(--k-fs-1);
+  color: var(--k-ink);
+}
+
+.linkField {
+  flex: 1;
+  min-width: 0;
+}
+
+.linkHint {
+  color: var(--k-ink2);
+  white-space: nowrap;
+}
+
+/* тон уведомления — полосой слева: текст остаётся цвета --k-ink (контраст), цвет — только признак */
+.notice[data-tone="ok"] {
+  border-left: 3px solid var(--k-ok);
+}
+
+.notice[data-tone="bad"] {
+  border-left: 3px solid var(--k-bad);
+}
+
+.noticeText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* поле «Причина» Prompt отклонения: подпись, поле, счётчик справа */
+.reason {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+.reasonLabel {
+  font: 600 var(--k-fs-2) / 1.3 var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.reasonField {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+  font: var(--k-fs-1) / 1.45 var(--k-sans);
+  color: var(--k-ink);
+  resize: vertical;
+}
+
+.reasonField:focus-visible {
+  border-color: var(--k-val);
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.reasonCount {
+  align-self: flex-end;
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}

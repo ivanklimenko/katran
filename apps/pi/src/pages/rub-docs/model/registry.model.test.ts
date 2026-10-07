@@ -2,7 +2,7 @@ import { allSettled, fork } from 'effector'
 import { RUB_DETAIL_EXAMPLE, RUB_TABS, parseRubDocDetail, rubDocPorts, type RubDoc } from '../../../entities/rub-doc'
 import { requestFx, type HttpRequest, type TabQuery } from '../../../shared/api'
 import { rubDetailDomain } from '../ui/detailDomain'
-import { detail, lifecycle, registry, RUB_LOCAL_TABS } from './registry.model'
+import { detail, docLinkOpened, lifecycle, registry, RUB_LOCAL_TABS } from './registry.model'
 
 describe('страница rub-docs: реестр → деталка (спека 2a §4.4)', () => {
   it('openRequested открывает деталку; уход с экрана закрывает', async () => {
@@ -81,5 +81,45 @@ describe('страница rub-docs: вкладки деталки (спека 2
       expect((await allSettled(rubDocPorts.tabFx, { scope, params: { id: 'r1', tab } })).status).toBe('fail')
     }
     expect(urls).toHaveLength(RUB_TABS.length - RUB_LOCAL_TABS.length)
+  })
+})
+
+describe('страница rub-docs: открытие документа по ссылке ?doc= (спека 2d §4 п. 6, Review Focus 1)', () => {
+  it('docLinkOpened отменяет автооткрытие: в A — документ ссылки (не quiet), первый ответ реестра первую запись не открывает', async () => {
+    const doc = parseRubDocDetail(RUB_DETAIL_EXAMPLE, 'ответ')
+    const row = { id: 'first' } as unknown as RubDoc
+    let answer: () => void = () => {}
+    const scope = fork({
+      handlers: [
+        [rubDocPorts.detailFx, async (id: string) => ({ ...doc, id })],
+        [rubDocPorts.searchFx, () => new Promise((ok) => { answer = () => ok({ rows: [row], total: 1 }) })],
+        [rubDocPorts.facetsFx, async () => []],
+        [rubDocPorts.filterMetaFx, async () => ({ fields: [] })],
+      ],
+    })
+    const tick = () => new Promise<void>((r) => setTimeout(r, 0))
+    // allSettled ждёт все эффекты скоупа — реестр висит до answer(), поэтому шаги без await
+    const opening = allSettled(lifecycle.pageOpened, { scope })
+    await tick()
+    const linking = allSettled(docLinkOpened, { scope, params: 'id3' })
+    await tick()
+    expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'id3', state: 'ready' })
+    expect(scope.getState(detail.$quiet)).toEqual({})
+    answer()
+    await opening; await linking
+    expect(scope.getState(detail.$slots)).toMatchObject({ a: { id: 'id3' }, b: null })
+    // новый визит без ссылки — автооткрытие снова работает
+    await allSettled(lifecycle.pageClosed, { scope })
+    const reopening = allSettled(lifecycle.pageOpened, { scope })
+    await tick()
+    answer()
+    await reopening
+    expect(scope.getState(detail.$slots).a).toMatchObject({ id: 'first' })
+    await allSettled(lifecycle.pageClosed, { scope })
+  })
+  it('ссылка на закрытом экране ничего не открывает', async () => {
+    const scope = fork({ handlers: [[rubDocPorts.detailFx, async () => { throw new Error('не ждали') }]] })
+    await allSettled(docLinkOpened, { scope, params: 'id3' })
+    expect(scope.getState(detail.$slots)).toEqual({ a: null, b: null })
   })
 })

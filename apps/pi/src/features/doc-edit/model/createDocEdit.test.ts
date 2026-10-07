@@ -1,7 +1,7 @@
 import { allSettled, createEffect, createStore, fork } from 'effector'
-import { ApiError, type AccountItem, type AccountsQuery, type EditQuery, type EditValue } from '../../../shared/api'
+import { ApiError, type AccountItem, type AccountsQuery, type DecisionQuery, type EditQuery, type RejectQuery, type EditValue } from '../../../shared/api'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
-import { CONFLICT_TEXT, createDocEdit, editKey, editScope } from './createDocEdit'
+import { CONFLICT_TEXT, DECISION_TEXT, REJECT_MAX, createDocEdit, editKey, editScope } from './createDocEdit'
 
 type Doc = { id: string; rev: number }
 type Pending<P, R> = { params: P; ok: (r: R) => void; fail: (e: ApiError) => void }
@@ -11,15 +11,22 @@ const upper = (v: EditValue): EditValue => (typeof v === 'string' ? v.trim().toU
 const same = (a: EditValue, b: EditValue) => JSON.stringify(a) === JSON.stringify(b)
 const ACC: AccountItem[] = [{ account: '40702840000000000001', ccy: 'USD', kind: 'Текущий' }]
 
+/** Отложенный порт: вызовы копятся в calls, ответ каждого отпускается вручную (ok/fail). */
+function deferred<P, R>() {
+  const calls: Pending<P, R>[] = []
+  const fx = createEffect<P, R, ApiError>((params) => new Promise<R>((ok, fail) => { calls.push({ params, ok, fail }) }))
+  return { calls, fx }
+}
+
 /** Порты — отложенные заглушки: ответы отпускаются вручную; журналы событий — сторами (allSettled ждёт висящие эффекты — шаги копятся в fire). */
 function setup() {
-  const saves: Pending<EditQuery, Doc>[] = []
-  const loads: Pending<AccountsQuery, AccountItem[]>[] = []
-  const saveEditFx = createEffect<EditQuery, Doc, ApiError>((params) => new Promise<Doc>((ok, fail) => { saves.push({ params, ok, fail }) }))
-  const accountsFx = createEffect<AccountsQuery, AccountItem[], ApiError>((params) => new Promise<AccountItem[]>((ok, fail) => { loads.push({ params, ok, fail }) }))
+  const { calls: saves, fx: saveEditFx } = deferred<EditQuery, Doc>()
+  const { calls: loads, fx: accountsFx } = deferred<AccountsQuery, AccountItem[]>()
+  const { calls: confirms, fx: confirmEditFx } = deferred<DecisionQuery, Doc>()
+  const { calls: rejects, fx: rejectEditFx } = deferred<RejectQuery, Doc>()
   const lifecycle = createPageLifecycle()
   const edit = createDocEdit<Doc>({
-    ports: { saveEditFx, accountsFx },
+    ports: { saveEditFx, accountsFx, confirmEditFx, rejectEditFx },
     validate: (_t, v) => (typeof v === 'string' && v.includes('!') ? 'Недопустимый символ' : null),
     normalize: (_t, v) => upper(v),
     same,
@@ -31,7 +38,7 @@ function setup() {
   const scope = fork()
   const inFlight: Promise<unknown>[] = []
   return {
-    edit, scope, saves, loads, lifecycle,
+    edit, scope, saves, loads, confirms, rejects, lifecycle,
     fire: (p: Promise<unknown>) => { inFlight.push(p) },
     settle: () => Promise.all(inFlight),
     edited: () => scope.getState($edited),
@@ -260,5 +267,221 @@ describe('createDocEdit (план 2c §3.2)', () => {
     loads[0]!.ok(ACC)
     await t.settle()
     expect(scope.getState(edit.$accounts)).toEqual({})
+  })
+})
+
+/** Экран открыт (решения принимаются только на открытом экране); запрос решения по полю 57 документа u1. */
+async function ask(t: ReturnType<typeof setup>, kind: 'confirm' | 'reject', docId = 'u1') {
+  const { edit, scope } = t
+  const q = { docId, target: 'field:57', when: '2026-09-23T10:42:00' }
+  await allSettled(kind === 'confirm' ? edit.confirmRequested : edit.rejectRequested, { scope, params: q })
+}
+const problem = (status: number, title: string, message?: string) =>
+  new ApiError(status, { type: 'urn:katran:x', title, status, ...(message !== undefined ? { errors: [{ path: 'reason', code: 'VALIDATION', message }] } : {}) }, title)
+
+describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
+  it('константы контракта', () => {
+    expect(REJECT_MAX).toBe(140)
+    expect(DECISION_TEXT).toEqual({ confirmed: 'Правка утверждена', rejected: 'Правка отклонена', conflict: 'Правку уже обработали — данные обновлены' })
+  })
+
+  it('утвердить: Prompt → запрос { id, target, when }, busy; успех — решение снято, docEdited, $decided «Правка утверждена»', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    expect(scope.getState(edit.$decision)).toEqual({ u1: { kind: 'confirm', target: 'field:57', when: '2026-09-23T10:42:00', reason: '', busy: false, error: null } })
+    expect(confirms).toHaveLength(0)
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    expect(confirms.map((c) => c.params)).toEqual([{ id: 'u1', target: 'field:57', when: '2026-09-23T10:42:00' }])
+    expect(scope.getState(edit.$decision).u1?.busy).toBe(true)
+    // повтор при busy — второго запроса нет
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    expect(confirms).toHaveLength(1)
+    confirms[0]!.ok({ id: 'u1', rev: 5 })
+    await t.settle()
+    expect(scope.getState(edit.$decision)).toEqual({})
+    expect(t.edited()).toEqual([{ id: 'u1', detail: { id: 'u1', rev: 5 } }])
+    expect(scope.getState(edit.$decided)).toEqual({ count: 1, text: 'Правка утверждена' })
+    // решение — не сохранение: «Изменения сохранены» не объявляется
+    expect(scope.getState(edit.$savedCount)).toBe(0)
+  })
+
+  it('отклонить: причина уходит после trim; успех — «Правка отклонена»', async () => {
+    const t = setup()
+    const { edit, scope, rejects, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'reject')
+    expect(scope.getState(edit.$decision).u1?.kind).toBe('reject')
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u1', text: '  BIC  ' } })
+    expect(scope.getState(edit.$decision).u1?.reason).toBe('  BIC  ')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    expect(rejects.map((r) => r.params)).toEqual([{ id: 'u1', target: 'field:57', when: '2026-09-23T10:42:00', reason: 'BIC' }])
+    expect(confirms).toHaveLength(0)
+    rejects[0]!.ok({ id: 'u1', rev: 6 })
+    await t.settle()
+    expect(scope.getState(edit.$decision)).toEqual({})
+    expect(t.edited()).toEqual([{ id: 'u1', detail: { id: 'u1', rev: 6 } }])
+    expect(scope.getState(edit.$decided)).toEqual({ count: 1, text: 'Правка отклонена' })
+  })
+
+  it('причина из пробелов — запроса нет, Prompt на месте', async () => {
+    const t = setup()
+    const { edit, scope, rejects } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'reject')
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } })
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u1', text: '   ' } })
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } })
+    expect(rejects).toHaveLength(0)
+    expect(scope.getState(edit.$decision).u1).toMatchObject({ kind: 'reject', reason: '   ', busy: false })
+  })
+
+  it('403 — текст ошибки в решении, busy снят, Prompt остаётся; 400 — первая ошибка problem.errors', async () => {
+    const t = setup()
+    const { edit, scope, confirms, rejects } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    confirms[0]!.fail(problem(403, 'Свою правку утверждает другой сотрудник'))
+    await t.settle()
+    expect(scope.getState(edit.$decision).u1).toEqual({
+      kind: 'confirm', target: 'field:57', when: '2026-09-23T10:42:00', reason: '', busy: false, error: 'Свою правку утверждает другой сотрудник',
+    })
+    expect(scope.getState(edit.$decided).count).toBe(0)
+    expect(t.conflicts()).toEqual([])
+    // ошибку можно повторить: новый запрос — ошибка снята на время полёта
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    expect(confirms).toHaveLength(2)
+    expect(scope.getState(edit.$decision).u1).toMatchObject({ busy: true, error: null })
+    confirms[1]!.fail(problem(500, 'Сбой сервера'))
+    await t.settle()
+    expect(scope.getState(edit.$decision).u1?.error).toBe('Сбой сервера')
+
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: false } })
+    await ask(t, 'reject')
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u1', text: 'x' } })
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    rejects[0]!.fail(problem(400, 'Правка не принята', 'Причина длиннее 140 символов'))
+    await t.settle()
+    expect(scope.getState(edit.$decision).u1?.error).toBe('Причина длиннее 140 символов')
+  })
+
+  it('отказ решения без текста — запасной текст, не пустая строка', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    confirms[0]!.fail(new ApiError(400, { type: 'urn:katran:validation', title: 'Правка не принята', status: 400, errors: [{ path: 'when', code: 'VALIDATION', message: '' }] }, ''))
+    await t.settle()
+    expect(scope.getState(edit.$decision).u1).toMatchObject({ busy: false, error: 'Не удалось выполнить действие' })
+  })
+
+  it('409 — решение снято, conflict { id }, $decided «Правку уже обработали — данные обновлены»', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    confirms[0]!.fail(problem(409, 'Документ изменили'))
+    await t.settle()
+    expect(scope.getState(edit.$decision)).toEqual({})
+    expect(t.conflicts()).toEqual([{ id: 'u1' }])
+    expect(scope.getState(edit.$decided)).toEqual({ count: 1, text: 'Правку уже обработали — данные обновлены' })
+    expect(t.edited()).toEqual([])
+  })
+
+  it('отмена: при busy игнорируется, без busy — решение снято', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: false } })
+    expect(scope.getState(edit.$decision)).toEqual({})
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: false } }))
+    // причина при busy не меняется: в полёте уже та, что ушла
+    t.fire(allSettled(edit.reasonChanged, { scope, params: { docId: 'u1', text: 'x' } }))
+    expect(scope.getState(edit.$decision).u1).toMatchObject({ busy: true, reason: '' })
+    confirms[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+  })
+
+  it('одна операция над документом: открытый редактор документа или сохранение его правки в полёте — запрос решения игнорируется; другой документ — работает', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    await ask(t, 'confirm')
+    await ask(t, 'reject')
+    expect(scope.getState(edit.$decision)).toEqual({})
+    await ask(t, 'confirm', 'u2')
+    expect(Object.keys(scope.getState(edit.$decision))).toEqual(['u2'])
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: false } })
+    // сохранение правки u1 в полёте (редактор уже закрыт уходом) — решение по u1 не начинается; по u2 — начинается (M2)
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    t.fire(allSettled(edit.model.save, { scope }))
+    t.fire(allSettled(edit.model.requestLeave, { scope, params: { scope: 'u1:', next: { kind: 'close', slot: 'a' } } }))
+    expect(scope.getState(edit.model.$editing)).toBeNull()
+    expect(scope.getState(edit.model.$saving)).toBe(true)
+    expect(scope.getState(edit.$savingDoc)).toBe('u1')
+    // allSettled ждёт висящее сохранение — шаги копятся в fire
+    t.fire(ask(t, 'confirm'))
+    t.fire(ask(t, 'confirm', 'u2'))
+    expect(Object.keys(scope.getState(edit.$decision))).toEqual(['u2'])
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: false } }))
+    saves[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+    expect(scope.getState(edit.$savingDoc)).toBeNull()
+    // решение уже открыто — второй запрос по документу его не подменяет
+    await ask(t, 'confirm')
+    await ask(t, 'reject')
+    expect(scope.getState(edit.$decision).u1?.kind).toBe('confirm')
+  })
+
+  it('экран закрыт — решение не начинается', async () => {
+    const t = setup()
+    await ask(t, 'confirm')
+    expect(t.scope.getState(t.edit.$decision)).toEqual({})
+  })
+
+  it('поздний ответ решения после pageClosed: $decision пуст, $decided не растёт; docEdited выпускается (кэш фильтрует закрытый экран сам)', async () => {
+    const t = setup()
+    const { edit, scope, confirms, rejects } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    await ask(t, 'reject', 'u2')
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u2', text: 'BIC' } })
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: true } }))
+    t.fire(allSettled(t.lifecycle.pageClosed, { scope }))
+    expect(scope.getState(edit.$decision)).toEqual({})
+    confirms[0]!.ok({ id: 'u1', rev: 7 })
+    rejects[0]!.fail(problem(409, 'Документ изменили'))
+    await t.settle()
+    expect(scope.getState(edit.$decision)).toEqual({})
+    expect(scope.getState(edit.$decided)).toEqual({ count: 0, text: '' })
+    expect(t.edited()).toEqual([{ id: 'u1', detail: { id: 'u1', rev: 7 } }])
+    expect(t.conflicts()).toEqual([])
+  })
+
+  it('ответ решения прошлого визита после возврата на экран — не принимается', async () => {
+    const t = setup()
+    const { edit, scope, confirms } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u1', ok: true } }))
+    t.fire(allSettled(t.lifecycle.pageClosed, { scope }))
+    t.fire(allSettled(t.lifecycle.pageOpened, { scope }))
+    t.fire(ask(t, 'reject'))
+    expect(scope.getState(edit.$decision).u1?.kind).toBe('reject')
+    confirms[0]!.ok({ id: 'u1', rev: 7 })
+    await t.settle()
+    // новое решение нового визита не снято чужим ответом; деталь прошлого визита — не в кэш
+    expect(scope.getState(edit.$decision).u1?.kind).toBe('reject')
+    expect(scope.getState(edit.$decided).count).toBe(0)
+    expect(t.edited()).toEqual([])
   })
 })

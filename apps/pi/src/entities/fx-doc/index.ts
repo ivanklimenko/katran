@@ -7,7 +7,7 @@ export { FX_ACTIONS, FX_DETAIL_TITLE, FX_FIELDS, FX_OPTION_LABELS, FX_PROFILES, 
 export { parseFxDocDetail } from './api/detail.mapper'
 export { FX_CONFIRM_TARGETS, fxEditRule, fxEditableTargets, normalizeFxEdit, validateFxEdit, validateRefOut, validateSwiftField } from './model/rules'
 export { groupAccount } from './model/account'
-export { fxCommitView, fxFormEdit } from './ui/edit'
+export { fxCommitView, fxDecisionFocus, fxDecisionNote, fxFormEdit } from './ui/edit'
 export { FX_DETAIL_EXAMPLE } from './api/detail.example'
 export { fxBlock, fxDocDetailDomain, fxDocSummary, fxHero, fxRowSummary } from './ui/detail'
 export { fxExtraGroups, isCode, type ExtraGroup, type ExtraPart, type ExtraRow } from './model/extra'

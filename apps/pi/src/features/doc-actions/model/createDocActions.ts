@@ -1,0 +1,231 @@
+import { attach, createEffect, createEvent, createStore, sample, type Event, type EventCallable, type Store } from 'effector'
+import type { ActionPorts, ApiError, PrintQuery } from '../../../shared/api'
+import type { ActionNotice } from '../../../shared/lib/detail'
+import { buildDocLink } from '../../../shared/lib/doc-link'
+import type { PageLifecycle } from '../../../shared/lib/lifecycle'
+
+export const PRINT_PENDING_TEXT = 'Формируется…'
+export const PRINT_BLOCKED_TEXT = 'Браузер заблокировал вкладку — форма скачана'
+export const LINK_COPIED_TEXT = 'Ссылка скопирована'
+/** Отказ без текста (ни detail Problem, ни message) — на практике не встречается: ApiError всегда с message. */
+export const ACTION_FAILED_TEXT = 'Действие не выполнено'
+/** Успешное уведомление («Ссылка скопирована») скрывается само через столько мс; отказ висит до «Закрыть» (Ruling R20). */
+export const NOTICE_HIDE_MS = 4000
+
+export type DocActionsConfig = {
+  gridId: string
+  ports: ActionPorts
+  lifecycle: PageLifecycle
+  /** Ссылка на документ; по умолчанию buildDocLink (defaultDocLink или подмена хоста configureDocLinks). */
+  buildLink?: ((gridId: string, id: string) => string) | undefined
+  /**
+   * Запасное имя файла сообщения по id, если бек не прислал Content-Disposition: '<номер>.txt' | '<номер>.xml' (Ruling R18).
+   * Стор, а не функция: страница строит его из своих сторов (combine строк реестра и слотов детали), модель читает его через
+   * source в момент ответа — номер берётся из скоупа запроса (fork-safe), без словарей модуля.
+   */
+  fallbackName: Store<(id: string) => string>
+}
+
+export type PrintCall = { id: string; form: string; win: Window | null }
+
+export type DocActions = {
+  /** Из вида; страница решает: охрана правки или сразу refresh. */
+  refreshRequested: EventCallable<string>
+  /** Выполнить обновление: страница → detail.refreshDoc + registry.refreshRequested. */
+  refresh: Event<string>
+  copyLink: EventCallable<string>
+  download: EventCallable<string>
+  /** win — окно, открытое видом синхронно в обработчике клика; null — браузер его заблокировал. */
+  print: EventCallable<PrintCall>
+  /** Действия в полёте: ключ `${id}:${actionId}`, actionId — 'link' | 'down' | 'print'; повтор в полёте игнорируется. */
+  $pending: Store<Record<string, true>>
+  /** Буфер обмена недоступен (нет API или отказ) — ссылка для ручного копирования. */
+  $linkFallback: Store<string | null>
+  /** Документ, чья ссылка в $linkFallback: вид показывает поле только в его drawer. */
+  $linkFallbackDoc: Store<string | null>
+  closeLinkFallback: EventCallable<void>
+  /** Объявления: count растёт, text — LINK_COPIED_TEXT, PRINT_BLOCKED_TEXT или текст ошибки (detail Problem, иначе message). */
+  $notice: Store<{ count: number; text: string }>
+  /**
+   * Видимое уведомление под лейном (спека 2d §4 п. 7) — тот же текст, что и объявление, у документа docId: вид показывает его
+   * только в drawer этого документа. ok скрывается само через NOTICE_HIDE_MS, bad — до closeNotice; новое заменяет прежнее.
+   */
+  $docNotice: Store<(ActionNotice & { docId: string }) | null>
+  closeNotice: EventCallable<void>
+}
+
+export type SaveFileQuery = { blob: Blob; name: string }
+export type ShowInWindowQuery = { win: Window; blob: Blob }
+
+export const pendingKey = (id: string, actionId: string): string => `${id}:${actionId}`
+
+// Побочные эффекты — эффектами уровня модуля: тесты и стенды подменяют их через fork({ handlers }).
+
+/** Записать текст в буфер обмена; нет Clipboard API (не https, старый браузер) или отказ — отказ эффекта. */
+export const writeClipboardFx = createEffect<string, void, Error>(async (text) => {
+  const clip = navigator.clipboard as Clipboard | undefined
+  if (clip === undefined || typeof clip.writeText !== 'function') throw new Error('Буфер обмена недоступен')
+  await clip.writeText(text)
+})
+
+/** Скачать файл: <a href=blobURL download=name>.click(); URL освобождается в следующем тике (загрузка уже начата). */
+export const saveFileFx = createEffect<SaveFileQuery, void>(({ blob, name }) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  a.rel = 'noopener'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => { URL.revokeObjectURL(url) }, 0)
+})
+
+/** Показать файл в окне печати: win.location.href = blobURL; результат — URL (живёт, пока жив экран). Окно уже закрыли — null. */
+export const showInWindowFx = createEffect<ShowInWindowQuery, string | null>(({ win, blob }) => {
+  if (win.closed) return null
+  const url = URL.createObjectURL(blob)
+  win.location.href = url
+  return url
+})
+
+export const closeWindowFx = createEffect<Window, void>((win) => {
+  if (!win.closed) win.close()
+})
+
+export const revokeUrlsFx = createEffect<string[], void>((urls) => {
+  urls.forEach((u) => { URL.revokeObjectURL(u) })
+})
+
+/**
+ * Пауза автоскрытия уведомления ms: таймер — эффектом (тесты и стенды подменяют его через fork handlers); seq — номер
+ * уведомления, возвращается в done (скрывается только оно).
+ */
+export const noticeDelayFx = createEffect<{ seq: number; ms: number }, void>(({ ms }) => new Promise<void>((done) => { setTimeout(done, ms) }))
+
+/** Текст отказа для объявления (спека 2d §3.3): detail Problem, иначе message. */
+const errorText = (e: ApiError): string => e.problem?.detail || e.message || ACTION_FAILED_TEXT
+
+const add = (p: Record<string, true>, k: string): Record<string, true> => ({ ...p, [k]: true })
+const without = (p: Record<string, true>, k: string): Record<string, true> => {
+  if (!(k in p)) return p
+  const next: Record<string, true> = {}
+  Object.keys(p).forEach((x) => { if (x !== k) next[x] = true })
+  return next
+}
+
+/** Имя PDF, если бек не прислал Content-Disposition: '<форма>-<номер>.pdf' (номер — fallbackName без расширения). */
+const pdfName = (form: string, fallback: string): string => `${form}-${fallback.replace(/\.[^.]+$/, '')}.pdf`
+
+/**
+ * Действия лейна документа (план 2d §3.3): Обновить (событие для страницы), ссылка в буфер с запасным полем, скачать
+ * сообщение, печатная форма во вкладке. Окно печати открывает вид синхронно в обработчике клика (иначе его заблокирует
+ * браузер) и передаёт в print; модель кладёт в него PDF, при ошибке закрывает, при блокировке скачивает файл.
+ * Blob URL печати освобождаются при уходе с экрана; запасная ссылка, уведомление и $pending сбрасываются.
+ * Каждое объявление ($notice) видно и уведомлением документа ($docNotice): успех скрывается сам, отказ — по «Закрыть».
+ */
+export function createDocActions(cfg: DocActionsConfig): DocActions {
+  const { gridId, ports, lifecycle, fallbackName } = cfg
+  const build = cfg.buildLink ?? buildDocLink
+
+  const refreshRequested = createEvent<string>()
+  const copyLink = createEvent<string>()
+  const download = createEvent<string>()
+  const print = createEvent<PrintCall>()
+  const closeLinkFallback = createEvent<void>()
+  const closeNotice = createEvent<void>()
+  const noticed = createEvent<ActionNotice & { docId: string }>()
+  const linkStarted = createEvent<{ id: string; url: string }>()
+  const downloadStarted = createEvent<string>()
+  const printStarted = createEvent<PrintCall>()
+  const urlsReleased = createEvent<string[]>()
+
+  const refresh = refreshRequested.map((id) => id)
+
+  const copyFx = attach({ effect: writeClipboardFx, mapParams: ({ url }: { id: string; url: string }) => url })
+  const messageFx = attach({ effect: ports.messageFx })
+  const printFx = attach({ effect: ports.printFx, mapParams: ({ id, form }: PrintCall): PrintQuery => ({ id, form }) })
+  const showFx = attach({ effect: showInWindowFx })
+  // своя копия таймера: done — только от уведомлений этой модели
+  const hideFx = attach({ effect: noticeDelayFx })
+
+  const $pending = createStore<Record<string, true>>({})
+    .on(linkStarted, (p, { id }) => add(p, pendingKey(id, 'link')))
+    .on(copyFx.finally, (p, { params }) => without(p, pendingKey(params.id, 'link')))
+    .on(downloadStarted, (p, id) => add(p, pendingKey(id, 'down')))
+    .on(messageFx.finally, (p, { params }) => without(p, pendingKey(params, 'down')))
+    .on(printStarted, (p, { id }) => add(p, pendingKey(id, 'print')))
+    .on(printFx.finally, (p, { params }) => without(p, pendingKey(params.id, 'print')))
+    .reset(lifecycle.pageClosed)
+  const $fallback = createStore<{ docId: string; url: string } | null>(null)
+    .on(copyFx.fail, (_, { params }) => ({ docId: params.id, url: params.url }))
+    // скопировалось — поле этого документа больше не нужно; поле другого документа остаётся
+    .on(copyFx.done, (f, { params }) => (f !== null && f.docId === params.id ? null : f))
+    .reset(closeLinkFallback, lifecycle.pageClosed)
+  // номер уведомления — count объявления: таймер скрывает только то уведомление, для которого запущен
+  const $seq = createStore(0)
+  const raised = sample({ clock: noticed, source: $seq, fn: (seq, n) => ({ ...n, seq: seq + 1 }) })
+  $seq.on(raised, (_, { seq }) => seq)
+  const $notice = createStore({ count: 0, text: '' }).on(raised, (_, { seq, text }) => ({ count: seq, text }))
+  const $shown = createStore<(ActionNotice & { docId: string; seq: number }) | null>(null)
+    .on(raised, (_, n) => n)
+    .on(hideFx.done, (cur, { params }) => (cur !== null && cur.seq === params.seq ? null : cur))
+    .reset(closeNotice, lifecycle.pageClosed)
+  const $printUrls = createStore<string[]>([])
+    .on(showFx.doneData, (l, url) => (url === null ? l : [...l, url]))
+    .on(urlsReleased, () => [])
+
+  // Ссылка
+  sample({
+    clock: copyLink, source: $pending, filter: (p, id) => !p[pendingKey(id, 'link')],
+    fn: (_, id) => ({ id, url: build(gridId, id) }), target: linkStarted,
+  })
+  sample({ clock: linkStarted, target: copyFx })
+  sample({ clock: copyFx.done, fn: ({ params }) => ({ docId: params.id, text: LINK_COPIED_TEXT, tone: 'ok' as const }), target: noticed })
+
+  // Скачать сообщение
+  sample({ clock: download, source: $pending, filter: (p, id) => !p[pendingKey(id, 'down')], fn: (_, id) => id, target: downloadStarted })
+  sample({ clock: downloadStarted, target: messageFx })
+  sample({
+    clock: messageFx.done, source: fallbackName,
+    fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? nameOf(params) }), target: saveFileFx,
+  })
+  sample({ clock: messageFx.fail, fn: ({ params, error }) => ({ docId: params, text: errorText(error), tone: 'bad' as const }), target: noticed })
+
+  // Печать
+  // одно чтение $pending на клик: printStarted тут же меняет $pending, второе чтение увидело бы уже свою же отметку
+  const printed = sample({ clock: print, source: $pending, fn: (p, c) => ({ c, busy: Boolean(p[pendingKey(c.id, 'print')]) }) })
+  sample({ clock: printed, filter: ({ busy }) => !busy, fn: ({ c }) => c, target: printStarted })
+  // повтор в полёте: вид окно не открывает, но если открыл — лишнюю вкладку не оставляем
+  sample({ clock: printed, filter: ({ busy, c }) => busy && c.win !== null, fn: ({ c }) => c.win as Window, target: closeWindowFx })
+  sample({ clock: printStarted, target: printFx })
+  sample({
+    clock: printFx.done, filter: ({ params }) => params.win !== null,
+    fn: ({ params, result }) => ({ win: params.win as Window, blob: result.blob }), target: showFx,
+  })
+  const blocked = sample({ clock: printFx.done, filter: ({ params }) => params.win === null })
+  sample({
+    clock: blocked, source: fallbackName,
+    fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? pdfName(params.form, nameOf(params.id)) }), target: saveFileFx,
+  })
+  // вкладки нет — пользователь её ждал: уведомление висит до «Закрыть», как отказ
+  sample({ clock: blocked, fn: ({ params }) => ({ docId: params.id, text: PRINT_BLOCKED_TEXT, tone: 'bad' as const }), target: noticed })
+  sample({ clock: printFx.fail, filter: ({ params }) => params.win !== null, fn: ({ params }) => params.win as Window, target: closeWindowFx })
+  sample({ clock: printFx.fail, fn: ({ params, error }) => ({ docId: params.id, text: errorText(error), tone: 'bad' as const }), target: noticed })
+
+  // Уведомление: успех скрывается сам (таймер — эффектом), отказ — до «Закрыть»
+  sample({ clock: raised, filter: ({ tone }) => tone === 'ok', fn: ({ seq }) => ({ seq, ms: NOTICE_HIDE_MS }), target: hideFx })
+
+  // Уход с экрана: URL печати освобождаются (спека 2d §3.3); открытые вкладки PDF к этому времени уже загрузили
+  sample({ clock: lifecycle.pageClosed, source: $printUrls, filter: (l) => l.length > 0, target: [urlsReleased, revokeUrlsFx] })
+
+  return {
+    refreshRequested, refresh, copyLink, download, print, $pending,
+    $linkFallback: $fallback.map((f) => f?.url ?? null),
+    $linkFallbackDoc: $fallback.map((f) => f?.docId ?? null),
+    closeLinkFallback, $notice,
+    $docNotice: $shown.map((n) => (n === null ? null : { docId: n.docId, text: n.text, tone: n.tone })),
+    closeNotice,
+  }
+}

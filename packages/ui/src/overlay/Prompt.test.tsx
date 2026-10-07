@@ -146,9 +146,152 @@ describe('Prompt (спека 2c §2.1, эталон prompt.js)', () => {
     expect(screen.getByRole('button', { name: 'Сохранить' })).toHaveFocus()
   })
 
+  it('открывший элемент исчез вместе с окном — фокус на fallbackFocus(); элемент на месте — fallbackFocus не зовётся', async () => {
+    const fallbackFocus = vi.fn(() => document.getElementById('pen'))
+    function Host() {
+      const [shown, setShown] = useState(false)
+      const [decided, setDecided] = useState(false)
+      return (
+        <>
+          <button id="pen">Изменить</button>
+          {!decided && <button onClick={() => setShown(true)}>Утвердить правку</button>}
+          {shown && <Prompt open onResult={(ok) => { setShown(false); setDecided(ok) }} fallbackFocus={fallbackFocus} />}
+          <button onClick={() => setShown(true)}>Ещё</button>
+        </>
+      )
+    }
+    renderK(<Host />)
+    // открывшая кнопка пропадает вместе с окном (как кнопка решения вместе с решённой правкой)
+    await userEvent.click(screen.getByRole('button', { name: 'Утвердить правку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(fallbackFocus).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Изменить' })).toHaveFocus()
+    // открывший элемент на месте — возврат на него
+    await userEvent.click(screen.getByRole('button', { name: 'Ещё' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByRole('button', { name: 'Ещё' })).toHaveFocus()
+    expect(fallbackFocus).toHaveBeenCalledTimes(1)
+  })
+
+  it('открывшая кнопка пропала, едва окно открылось (фокус был в body), — при закрытии фокус на fallbackFocus()', async () => {
+    function Host() {
+      const [shown, setShown] = useState(false)
+      return (
+        <>
+          <button id="pen">Изменить</button>
+          {/* как кнопки решения правки: пока открыт Prompt документа, их нет */}
+          {!shown && <button onClick={() => setShown(true)}>Утвердить правку</button>}
+          {shown && <Prompt open onResult={() => setShown(false)} fallbackFocus={() => document.getElementById('pen')} />}
+        </>
+      )
+    }
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: 'Утвердить правку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.getByRole('button', { name: 'Изменить' })).toHaveFocus()
+  })
+
   it('PromptChange: было → стало; axe без нарушений', async () => {
     const { container } = renderK(<Prompt open note={<PromptChange was="23.09.2026" now="24.09.2026" />} onResult={vi.fn()} />)
     expect(screen.getByRole('alertdialog')).toHaveAccessibleDescription('23.09.2026 → 24.09.2026')
     expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe('Prompt: тело, блокировка, ошибка (спека 2d §2.1)', () => {
+  const Body = () => <textarea aria-label="Причина" />
+
+  it('children — между note и кнопками; при открытии фокус на поле тела', () => {
+    renderK(<Prompt open note="Пояснение" okLabel="Отклонить" tone="danger" onResult={vi.fn()}><Body /></Prompt>)
+    const d = screen.getByRole('alertdialog')
+    const field = screen.getByRole('textbox', { name: 'Причина' })
+    expect(field).toHaveFocus()
+    const note = screen.getByText('Пояснение')
+    const cancel = within(d).getByRole('button', { name: 'Отмена' })
+    expect(note.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(field.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('ловушка Tab по всем фокусируемым: с последней кнопки — к полю, Shift+Tab с поля — к последней кнопке', async () => {
+    renderK(
+      <>
+        <button>До</button>
+        <Prompt open okLabel="Отклонить" onResult={vi.fn()}><Body /></Prompt>
+        <button>После</button>
+      </>,
+    )
+    const field = screen.getByRole('textbox', { name: 'Причина' })
+    const cancel = screen.getByRole('button', { name: 'Отмена' })
+    const ok = screen.getByRole('button', { name: 'Отклонить' })
+    expect(field).toHaveFocus()
+    await userEvent.tab()
+    expect(cancel).toHaveFocus()
+    await userEvent.tab()
+    expect(ok).toHaveFocus()
+    await userEvent.tab()
+    expect(field).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(ok).toHaveFocus()
+  })
+
+  it('okDisabled — основная недоступна, клик без onResult; Tab её пропускает', async () => {
+    const onResult = vi.fn()
+    renderK(<Prompt open okDisabled okLabel="Отклонить" onResult={onResult}><Body /></Prompt>)
+    const ok = screen.getByRole('button', { name: 'Отклонить' })
+    expect(ok).toBeDisabled()
+    await userEvent.click(ok)
+    expect(onResult).not.toHaveBeenCalled()
+    screen.getByRole('textbox', { name: 'Причина' }).focus() // клик по недоступной кнопке снимает фокус
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Отмена' })).toHaveFocus()
+    await userEvent.tab()
+    expect(screen.getByRole('textbox', { name: 'Причина' })).toHaveFocus()
+  })
+
+  it('okDisabled без тела: фокус при открытии — на первой доступной кнопке', () => {
+    renderK(<Prompt open okDisabled onResult={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Отмена' })).toHaveFocus()
+  })
+
+  it('busy — обе кнопки недоступны, aria-busy; Esc и подложка без onResult, Esc не всплывает', async () => {
+    const onResult = vi.fn()
+    const parent = vi.fn()
+    const { container } = renderK(<div role="presentation" onKeyDown={parent}><Prompt open busy onResult={onResult}><Body /></Prompt></div>)
+    expect(screen.getByRole('alertdialog')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Отмена' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Подтвердить' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    fireEvent.mouseDown(container.querySelector('[data-k-prompt]') as Element)
+    expect(onResult).not.toHaveBeenCalled()
+    expect(parent).not.toHaveBeenCalled()
+  })
+
+  it('busy после нажатия основной: фокус с недоступной кнопки уходит на коробку', async () => {
+    function Host() {
+      const [busy, setBusy] = useState(false)
+      return <Prompt open busy={busy} onResult={(ok) => setBusy(ok)} />
+    }
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.getByRole('alertdialog')).toHaveFocus()
+  })
+
+  it('без busy — aria-busy нет', () => {
+    renderK(<Prompt open onResult={vi.fn()} />)
+    expect(screen.getByRole('alertdialog')).not.toHaveAttribute('aria-busy')
+  })
+
+  it('error — строка role="alert" над кнопками; axe без нарушений', async () => {
+    const { container } = renderK(<Prompt open error="Нет прав" onResult={vi.fn()}><Body /></Prompt>)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Нет прав')
+    expect(alert.compareDocumentPosition(screen.getByRole('button', { name: 'Отмена' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it('без error — role="alert" нет', () => {
+    renderK(<Prompt open onResult={vi.fn()} />)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

@@ -23,6 +23,10 @@ describe('EditMark', () => {
     expect(screen.getByRole('img', { name: TIP })).toHaveAttribute('data-status', 'confirmed')
     expect(screen.getByRole('img', { name: TIP })).toHaveTextContent('✓')
   })
+  it('rejected — data-status="rejected"', () => {
+    renderK(<EditMark tip="Правка отклонена · Смирнова Е. В., 23.09.2026 10:00" status="rejected" />)
+    expect(screen.getByRole('img', { name: 'Правка отклонена · Смирнова Е. В., 23.09.2026 10:00' })).toHaveAttribute('data-status', 'rejected')
+  })
   it('axe без нарушений', async () => {
     const { container } = renderK(<p>Дата <EditMark tip={TIP} /> <EditMark tip="Утверждено" status="confirmed" /></p>)
     expect(await axe(container)).toHaveNoViolations()

@@ -4,7 +4,6 @@ import type { ActionIcon } from '../../../shared/lib/detail'
 // Пиктограммы действий — символы стенда (grid.html, <symbol id="i-…">), viewBox 24
 const PATHS: Record<ActionIcon, ReactElement> = {
   refresh: <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />,
-  edit: <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />,
   doc: <path d="M14 3H6v18h12V7l-4-4zM14 3v4h4M12 11v6M9 14h6" />,
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   print: <path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z" />,

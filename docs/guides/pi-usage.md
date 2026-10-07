@@ -103,6 +103,8 @@ requestFx.use(myHandler)
 
 **Правило обработчика**: 2xx-ответ → разобранный JSON (или `null`/`undefined`, если тела нет); не 2xx → отказ (`throw`) значением `toApiError(status, body)` из `apps/pi/src/shared/api/problem.ts`. `toApiError` сам распознаёт тело в формате Problem Details (RFC 9457, `docs/reference/pi-api.md` §2) и собирает читаемое сообщение; если тело не Problem Details — подставляет заглушку по коду статуса.
 
+Файлы (сообщение документа, печатная форма) идут вторым эффектом — `requestFileFx` со своим обработчиком: раздел 15.4.
+
 ### 4.1. Пример на `fetch`
 
 ```ts
@@ -472,7 +474,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
 - Shift+клик — в B сразу; Enter/Space на кнопке — в A сразу.
 - Документ, уже открытый в A или B, повторно не открывается — фокус переходит в его drawer.
 - Esc или «×» — закрывает сначала B, потом A; фокус возвращается на кнопку открытия записи (`returnFocus`), если был в закрытом drawer'е (13.2). Закрытие A «×» при открытом B: B сдвигается в A, фокус — в заголовок оставшегося drawer'а, а не в грид (R11). Esc в поле ввода, в меню и в поповере drawer не закрывает — у них Esc свой (меню «••• N» вкладок закрывается, деталка остаётся). Видимый тултип тоже забирает Esc первым: первое нажатие прячет подсказку, второе закрывает drawer. Пока деталка открыта, Esc из интерактивного элемента внутри ячейки грида тоже закрывает drawer (без деталки он возвращает фокус в ячейку).
-- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d. Кнопки вкладок 2b («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — тоже заглушки: `announce` «Действие будет в 2d».
+- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d (раздел 15). Кнопки вкладок 2b («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — тоже заглушки: `announce` «Действие будет в 2d».
 - Раскрываемые строки вкладок («Связанные», «Задачи») — мышью и Enter/Space на шевроне, `aria-expanded`; клик по ссылке или кнопке внутри строки её не раскрывает. ID связанного документа — ссылка-кнопка «Открыть … в соседней панели»: документ открывается в B (уже открытый — фокус в его drawer). Esc внутри `CodeView` и раскрытых строк не перехватывается — работает, как в остальной деталке.
 
 ### 13.6. Как проверить
@@ -638,6 +640,168 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 - **Заблокированный документ — только просмотр** (Д66): список правимого у документа с `lock` — пустой (бек отклоняет правку), виды не рисуют карандаши, ↺ и редакторы (маркеры и аудит остаются), модель страницы закрывает редактор, если документ пришёл заблокированным.
 - **Справочник счетов** `$accounts` грузится только для целей `accDt`/`accKt` (`sideOf` в `features/doc-edit/model/createDocEdit.ts`); другие имена целей счетов справочник не запросят.
 - **Прокрутка drawer'а** с 2c — во внутренней части `[data-part="scroll"]`, не в корне (`CHANGELOG.md`, срез 2c): стили и скрипты, прокручивающие деталку, переносите туда.
+
+## 15. Действия лейна и «вторая рука» (срез 2d)
+
+Кнопки лейна деталки делают настоящую работу, а чужую правку можно утвердить или отклонить. Лейн — шесть действий: «Обновить» (и F5), «Создать служебный документ», «Скачать» (SWIFT-сообщение у валюты, сообщение ED XML у рубля), «Печать» (меню форм), «Скопировать ссылку на документ», «Аннулировать»; «Редактировать» убран — правка идёт карандашами. «Создать служебный документ» и «Аннулировать» остаются заглушками с `announce` до среза 2e. «Вторая рука» — у цели правки, где бек вернул `canConfirm`: «Утвердить» и «Отклонить» (с обязательной причиной до 140 символов). Спека — `docs/superpowers/specs/2026-10-07-katran-lane-actions-design.md` (уточнения исполнения — её §9); эндпоинты для бека — `docs/reference/pi-api.md` §1.7 (решения `confirm`/`reject`), §1.9 (сообщение), §1.10 (печать), правки в детали с `canConfirm`/`reason` — §7.6; сверка с эталоном — `docs/reference/detail-drift.md`, раздел «2d».
+
+### 15.0. Если деталка у вас уже перенесена
+
+Срез 2d поменял и добавил файлы поверх разделов 13 и 14 (или перенесите изменения из `git log` ветки `feat/lane-actions`):
+
+| Файл | Что поменялось |
+|---|---|
+| `shared/api/request.ts`, `index.ts` | `requestFileFx` — второй транспорт (файлы), `fileNameOf(header)` — имя из `Content-Disposition`; типы `FileRequest`, `FileResponse` |
+| `shared/api/action-ports.ts` (новый) | `createActionPorts(gridId)` → `messageFx(id)` и `printFx({ id, form })` поверх `requestFileFx`; типы `ActionPorts`, `PrintQuery` |
+| `shared/api/edit-ports.ts`, `guards.ts` | `confirmEditFx({ id, target, when })`, `rejectEditFx({ id, target, when, reason })` — ответ деталью тем же парсером; типы `DecisionQuery`, `RejectQuery`; охранник `bool` |
+| `shared/lib/doc-link.ts` (новый) | `defaultDocLink`, `configureDocLinks({ build })`, `buildDocLink` — подмена ссылки хостом (15.3) |
+| `shared/lib/detail/types.ts`, `index.ts` | `PrintFormItem` (`menu` действия — `{ label, form }[]`), `ActionsView`, `DecisionKind`/`DecisionState`; у `EditContext` — `decision`, `canDecide`, `confirmEdit`, `rejectEdit`, `changeReason`, `onDecision`; у `DetailDomain` — `decisionNote`, `decisionFocus`; `LeaveIntent` — вид `refresh`; из `ActionIcon` ушла `edit` |
+| `entities/fx-doc/model/edit.ts`, `api/detail.mapper.ts`, `api/detail.example.ts` | `FxEdit.canConfirm`, `FxHistEntry.reason`, статус `rejected`; `parseEdits` читает `canConfirm` (не boolean — нарушение контракта с путём, нет ключа — `false`) |
+| `entities/fx-doc/model/swift.ts`, `entities/rub-doc/model/profiles.ts` | из наборов действий ушло `edit`; пункты меню печати — `PrintFormItem` с кодами форм |
+| `entities/fx-doc/ui/edit.tsx`, `edit.module.css`, `index.ts` | кнопки решения у 20 исх и счетов, маркер «отклонено», `fxDecisionNote` (тело `Prompt` решения), `fxDecisionFocus` (карандаш цели после решения); в аудите поля — кнопки решения у последней `pending` |
+| `features/doc-actions/` (новая папка) | `createDocActions` — модель действий лейна, `useActionsOf` — виды по документам; эффекты `writeClipboardFx`, `saveFileFx`, `showInWindowFx`, `closeWindowFx`, `revokeUrlsFx`; тексты `LINK_COPIED_TEXT`, `PRINT_BLOCKED_TEXT`, `PRINT_PENDING_TEXT`, `ACTION_FAILED_TEXT` |
+| `features/doc-edit/model/createDocEdit.ts`, `ui/useEditContexts.ts`, `index.ts` | `confirmRequested`, `rejectRequested`, `reasonChanged`, `decisionResult`, `$decision`, `$decided`; `useEditContexts` отдаёт виду `decision`/`canDecide` и объявляет `$decided`; `DECISION_TEXT`, `REJECT_MAX` |
+| `widgets/doc-detail/lib/createDetail.ts`, `ui/DocDetail.tsx`, `ui/DocDetail.module.css` | `refreshDoc(id)`; проп `actionsOf`; F5 на корне drawer; запасное поле ссылки; `Prompt` решения с полем «Причина» |
+| `pages/fx-docs/model/actions.model.ts`, `pages/rub-docs/model/actions.model.ts` (новые), `registry.model.ts`, `pages/fx-docs/model/edit.model.ts`, `ui/*Page.tsx`, `index.ts` | `docActions` страницы и её связи; событие `docLinkOpened`; `useActionsOf` и `actionsOf`; снятие открытого решения ушедшего документа |
+| `app/routes.ts`, `app/transport.ts`, `app/fake/*` | чтение `?doc=` и `docLinkOpened` после `pageOpened`; подключение `requestFileFx` стенда; фейк — решения, чужие правки в сиде, сообщение, PDF, регуляторы `?fail=decide`, `?fail=message`, `?fail=print` |
+
+**Кит нужен свежий** (пересобрать тарболы): `Prompt` (`children`, `okDisabled`, `busy`, `error`, `fallbackFocus`), `EditHistory` (`onConfirm`/`onReject`, `confirmLabel`/`rejectLabel`, `reason` в записи), `EditStatus` с `'rejected'` и `EditMark status="rejected"`, `Button` со стилем `[aria-disabled="true"]`, `Drawer.onKeyDown`; в `@katran/effector` изменений нет. Записи — `CHANGELOG.md`, раздел среза 2d.
+
+### 15.1. Действия лейна
+
+Четыре рабочих действия собирает `createDocActions` (`apps/pi/src/features/doc-actions/model/createDocActions.ts`); он не знает ни деталки, ни реестра — с ними его связывает страница.
+
+| Действие | Событие модели | Что делает |
+|---|---|---|
+| «Обновить», F5 | `refreshRequested(docId)` → `refresh` | модель только объявляет намерение; страница решает, что обновлять (ниже) |
+| «Скопировать ссылку» | `copyLink(docId)` | `buildDocLink(gridId, id)` → `navigator.clipboard.writeText`; успех — объявление «Ссылка скопирована»; буфера нет или отказ — `$linkFallback` / `$linkFallbackDoc`, виджет показывает поле только для чтения в drawer этого документа |
+| «Скачать» | `download(docId)` | `messageFx(id)` → файл (`saveFileFx`: `<a download>`); имя — из `Content-Disposition`, иначе `fallbackName(id)` (`<номер>.txt` у валюты, `<номер>.xml` у рубля) |
+| «Печать» → форма | `print({ id, form, win })` | `printFx` → PDF в окне `win` (`showInWindowFx`); `win === null` (вкладку заблокировали) — файл `<форма>-<номер>.pdf` и объявление «Браузер заблокировал вкладку — форма скачана»; ошибка — окно закрывается, объявление с текстом отказа; открытые адреса PDF освобождаются при `pageClosed` |
+
+`$pending` (`{ [`${docId}:${actionId}`]: true }`, `actionId` — `link`, `down`, `print`) держит действие в полёте: повторный вызов игнорируется, кнопка — `aria-disabled="true"` и `aria-busy` (не `disabled`: Chromium снимает фокус с отключённой кнопки, и F5 деталки с клавиатурой терялись). Объявления идут через `$notice` (`{ count, text }`); текст отказа — `detail` Problem, иначе `message`, иначе `ACTION_FAILED_TEXT`.
+
+**Уведомление действия** (спека 2d §4 п. 7 — «объявление и тост с текстом»). Тот же текст, что и объявление, виден под лейном drawer своего документа: `$docNotice` (`{ docId, text, tone } | null`) модели, в `ActionsView` — `notice` (`{ text, tone: 'ok' | 'bad' } | null`) и `closeNotice()`. `ok` — «Ссылка скопирована»: скрывается само через `NOTICE_HIDE_MS` (4 с; таймер — эффект `noticeDelayFx`, подменяется через `fork({ handlers })`). `bad` — отказ «Скачать»/«Печать» и «Браузер заблокировал вкладку — форма скачана»: висит до «Закрыть» (`aria-label` «Закрыть уведомление»); новое уведомление заменяет прежнее, уход с экрана сбрасывает. Своей живой области у уведомления нет — объявляет модель через `announce`, иначе текст прозвучал бы дважды.
+
+**Правило для бека:** `detail` Problem отказа «Скачать»/«Печать» — **самодостаточный текст для оператора** («Печатная форма недоступна для документа в статусе «Отказ»»), без кодов и стека: действия показывают его как есть, без префиксов и перевода. Нет `detail` — показывается `message` транспорта («Ошибка запроса (статус 502)»), что оператору говорит меньше.
+
+**Окно печати открывает вид, не модель:** `useActionsOf` вызывает `window.open('', '_blank')` синхронно в обработчике клика, до любого `await` (иначе браузер блокирует вкладку), снимает `opener` и пишет «Формируется…»; окно уходит в `print` как `win`. Свой вид действий пишите так же.
+
+Сборка на странице (`apps/pi/src/pages/rub-docs/model/actions.model.ts` — «Обновить» без охраны):
+
+```ts
+import { combine, sample } from 'effector'
+import { createDocActions } from '../../../features/doc-actions'
+import { createActionPorts } from '../../../shared/api'
+import { detail, lifecycle, registry } from './registry.model'
+
+export const rubActionPorts = createActionPorts('rub-docs')
+
+// запасное имя файла сообщения — стор страницы: номер из строки реестра, иначе из детали в слотах, иначе id
+const $fallbackName = combine(registry.grid.$rows, detail.$slots, (rows, { a, b }) => (id: string): string => {
+  const row = rows.find((r) => r.id === id)
+  const data = a?.id === id ? a.data : b?.id === id ? b.data : null
+  return `${row ? row.docNumber : data ? data.docNumber : id}.xml`
+})
+
+export const docActions = createDocActions({ gridId: 'rub-docs', ports: rubActionPorts, lifecycle, fallbackName: $fallbackName })
+
+// «Обновить»: модели правки у рубля нет — деталь документа и реестр заново
+sample({ clock: docActions.refresh, target: detail.refreshDoc })
+sample({ clock: docActions.refresh, target: registry.refreshRequested })
+```
+
+У валюты `refresh` **не связывается**: «Обновить» идёт через охрану правки — `docActions.refreshRequested` → `docEdit.model.requestLeave({ scope: editScope(id), next: { kind: 'refresh', id } })`; грязный черновик держит `Prompt` «Отменить правку?», чистый редактор закрывается без вопроса, и по `docEdit.model.leave` с `kind === 'refresh'` страница вызывает `detail.refreshDoc` и `registry.refreshRequested` (`apps/pi/src/pages/fx-docs/model/actions.model.ts`). Связка `leave → detail.leave` в `edit.model.ts` пропускает `refresh` (фильтр `intent.kind !== 'refresh'`) — деталка при «Обновить» не закрывается. Свяжете `refresh` напрямую — охрана будет обойдена. `detail.refreshDoc(id)` сбрасывает кэш и ошибки вкладок документа, перезапрашивает деталь (без скелетона) и активную нелокальную вкладку каждого слота с этим документом; ответы, ушедшие до обновления, кэш не трогают.
+
+Экран: `useActionsOf(docActions)` вызывается **один раз на модель** (на странице; второй вызов продублирует объявления `$notice`) и отдаётся деталке:
+
+```tsx
+import { useActionsOf } from '../../../features/doc-actions'
+import { docActions } from '../model/actions.model'
+
+// внутри страницы:
+const actionsOf = useActionsOf(docActions)
+// …
+<DocDetail detail={detail} domain={rubDetailDomain} rowOf={…} returnFocus={…} actionsOf={actionsOf} />
+```
+
+`DocDetail` вызывает `actionsOf(docId)` и получает `ActionsView` (`run`, `pending`, `linkFallback`, `closeLinkFallback`, `notice`, `closeNotice`); «Создать служебный документ» и «Аннулировать» (`esid`, `ban`) остаются объявлением-заглушкой. Без `actionsOf` все действия — заглушки, как в 2a (демо кита). F5 — `keydown` на корне drawer: «Обновить» только при чистом F5 (без Ctrl/Alt/Shift/Meta), не из поля ввода (поле только для чтения — запасная ссылка — не ввод: F5 в нём — «Обновить»), без открытого редактора и `Prompt` документа; иначе браузер ведёт себя как обычно. Запасная ссылка — группа «Ссылка на документ» (не живая область: в ней поле и кнопка), появление объявляется отдельно; подсказка «Скопируйте ссылку: Ctrl+C» — описание поля; Esc в поле или на «Закрыть ссылку» закрывает ссылку, а не деталку, фокус возвращается на «Скопировать ссылку».
+
+Коды печатных форм — в пунктах меню действия `print` профиля (`PrintFormItem`, `entities/fx-doc/model/swift.ts`: `payment-order`, `memorial-order`, `swift-form`; `entities/rub-doc/model/profiles.ts`: `payment-order`, `collection-order`, `payment-ordr`, `memorial-order`). Настоящие коды — у бека: поменяйте `form` в пунктах, отдельного словаря нет.
+
+### 15.2. Утверждение и отклонение чужой правки
+
+- **Контракт.** У цели в `edits` детали — `canConfirm: boolean` (ставит бек: последняя запись `pending`, автор не текущий пользователь, есть право); у записи истории — статус `rejected` и `reason`. Фронт текущего пользователя не знает. Решения — `POST …/documents/{id}/edits/{target}/confirm` (тело `{ when }`) и `…/reject` (тело `{ when, reason }`), ответ — деталь целиком; ошибки `400`/`403`/`404`/`409`/`5xx` — `pi-api.md` §1.7. Другие адреса — в `createEditPorts` (`shared/api/edit-ports.ts`).
+- **Модель** — `createDocEdit` (`features/doc-edit`): `confirmRequested({ docId, target, when })`, `rejectRequested(…)` открывают `Prompt` решения; `reasonChanged({ docId, text })`; `decisionResult({ docId, ok })` — `true` отправляет запрос (у отклонения — только с непустой после `trim` причиной), `false` закрывает (при запросе в полёте оба игнорируются). `$decision: Record<docId, DecisionState>` с `busy` и `error`; решение не начинается при открытом редакторе документа, сохранении в полёте и уже открытом решении документа. Успех — тот же `docEdited({ id, detail })`, что у сохранения (страница кладёт деталь в кэш и перезапрашивает реестр — связи из 14.2 работают без изменений); `409` — `Prompt` закрывается, деталь перезапрашивается, объявление «Правку уже обработали — данные обновлены». `$decided` (`{ count, text }`) растёт на успехе и на `409`; тексты — `DECISION_TEXT`. Ответ прошлого визита экрана отбрасывается.
+- **Одна связь на странице сверх 14.2** — открытое (не в полёте) решение документа, ушедшего из слотов не уходом с экрана, снимается (`apps/pi/src/pages/fx-docs/model/edit.model.ts`: слежение за `detail.$slots` и `decisionResult({ docId, ok: false })`); решение в полёте снимет его ответ. Без неё при повторном открытии документа всплыл бы старый `Prompt`.
+- **Виды.** `useEditContexts` отдаёт виду `EditContext` с `decision`, `canDecide(target, canConfirm)`, `confirmEdit`, `rejectEdit`, `changeReason`, `onDecision` и объявляет `$decided`. Тело `Prompt` (цель, «Было → Стало», автор и время) — `decisionNote` домена (`fxDecisionNote`), фокус после решения — `decisionFocus` (`fxDecisionFocus`: карандаш цели; нет — заголовок drawer). Оба — в домене страницы: `{ ...fxDocDetailDomain, tabViews, decisionNote: fxDecisionNote, decisionFocus: fxDecisionFocus }` (`pages/fx-docs/ui/detailDomain.ts`). Без `decisionNote` `Prompt` решения открывается без тела.
+- **Где кнопки.** У полей сетки — в сводке блока аудита раскрытой строки; у 20 исх, счетов Дт/Кт — рядом с маркером «изменено» (блока истории у этих целей нет). Пока у документа открыт редактор или идёт сохранение, кнопок нет; пока открыт `Prompt` решения, карандаши и ↺ документа не действуют (одна операция за раз). У даты валютирования и маршрута `canConfirm` всегда `false`. После отклонения у 20 исх и счетов остаётся маркер «отклонено» с причиной в подсказке.
+- **Поле «Причина»** — в виджете (`DecisionPrompt` в `widgets/doc-detail/ui/DocDetail.tsx`): обязательное, счётчик `n/140`; «Отклонить» недоступна, пока причина пуста. Длина 140 — `REJECT_MAX` (`features/doc-edit`); виджет `features` не импортирует и держит свою константу `REASON_MAX` — меняйте обе, и лимит бека.
+- **Другая форма** `canConfirm`/`reason` в детали — только `parseEdits` в `entities/fx-doc/api/detail.mapper.ts` (после правки обновите `api/detail.example.ts`); тексты решений — `DECISION_TEXT` и `Prompt` в `DocDetail.tsx`, `entities/fx-doc/ui/edit.tsx`.
+
+### 15.3. Ссылка на документ и подключение хоста
+
+Ссылка — параметр `?doc=<id>` в хвосте hash: `#/fx-docs?doc=<id>`. Копирует её `copyLink`; открывает деталь в слоте A страница по событию `docLinkOpened(id)` (`pages/fx-docs/model/registry.model.ts`, `pages/rub-docs/model/registry.model.ts`, экспорт из `pages/*/index.ts`). Открытие — как действие пользователя (фокус в drawer), документ открывается даже без своей строки на странице реестра; нет документа — состояние ошибки детали. Первая запись реестра в этом визите после ссылки не открывается и документ из ссылки не вытесняет. Событие не действует на закрытом экране.
+
+Что делает хост — два места:
+
+1. **Построение ссылки.** По умолчанию — `defaultDocLink(gridId, id)` (`shared/lib/doc-link.ts`): `${location.origin}${location.pathname}#/${gridId}?doc=${encodeURIComponent(id)}`. Под свою маршрутизацию подмените строитель **один раз, рядом с подключением транспорта** (у нас — `apps/pi/src/app/transport.ts`, там же комментарий-образец):
+
+   ```ts
+   import { configureDocLinks } from '../shared/lib/doc-link'
+
+   configureDocLinks({ build: (gridId, id) => `${hostOrigin}/pi/${gridId}?doc=${encodeURIComponent(id)}` })
+   ```
+
+   Строитель читается в момент копирования (`buildDocLink`), поэтому подмена действует и на модели, созданные раньше. Страницы слой `app` не импортируют (FSD) — отсюда отдельный модуль в `shared/lib`.
+2. **Разбор ссылки.** Роутер хоста, прочитав `doc` из своего адреса, вызывает `docLinkOpened(id)` **после** `pageOpened` экрана: до `pageOpened` экран закрыт и событие игнорируется. Образец — `startRouting` в `apps/pi/src/app/routes.ts` (`parseDocParam` читает `doc` из хвоста hash; на входе на экран — `pageOpened`, затем `docLinkOpened`):
+
+   ```ts
+   import { docLinkOpened, lifecycle } from '../pages/fx-docs'
+
+   // на входе на экран:
+   lifecycle.pageOpened()
+   if (docFromAddress !== null) docLinkOpened(docFromAddress)
+   ```
+
+   `doc` из адреса после открытия не стирается. Ограничение роутера стенда: он открывает документ по смене значения `doc` на том же экране, поэтому повторная вставка **той же** ссылки `?doc=` после открытия другого документа его не откроет; у хоста с другой маршрутизацией это решается по-своему.
+
+Запасной путь: буфер обмена доступен только по https и в разрешённом контексте; без него (нет `navigator.clipboard`, отказ) виджет показывает поле только для чтения с выделенной ссылкой и подсказкой «Скопируйте ссылку: Ctrl+C»; «Закрыть» возвращает фокус на кнопку лейна.
+
+### 15.4. Файловый транспорт
+
+Сообщение и печатная форма — файлы, поэтому у них свой эффект рядом с `requestFx` (`apps/pi/src/shared/api/request.ts`):
+
+```ts
+export type FileRequest = { url: string }
+export type FileResponse = { blob: Blob; name: string | null }
+export const requestFileFx = createEffect<FileRequest, FileResponse, ApiError>(...)
+```
+
+По умолчанию он бросает `ApiError` «Транспорт файлов не подключён: вызовите requestFileFx.use(…) в слое app». Подключите обработчик там же, где `requestFx` (у нас — `apps/pi/src/app/transport.ts`: `requestFileFx.use(createFakeFileServer(…))`):
+
+```ts
+import { fileNameOf, requestFileFx, toApiError } from '../shared/api'
+
+requestFileFx.use(async ({ url }) => {
+  const res = await fetch(`${API}${url}`, { headers: { Authorization: token() } }) // ваша авторизация
+  if (!res.ok) {
+    const type = res.headers.get('Content-Type') ?? ''
+    const body = type.includes('json') ? await res.json().catch(() => null) : null
+    throw toApiError(res.status, body)
+  }
+  return { blob: await res.blob(), name: fileNameOf(res.headers.get('Content-Disposition')) }
+})
+```
+
+Правила обработчика: запрос — всегда `GET` по `url` контракта; 2xx → `{ blob, name }`, где `name` — результат `fileNameOf` (имя из `Content-Disposition`: `filename*=UTF-8''…` приоритетнее `filename="…"`; нет заголовка или транспорт его не видит — `null`, тогда фронт назовёт файл сам); не 2xx → отказ значением `toApiError(status, body)`, тело читается как JSON, если `Content-Type` — `application/problem+json` или `application/json` (иначе `null`). Если ваш транспорт не отдаёт заголовок ответа (CORS без `Access-Control-Expose-Headers: Content-Disposition`), имя будет запасным — `<номер>.txt`, `<номер>.xml` или `<форма>-<номер>.pdf`.
+
+### 15.5. Бек отдаёт иначе, как проверить
+
+- **Другие адреса** сообщения и печати — `url` в `createActionPorts` (`shared/api/action-ports.ts`), решений — в `createEditPorts` (`shared/api/edit-ports.ts`); `target` в пути решений кодируется (`encodeURIComponent`, `field%3AB.57`).
+- **Контрактные тесты против своего бека** — блоки `describe` в `apps/pi/src/app/fake/contract.test.ts` (решения `confirm`/`reject` со всеми ошибками, сообщение, печать) и `app/fake/files.test.ts` (файловый сервер); скопируйте и подставьте свой обработчик, как в разделе 7. Специфичны для фейка и уберите: сид чужих правок (поле 57 второго документа, `accKt` у второго MT103 в USD), текст MT и содержимое PDF.
+- **Юнит-тесты слайсов** переезжают вместе с ними: `features/doc-actions/model/createDocActions.test.ts`, `features/doc-actions/ui/useActionsOf.test.tsx`, `features/doc-edit/model/createDocEdit.test.ts`, `shared/lib/doc-link.test.ts`, `shared/api/request.test.ts`, `pages/fx-docs/model/actions.model.test.ts`, `pages/rub-docs/model/actions.model.test.ts`, `app/routes.test.ts`.
+- **e2e** — `apps/pi/e2e/lane-actions.spec.ts` (утверждение и отклонение, скачивание, печать в новой вкладке, F5, ссылка, запасное поле) и лейн из шести кнопок в `detail.spec.ts`; завязаны на данные фейка и порт 5186, как остальные спеки.
+- **Регуляторы фейка** (только стенд): `?fail=decide` — `500` на решении правки, `?fail=message` — `500` на сообщении, `?fail=print` — `500` на печатной форме (`apps/pi/README.md`).
 
 ## Зависимости
 

@@ -85,7 +85,7 @@ describe('fxEditableTargets — правимое по профилю (спека
     const empty56 = { ...d.fields, '56': { lines: [] } }
     expect(of({ fields: empty56 }).has('field:56')).toBe(false)
     const hist = d.edits['field:57']!.hist
-    expect(of({ fields: empty56, edits: { 'field:56': { now: { lines: [] }, hist } } }).has('field:56')).toBe(true)
+    expect(of({ fields: empty56, edits: { 'field:56': { now: { lines: [] }, canConfirm: false, hist } } }).has('field:56')).toBe(true)
   })
 
   it('MT202: 52, 56, 57, 72; MT202COV — то же и B.*; MT199 — без полей и без даты', () => {

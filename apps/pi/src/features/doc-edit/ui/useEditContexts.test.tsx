@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { createEffect } from 'effector'
-import { ApiError, type AccountItem, type AccountsQuery, type EditQuery, type EditValue } from '../../../shared/api'
+import { ApiError, type AccountItem, type AccountsQuery, type DecisionQuery, type EditQuery, type RejectQuery, type EditValue } from '../../../shared/api'
 import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
@@ -13,13 +13,17 @@ const commitView = (target: string, was: EditValue, now: EditValue): EditConfirm
   title: `Подтвердить ${target}`, note: `${text(was)} → ${text(now)}`, okLabel: 'Подтвердить', cancelLabel: 'Отмена', tone: 'neutral',
 })
 
+/** Порт-заглушка: по умолчанию отвечает деталью { id, rev: 2 }; impl — свой ответ (отказ, запись запросов). */
+const port = <P extends { id: string }>(impl?: ((q: P) => Promise<Doc>) | undefined) =>
+  createEffect<P, Doc, ApiError>(impl ?? (async (q) => ({ id: q.id, rev: 2 })))
+
 // UI-тесты apps/pi идут на глобальном scope (как DocDetail.test.tsx): модель — новая в каждом тесте
-function setup(save: (q: EditQuery) => Promise<Doc> = async (q) => ({ id: q.id, rev: 2 })) {
-  const saveEditFx = createEffect<EditQuery, Doc, ApiError>(save)
+function setup(save?: (q: EditQuery) => Promise<Doc>, decide: { confirm?: (q: DecisionQuery) => Promise<Doc>; reject?: (q: RejectQuery) => Promise<Doc> } = {}) {
+  const saveEditFx = port<EditQuery>(save)
   const accountsFx = createEffect<AccountsQuery, AccountItem[], ApiError>(async () => [])
   const lifecycle = createPageLifecycle()
   const edit = createDocEdit<Doc>({
-    ports: { saveEditFx, accountsFx },
+    ports: { saveEditFx, accountsFx, confirmEditFx: port<DecisionQuery>(decide.confirm), rejectEditFx: port<RejectQuery>(decide.reject) },
     validate: (_t, v) => (typeof v === 'string' && v.includes('!') ? 'Недопустимый символ' : null),
     normalize: (_t, v) => (typeof v === 'string' ? v.trim() : v),
     confirmTargets: ['valueDate'],
@@ -122,5 +126,73 @@ describe('useEditContexts (план 2c §3.2)', () => {
     act(() => { ctx.d1!.revert('refOut', 'REF2', 'REF1') })
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Изменения не сохранены: Не тот формат'))
     expect(ctx.d1?.saveError).toBeNull()
+  })
+
+  it('canDecide: canConfirm цели и нет редактора документа, решения и сохранения', async () => {
+    const { ctx } = setup()
+    expect(ctx.d1?.canDecide('field:57', true)).toBe(true)
+    expect(ctx.d1?.canDecide('field:57', false)).toBe(false)
+    expect(ctx.d1?.decision).toBeNull()
+    act(() => { ctx.d1!.open('refOut', 'REF1') })
+    expect(ctx.d1?.canDecide('field:57', true)).toBe(false)
+    // редактор чужого документа — решать в этом можно
+    expect(ctx.d2?.canDecide('field:57', true)).toBe(true)
+    act(() => { ctx.d1!.cancel() })
+    act(() => { ctx.d1!.confirmEdit('field:57', 'w1') })
+    expect(ctx.d1?.decision).toEqual({ kind: 'confirm', target: 'field:57', when: 'w1', reason: '', busy: false, error: null })
+    expect(ctx.d2?.decision).toBeNull()
+    expect(ctx.d1?.canDecide('accKt', true)).toBe(false)
+    // пока открыт Prompt решения — карандаши документа недоступны (одна операция за раз)
+    act(() => { ctx.d1!.open('refOut', 'REF1') })
+    expect(ctx.d1?.editing).toBeNull()
+    act(() => { ctx.d1!.onDecision(false) })
+    expect(ctx.d1?.decision).toBeNull()
+  })
+
+  it('canDecide — false, пока сохраняется правка этого документа; сохранение другого документа решения не блокирует (финальное ревью 2d, M2)', async () => {
+    let release: () => void = () => undefined
+    const { ctx } = setup((q) => new Promise<Doc>((ok) => { release = () => ok({ id: q.id, rev: 2 }) }))
+    act(() => { ctx.d1!.revert('refOut', 'REF2', 'REF1') })
+    expect(ctx.d2?.saving).toBe(true)
+    expect(ctx.d1?.canDecide('field:57', true)).toBe(false)
+    expect(ctx.d2?.canDecide('field:57', true)).toBe(true)
+    await act(async () => { release() })
+    await waitFor(() => expect(ctx.d1?.canDecide('field:57', true)).toBe(true))
+  })
+
+  it('отклонение: changeReason → причина, onDecision(true) → запрос; успех — объявление «Правка отклонена»; на монтировании — без объявления', async () => {
+    const rejects: RejectQuery[] = []
+    const { ctx } = setup(undefined, { reject: async (q) => { rejects.push(q); return { id: q.id, rev: 3 } } })
+    expect(screen.getByRole('status')).toHaveTextContent('')
+    act(() => { ctx.d1!.rejectEdit('field:57', 'w1') })
+    act(() => { ctx.d1!.changeReason('  BIC  ') })
+    expect(ctx.d1?.decision?.reason).toBe('  BIC  ')
+    // причина и решение чужого документа не трогают
+    act(() => { ctx.d2!.changeReason('x') })
+    act(() => { ctx.d2!.onDecision(true) })
+    expect(rejects).toHaveLength(0)
+    act(() => { ctx.d1!.onDecision(true) })
+    expect(ctx.d1?.decision?.busy).toBe(true)
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Правка отклонена'))
+    expect(rejects).toEqual([{ id: 'd1', target: 'field:57', when: 'w1', reason: 'BIC' }])
+    expect(ctx.d1?.decision).toBeNull()
+  })
+
+  it('утверждение: объявление «Правка утверждена»; 409 — «Правку уже обработали — данные обновлены»', async () => {
+    let conflict = false
+    const { ctx } = setup(undefined, {
+      confirm: async (q) => {
+        if (conflict) throw new ApiError(409, { type: 'urn:katran:edit-conflict', title: 'Документ изменили', status: 409 }, 'Документ изменили')
+        return { id: q.id, rev: 3 }
+      },
+    })
+    act(() => { ctx.d1!.confirmEdit('field:57', 'w1') })
+    act(() => { ctx.d1!.onDecision(true) })
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Правка утверждена'))
+    conflict = true
+    act(() => { ctx.d2!.confirmEdit('accKt', 'w2') })
+    act(() => { ctx.d2!.onDecision(true) })
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Правку уже обработали — данные обновлены'))
+    expect(ctx.d2?.decision).toBeNull()
   })
 })

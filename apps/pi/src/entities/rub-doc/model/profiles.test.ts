@@ -19,7 +19,11 @@ describe('профили рубля (PROFILES/RSECTIONS стенда, index.html
   it('вкладки: ED244 вместо «Исходного текста», без «Доп. полей»; действия — печать четырёх форм', () => {
     expect(RUB_TABS.map((t) => t.id)).toEqual(['main', 'statuses', 'compliance', 'linked', 'tasks', 'notif', 'ed244', 'stream', 'mpu', 'audit'])
     expect(RUB_ACTIONS.find((a) => a.id === 'down')?.label).toBe('Скачать сообщение ED (XML)')
-    expect(RUB_ACTIONS.find((a) => a.id === 'print')?.menu).toEqual(['Платёжное поручение', 'Инкассовое поручение', 'Платёжный ордер', 'Мемориальный ордер'])
+    expect(RUB_ACTIONS.map((a) => a.id)).toEqual(['refresh', 'esid', 'down', 'print', 'link', 'ban'])
+    expect(RUB_ACTIONS.find((a) => a.id === 'print')?.menu).toEqual([
+      { label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Инкассовое поручение', form: 'collection-order' },
+      { label: 'Платёжный ордер', form: 'payment-ordr' }, { label: 'Мемориальный ордер', form: 'memorial-order' },
+    ])
   })
   it('ED107: шесть подгрупп, узлы как на эталоне', () => {
     expect(ED107_GROUPS.map((g) => g.node)).toEqual(['OrderingBank', 'AcctWithInst', 'Beneficiary', 'PrevInstrAgent', 'InstructingAgent', 'InstructedAgent'])

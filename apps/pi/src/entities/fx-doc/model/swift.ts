@@ -84,13 +84,18 @@ export const FX_TABS: DetailTab[] = [
   { id: 'mpu', label: 'MPU' }, { id: 'audit', label: 'Аудит' },
 ]
 
-/** Действия лейна — ACTIONS стенда (index.html:729); в 2a — заглушки. */
+/**
+ * Действия лейна — ACTIONS стенда (index.html:729) без «Редактировать» (спека 2d §4 п. 8: правка — карандашами у целей);
+ * пункты печати — подпись и код формы (план 2d, «Коды печатных форм»).
+ */
 export const FX_ACTIONS: DetailAction[] = [
   { id: 'refresh', label: 'Обновить', icon: 'refresh', hotkey: 'F5' },
-  { id: 'edit', label: 'Редактировать', icon: 'edit', hotkey: 'E' },
   { id: 'esid', label: 'Создать служебный документ', icon: 'doc' },
   { id: 'down', label: 'Скачать SWIFT-сообщение', icon: 'download' },
-  { id: 'print', label: 'Печать', icon: 'print', menu: ['Платёжное поручение', 'Мемориальный ордер', 'Форма SWIFT'] },
+  { id: 'print', label: 'Печать', icon: 'print', menu: [
+    { label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Мемориальный ордер', form: 'memorial-order' },
+    { label: 'Форма SWIFT', form: 'swift-form' },
+  ] },
   { id: 'link', label: 'Скопировать ссылку на документ', icon: 'link' },
   { id: 'ban', label: 'Аннулировать', icon: 'ban', danger: true },
 ]

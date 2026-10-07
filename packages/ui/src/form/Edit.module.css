@@ -21,6 +21,26 @@
   color: var(--k-muted);
 }
 
+/* кнопки решения второй руки (спека 2d §2.1) — в сводке правее бейджа последней записи (Ruling R7) */
+.hsActs {
+  display: flex;
+  gap: var(--k-sp-1);
+}
+
+/* «Отклонить»: ghost-кнопка кита в тоне bad; двойной класс — выше варианта кнопки независимо от порядка в бандле */
+.hsReject.hsReject {
+  color: var(--k-bad);
+}
+
+.hsReject.hsReject:focus-visible {
+  outline-color: var(--k-bad);
+}
+
+.hsReject.hsReject:hover:not(:disabled) {
+  border-color: var(--k-bad);
+  color: var(--k-bad);
+}
+
 .hsToggle {
   margin-left: auto;
   padding: 0 calc(var(--k-sp-1) / 2);
@@ -73,6 +93,10 @@
 
 .hlItem[data-status="pending"]::before {
   background: var(--k-warn);
+}
+
+.hlItem[data-status="rejected"]::before {
+  background: var(--k-bad);
 }
 
 .hlHead {

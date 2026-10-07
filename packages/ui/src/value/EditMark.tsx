@@ -1,11 +1,11 @@
 import s from './Value.module.css'
 
-/** pending — правка ждёт утверждения, confirmed — утверждена. */
-export type EditStatus = 'pending' | 'confirmed'
+/** pending — правка ждёт утверждения, confirmed — утверждена, rejected — отклонена второй рукой. */
+export type EditStatus = 'pending' | 'confirmed' | 'rejected'
 export type EditMarkProps = {
   /** Доступное имя и тултип: что изменено, кем и когда. */
   tip: string
-  /** Без статуса — только точка; со статусом под точкой галочка, видимая лишь у confirmed. */
+  /** Без статуса — только точка; со статусом под точкой галочка, видимая лишь у confirmed; у rejected точка цвета bad. */
   status?: EditStatus | undefined
 }
 

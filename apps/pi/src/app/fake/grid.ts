@@ -19,6 +19,23 @@ export type FakeGrid = {
   edit?: ((id: string, body: unknown, when: string) => unknown) | undefined
   /** Справочник счетов стороны документа; null — документа нет (404). */
   accounts?: ((id: string, side: unknown) => unknown) | undefined
+  /** Утверждение или отклонение чужой правки (срез 2d): деталь после решения; null — документа нет (404). Нет поля — у грида нет правки. */
+  decide?: ((id: string, target: string, kind: 'confirm' | 'reject', body: unknown, when: string) => unknown) | undefined
+  /** Файл сообщения документа; null — документа нет (404). Нет поля — у грида нет файлов. */
+  message?: ((id: string) => FakeMessage | null) | undefined
+  /** Коды печатных форм, доступных документам грида. */
+  printForms?: readonly string[] | undefined
+  /** PDF печатной формы (text — содержимое строкой); null — документа нет (404). */
+  print?: ((id: string, form: string) => { text: string; number: string } | null) | undefined
+}
+
+/** Сообщение документа: текст, расширение файла (по нему имя и тип) и номер для имени. */
+export type FakeMessage = { text: string; ext: 'txt' | 'xml'; number: string }
+/** Файлы грида (срез 2d): текст сообщения из детали и PDF формы; forms — коды форм, формы вне набора — 404. */
+export type FakeFiles = {
+  message: (detail: Record<string, unknown>) => { text: string; ext: 'txt' | 'xml' }
+  forms: readonly string[]
+  print: (form: string, detail: Record<string, unknown>) => string
 }
 
 /** Опции фейкового грида. sortLabels — как у createFakeBackend демо (сверка S3): перечисленные ключи сортируются по подписи, а не по коду. */
@@ -30,6 +47,8 @@ export type FakeGridOptions<Row> = {
   tabs?: { ids: readonly string[]; data: (row: Row, index: number, rows: Row[]) => Record<string, unknown> } | undefined
   /** Память правок (план 2c): деталь — overlay поверх detail(…); edit и accounts — через хранилище. Нужна detail. */
   edits?: FakeEditStore | undefined
+  /** Файлы документа (срез 2d): сообщение и печатные формы. Нужна detail. */
+  files?: FakeFiles | undefined
 }
 
 const fromSortDto = (dto: SortDto[]): Sort => dto.map((s) => ({ key: s.field, dir: s.direction === 'ASC' ? 'asc' : 'desc' }))
@@ -87,6 +106,27 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
       grid.accounts = (id, side) => {
         const d = base(id)
         return d && store.accounts(d, side)
+      }
+      grid.decide = (id, target, kind, body, when) => {
+        const d = base(id)
+        return d && store.decide(id, d, target, kind, body, when)
+      }
+    }
+    const files = opts.files
+    if (files) {
+      // файлы — по текущей детали с правками: в сообщении и на форме текущие значения
+      const current = (id: string): Record<string, unknown> | null => {
+        const d = base(id)
+        return d && store ? store.overlay(id, d) : d
+      }
+      grid.printForms = files.forms
+      grid.message = (id) => {
+        const d = current(id)
+        return d && { ...files.message(d), number: String(d.docNumber) }
+      }
+      grid.print = (id, form) => {
+        const d = current(id)
+        return d && { text: files.print(form, d), number: String(d.docNumber) }
       }
     }
   }

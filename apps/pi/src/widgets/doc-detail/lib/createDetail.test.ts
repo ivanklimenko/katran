@@ -700,3 +700,81 @@ describe('createDetail: replaceDetail и летящие ответы (эпоха
     expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 3 } })
   })
 })
+
+describe('createDetail: refreshDoc и намерение refresh (спека 2d §3.5)', () => {
+  it('refreshDoc: деталь перезапрошена, кэш и ошибки вкладок сброшены, активная вкладка перезапрошена, слот без скелетона', async () => {
+    const { d, scope, lifecycle, open, tab, detailCalls, tabCalls, hold, release } = setupEdit({ failTab: 'u1:audit' })
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await tab('a', 'audit')
+    await tab('a', 'statuses')
+    expect(tabCalls).toEqual(['u1:audit', 'u1:statuses'])
+    hold(true)
+    const done = allSettled(d.refreshDoc, { scope, params: 'u1' })
+    expect(detailCalls).toEqual(['u1', 'u1'])
+    // до ответа: старая деталь, слот ready
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 1 }, error: null })
+    expect(tabCalls).toEqual(['u1:audit', 'u1:statuses', 'u1:statuses'])
+    release()
+    await done
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 2 } })
+    expect(scope.getState(d.$slots).a?.tabView).toMatchObject({ state: 'ready' })
+    // кэш и ошибка «Аудита» сброшены: возврат на вкладку — новый запрос
+    await tab('a', 'audit')
+    expect(tabCalls).toHaveLength(4)
+  })
+
+  it('refreshDoc при закрытом экране — без запросов', async () => {
+    const { d, scope, lifecycle, open, tab, detailCalls, tabCalls } = setupEdit()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await tab('a', 'statuses')
+    await allSettled(lifecycle.pageClosed, { scope })
+    await allSettled(d.refreshDoc, { scope, params: 'u1' })
+    expect(detailCalls).toEqual(['u1'])
+    expect(tabCalls).toEqual(['u1:statuses'])
+  })
+
+  // kind 'refresh' должен компилироваться как LeaveIntent; поведение: leave его не исполняет — ни слотов, ни запросов
+  it('leave с kind refresh (тип LeaveIntent): слоты не меняются, запросов нет', async () => {
+    const { d, scope, lifecycle, open, ids, detailCalls, tabCalls } = setupEdit({ guard: true })
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await allSettled(d.leave, { scope, params: { kind: 'refresh', id: 'u1' } })
+    expect(ids()).toEqual({ a: 'u1', b: null })
+    expect(detailCalls).toEqual(['u1'])
+    expect(tabCalls).toEqual([])
+  })
+
+  it('refreshDoc при летящей загрузке детали: старый ответ отброшен эпохой, новый — ready; загрузка не зависает', async () => {
+    const { d, scope, lifecycle, calls, open, tick } = setupManual()
+    await allSettled(lifecycle.pageOpened, { scope })
+    void open('d1')
+    expect(calls).toHaveLength(1)
+    void allSettled(d.refreshDoc, { scope, params: 'd1' })
+    expect(calls).toHaveLength(2)
+    calls[0]!.ok()
+    await tick()
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'loading', data: null })
+    calls[1]!.ok()
+    await tick()
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 2 } })
+    void allSettled(d.reloadDetail, { scope, params: 'd1' })
+    expect(calls).toHaveLength(3)
+    calls[2]!.ok()
+    await tick()
+  })
+
+  it('refreshDoc при локальной активной вкладке: кэш вкладок сброшен, запроса вкладки нет', async () => {
+    const { d, scope, lifecycle, open, tab, tabCalls } = setupEdit()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await tab('a', 'statuses')
+    await tab('a', 'main')
+    expect(tabCalls).toEqual(['u1:statuses'])
+    await allSettled(d.refreshDoc, { scope, params: 'u1' })
+    expect(tabCalls).toEqual(['u1:statuses'])
+    await tab('a', 'statuses')
+    expect(tabCalls).toEqual(['u1:statuses', 'u1:statuses'])
+  })
+})

@@ -34,6 +34,12 @@ export function num(o: Obj, k: string, path: string): number {
   if (typeof v !== 'number' || Number.isNaN(v)) throw contractError(`${path}.${k}: ожидалось число`)
   return v
 }
+export function bool(o: Obj, k: string, path: string, fallback = false): boolean {
+  const v = o[k]
+  if (v === undefined) return fallback
+  if (typeof v !== 'boolean') throw contractError(`${path}.${k}: ожидалось true или false`)
+  return v
+}
 export function oneOf<T extends string>(o: Obj, k: string, values: readonly T[], path: string): T {
   const v = str(o, k, path)
   if (!(values as readonly string[]).includes(v)) throw contractError(`${path}.${k}: недопустимое значение «${v}»`)

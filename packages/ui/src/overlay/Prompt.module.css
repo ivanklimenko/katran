@@ -78,6 +78,17 @@
   color: var(--k-ink);
 }
 
+/* тело (поле причины) под пояснением; строка ошибки — над кнопками, цвет bad */
+.body {
+  margin-top: var(--k-sp-3);
+}
+
+.error {
+  margin-top: var(--k-sp-2);
+  font: var(--k-fs-2) / 1.3 var(--k-sans);
+  color: var(--k-bad);
+}
+
 .acts {
   display: flex;
   justify-content: flex-end;

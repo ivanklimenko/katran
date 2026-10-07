@@ -60,6 +60,23 @@ for (const route of ['fx-docs', 'rub-docs'] as const) {
   })
 }
 
+// 2d (г7): лейн — шесть действий, «Редактировать» убран (правка — карандашами на месте); «Аннулировать» — последней
+const LANE = {
+  'fx-docs': ['Обновить', 'Создать служебный документ', 'Скачать SWIFT-сообщение', 'Печать', 'Скопировать ссылку на документ', 'Аннулировать'],
+  'rub-docs': ['Обновить', 'Создать служебный документ', 'Скачать сообщение ED (XML)', 'Печать', 'Скопировать ссылку на документ', 'Аннулировать'],
+}
+for (const route of ['fx-docs', 'rub-docs'] as const) {
+  test(`лейн: шесть действий, «Редактировать» нет (${route})`, async ({ page }) => {
+    await start(page, route)
+    await openBtn(page, 1).click()
+    await ready(page)
+    const lane = dialogs(page).first().getByRole('group', { name: 'Действия с документом' })
+    await expect(lane.getByRole('button')).toHaveCount(6)
+    expect(await lane.getByRole('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))).toEqual(LANE[route])
+    await expect(dialogs(page).first().getByRole('button', { name: 'Редактировать', exact: true })).toHaveCount(0)
+  })
+}
+
 test('A и B рядом: двойной клик открывает B слева, A не заменяется; записи помечены', async ({ page }) => {
   await start(page, 'fx-docs')
   await openBtn(page, 1).click()

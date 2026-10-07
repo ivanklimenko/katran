@@ -1,8 +1,10 @@
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
 import { rubDocLayout } from '../../../entities/rub-doc'
+import { useActionsOf } from '../../../features/doc-actions'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
+import { docActions } from '../model/actions.model'
 import { detail, registry } from '../model/registry.model'
 import { rubDetailDomain } from './detailDomain'
 
@@ -12,6 +14,8 @@ const TITLE = 'Рублёвые документы'
 export function RubDocsPage({ note }: { note?: string | undefined }) {
   const { announce } = useKatran()
   const [rows, marks] = useUnit([registry.grid.$rows, detail.$marks])
+  // действия лейна: один вызов на модель (иначе объявления $notice двоятся), деталка получает функцию
+  const actionsOf = useActionsOf(docActions)
   return (
     <>
       <DocRegistry
@@ -33,6 +37,7 @@ export function RubDocsPage({ note }: { note?: string | undefined }) {
         domain={rubDetailDomain}
         rowOf={(id) => rows.find((r) => rubDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
+        actionsOf={actionsOf}
       />
     </>
   )
