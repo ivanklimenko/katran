@@ -64,12 +64,20 @@ const said = (page: Page) => page.evaluate(() => (window as unknown as { __said:
 const f5 = (page: Page) => page.evaluate(() => (window as unknown as { __f5: boolean[] }).__f5.slice())
 const DECIDE = /^POST \/grids\/fx-docs\/documents\/[^/]+\/edits\/[^/]+\/(confirm|reject)$/
 const digits = (s: string | null) => (s ?? '').replace(/\D/g, '')
-/** F5 сейчас: перехвачен ли деталкой (последняя запись журнала). */
+/** Медленный фейк для проверок «в полёте»: с запасом на загрузку CI — состояние не успевает смениться между шагами. */
+const SLOW = 'slow=1500'
+/** F5 сейчас: перехвачен ли деталкой — запись этого нажатия (журнал вырос ровно на одну). */
 const pressF5 = async (page: Page) => {
+  const before = (await f5(page)).length
   await page.keyboard.press('F5')
   const log = await f5(page)
-  return log[log.length - 1]
+  expect(log).toHaveLength(before + 1)
+  return log[before]
 }
+/** Два кадра отрисовки: всё, что модель уже решила, React успел показать. */
+const frames = (page: Page) => page.evaluate(() => new Promise<void>((done) => { requestAnimationFrame(() => { requestAnimationFrame(() => { done() }) }) }))
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const notice = (dw: Locator) => dw.locator('[data-part="action-notice"]')
 
 /** Контраст текста элемента к его фактическому фону (WCAG 2.x): фон — первый непрозрачный предок, полупрозрачные смешаны. */
 const contrastOf = (loc: Locator) => loc.evaluate((el) => {
@@ -94,7 +102,7 @@ const contrastOf = (loc: Locator) => loc.evaluate((el) => {
 
 test('утвердить чужую правку поля 57: Prompt «Утвердить правку?», в полёте фокус на Prompt и Esc деталку не закрывает; бейдж «утверждено», «Утвердил(а) Вы, …», кнопок решения нет, фокус на карандаше', async ({ page }) => {
   // медленный фейк — видно состояние «в полёте»
-  await start(page, 'slow=600')
+  await start(page, SLOW)
   const dw = await open(page, SEED_57.n)
   expect(await idOf(dw)).toBe(SEED_57.id)
   const cell = dw.locator('[data-field="57"]')
@@ -183,6 +191,7 @@ test('отклонить правку счёта Кт: «Отклонить» н
 test('отклонить правку поля 57: бейдж «отклонено» (контраст ≥ 4,5), «Отклонил(а) Вы, …», «Причина: Не тот банк» в истории', async ({ page }) => {
   await start(page)
   const dw = await open(page, SEED_57.n)
+  expect(await idOf(dw)).toBe(SEED_57.id)
   const cell = dw.locator('[data-field="57"]')
   await cell.locator('> button[aria-expanded]').click()
   await expect(cell.locator('> button[aria-expanded]')).toContainText('LONDON B')
@@ -196,6 +205,8 @@ test('отклонить правку поля 57: бейдж «отклонен
   // значение вернулось к was отклонённой записи (первая, утверждённая правка осталась — маркер «изменено» горит)
   await expect(cell.locator('> button[aria-expanded]')).not.toContainText('LONDON B')
   await expect(cell).toHaveAttribute('data-edited', '')
+  // «Изменено» — автор действующего значения (утверждённая правка), не отклонённая запись; след отклонения — в конце (I2)
+  await expect(cell).toHaveAttribute('data-k-tip', /^Изменено: (?!Иванова)[^·]+, \d{2}\.\d{2}\.\d{4} \d{2}:\d{2} · Правка отклонена · Вы, \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/)
   const badge = cell.getByText('отклонено', { exact: true })
   await expect(badge).toBeVisible()
   await expect(cell.getByRole('button', { name: /^(Утвердить|Отклонить)$/ })).toHaveCount(0)
@@ -215,7 +226,7 @@ test('отклонить правку поля 57: бейдж «отклонен
 })
 
 test('скачать: событие download, имя <номер>.txt, содержимое начинается с {1:F01; в полёте кнопка недоступна, фокус и F5 — на ней', async ({ page }) => {
-  await start(page, 'slow=400')
+  await start(page, SLOW)
   const dw = await open(page, 1)
   const number = /№ (\d+)/.exec((await dw.getAttribute('aria-label'))!)![1]!
   const down = dw.getByRole('button', { name: 'Скачать SWIFT-сообщение' })
@@ -239,7 +250,7 @@ test('скачать: событие download, имя <номер>.txt, соде
 })
 
 test('печать «Форма SWIFT»: новая вкладка «Формируется…», затем blob application/pdf с %PDF-1.4; деталка на месте', async ({ page, context }) => {
-  await start(page, 'slow=600')
+  await start(page, SLOW)
   const dw = await open(page, 1)
   const printBtn = dw.getByRole('button', { name: 'Печать' })
   await printBtn.click()
@@ -254,7 +265,7 @@ test('печать «Форма SWIFT»: новая вкладка «Форми�
   // headless Chromium не показывает PDF: переход вкладки на blob: заканчивается загрузкой — ловим её адрес
   const shown = await tab.waitForEvent('download')
   const url = shown.url()
-  expect(url).toMatch(/^blob:http:\/\/localhost:5186\//)
+  expect(url).toMatch(new RegExp(`^blob:${escapeRe(new URL(page.url()).origin)}/`))
   // blob создан в странице реестра и живёт, пока жив экран — читаем его оттуда
   const pdf = await page.evaluate(async (u) => {
     const b = await (await fetch(u)).blob()
@@ -299,6 +310,10 @@ test('ссылка: «Скопировать ссылку» кладёт в бу
   const name = await dw.getAttribute('aria-label')
   await dw.getByRole('button', { name: 'Скопировать ссылку на документ' }).click()
   await expect.poll(() => said(page)).toContain('Ссылка скопирована')
+  // видимое уведомление успеха под лейном — скрывается само (NOTICE_HIDE_MS = 4 с)
+  await expect(notice(dw)).toHaveText(/Ссылка скопирована/)
+  await expect(notice(dw)).toHaveAttribute('data-tone', 'ok')
+  await expect(notice(dw)).toHaveCount(0, { timeout: 7000 })
   const link = await page.evaluate(() => navigator.clipboard.readText())
   expect(link).toContain('?doc=')
   expect(link).toBe(`${new URL(page.url()).origin}/#/fx-docs?doc=${id}`)
@@ -308,14 +323,15 @@ test('ссылка: «Скопировать ссылку» кладёт в бу
   await page.locator('tbody[data-key]').first().waitFor()
   const opened = await ready(page)
   await expect(opened).toHaveAttribute('aria-label', name!)
-  // дольше задержки автооткрытия: первая запись не заменила документ из ссылки
-  await page.waitForTimeout(800)
+  // автооткрытие первой записи решается на первом ответе реестра — строки уже на экране; два кадра — React показал решение.
+  // Первая запись не заменила документ из ссылки
+  await frames(page)
   await expect(dialogs(page)).toHaveCount(1)
   await expect(dialogs(page).first()).toHaveAttribute('aria-label', name!)
   expect(await page.evaluate(() => document.activeElement?.closest('[data-k-drawer]') != null)).toBe(true)
 })
 
-test('буфер недоступен: уведомление с полем только для чтения, ссылка выделена, «Скопируйте ссылку: Ctrl+C»; «Закрыть» убирает его и возвращает фокус на кнопку', async ({ page }) => {
+test('буфер недоступен: группа «Ссылка на документ» с полем только для чтения, ссылка выделена, «Скопируйте ссылку: Ctrl+C» — описание поля; F5 в поле — «Обновить»; Esc и «Закрыть ссылку» убирают её, деталка на месте, фокус на кнопке', async ({ page }) => {
   await page.addInitScript(() => {
     // отказ с задержкой (как после вопроса о разрешении): кнопка успевает стать недоступной
     Object.defineProperty(navigator, 'clipboard', {
@@ -329,8 +345,8 @@ test('буфер недоступен: уведомление с полем то
   await copy.click()
   await expect(copy).toHaveAttribute('aria-disabled', 'true')
   await expect(copy).toBeFocused()
-  const note = dw.locator('[data-part="link-fallback"]')
-  await expect(note).toHaveAttribute('role', 'status')
+  const note = dw.getByRole('group', { name: 'Ссылка на документ' })
+  await expect(note).toHaveAttribute('data-part', 'link-fallback')
   const field = note.getByRole('textbox', { name: 'Ссылка на документ' })
   await expect(field).toHaveAttribute('readonly', '')
   await expect(field).toHaveValue(new RegExp(`#/fx-docs\\?doc=${id}$`))
@@ -338,9 +354,60 @@ test('буфер недоступен: уведомление с полем то
   const selected = await field.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd, el.value.length])
   expect(selected).toEqual([0, selected[2], selected[2]])
   await expect(note).toContainText('Скопируйте ссылку: Ctrl+C')
-  await note.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(field).toHaveAccessibleDescription('Скопируйте ссылку: Ctrl+C')
+  await expect.poll(() => said(page)).toContain('Буфер обмена недоступен. Скопируйте ссылку: Ctrl+C')
+  // F5 в поле только для чтения — «Обновить» деталки, не перезагрузка страницы (I3)
+  const DETAIL = new RegExp(`^GET /grids/fx-docs/documents/${id}$`)
+  const details = await reqs(page, DETAIL)
+  expect(await pressF5(page)).toBe(true)
+  await expect.poll(() => reqs(page, DETAIL)).toBe(details + 1)
+  // Esc в поле — закрыта ссылка, не деталка; фокус вернулся на «Скопировать ссылку»
+  await field.focus()
+  await page.keyboard.press('Escape')
   await expect(note).toHaveCount(0)
-  // фокус вернулся на «Скопировать ссылку» и при задержанном отказе буфера (Ruling R19)
+  await expect(dialogs(page)).toHaveCount(1)
   await expect(copy).toBeFocused()
+  // снова: «Закрыть ссылку» — то же; фокус вернулся на «Скопировать ссылку» и при задержанном отказе буфера (Ruling R19)
+  await copy.click()
+  await expect(field).toBeFocused()
+  await note.getByRole('button', { name: 'Закрыть ссылку' }).click()
+  await expect(note).toHaveCount(0)
+  await expect(copy).toBeFocused()
+  await expect(dialogs(page)).toHaveCount(1)
+})
+
+test('?fail=message: отказ «Скачать» — видимое уведомление с текстом бека (и объявление), файла нет; не скрывается само, «Закрыть уведомление» убирает', async ({ page }) => {
+  await start(page, 'slow=0&fail=message')
+  const dw = await open(page, 1)
+  let downloaded = false
+  page.on('download', () => { downloaded = true })
+  await dw.getByRole('button', { name: 'Скачать SWIFT-сообщение' }).click()
+  const bar = notice(dw)
+  await expect(bar).toBeVisible()
+  await expect(bar).toContainText('Регулятор ?fail=message')
+  await expect(bar).toHaveAttribute('data-tone', 'bad')
+  await expect.poll(() => said(page)).toContain('Регулятор ?fail=message')
+  const ratio = await contrastOf(bar.locator('span').first())
+  expect(ratio).toBeGreaterThanOrEqual(4.5)
+  await page.screenshot({ path: test.info().outputPath('notice-fail-message.png') })
+  expect(downloaded).toBe(false)
+  await bar.getByRole('button', { name: 'Закрыть уведомление' }).click()
+  await expect(bar).toHaveCount(0)
+  await expect(dialogs(page)).toHaveCount(1)
+})
+
+test('?fail=print: отказ печати — вкладка закрыта, видимое уведомление с текстом бека; деталка на месте', async ({ page, context }) => {
+  await start(page, 'slow=0&fail=print')
+  const dw = await open(page, 1)
+  await dw.getByRole('button', { name: 'Печать' }).click()
+  const popup = context.waitForEvent('page')
+  await page.getByRole('menuitem', { name: 'Форма SWIFT' }).click()
+  const tab = await popup
+  await expect.poll(() => tab.isClosed()).toBe(true)
+  expect(context.pages()).toHaveLength(1)
+  const bar = notice(dw)
+  await expect(bar).toContainText('Регулятор ?fail=print')
+  await expect(bar).toHaveAttribute('data-tone', 'bad')
+  await expect.poll(() => said(page)).toContain('Регулятор ?fail=print')
   await expect(dialogs(page)).toHaveCount(1)
 })
