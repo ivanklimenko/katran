@@ -103,6 +103,17 @@ describe('страница fx-docs: запасное имя файла сооб�
     expect(saved).toEqual([{ name: '417.txt' }, { name: '905.txt' }, { name: 'nope.txt' }])
     await allSettled(lifecycle.pageClosed, { scope })
   })
+
+  it('номера — в своём скоупе: соседний скоуп со своим реестром и его уход с экрана имя не меняют (fork-safe, R18)', async () => {
+    const one = page([row('u1', 417)])
+    const two = page([row('u1', 555)])
+    await allSettled(lifecycle.pageOpened, { scope: one.scope })
+    await allSettled(lifecycle.pageOpened, { scope: two.scope })
+    await allSettled(lifecycle.pageClosed, { scope: two.scope })
+    await allSettled(docActions.download, { scope: one.scope, params: 'u1' })
+    expect(one.saved).toEqual([{ name: '417.txt' }])
+    await allSettled(lifecycle.pageClosed, { scope: one.scope })
+  })
 })
 
 describe('страница fx-docs: решение документа, ушедшего из слотов (R12)', () => {

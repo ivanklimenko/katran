@@ -15,8 +15,12 @@ export type DocActionsConfig = {
   lifecycle: PageLifecycle
   /** Ссылка на документ; по умолчанию buildDocLink (defaultDocLink или подмена хоста configureDocLinks). */
   buildLink?: ((gridId: string, id: string) => string) | undefined
-  /** Номер документа для запасного имени файла: '<номер>.txt' | '<номер>.xml'. */
-  fallbackName: (id: string) => string
+  /**
+   * Запасное имя файла сообщения по id, если бек не прислал Content-Disposition: '<номер>.txt' | '<номер>.xml' (Ruling R18).
+   * Стор, а не функция: страница строит его из своих сторов (combine строк реестра и слотов детали), модель читает его через
+   * source в момент ответа — номер берётся из скоупа запроса (fork-safe), без словарей модуля.
+   */
+  fallbackName: Store<(id: string) => string>
 }
 
 export type PrintCall = { id: string; form: string; win: Window | null }
@@ -156,7 +160,10 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
   // Скачать сообщение
   sample({ clock: download, source: $pending, filter: (p, id) => !p[pendingKey(id, 'down')], fn: (_, id) => id, target: downloadStarted })
   sample({ clock: downloadStarted, target: messageFx })
-  sample({ clock: messageFx.done, fn: ({ params, result }) => ({ blob: result.blob, name: result.name ?? fallbackName(params) }), target: saveFileFx })
+  sample({
+    clock: messageFx.done, source: fallbackName,
+    fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? nameOf(params) }), target: saveFileFx,
+  })
   sample({ clock: messageFx.failData, fn: errorText, target: noticed })
 
   // Печать
@@ -171,7 +178,10 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     fn: ({ params, result }) => ({ win: params.win as Window, blob: result.blob }), target: showFx,
   })
   const blocked = sample({ clock: printFx.done, filter: ({ params }) => params.win === null })
-  sample({ clock: blocked, fn: ({ params, result }) => ({ blob: result.blob, name: result.name ?? pdfName(params.form, fallbackName(params.id)) }), target: saveFileFx })
+  sample({
+    clock: blocked, source: fallbackName,
+    fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? pdfName(params.form, nameOf(params.id)) }), target: saveFileFx,
+  })
   sample({ clock: blocked, fn: () => PRINT_BLOCKED_TEXT, target: noticed })
   sample({ clock: printFx.fail, filter: ({ params }) => params.win !== null, fn: ({ params }) => params.win as Window, target: closeWindowFx })
   sample({ clock: printFx.failData, fn: errorText, target: noticed })

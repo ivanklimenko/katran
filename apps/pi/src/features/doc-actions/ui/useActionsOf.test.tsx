@@ -1,5 +1,5 @@
 import { act, screen, waitFor } from '@testing-library/react'
-import { createEffect } from 'effector'
+import { createEffect, createStore } from 'effector'
 import { vi } from 'vitest'
 import type { ApiError, FileResponse, PrintQuery } from '../../../shared/api'
 import type { ActionsView, DetailAction } from '../../../shared/lib/detail'
@@ -26,7 +26,7 @@ function setup() {
   const messageFx = createEffect<string, FileResponse, ApiError>(() => new Promise<FileResponse>(() => undefined))
   const printFx = createEffect<PrintQuery, FileResponse, ApiError>((q) => { prints.push(q); return new Promise<FileResponse>(() => undefined) })
   const lifecycle = createPageLifecycle()
-  const actions = createDocActions({ gridId: 'fx-docs', ports: { messageFx, printFx }, lifecycle, buildLink: () => 'L', fallbackName: (id) => id })
+  const actions = createDocActions({ gridId: 'fx-docs', ports: { messageFx, printFx }, lifecycle, buildLink: () => 'L', fallbackName: createStore((id: string) => id) })
   const log = { refresh: [] as string[], link: [] as string[], down: [] as string[], print: [] as { id: string; form: string; win: Window | null }[] }
   const unwatch = [
     actions.refreshRequested.watch((id) => { log.refresh.push(id) }),

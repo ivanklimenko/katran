@@ -1,16 +1,20 @@
-import { sample } from 'effector'
+import { combine, sample } from 'effector'
 import { createDocActions } from '../../../features/doc-actions'
 import { editScope } from '../../../features/doc-edit'
 import { createActionPorts } from '../../../shared/api'
-import { createDocNumbers } from '../../../shared/lib/doc-numbers'
 import type { LeaveIntent } from '../../../shared/lib/detail'
 import { docEdit } from './edit.model'
 import { detail, lifecycle, registry } from './registry.model'
 
 export const fxActionPorts = createActionPorts('fx-docs')
 
-/** Номер документа: строка реестра, иначе деталь в слотах. */
-const numberOf = createDocNumbers({ rows: registry.grid.$rows, slots: detail.$slots, lifecycle })
+/** Запасное имя сообщения (R18): номер из строки реестра, иначе из детали в слотах, иначе id — из сторов скоупа экрана. */
+const $fallbackName = combine(registry.grid.$rows, detail.$slots, (rows, { a, b }) => (id: string): string => {
+  const row = rows.find((r) => r.id === id)
+  const data = a?.id === id ? a.data : b?.id === id ? b.data : null
+  const num = row ? String(row.docNumber) : data ? String(data.docNumber) : id
+  return `${num}.txt`
+})
 
 /**
  * Действия лейна валютного документа (план 2d §3.6). Ссылка — buildDocLink (подмена хоста — configureDocLinks в слое app);
@@ -20,7 +24,7 @@ export const docActions = createDocActions({
   gridId: 'fx-docs',
   ports: fxActionPorts,
   lifecycle,
-  fallbackName: (id) => `${numberOf(id) ?? id}.txt`,
+  fallbackName: $fallbackName,
 })
 
 // «Обновить» — через охрану правки (R16): грязный черновик документа держит Prompt «Отменить правку?», чистый редактор

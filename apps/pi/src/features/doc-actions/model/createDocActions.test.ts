@@ -1,4 +1,4 @@
-import { allSettled, createEffect, fork } from 'effector'
+import { allSettled, createEffect, createStore, fork } from 'effector'
 import { vi } from 'vitest'
 import { ApiError, type FileResponse, type PrintQuery } from '../../../shared/api'
 import { configureDocLinks, defaultDocLink } from '../../../shared/lib/doc-link'
@@ -34,7 +34,7 @@ function setup(o: { buildLink?: (gridId: string, id: string) => string; clipboar
     ports: { messageFx, printFx },
     lifecycle,
     buildLink: o.buildLink,
-    fallbackName: (id) => `N-${id}.txt`,
+    fallbackName: createStore((id: string) => `N-${id}.txt`),
   })
   const log = { copied: [] as string[], saved: [] as { blob: Blob; name: string }[], shown: [] as { win: Window; blob: Blob }[], closed: [] as Window[], revoked: [] as string[][] }
   let n = 0
@@ -115,7 +115,7 @@ describe('createDocActions (план 2d §3.3)', () => {
     const lifecycle = createPageLifecycle()
     const { fx: messageFx } = deferred<string, FileResponse>()
     const { fx: printFx } = deferred<PrintQuery, FileResponse>()
-    const actions = createDocActions({ gridId: 'fx-docs', ports: { messageFx, printFx }, lifecycle, buildLink: () => 'L', fallbackName: (id) => id })
+    const actions = createDocActions({ gridId: 'fx-docs', ports: { messageFx, printFx }, lifecycle, buildLink: () => 'L', fallbackName: createStore((id: string) => id) })
     expect('clipboard' in navigator && navigator.clipboard !== undefined).toBe(false)
     const scope = fork()
     await allSettled(actions.copyLink, { scope, params: 'x' })
