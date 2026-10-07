@@ -86,6 +86,10 @@ export type LeaveIntent = { kind: 'close'; slot: DrawerSlot } | { kind: 'open'; 
 export type AccountsSlot = { state: 'loading' | 'ready' | 'error'; items: AccountItem[]; error: string | null }
 /** Текст Prompt правки (отмена черновика, подтверждение даты валютирования) — ложится на PromptProps кита. */
 export type EditConfirmView = { title: string; note?: ReactNode | undefined; okLabel: string; cancelLabel: string; tone: PromptTone }
+/** Решение второй руки по чужой правке (план 2d §3.3). */
+export type DecisionKind = 'confirm' | 'reject'
+/** Prompt решения документа: цель и время записи правки, причина отклонения, запрос в полёте, текст отказа. */
+export type DecisionState = { kind: DecisionKind; target: string; when: string; reason: string; busy: boolean; error: string | null }
 /** Правка одного документа для видов сущности (план 2c §3.2): состояние редактора и команды, без знания о модели. */
 export type EditContext = {
   docId: string
@@ -108,4 +112,15 @@ export type EditContext = {
   /** null — ещё не запрашивались. */
   accounts: (side: AccountSide) => AccountsSlot | null
   retryAccounts: (side: AccountSide) => void
+  /** Prompt решения этого документа (утвердить/отклонить чужую правку), иначе null. */
+  decision: DecisionState | null
+  /** Можно ли сейчас решать по цели: canConfirm цели && нет открытого редактора документа && нет decision && не saving. */
+  canDecide: (target: string, canConfirm: boolean) => boolean
+  /** «Утвердить» у записи правки цели (when — время записи) — Prompt решения. */
+  confirmEdit: (target: string, when: string) => void
+  /** «Отклонить» у записи правки цели — Prompt решения с полем «Причина». */
+  rejectEdit: (target: string, when: string) => void
+  changeReason: (text: string) => void
+  /** Ответ Prompt решения: true — запрос, false — закрыть (при запросе в полёте игнорируется). */
+  onDecision: (ok: boolean) => void
 }

@@ -335,6 +335,7 @@ const editStub = (docId: string, over: Partial<EditContext> = {}): EditContext =
   docId, editing: null, draft: null, error: null, saving: false, saveError: null, confirm: null,
   onConfirm: vi.fn(), open: vi.fn(), change: vi.fn(), cancel: vi.fn(), save: vi.fn(), revert: vi.fn(),
   accounts: () => null, retryAccounts: vi.fn(),
+  decision: null, canDecide: () => false, confirmEdit: vi.fn(), rejectEdit: vi.fn(), changeReason: vi.fn(), onDecision: vi.fn(),
   ...over,
 })
 

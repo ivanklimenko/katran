@@ -1,7 +1,7 @@
-import { attach, createEvent, createStore, sample, type Event, type EventCallable, type Store } from 'effector'
+import { attach, createEvent, createStore, merge, sample, type Event, type EventCallable, type Store } from 'effector'
 import { createEditModel, type EditModel, type SaveQuery } from '@katran/effector'
-import type { ApiError, AccountSide, AccountsQuery, EditPorts, EditQuery, EditValue } from '../../../shared/api'
-import type { AccountsSlot, EditConfirmView, LeaveIntent } from '../../../shared/lib/detail'
+import type { ApiError, AccountSide, AccountsQuery, DecisionQuery, EditPorts, EditQuery, EditValue, RejectQuery } from '../../../shared/api'
+import type { AccountsSlot, DecisionKind, DecisionState, EditConfirmView, LeaveIntent } from '../../../shared/lib/detail'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type DocEditConfig<D extends { id: string }> = {
@@ -22,17 +22,32 @@ export type DocEdit<D> = {
   /** Справочники счетов по ключу `${id}:${side}`. */
   $accounts: Store<Record<string, AccountsSlot>>
   loadAccounts: EventCallable<AccountsQuery>
-  /** Бек принял правку: деталь целиком из ответа (= model.saved, id — detail.id). */
+  /**
+   * Бек принял правку или решение по ней: деталь целиком из ответа (id — detail.id). Ответ решения прошлого визита экрана не
+   * выпускается; пришедший после ухода с экрана того же визита — выпускается (кэш детали и реестр сами не принимают его на закрытом).
+   */
   docEdited: Event<{ id: string; detail: D }>
-  /** Отказ 409: документ изменили — деталь нужно перезапросить. */
+  /** Отказ 409 сохранения или решения: документ изменили — деталь нужно перезапросить. */
   conflict: Event<{ id: string }>
-  /** Растёт на docEdited — объявление «Изменения сохранены». */
+  /** Растёт на принятом сохранении (не на решении) — объявление «Изменения сохранены». */
   $savedCount: Store<number>
   /**
    * Отказ сохранения, которому негде показаться строкой: ↺ (редактора нет) или редактор этого ключа уже закрыт (уход во время
    * сохранения). count растёт — объявление text «Изменения не сохранены: {текст отказа}».
    */
   $unsaved: Store<{ count: number; text: string }>
+  /** Prompt решения по документам (ключ — docId; одна операция на документ); сброс при уходе с экрана. */
+  $decision: Store<Record<string, DecisionState>>
+  /** «Утвердить» чужую правку цели; игнорируется при открытом редакторе документа, сохранении в полёте, открытом решении документа. */
+  confirmRequested: EventCallable<{ docId: string; target: string; when: string }>
+  /** «Отклонить» чужую правку цели — те же условия, что у confirmRequested. */
+  rejectRequested: EventCallable<{ docId: string; target: string; when: string }>
+  /** Причина отклонения как введена (trim — при запросе); при запросе в полёте игнорируется. */
+  reasonChanged: EventCallable<{ docId: string; text: string }>
+  /** true — запрос (у отклонения — только с непустой причиной), false — закрыть; при запросе в полёте оба игнорируются. */
+  decisionResult: EventCallable<{ docId: string; ok: boolean }>
+  /** count растёт на успехе и на 409 решения; text — 'Правка утверждена' | 'Правка отклонена' | 'Правку уже обработали — данные обновлены'. */
+  $decided: Store<{ count: number; text: string }>
 }
 
 /** Ключ правки: `${id}:${target}`; id без ':' (UUID контракта), цель может содержать ':' ('field:57'). */
@@ -53,6 +68,11 @@ export const DISCARD_VIEW: EditConfirmView = {
   tone: 'danger',
 }
 
+/** Наибольшая длина причины отклонения (контракт: длиннее — 400 по пути reason). */
+export const REJECT_MAX = 140
+/** Объявления решения второй руки (спека 2d §4). */
+export const DECISION_TEXT = { confirmed: 'Правка утверждена', rejected: 'Правка отклонена', conflict: 'Правку уже обработали — данные обновлены' }
+
 /** Отказ без текста — общий текст, не пустая строка под редактором. */
 const SAVE_FAILED = 'Не удалось сохранить изменения'
 /** Текст отказа сохранения: 409 — CONFLICT_TEXT, иначе первая ошибка problem.errors (без префикса «Правка отклонена: …»), иначе message. */
@@ -62,6 +82,16 @@ const sideOf = (target: string): AccountSide | null => (target === 'accDt' ? 'dt
 const accKey = (q: AccountsQuery) => `${q.id}:${q.side}`
 
 type AccLoad = AccountsQuery & { visit: number }
+type ConfirmRun = DecisionQuery & { visit: number }
+type RejectRun = RejectQuery & { visit: number }
+type DecisionAsk = { docId: string; target: string; when: string }
+/** Текст отказа решения (409 обрабатывается отдельно): первая ошибка problem.errors (400), иначе message. */
+const decisionErrorText = (e: ApiError): string => e.problem?.errors?.[0]?.message || e.message
+const without = <T>(m: Record<string, T>, key: string): Record<string, T> => {
+  const next = { ...m }
+  delete next[key]
+  return next
+}
 type Visit = { opened: boolean; visit: number }
 /** Ответ своего визита экрана: пришедший после ухода или от прошлого визита не принимается. */
 const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.opened && params.visit === cur.visit
@@ -76,6 +106,9 @@ const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.open
  */
 export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): DocEdit<D> {
   const { ports, lifecycle } = cfg
+  // визит экрана: растёт на pageOpened — ответы справочников и решений прошлого визита не принимаются
+  const $visit = createStore(0).on(lifecycle.pageOpened, (v) => v + 1)
+  const current = { opened: lifecycle.$opened, visit: $visit }
   const open = createEvent<{ key: string; initial: EditValue }>()
   const submit = createEvent<{ key: string; initial: EditValue; draft: EditValue }>()
   // текущее как пришло с бека, по ключу правки — для was запроса. Пишется только для принятого моделью действия:
@@ -123,9 +156,9 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   sample({ clock: submit, fn: ({ key, initial, draft }) => ({ key, initial: cfg.normalize(targetOf(key), initial), draft }), target: inner.submit })
   const model: EditModel<EditValue, D, LeaveIntent, ApiError> = { ...inner, open, submit }
 
-  const docEdited = sample({ clock: inner.saved, fn: ({ result }) => ({ id: result.id, detail: result }) })
-  const conflict = sample({ clock: inner.failed, filter: ({ error }) => error.status === 409, fn: ({ key }) => ({ id: idOf(key) }) })
-  const $savedCount = createStore(0).on(docEdited, (n) => n + 1)
+  const savedDoc = sample({ clock: inner.saved, fn: ({ result }) => ({ id: result.id, detail: result }) })
+  const savedConflict = sample({ clock: inner.failed, filter: ({ error }) => error.status === 409, fn: ({ key }) => ({ id: idOf(key) }) })
+  const $savedCount = createStore(0).on(savedDoc, (n) => n + 1)
   // отказ без своего открытого редактора — объявлением (строки под редактором нет)
   const unseen = sample({
     clock: inner.failed,
@@ -138,8 +171,6 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   // --- справочники счетов: своя копия порта, ответы только своего визита экрана (как у createDetail) ---
   const loadAccounts = createEvent<AccountsQuery>()
   const loadFx = attach({ effect: ports.accountsFx, mapParams: (p: AccLoad): AccountsQuery => ({ id: p.id, side: p.side }) })
-  const $visit = createStore(0).on(lifecycle.pageOpened, (v) => v + 1)
-  const current = { opened: lifecycle.$opened, visit: $visit }
   const $accounts = createStore<Record<string, AccountsSlot>>({})
 
   const done = sample({ clock: loadFx.done, source: current, filter: mine, fn: (_, x) => x })
@@ -172,5 +203,97 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   $was.reset(lifecycle.pageClosed)
   $openRaw.reset(lifecycle.pageClosed)
 
-  return { model, $accounts, loadAccounts, docEdited, conflict, $savedCount, $unsaved }
+  // --- вторая рука: утвердить/отклонить чужую правку (план 2d §3.3); одна операция над документом за раз ---
+  const confirmRequested = createEvent<DecisionAsk>()
+  const rejectRequested = createEvent<DecisionAsk>()
+  const reasonChanged = createEvent<{ docId: string; text: string }>()
+  const decisionResult = createEvent<{ docId: string; ok: boolean }>()
+  const $decision = createStore<Record<string, DecisionState>>({})
+  const confirmFx = attach({ effect: ports.confirmEditFx, mapParams: ({ id, target, when }: ConfirmRun): DecisionQuery => ({ id, target, when }) })
+  const rejectFx = attach({ effect: ports.rejectEditFx, mapParams: ({ id, target, when, reason }: RejectRun): RejectQuery => ({ id, target, when, reason }) })
+
+  const kindOf = (kind: DecisionKind) => (q: DecisionAsk) => ({ ...q, kind })
+  // решение начинается только на открытом экране, без своего открытого редактора документа, без сохранения в полёте и
+  // без уже открытого решения этого документа (оно не подменяется)
+  const asked = sample({
+    clock: merge([confirmRequested.map(kindOf('confirm')), rejectRequested.map(kindOf('reject'))]),
+    source: { opened: lifecycle.$opened, decision: $decision, editing: inner.$editing, saving: inner.$saving },
+    filter: ({ opened, decision, editing, saving }, q) =>
+      opened && !saving && decision[q.docId] === undefined && (editing === null || !editing.key.startsWith(editScope(q.docId))),
+    fn: (_, q) => q,
+  })
+  // запрос: решение не в полёте; у отклонения — причина не пуста после trim
+  const go = sample({
+    clock: decisionResult,
+    source: { decision: $decision, visit: $visit },
+    filter: ({ decision }, { docId, ok }) => {
+      const d = decision[docId]
+      return ok && d !== undefined && !d.busy && (d.kind === 'confirm' || d.reason.trim() !== '')
+    },
+    fn: ({ decision, visit }, { docId }) => ({ docId, visit, d: decision[docId] as DecisionState }),
+  })
+  // отмена — только без запроса в полёте
+  const dismissed = sample({
+    clock: decisionResult,
+    source: $decision,
+    filter: (decision, { docId, ok }) => !ok && decision[docId] !== undefined && !(decision[docId] as DecisionState).busy,
+    fn: (_, { docId }) => docId,
+  })
+
+  // ответы своего визита; после ухода с экрана решения уже сброшены, ответ их не трогает и не объявляется
+  const confirmed = sample({ clock: confirmFx.done, source: current, filter: mine, fn: (_, { params }) => params.id })
+  const rejected = sample({ clock: rejectFx.done, source: current, filter: mine, fn: (_, { params }) => params.id })
+  const refused = sample({ clock: merge([confirmFx.fail, rejectFx.fail]), source: current, filter: mine, fn: (_, { params, error }) => ({ docId: params.id, error }) })
+  const decisionConflict = sample({ clock: refused, filter: ({ error }) => error.status === 409, fn: ({ docId }) => ({ id: docId }) })
+  const declined = sample({ clock: refused, filter: ({ error }) => error.status !== 409, fn: ({ docId, error }) => ({ docId, text: decisionErrorText(error) }) })
+
+  $decision
+    .on(asked, (m, { docId, kind, target, when }) => ({ ...m, [docId]: { kind, target, when, reason: '', busy: false, error: null } }))
+    .on(reasonChanged, (m, { docId, text }) => {
+      const d = m[docId]
+      return d === undefined || d.busy ? m : { ...m, [docId]: { ...d, reason: text, error: null } }
+    })
+    .on(go, (m, { docId, d }) => ({ ...m, [docId]: { ...d, busy: true, error: null } }))
+    .on(dismissed, (m, docId) => without(m, docId))
+    .on([confirmed, rejected], (m, docId) => without(m, docId))
+    .on(decisionConflict, (m, { id }) => without(m, id))
+    .on(declined, (m, { docId, text }) => {
+      const d = m[docId]
+      return d === undefined ? m : { ...m, [docId]: { ...d, busy: false, error: text } }
+    })
+    .reset(lifecycle.pageClosed)
+
+  sample({
+    clock: go,
+    filter: ({ d }) => d.kind === 'confirm',
+    fn: ({ docId, visit, d }): ConfirmRun => ({ id: docId, target: d.target, when: d.when, visit }),
+    target: confirmFx,
+  })
+  sample({
+    clock: go,
+    filter: ({ d }) => d.kind === 'reject',
+    fn: ({ docId, visit, d }): RejectRun => ({ id: docId, target: d.target, when: d.when, reason: d.reason.trim(), visit }),
+    target: rejectFx,
+  })
+
+  const $decided = createStore({ count: 0, text: '' })
+    .on(confirmed, ({ count }) => ({ count: count + 1, text: DECISION_TEXT.confirmed }))
+    .on(rejected, ({ count }) => ({ count: count + 1, text: DECISION_TEXT.rejected }))
+    .on(decisionConflict, ({ count }) => ({ count: count + 1, text: DECISION_TEXT.conflict }))
+
+  // деталь ответа решения — фильтр визита экрана: прошлый визит не принимается; ответ после ухода того же визита выпускается —
+  // кэш детали и реестр сами не принимают его на закрытом экране
+  const decidedDoc = sample({
+    clock: merge([confirmFx.done, rejectFx.done]),
+    source: $visit,
+    filter: (visit, { params }) => params.visit === visit,
+    fn: (_, { result }) => ({ id: result.id, detail: result }),
+  })
+  const docEdited = merge([savedDoc, decidedDoc])
+  const conflict = merge([savedConflict, decisionConflict])
+
+  return {
+    model, $accounts, loadAccounts, docEdited, conflict, $savedCount, $unsaved,
+    $decision, confirmRequested, rejectRequested, reasonChanged, decisionResult, $decided,
+  }
 }

@@ -1,4 +1,4 @@
 export type {
-  AccountsSlot, ActionIcon, DetailAction, DetailDomain, DetailSummary, DetailTab, EditConfirmView, EditContext, LeaveIntent, LocalTabView, RemoteTabView, TabContext, TabView,
+  AccountsSlot, ActionIcon, DecisionKind, DecisionState, DetailAction, DetailDomain, DetailSummary, DetailTab, EditConfirmView, EditContext, LeaveIntent, LocalTabView, RemoteTabView, TabContext, TabView,
 } from './types'
 export { remoteTab } from './remoteTab'

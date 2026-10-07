@@ -12,6 +12,10 @@ import { DISCARD_VIEW, editKey, editScope, targetOf, type DocEdit } from '../mod
  * Рост $savedCount — объявление «Изменения сохранены» в живой области (на монтировании — без объявления); рост $unsaved — его текст
  * «Изменения не сохранены: …» (отказ ↺ и отказ после ухода из редактора).
  *
+ * Вторая рука (план 2d §3.3): decision — Prompt решения своего документа; canDecide — кнопки «Утвердить»/«Отклонить» цели
+ * (canConfirm цели, нет своего редактора, нет решения, не saving); пока решение открыто, open и revert документа не действуют
+ * (одна операция за раз). Рост $decided — объявление его текста («Правка утверждена» / «Правка отклонена» / 409).
+ *
  * commitView получает initial модели (нормализованное текущее) и черновик как он есть, без нормализации: запрос уйдёт с
  * normalize(черновик). Для единственной цели с Prompt «commit» — даты валютирования ГГГГ-ММ-ДД из DateInput — это одно и то же.
  */
@@ -20,11 +24,13 @@ export function useEditContexts<D extends { id: string }>(
   commitView: (target: string, was: EditValue, now: EditValue) => EditConfirmView,
 ): (docId: string) => EditContext {
   const { model } = edit
-  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount, unsaved] = useUnit([
+  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount, unsaved, decisions, decided] = useUnit([
     model.$editing, model.$drafts, model.$errors, model.$saving, model.$saveError, model.$confirm, edit.$accounts, edit.$savedCount, edit.$unsaved,
+    edit.$decision, edit.$decided,
   ])
-  const [open, change, cancel, save, submit, confirmResult, loadAccounts] = useUnit([
+  const [open, change, cancel, save, submit, confirmResult, loadAccounts, confirmRequested, rejectRequested, reasonChanged, decisionResult] = useUnit([
     model.open, model.change, model.cancel, model.save, model.submit, model.confirmResult, edit.loadAccounts,
+    edit.confirmRequested, edit.rejectRequested, edit.reasonChanged, edit.decisionResult,
   ])
   const { announce } = useKatran()
 
@@ -38,6 +44,11 @@ export function useEditContexts<D extends { id: string }>(
     if (unsaved.count > seenUnsaved.current) announce(unsaved.text)
     seenUnsaved.current = unsaved.count
   }, [unsaved, announce])
+  const seenDecided = useRef(decided.count)
+  useEffect(() => {
+    if (decided.count > seenDecided.current) announce(decided.text)
+    seenDecided.current = decided.count
+  }, [decided, announce])
 
   return useCallback((docId: string): EditContext => {
     const scope = editScope(docId)
@@ -45,6 +56,7 @@ export function useEditContexts<D extends { id: string }>(
     const key = own?.key ?? null
     const draft = key !== null ? drafts[key] ?? null : null
     const ownConfirm = confirm !== null && confirm.key.startsWith(scope)
+    const decision = decisions[docId] ?? null
     let view: EditConfirmView | null = null
     if (confirm !== null && ownConfirm) {
       if (confirm.kind === 'discard') view = DISCARD_VIEW
@@ -60,13 +72,23 @@ export function useEditContexts<D extends { id: string }>(
       saveError: key !== null && !saving ? saveError : null,
       confirm: view,
       onConfirm: (ok) => { if (ownConfirm) confirmResult(ok) },
-      open: (target, current) => open({ key: editKey(docId, target), initial: current }),
+      // пока открыт Prompt решения документа — карандаши и ↺ не действуют
+      open: (target, current) => { if (decision === null) open({ key: editKey(docId, target), initial: current }) },
       change: (next) => { if (key !== null) change({ key, draft: next }) },
       cancel: () => { if (key !== null) cancel() },
       save: () => { if (key !== null) save() },
-      revert: (target, current, original) => submit({ key: editKey(docId, target), initial: current, draft: original }),
+      revert: (target, current, original) => { if (decision === null) submit({ key: editKey(docId, target), initial: current, draft: original }) },
       accounts: (side) => accounts[`${docId}:${side}`] ?? null,
       retryAccounts: (side) => loadAccounts({ id: docId, side }),
+      decision,
+      canDecide: (_target, canConfirm) => canConfirm && own === null && decision === null && !saving,
+      confirmEdit: (target, when) => confirmRequested({ docId, target, when }),
+      rejectEdit: (target, when) => rejectRequested({ docId, target, when }),
+      changeReason: (text) => reasonChanged({ docId, text }),
+      onDecision: (ok) => decisionResult({ docId, ok }),
     }
-  }, [editing, drafts, errors, saving, saveError, confirm, accounts, commitView, open, change, cancel, save, submit, confirmResult, loadAccounts])
+  }, [
+    editing, drafts, errors, saving, saveError, confirm, accounts, decisions, commitView, open, change, cancel, save, submit, confirmResult, loadAccounts,
+    confirmRequested, rejectRequested, reasonChanged, decisionResult,
+  ])
 }
