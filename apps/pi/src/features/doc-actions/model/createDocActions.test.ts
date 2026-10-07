@@ -4,7 +4,8 @@ import { ApiError, type FileResponse, type PrintQuery } from '../../../shared/ap
 import { configureDocLinks, defaultDocLink } from '../../../shared/lib/doc-link'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import {
-  LINK_COPIED_TEXT, PRINT_BLOCKED_TEXT, closeWindowFx, createDocActions, revokeUrlsFx, saveFileFx, showInWindowFx, writeClipboardFx,
+  LINK_COPIED_TEXT, NOTICE_HIDE_MS, PRINT_BLOCKED_TEXT, closeWindowFx, createDocActions, noticeDelayFx, revokeUrlsFx, saveFileFx, showInWindowFx,
+  writeClipboardFx,
 } from './createDocActions'
 
 type Pending<P, R> = { params: P; ok: (r: R) => void; fail: (e: ApiError) => void }
@@ -39,6 +40,8 @@ function setup(o: { buildLink?: (gridId: string, id: string) => string; clipboar
   const log = { copied: [] as string[], saved: [] as { blob: Blob; name: string }[], shown: [] as { win: Window; blob: Blob }[], closed: [] as Window[], revoked: [] as string[][] }
   let n = 0
   const clip = { fail: o.clipboard === 'fail' }
+  // таймер автоскрытия уведомления: по умолчанию «истёк сразу»; hold — истекает по release()
+  const timer = { hold: false, delays: [] as number[], release: [] as (() => void)[] }
   const scope = fork({
     handlers: [
       [writeClipboardFx, async (text: string) => { if (clip.fail) throw new Error('NotAllowedError'); log.copied.push(text) }],
@@ -46,11 +49,15 @@ function setup(o: { buildLink?: (gridId: string, id: string) => string; clipboar
       [showInWindowFx, (p: { win: Window; blob: Blob }) => { log.shown.push(p); n += 1; return `blob:print-${n}` }],
       [closeWindowFx, (w: Window) => { log.closed.push(w) }],
       [revokeUrlsFx, (urls: string[]) => { log.revoked.push(urls) }],
+      [noticeDelayFx, ({ ms }: { seq: number; ms: number }) => {
+        timer.delays.push(ms)
+        return timer.hold ? new Promise<void>((ok) => { timer.release.push(ok) }) : undefined
+      }],
     ],
   })
   const inFlight: Promise<unknown>[] = []
   return {
-    actions, scope, messages, prints, lifecycle, log, clip,
+    actions, scope, messages, prints, lifecycle, log, clip, timer,
     fire: (p: Promise<unknown>) => { inFlight.push(p) },
     settle: () => Promise.all(inFlight),
   }
@@ -206,6 +213,58 @@ describe('createDocActions (план 2d §3.3)', () => {
     expect(scope.getState(actions.$pending)).toEqual({})
   })
 
+  it('видимое уведомление документа (спека 2d §4 п. 7): ошибка — bad, до closeNotice; таймера нет', async () => {
+    const t = setup()
+    const { actions, scope, messages, timer } = t
+    expect(scope.getState(actions.$docNotice)).toBeNull()
+    t.fire(allSettled(actions.download, { scope, params: 'x' }))
+    messages[0]!.fail(new ApiError(500, { type: 'urn:katran:error', title: 'Ошибка', status: 500, detail: 'Сообщение не сформировано' }, 'Ошибка'))
+    await t.settle()
+    expect(scope.getState(actions.$docNotice)).toEqual({ docId: 'x', text: 'Сообщение не сформировано', tone: 'bad' })
+    expect(timer.delays).toEqual([])
+    // объявление живой области — как было
+    expect(scope.getState(actions.$notice)).toEqual({ count: 1, text: 'Сообщение не сформировано' })
+    await allSettled(actions.closeNotice, { scope })
+    expect(scope.getState(actions.$docNotice)).toBeNull()
+  })
+
+  it('уведомление: «Ссылка скопирована» — ok, скрывается само через NOTICE_HIDE_MS (noticeDelayFx); старый таймер новое уведомление не скрывает', async () => {
+    const t = setup({ buildLink: () => 'L' })
+    const { actions, scope, prints, timer } = t
+    timer.hold = true
+    t.fire(allSettled(actions.copyLink, { scope, params: 'x' }))
+    await new Promise((r) => { setTimeout(r, 0) })
+    expect(NOTICE_HIDE_MS).toBe(4000)
+    expect(timer.delays).toEqual([4000])
+    expect(scope.getState(actions.$docNotice)).toEqual({ docId: 'x', text: LINK_COPIED_TEXT, tone: 'ok' })
+    // до истечения таймера — отказ печати другого документа: его уведомление не скрывается старым таймером
+    const win = fakeWin()
+    t.fire(allSettled(actions.print, { scope, params: { id: 'y', form: 'swift-form', win } }))
+    prints[0]!.fail(notFound)
+    await new Promise((r) => { setTimeout(r, 0) })
+    expect(scope.getState(actions.$docNotice)).toEqual({ docId: 'y', text: 'Печатная форма недоступна', tone: 'bad' })
+    timer.release[0]!()
+    await t.settle()
+    expect(scope.getState(actions.$docNotice)).toEqual({ docId: 'y', text: 'Печатная форма недоступна', tone: 'bad' })
+    // новый успех — снова ok и таймер; истёк — скрыто
+    timer.hold = false
+    await allSettled(actions.copyLink, { scope, params: 'x' })
+    expect(timer.delays).toEqual([4000, 4000])
+    expect(scope.getState(actions.$docNotice)).toBeNull()
+  })
+
+  it('уведомление: вкладку печати заблокировали — bad (форма скачана, но вкладки нет), без автоскрытия; pageClosed сбрасывает', async () => {
+    const t = setup()
+    const { actions, scope, prints, timer, lifecycle } = t
+    t.fire(allSettled(actions.print, { scope, params: { id: 'x', form: 'swift-form', win: null } }))
+    prints[0]!.ok({ blob: blob('%PDF'), name: null })
+    await t.settle()
+    expect(scope.getState(actions.$docNotice)).toEqual({ docId: 'x', text: PRINT_BLOCKED_TEXT, tone: 'bad' })
+    expect(timer.delays).toEqual([])
+    await allSettled(lifecycle.pageClosed, { scope })
+    expect(scope.getState(actions.$docNotice)).toBeNull()
+  })
+
   it('pageClosed: blob URL печати освобождены, $pending и запасная ссылка сброшены', async () => {
     const t = setup({ clipboard: 'fail', buildLink: () => 'L' })
     const { actions, scope, prints, messages, log, lifecycle } = t
@@ -265,6 +324,21 @@ describe('побочные эффекты doc-actions (настоящие обр
     const gone = { ...fakeWin(), closed: true } as unknown as Window
     expect(await showInWindowFx({ win: gone, blob: blob('%PDF') })).toBeNull()
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+  })
+
+  it('noticeDelayFx: завершается через ms (таймер), не раньше', async () => {
+    vi.useFakeTimers()
+    try {
+      let done = false
+      const run = noticeDelayFx({ seq: 1, ms: NOTICE_HIDE_MS }).then(() => { done = true })
+      await vi.advanceTimersByTimeAsync(NOTICE_HIDE_MS - 1)
+      expect(done).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      await run
+      expect(done).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('closeWindowFx закрывает окно; revokeUrlsFx освобождает каждый URL', async () => {

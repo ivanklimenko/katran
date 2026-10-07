@@ -1,7 +1,8 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
-import { createEffect } from 'effector'
+import { createEffect, createEvent, createStore } from 'effector'
+import { useUnit } from 'effector-react'
 import { ApiError, type TabQuery } from '../../../shared/api'
 import { remoteTab, type ActionsView, type DetailDomain, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -404,7 +405,7 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
 
 /** Вид действий документа — заглушка с vi.fn(): виджет не знает модели действий (план 2d §3.3). */
 const actionsStub = (over: Partial<ActionsView> = {}): ActionsView => ({
-  run: vi.fn(), pending: () => false, linkFallback: null, closeLinkFallback: vi.fn(), ...over,
+  run: vi.fn(), pending: () => false, linkFallback: null, closeLinkFallback: vi.fn(), notice: null, closeNotice: vi.fn(), ...over,
 })
 // лейн 2d: шесть действий эталона без «Редактировать»; блок с полем ввода — для F5 в поле
 const laneDomain: DetailDomain<Doc, Doc> = {
@@ -484,7 +485,7 @@ describe('DocDetail: действия лейна (план 2d §3.5)', () => {
     expect(refresh).not.toHaveAttribute('aria-busy')
   })
 
-  it('запасная ссылка — status в drawer своего документа: поле только для чтения, ссылка выделена, «Закрыть» — closeLinkFallback', async () => {
+  it('запасная ссылка — группа «Ссылка на документ» в drawer своего документа: поле только для чтения, ссылка выделена, подсказка — описание поля, «Закрыть ссылку» — closeLinkFallback; появление объявлено', async () => {
     const url = 'http://localhost/#/fx-docs?doc=d1'
     const own = actionsStub({ linkFallback: url })
     const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: (id) => (id === 'd1' ? own : actionsStub()) })
@@ -494,16 +495,103 @@ describe('DocDetail: действия лейна (план 2d §3.5)', () => {
     await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
     const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
     const b = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
-    expect(within(b).queryByRole('status')).toBeNull()
-    const note = within(a).getByRole('status')
+    expect(within(b).queryByRole('group', { name: 'Ссылка на документ' })).toBeNull()
+    const note = within(a).getByRole('group', { name: 'Ссылка на документ' })
+    // интерактивное содержимое — не в живой области: role=status у уведомления нет
+    expect(within(a).queryByRole('status')).toBeNull()
     expect(note).toHaveTextContent('Скопируйте ссылку: Ctrl+C')
     const field = within(note).getByRole('textbox')
     expect(field).toHaveValue(url)
     expect(field).toHaveAttribute('readonly')
     expect(field).toHaveFocus()
+    expect(field).toHaveAccessibleDescription('Скопируйте ссылку: Ctrl+C')
     expect([(field as HTMLInputElement).selectionStart, (field as HTMLInputElement).selectionEnd]).toEqual([0, url.length])
-    await userEvent.click(within(note).getByRole('button', { name: 'Закрыть' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Буфер обмена недоступен. Скопируйте ссылку: Ctrl+C'))
+    await userEvent.click(within(note).getByRole('button', { name: 'Закрыть ссылку' }))
     expect(own.closeLinkFallback).toHaveBeenCalledTimes(1)
+  })
+
+  describe('запасная ссылка: клавиатура (финальное ревью 2d, I3)', () => {
+    const url = 'http://localhost/#/fx-docs?doc=d1'
+    const shown = createEvent<string | null>()
+    const closed = createEvent()
+    const $link = createStore<string | null>(null).on(shown, (_, l) => l).reset(closed)
+    const run = vi.fn()
+    // вид действий со своим стором ссылки: закрытие действительно убирает уведомление (возврат фокуса)
+    const useLinkActions = (): ActionsView => {
+      const link = useUnit($link)
+      return actionsStub({ run, linkFallback: link, closeLinkFallback: () => { closed() } })
+    }
+    const ready = async () => {
+      run.mockClear()
+      act(() => { closed() })
+      const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: useLinkActions })
+      open('d1')
+      await screen.findByText('Блок b1')
+      const copy = screen.getByRole('button', { name: 'Скопировать ссылку' })
+      copy.focus()
+      act(() => { shown(url) })
+      const field = screen.getByRole('textbox', { name: 'Ссылка на документ' })
+      expect(field).toHaveFocus()
+      return { copy, field }
+    }
+
+    it('F5 в поле ссылки (только для чтения) — «Обновить», страница не перезагружается', async () => {
+      const { field } = await ready()
+      expect(fireEvent.keyDown(field, { key: 'F5' })).toBe(false)
+      expect(run).toHaveBeenCalledWith(refreshAction)
+    })
+
+    it('Esc в поле — закрыто уведомление, не деталка; фокус вернулся на «Скопировать ссылку»', async () => {
+      const { copy } = await ready()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('group', { name: 'Ссылка на документ' })).toBeNull()
+      expect(screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })).toBeInTheDocument()
+      expect(copy).toHaveFocus()
+    })
+
+    it('Esc на «Закрыть ссылку» — тоже только уведомление; «Закрыть ссылку» кликом — фокус на «Скопировать ссылку»', async () => {
+      const first = await ready()
+      screen.getByRole('button', { name: 'Закрыть ссылку' }).focus()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.queryByRole('group', { name: 'Ссылка на документ' })).toBeNull()
+      expect(screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })).toBeInTheDocument()
+      expect(first.copy).toHaveFocus()
+      act(() => { shown(url) })
+      await userEvent.click(screen.getByRole('button', { name: 'Закрыть ссылку' }))
+      expect(screen.queryByRole('group', { name: 'Ссылка на документ' })).toBeNull()
+      expect(first.copy).toHaveFocus()
+    })
+  })
+
+  it('уведомление действия — под лейном своего drawer: текст виден, тон в data-tone; «Закрыть уведомление» — closeNotice', async () => {
+    const own = actionsStub({ notice: { text: 'Сообщение не сформировано', tone: 'bad' } })
+    const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: (id) => (id === 'd1' ? own : actionsStub()) })
+    open('d1', false, true)
+    open('d2', true, true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    const b = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
+    expect(b.querySelector('[data-part="action-notice"]')).toBeNull()
+    const note = a.querySelector('[data-part="action-notice"]') as HTMLElement
+    expect(note).toHaveTextContent('Сообщение не сформировано')
+    expect(note).toHaveAttribute('data-tone', 'bad')
+    expect(note).toBeVisible()
+    // объявляет модель (announce): у видимого уведомления своей живой области нет — иначе текст прозвучал бы дважды
+    expect(note.closest('[aria-live]')).toBeNull()
+    await userEvent.click(within(note).getByRole('button', { name: 'Закрыть уведомление' }))
+    expect(own.closeNotice).toHaveBeenCalledTimes(1)
+    expect(own.run).not.toHaveBeenCalled()
+  })
+
+  it('уведомление успеха и запасная ссылка вместе — оба видны; без нарушений axe', async () => {
+    const view = actionsStub({ notice: { text: 'Ссылка скопирована', tone: 'ok' }, linkFallback: 'http://localhost/#/fx-docs?doc=d1' })
+    const { container, open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: () => view })
+    open('d1', false, true)
+    await screen.findByText('Блок b1')
+    expect(document.querySelector('[data-part="action-notice"]')).toHaveAttribute('data-tone', 'ok')
+    expect(screen.getByRole('group', { name: 'Ссылка на документ' })).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
   })
 })
 

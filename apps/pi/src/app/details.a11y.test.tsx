@@ -142,8 +142,11 @@ describe('a11y правки деталки (план 2c, Task 12)', () => {
   }, 60_000)
 })
 
-/** Вид действий с «Скачать» в полёте — лейн с aria-busy (модель действий связывает страница, Task 11). */
-const downPending = (): ActionsView => ({ run: () => {}, pending: (id) => id === 'down', linkFallback: null, closeLinkFallback: () => {} })
+/** Вид действий с «Скачать» в полёте — лейн с aria-busy и уведомлением отказа под ним (модель действий связывает страница, Task 11). */
+const downPending = (): ActionsView => ({
+  run: () => {}, pending: (id) => id === 'down', linkFallback: null, closeLinkFallback: () => {},
+  notice: { text: 'Сообщение не сформировано', tone: 'bad' }, closeNotice: () => {},
+})
 
 function FxDecisionDetail() {
   const editOf = useEditContexts(docEdit, fxCommitView)

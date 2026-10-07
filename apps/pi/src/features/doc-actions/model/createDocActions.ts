@@ -1,5 +1,6 @@
 import { attach, createEffect, createEvent, createStore, sample, type Event, type EventCallable, type Store } from 'effector'
 import type { ActionPorts, ApiError, PrintQuery } from '../../../shared/api'
+import type { ActionNotice } from '../../../shared/lib/detail'
 import { buildDocLink } from '../../../shared/lib/doc-link'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
@@ -8,6 +9,8 @@ export const PRINT_BLOCKED_TEXT = 'Браузер заблокировал вк�
 export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 /** Отказ без текста (ни detail Problem, ни message) — на практике не встречается: ApiError всегда с message. */
 export const ACTION_FAILED_TEXT = 'Действие не выполнено'
+/** Успешное уведомление («Ссылка скопирована») скрывается само через столько мс; отказ висит до «Закрыть» (Ruling R20). */
+export const NOTICE_HIDE_MS = 4000
 
 export type DocActionsConfig = {
   gridId: string
@@ -43,6 +46,12 @@ export type DocActions = {
   closeLinkFallback: EventCallable<void>
   /** Объявления: count растёт, text — LINK_COPIED_TEXT, PRINT_BLOCKED_TEXT или текст ошибки (detail Problem, иначе message). */
   $notice: Store<{ count: number; text: string }>
+  /**
+   * Видимое уведомление под лейном (спека 2d §4 п. 7) — тот же текст, что и объявление, у документа docId: вид показывает его
+   * только в drawer этого документа. ok скрывается само через NOTICE_HIDE_MS, bad — до closeNotice; новое заменяет прежнее.
+   */
+  $docNotice: Store<(ActionNotice & { docId: string }) | null>
+  closeNotice: EventCallable<void>
 }
 
 export type SaveFileQuery = { blob: Blob; name: string }
@@ -89,6 +98,12 @@ export const revokeUrlsFx = createEffect<string[], void>((urls) => {
   urls.forEach((u) => { URL.revokeObjectURL(u) })
 })
 
+/**
+ * Пауза автоскрытия уведомления ms: таймер — эффектом (тесты и стенды подменяют его через fork handlers); seq — номер
+ * уведомления, возвращается в done (скрывается только оно).
+ */
+export const noticeDelayFx = createEffect<{ seq: number; ms: number }, void>(({ ms }) => new Promise<void>((done) => { setTimeout(done, ms) }))
+
 /** Текст отказа для объявления (спека 2d §3.3): detail Problem, иначе message. */
 const errorText = (e: ApiError): string => e.problem?.detail || e.message || ACTION_FAILED_TEXT
 
@@ -107,7 +122,8 @@ const pdfName = (form: string, fallback: string): string => `${form}-${fallback.
  * Действия лейна документа (план 2d §3.3): Обновить (событие для страницы), ссылка в буфер с запасным полем, скачать
  * сообщение, печатная форма во вкладке. Окно печати открывает вид синхронно в обработчике клика (иначе его заблокирует
  * браузер) и передаёт в print; модель кладёт в него PDF, при ошибке закрывает, при блокировке скачивает файл.
- * Blob URL печати освобождаются при уходе с экрана; запасная ссылка и $pending сбрасываются.
+ * Blob URL печати освобождаются при уходе с экрана; запасная ссылка, уведомление и $pending сбрасываются.
+ * Каждое объявление ($notice) видно и уведомлением документа ($docNotice): успех скрывается сам, отказ — по «Закрыть».
  */
 export function createDocActions(cfg: DocActionsConfig): DocActions {
   const { gridId, ports, lifecycle, fallbackName } = cfg
@@ -118,7 +134,8 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
   const download = createEvent<string>()
   const print = createEvent<PrintCall>()
   const closeLinkFallback = createEvent<void>()
-  const noticed = createEvent<string>()
+  const closeNotice = createEvent<void>()
+  const noticed = createEvent<ActionNotice & { docId: string }>()
   const linkStarted = createEvent<{ id: string; url: string }>()
   const downloadStarted = createEvent<string>()
   const printStarted = createEvent<PrintCall>()
@@ -130,6 +147,8 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
   const messageFx = attach({ effect: ports.messageFx })
   const printFx = attach({ effect: ports.printFx, mapParams: ({ id, form }: PrintCall): PrintQuery => ({ id, form }) })
   const showFx = attach({ effect: showInWindowFx })
+  // своя копия таймера: done — только от уведомлений этой модели
+  const hideFx = attach({ effect: noticeDelayFx })
 
   const $pending = createStore<Record<string, true>>({})
     .on(linkStarted, (p, { id }) => add(p, pendingKey(id, 'link')))
@@ -144,7 +163,15 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     // скопировалось — поле этого документа больше не нужно; поле другого документа остаётся
     .on(copyFx.done, (f, { params }) => (f !== null && f.docId === params.id ? null : f))
     .reset(closeLinkFallback, lifecycle.pageClosed)
-  const $notice = createStore({ count: 0, text: '' }).on(noticed, (n, text) => ({ count: n.count + 1, text }))
+  // номер уведомления — count объявления: таймер скрывает только то уведомление, для которого запущен
+  const $seq = createStore(0)
+  const raised = sample({ clock: noticed, source: $seq, fn: (seq, n) => ({ ...n, seq: seq + 1 }) })
+  $seq.on(raised, (_, { seq }) => seq)
+  const $notice = createStore({ count: 0, text: '' }).on(raised, (_, { seq, text }) => ({ count: seq, text }))
+  const $shown = createStore<(ActionNotice & { docId: string; seq: number }) | null>(null)
+    .on(raised, (_, n) => n)
+    .on(hideFx.done, (cur, { params }) => (cur !== null && cur.seq === params.seq ? null : cur))
+    .reset(closeNotice, lifecycle.pageClosed)
   const $printUrls = createStore<string[]>([])
     .on(showFx.doneData, (l, url) => (url === null ? l : [...l, url]))
     .on(urlsReleased, () => [])
@@ -155,7 +182,7 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     fn: (_, id) => ({ id, url: build(gridId, id) }), target: linkStarted,
   })
   sample({ clock: linkStarted, target: copyFx })
-  sample({ clock: copyFx.done, fn: () => LINK_COPIED_TEXT, target: noticed })
+  sample({ clock: copyFx.done, fn: ({ params }) => ({ docId: params.id, text: LINK_COPIED_TEXT, tone: 'ok' as const }), target: noticed })
 
   // Скачать сообщение
   sample({ clock: download, source: $pending, filter: (p, id) => !p[pendingKey(id, 'down')], fn: (_, id) => id, target: downloadStarted })
@@ -164,7 +191,7 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     clock: messageFx.done, source: fallbackName,
     fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? nameOf(params) }), target: saveFileFx,
   })
-  sample({ clock: messageFx.failData, fn: errorText, target: noticed })
+  sample({ clock: messageFx.fail, fn: ({ params, error }) => ({ docId: params, text: errorText(error), tone: 'bad' as const }), target: noticed })
 
   // Печать
   // одно чтение $pending на клик: printStarted тут же меняет $pending, второе чтение увидело бы уже свою же отметку
@@ -182,9 +209,13 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     clock: blocked, source: fallbackName,
     fn: (nameOf, { params, result }) => ({ blob: result.blob, name: result.name ?? pdfName(params.form, nameOf(params.id)) }), target: saveFileFx,
   })
-  sample({ clock: blocked, fn: () => PRINT_BLOCKED_TEXT, target: noticed })
+  // вкладки нет — пользователь её ждал: уведомление висит до «Закрыть», как отказ
+  sample({ clock: blocked, fn: ({ params }) => ({ docId: params.id, text: PRINT_BLOCKED_TEXT, tone: 'bad' as const }), target: noticed })
   sample({ clock: printFx.fail, filter: ({ params }) => params.win !== null, fn: ({ params }) => params.win as Window, target: closeWindowFx })
-  sample({ clock: printFx.failData, fn: errorText, target: noticed })
+  sample({ clock: printFx.fail, fn: ({ params, error }) => ({ docId: params.id, text: errorText(error), tone: 'bad' as const }), target: noticed })
+
+  // Уведомление: успех скрывается сам (таймер — эффектом), отказ — до «Закрыть»
+  sample({ clock: raised, filter: ({ tone }) => tone === 'ok', fn: ({ seq }) => ({ seq, ms: NOTICE_HIDE_MS }), target: hideFx })
 
   // Уход с экрана: URL печати освобождаются (спека 2d §3.3); открытые вкладки PDF к этому времени уже загрузили
   sample({ clock: lifecycle.pageClosed, source: $printUrls, filter: (l) => l.length > 0, target: [urlsReleased, revokeUrlsFx] })
@@ -194,5 +225,7 @@ export function createDocActions(cfg: DocActionsConfig): DocActions {
     $linkFallback: $fallback.map((f) => f?.url ?? null),
     $linkFallbackDoc: $fallback.map((f) => f?.docId ?? null),
     closeLinkFallback, $notice,
+    $docNotice: $shown.map((n) => (n === null ? null : { docId: n.docId, text: n.text, tone: n.tone })),
+    closeNotice,
   }
 }

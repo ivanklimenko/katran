@@ -20,12 +20,15 @@ function openPrintWindow(): Window | null {
 /**
  * Виды действий лейна по документам (план 2d §3.3): деталка получает ActionsView своего документа, не зная о модели.
  * esid и ban — срез 2e: run без действия (объявление-заглушку 2a для них оставляет виджет).
- * Рост $notice.count — объявление его текста в живой области (на монтировании — без объявления).
+ * Рост $notice.count — объявление его текста в живой области (на монтировании — без объявления); тот же текст — видимым
+ * уведомлением notice у документа $docNotice (спека 2d §4 п. 7).
  */
 export function useActionsOf(actions: DocActions): (docId: string) => ActionsView {
-  const [pending, linkFallback, linkDoc, notice] = useUnit([actions.$pending, actions.$linkFallback, actions.$linkFallbackDoc, actions.$notice])
-  const [refreshRequested, copyLink, download, print, closeLinkFallback] = useUnit([
-    actions.refreshRequested, actions.copyLink, actions.download, actions.print, actions.closeLinkFallback,
+  const [pending, linkFallback, linkDoc, notice, docNotice] = useUnit([
+    actions.$pending, actions.$linkFallback, actions.$linkFallbackDoc, actions.$notice, actions.$docNotice,
+  ])
+  const [refreshRequested, copyLink, download, print, closeLinkFallback, closeNotice] = useUnit([
+    actions.refreshRequested, actions.copyLink, actions.download, actions.print, actions.closeLinkFallback, actions.closeNotice,
   ])
   const { announce } = useKatran()
 
@@ -53,5 +56,7 @@ export function useActionsOf(actions: DocActions): (docId: string) => ActionsVie
     pending: (actionId) => Boolean(pending[pendingKey(docId, actionId)]),
     linkFallback: linkDoc === docId ? linkFallback : null,
     closeLinkFallback: () => { if (linkDoc === docId) closeLinkFallback() },
-  }), [pending, linkFallback, linkDoc, refreshRequested, copyLink, download, print, closeLinkFallback])
+    notice: docNotice !== null && docNotice.docId === docId ? { text: docNotice.text, tone: docNotice.tone } : null,
+    closeNotice: () => { if (docNotice !== null && docNotice.docId === docId) closeNotice() },
+  }), [pending, linkFallback, linkDoc, docNotice, refreshRequested, copyLink, download, print, closeLinkFallback, closeNotice])
 }

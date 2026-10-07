@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { createEffect, createStore } from 'effector'
 import { vi } from 'vitest'
-import type { ApiError, FileResponse, PrintQuery } from '../../../shared/api'
+import { ApiError, type FileResponse, type PrintQuery } from '../../../shared/api'
 import type { ActionsView, DetailAction } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
@@ -21,9 +21,11 @@ const PRINT: DetailAction = { ...act_('print', 'print'), menu: [SWIFT] }
 const fakeWin = () => ({ opener: {} as unknown, closed: false, location: { href: '' }, close: vi.fn(), document: { title: '', body: { textContent: '' } } })
 
 // UI-тесты apps/pi идут на глобальном scope: модель — новая в каждом тесте; порты — висящие, вызовы в журнале
-function setup() {
+function setup(o: { message?: 'hang' | 'fail' } = {}) {
   const prints: PrintQuery[] = []
-  const messageFx = createEffect<string, FileResponse, ApiError>(() => new Promise<FileResponse>(() => undefined))
+  const messageFx = createEffect<string, FileResponse, ApiError>(() => (o.message === 'fail'
+    ? Promise.reject(new ApiError(500, { type: 'urn:katran:error', title: 'Ошибка', status: 500, detail: 'Сообщение не сформировано' }, 'Ошибка'))
+    : new Promise<FileResponse>(() => undefined)))
   const printFx = createEffect<PrintQuery, FileResponse, ApiError>((q) => { prints.push(q); return new Promise<FileResponse>(() => undefined) })
   const lifecycle = createPageLifecycle()
   const actions = createDocActions({ gridId: 'fx-docs', ports: { messageFx, printFx }, lifecycle, buildLink: () => 'L', fallbackName: createStore((id: string) => id) })
@@ -117,6 +119,19 @@ describe('useActionsOf (план 2d §3.3)', () => {
     expect(ctx.d2!.linkFallback).toBeNull()
     act(() => { ctx.d1!.closeLinkFallback() })
     expect(ctx.d1!.linkFallback).toBeNull()
+  })
+
+  it('notice — видимое уведомление только у своего документа; closeNotice из чужого документа не действует, из своего — убирает', async () => {
+    const { ctx, done } = setup({ message: 'fail' })
+    expect(ctx.d1!.notice).toBeNull()
+    await act(async () => { ctx.d1!.run(DOWN) })
+    done()
+    expect(ctx.d1!.notice).toEqual({ text: 'Сообщение не сформировано', tone: 'bad' })
+    expect(ctx.d2!.notice).toBeNull()
+    act(() => { ctx.d2!.closeNotice() })
+    expect(ctx.d1!.notice).toEqual({ text: 'Сообщение не сформировано', tone: 'bad' })
+    act(() => { ctx.d1!.closeNotice() })
+    expect(ctx.d1!.notice).toBeNull()
   })
 
   it('рост $notice.count → announce(text); на монтировании объявления нет', async () => {

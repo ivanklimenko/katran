@@ -5,8 +5,8 @@ import {
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
 } from '@katran/ui'
 import {
-  REASON_MAX, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailSummary, type EditContext, type PrintFormItem,
-  type RemoteTabView, type TabContext,
+  REASON_MAX, type ActionNotice, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailSummary, type EditContext,
+  type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
@@ -36,8 +36,13 @@ type OnAction = (a: DetailAction, form?: PrintFormItem) => void
 
 /** Действия среза 2e: у модели действий их нет — и при actionsOf объявление-заглушка 2a. */
 const LATER = ['esid', 'ban']
-/** Цель keydown, где F5 остаётся браузеру: поле ввода (спека 2d §4 п. 4). */
-const FIELD = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
+/**
+ * Цель keydown, где F5 остаётся браузеру: поле ввода (спека 2d §4 п. 4). Поле только для чтения (запасная ссылка) — не ввод:
+ * F5 в нём — «Обновить», а не перезагрузка страницы с потерей открытых деталок (финальное ревью 2d, I3).
+ */
+const FIELD = 'input:not([readonly]), textarea:not([readonly]), select, [contenteditable]:not([contenteditable="false"])'
+/** Подсказка запасной ссылки — видимая и описание поля. */
+const LINK_HINT = 'Скопируйте ссылку: Ctrl+C'
 
 function ActionButton({ action, onAction, pending }: { action: DetailAction; onAction: OnAction; pending: boolean }) {
   const ref = useRef<HTMLButtonElement>(null)
@@ -99,23 +104,49 @@ function Lane({ summary, actions, onAction, pending }: {
 
 /**
  * Буфер обмена недоступен (план 2d §3.3): ссылка в поле только для чтения, выделена и в фокусе — Ctrl+C копирует её.
- * Закрытие возвращает фокус туда, где он был при появлении (кнопка «Скопировать ссылку»), если тот элемент ещё в DOM.
+ * Группа, а не живая область (в ней поле и кнопка): появление объявляется отдельно. Esc в группе закрывает её, а не деталку
+ * (data-k-edit — свой Esc для DrawerStack кита). Закрытие возвращает фокус туда, где он был при появлении (кнопка
+ * «Скопировать ссылку»), если тот элемент ещё в DOM.
  */
 function LinkFallback({ link, onClose }: { link: string; onClose: () => void }) {
   const field = useRef<HTMLInputElement>(null)
+  const hintId = useStableId()
+  const { announce } = useKatran()
   useEffect(() => {
     const before = document.activeElement
     field.current?.focus()
     field.current?.select()
+    announce(`Буфер обмена недоступен. ${LINK_HINT}`)
     return () => {
       if (before instanceof HTMLElement && before.isConnected) before.focus()
     }
-  }, [link])
+  }, [link, announce])
+  // Esc на поле и на кнопке (других фокусируемых в группе нет) — закрыть ссылку
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Escape') return
+    e.preventDefault()
+    e.stopPropagation()
+    onClose()
+  }
   return (
-    <div role="status" className={s.link} data-part="link-fallback">
-      <Input ref={field} size="s" readOnly value={link} aria-label="Ссылка на документ" className={s.linkField} />
-      <span className={s.linkHint}>Скопируйте ссылку: Ctrl+C</span>
-      <Button size="s" onClick={onClose}>Закрыть</Button>
+    <div role="group" aria-label="Ссылка на документ" className={s.link} data-part="link-fallback" data-k-edit="">
+      <Input ref={field} size="s" readOnly value={link} aria-label="Ссылка на документ" aria-describedby={hintId} className={s.linkField}
+        onKeyDown={onKeyDown} />
+      <span id={hintId} className={s.linkHint}>{LINK_HINT}</span>
+      <Button size="s" aria-label="Закрыть ссылку" onClick={onClose} onKeyDown={onKeyDown}>Закрыть</Button>
+    </div>
+  )
+}
+
+/**
+ * Уведомление действия под лейном (спека 2d §4 п. 7): текст отказа (detail Problem как есть) или успеха. Объявляет модель —
+ * своей живой области у него нет (иначе текст прозвучал бы дважды); успех модель скрывает сама, отказ — по «Закрыть».
+ */
+function ActionNoticeBar({ notice, onClose }: { notice: ActionNotice; onClose: () => void }) {
+  return (
+    <div className={s.notice} data-part="action-notice" data-tone={notice.tone}>
+      <span className={s.noticeText}>{notice.text}</span>
+      <Button size="s" aria-label="Закрыть уведомление" onClick={onClose}>Закрыть</Button>
     </div>
   )
 }
@@ -342,7 +373,12 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
     >
       <div ref={laneBox} className={s.laneBox}>
         <Lane summary={summary} actions={domain.actions} onAction={onAction} pending={actions ? actions.pending : never} />
-        {actions?.linkFallback && <LinkFallback link={actions.linkFallback} onClose={actions.closeLinkFallback} />}
+        {actions && (actions.linkFallback || actions.notice) && (
+          <div className={s.under}>
+            {actions.notice && <ActionNoticeBar notice={actions.notice} onClose={actions.closeNotice} />}
+            {actions.linkFallback && <LinkFallback link={actions.linkFallback} onClose={actions.closeLinkFallback} />}
+          </div>
+        )}
       </div>
       <div className={s.tabs} data-part="tabs">
         <Tabs
