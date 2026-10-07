@@ -78,11 +78,12 @@ const TXS: Tx[] = [{ dir: 'DEBIT', acc: '30110840700000001842', amount: 1500.5, 
 
 function renderTx(balances?: LookupView<Balances>) {
   const onEscape = vi.fn()
+  const onKeyDown = vi.fn()
   const ui = (b?: LookupView<Balances>) => (
-    <DrawerStack onEscape={onEscape} items={[{ key: 'd1', slot: 'a', node: <Drawer label="Документ" title="Документ" onClose={vi.fn()}><TxBlock txs={TXS} txId="TX1" txAt="2026-09-23T10:52:11" balances={b} /></Drawer> }]} />
+    <DrawerStack onEscape={onEscape} items={[{ key: 'd1', slot: 'a', node: <Drawer label="Документ" title="Документ" onClose={vi.fn()} onKeyDown={onKeyDown}><TxBlock txs={TXS} txId="TX1" txAt="2026-09-23T10:52:11" balances={b} /></Drawer> }]} />
   )
   const utils = renderK(ui(balances))
-  return { ...utils, onEscape, rerenderWith: (b: LookupView<Balances>) => { utils.rerender(ui(b)) } }
+  return { ...utils, onEscape, onKeyDown, rerenderWith: (b: LookupView<Balances>) => { utils.rerender(ui(b)) } }
 }
 
 describe('«Проверить баланс» в блоке «Транзакции» (спека 2e §4 п. 7, 8)', () => {
@@ -122,7 +123,28 @@ describe('«Проверить баланс» в блоке «Транзакци
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
     expect(screen.queryByRole('dialog', { name: 'Проверить баланс' })).toBeNull()
     expect(t.onEscape).not.toHaveBeenCalled()
+    expect(t.onKeyDown).not.toHaveBeenCalled()
     expect(document.activeElement).toBe(link)
+  })
+
+  it('первое открытие при idle — один load; запись снята при открытом поповере (reset → idle) — load снова, не вечный скелетон', async () => {
+    const first = viewOf()
+    const t = renderTx(first)
+    await userEvent.click(screen.getByRole('button', { name: 'Проверить баланс' }))
+    expect(first.load).toHaveBeenCalledTimes(1)
+    const ready = viewOf({ state: 'ready', value: BAL })
+    t.rerenderWith(ready)
+    expect(ready.load).not.toHaveBeenCalled()
+    const afterReset = viewOf()
+    t.rerenderWith(afterReset)
+    expect(afterReset.load).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog', { name: 'Проверить баланс' })).toBeInTheDocument()
+  })
+
+  it('закрытый поповер при idle не грузит', () => {
+    const view = viewOf()
+    renderTx(view)
+    expect(view.load).not.toHaveBeenCalled()
   })
 
   it('«Повторить» пропала после нажатия — фокус остаётся в поповере, Esc закрывает только его', async () => {

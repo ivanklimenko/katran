@@ -106,7 +106,7 @@ export function fxHero(d: FxDocDetail, id: string, edit: EditContext | null = nu
         value: (
           <>
             <span className={s.amt}>{formatAmount(d.amount)}<small className={s.ccy}>{d.currency}</small></span>
-            {rates && <LookupLink label="Курс" framed onOpen={rates.load}><RatesView view={rates} ccy={d.currency} /></LookupLink>}
+            {rates && <LookupLink label="Курс" framed view={rates}><RatesView view={rates} ccy={d.currency} /></LookupLink>}
           </>
         ),
       }

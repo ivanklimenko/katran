@@ -38,10 +38,12 @@ describe('useLookupOf (спека 2e §3.3)', () => {
 
   it('ошибка — error с текстом; retry — повтор; refresh готового — перезапрос с прежним значением', async () => {
     let n = 0
+    // третий запрос висит до конца теста — refresh виден в полёте; в конце отпускается
+    let release: (v: string) => void = () => undefined
     const { views, asked } = setup(async () => {
       n += 1
       if (n === 1) throw new ApiError(500, { type: 'urn:katran:error', title: 'Ошибка', status: 500, detail: 'Остатки недоступны' }, 'Ошибка')
-      if (n === 3) return new Promise<string>(() => undefined)
+      if (n === 3) return new Promise<string>((ok) => { release = ok })
       return 'остатки'
     })
     act(() => { views.d1!.load() })
@@ -51,5 +53,7 @@ describe('useLookupOf (спека 2e §3.3)', () => {
     act(() => { views.d1!.refresh() })
     expect(asked).toEqual(['d1', 'd1', 'd1'])
     expect(views.d1).toMatchObject({ state: 'loading', value: 'остатки', error: null })
+    release('новые остатки')
+    await waitFor(() => expect(views.d1).toMatchObject({ state: 'ready', value: 'новые остатки' }))
   })
 })

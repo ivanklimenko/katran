@@ -6,8 +6,11 @@ import s from './posting.module.css'
 export type LookupLinkProps = {
   /** Текст кнопки-ссылки и доступное имя поповера: «Курс», «Проверить баланс». */
   label: string
-  /** Открытие поповера: первый раз — запрос, дальше — кэш (LookupView.load). */
-  onOpen: () => void
+  /**
+   * Состояние и запуск запроса (LookupView): открытие поповера — load (первый раз запрос, дальше кэш); запись снята при
+   * открытом поповере (reset после refreshDoc/replaceDetail — idle) — load снова, иначе скелетон висел бы без запроса.
+   */
+  view: Pick<LookupView<unknown>, 'state' | 'load'>
   /** Рамка вокруг ссылки — «Курс» рядом с суммой 32A (эталон .amt .lnk, сверка Д78, Д85). */
   framed?: boolean | undefined
   children: ReactNode
@@ -20,11 +23,19 @@ export type LookupLinkProps = {
  * ссылке внутри drawer, отдал бы Esc деталке (DrawerStack исключает только цели внутри [role="dialog"] поповера) —
  * закрылась бы деталь вместо поповера (Review Focus 5). Пропавшая кнопка («Повторить» после нажатия) фокус тоже не теряет.
  */
-export function LookupLink({ label, onOpen, framed = false, children }: LookupLinkProps) {
+export function LookupLink({ label, view, framed = false, children }: LookupLinkProps) {
   const [open, setOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
   const body = useRef<HTMLDivElement>(null)
   const id = useStableId()
+  const loadRef = useRef(view.load)
+  // актуализация ref — в эффекте, не в теле рендера (react-hooks/refs), как в Popover
+  useEffect(() => { loadRef.current = view.load })
+  const { state } = view
+  // открыт и записи нет (первое открытие или reset документа при открытом поповере) — запрос; повтор в полёте модель игнорирует
+  useEffect(() => {
+    if (open && state === 'idle') loadRef.current()
+  }, [open, state])
   useEffect(() => {
     if (open) body.current?.focus()
   }, [open])
@@ -37,7 +48,8 @@ export function LookupLink({ label, onOpen, framed = false, children }: LookupLi
   const toggle = () => {
     if (open) { setOpen(false); return }
     setOpen(true)
-    onOpen()
+    // idle грузит эффект выше; ready — кэш (load ничего не делает), error — повторный запрос
+    if (state !== 'idle') view.load()
   }
   return (
     <>

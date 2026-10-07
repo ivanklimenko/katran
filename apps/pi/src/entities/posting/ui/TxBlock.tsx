@@ -44,7 +44,7 @@ export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances 
           <span className={s.summary}>
             {counts.map(({ st, n }) => <span key={st} className={s.sumItem}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</span>)}
           </span>
-          {balances && <LookupLink label="Проверить баланс" onOpen={balances.load}><BalancesView view={balances} /></LookupLink>}
+          {balances && <LookupLink label="Проверить баланс" view={balances}><BalancesView view={balances} /></LookupLink>}
           {aside}
           <span className={s.ids}><LinkValue name="txId" value={txId} /><span className={s.at}>{formatDateTimeFull(txAt)}</span></span>
         </>
