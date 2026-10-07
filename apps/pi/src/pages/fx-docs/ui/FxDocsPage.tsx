@@ -2,9 +2,11 @@ import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
 import { fxCommitView, fxDocLayout } from '../../../entities/fx-doc'
 import { useEditContexts } from '../../../features/doc-edit'
+import { useActionsOf } from '../../../features/doc-actions'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { docEdit } from '../model/edit.model'
+import { docActions } from '../model/actions.model'
 import { detail, registry } from '../model/registry.model'
 import { fxDetailDomain } from './detailDomain'
 
@@ -16,6 +18,8 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
   const [rows, marks] = useUnit([registry.grid.$rows, detail.$marks])
   // правка деталки (план 2c): контекст правки своего документа — деталка не знает о модели
   const editOf = useEditContexts(docEdit, fxCommitView)
+  // действия лейна: один вызов на модель (иначе объявления $notice двоятся), деталка получает функцию
+  const actionsOf = useActionsOf(docActions)
   return (
     <>
       <DocRegistry
@@ -38,6 +42,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
         rowOf={(id) => rows.find((r) => fxDocLayout.rowKey(r) === id) ?? null}
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
         editOf={editOf}
+        actionsOf={actionsOf}
       />
     </>
   )

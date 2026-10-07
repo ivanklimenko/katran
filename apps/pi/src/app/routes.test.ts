@@ -4,12 +4,14 @@ import { vi } from 'vitest'
 const log: string[] = []
 vi.mock('../pages/fx-docs', () => ({
   lifecycle: { pageOpened: () => log.push('open fx-docs'), pageClosed: () => log.push('close fx-docs') },
+  docLinkOpened: (id: string) => log.push(`link fx-docs ${id}`),
 }))
 vi.mock('../pages/rub-docs', () => ({
   lifecycle: { pageOpened: () => log.push('open rub-docs'), pageClosed: () => log.push('close rub-docs') },
+  docLinkOpened: (id: string) => log.push(`link rub-docs ${id}`),
 }))
 
-const { parseRoute, startRouting } = await import('./routes')
+const { parseDocParam, parseRoute, startRouting } = await import('./routes')
 
 const goHash = (h: string) => {
   location.hash = h
@@ -39,7 +41,42 @@ describe('parseRoute', () => {
   })
 })
 
+describe('parseDocParam', () => {
+  it('doc из хвоста hash раскодирован; без doc и с пустым — null', () => {
+    location.hash = '#/fx-docs?doc=a%2Fb'
+    expect(parseDocParam()).toBe('a/b')
+    location.hash = '#/rub-docs?fail=search&doc=r%201'
+    expect(parseDocParam()).toBe('r 1')
+    location.hash = '#/fx-docs'
+    expect(parseDocParam()).toBeNull()
+    location.hash = '#/fx-docs?doc='
+    expect(parseDocParam()).toBeNull()
+    location.hash = '#/fx-docs?x=1'
+    expect(parseDocParam()).toBeNull()
+  })
+})
+
 describe('startRouting', () => {
+  it('?doc= — после pageOpened docLinkOpened экрана маршрута; doc в адресе остаётся', () => {
+    location.hash = '#/rub-docs?doc=a%2Fb'
+    const stop = startRouting(() => {})
+    expect(log).toEqual(['open rub-docs', 'link rub-docs a/b'])
+    expect(location.hash).toBe('#/rub-docs?doc=a%2Fb')
+    stop()
+  })
+
+  it('новая ссылка на том же экране открывает документ; та же ссылка и смена прочего хвоста — нет', () => {
+    location.hash = '#/fx-docs'
+    const stop = startRouting(() => {})
+    goHash('#/fx-docs?doc=u1')
+    goHash('#/fx-docs?doc=u1&x=1')
+    goHash('#/fx-docs?doc=u2')
+    expect(log).toEqual(['open fx-docs', 'link fx-docs u1', 'link fx-docs u2'])
+    goHash('#/rub-docs?doc=u2')
+    expect(log.slice(3)).toEqual(['close fx-docs', 'open rub-docs', 'link rub-docs u2'])
+    stop()
+  })
+
   it('старт открывает текущий экран; смена — pageClosed(старый) → pageOpened(новый); тот же маршрут не повторяет', () => {
     location.hash = '#/fx-docs'
     const seen: string[] = []

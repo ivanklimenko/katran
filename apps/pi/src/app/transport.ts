@@ -11,3 +11,7 @@ requestFileFx.use(createFakeFileServer(fakeGrids, {
   failing: browserFakeOptions.failing,
   observe: (req) => browserFakeOptions.observe?.({ method: 'GET', url: req.url }),
 }))
+// Ссылка на документ (кнопка лейна «Скопировать ссылку»): стенд оставляет defaultDocLink — адрес страницы с #/<грид>?doc=<id>.
+// Хост подменяет строитель здесь же, рядом со своим транспортом, под свою маршрутизацию (docs/guides/pi-usage.md):
+//   configureDocLinks({ build: (gridId, id) => `${hostOrigin}/pi/${gridId}?doc=${encodeURIComponent(id)}` })
+// (configureDocLinks — из shared/lib/doc-link). Вход по ссылке хост передаёт странице: docLinkOpened(id) после pageOpened.

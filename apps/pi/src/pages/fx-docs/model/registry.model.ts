@@ -1,4 +1,4 @@
-import { createStore, sample } from 'effector'
+import { createEvent, createStore, sample } from 'effector'
 import { fxDocLayout, fxDocPorts } from '../../../entities/fx-doc'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { createDetail } from '../../../widgets/doc-detail'
@@ -21,6 +21,16 @@ sample({ clock: registry.openRequested, target: detail.open })
 // В-Д4: при первом ответе реестра после входа на экран первая запись открывается в A (эталон grid.html:2192);
 // quiet — открытие не пользователем: фокус остаётся в реестре (R10)
 const $autoOpened = createStore(false).reset(lifecycle.pageClosed)
+
+/**
+ * Документ по ссылке ?doc= (спека 2d §3.6, §4 п. 6): роутер стенда (адаптер хоста) зовёт после pageOpened. Открытие в A
+ * пользовательское (не quiet) — фокус в drawer; первая запись реестра в этом визите уже не открывается и его не вытесняет
+ * (Review Focus 1). На закрытом экране не действует.
+ */
+export const docLinkOpened = createEvent<string>()
+const linked = sample({ clock: docLinkOpened, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, id) => id })
+$autoOpened.on(linked, () => true)
+sample({ clock: linked, fn: (id) => ({ id, secondary: false }), target: detail.open })
 const firstRow = sample({
   clock: registry.grid.$rows.updates,
   source: { done: $autoOpened, opened: lifecycle.$opened },

@@ -18,7 +18,8 @@ export const docEdit = createDocEdit({
 
 // охрана ухода деталки (guard: true): решает модель правки — черновик держит Prompt «Отменить правку?», чистый и в полёте — сразу
 sample({ clock: detail.leaveRequested, fn: ({ docId, intent }) => ({ scope: editScope(docId), next: intent }), target: docEdit.model.requestLeave })
-sample({ clock: docEdit.model.leave, target: detail.leave })
+// уход «Обновить» (kind 'refresh') выполняет actions.model.ts; закрытие и замена документа — деталка, как в 2c
+sample({ clock: docEdit.model.leave, filter: (intent) => intent.kind !== 'refresh', target: detail.leave })
 // бек принял правку: деталь ответа — в кэш без запроса детали; реестр — заново (строка могла измениться)
 sample({ clock: docEdit.docEdited, target: detail.replaceDetail })
 sample({ clock: docEdit.docEdited, target: registry.refreshRequested })
@@ -32,3 +33,14 @@ sample({
     && [slots.a, slots.b].some((s) => s !== null && s.data !== null && s.data.lock !== null && editing.key.startsWith(editScope(s.id))),
   target: docEdit.model.cancel,
 })
+
+// R12: открытое (не в полёте) решение документа, ушедшего из слотов не уходом с экрана (закрыли слот, в A открыли другой),
+// снимается — иначе при повторном открытии всплыл бы старый Prompt. Решение в полёте снимет его ответ. Документов в слотах
+// не больше двух — ушедших за одно обновление тоже не больше двух.
+const leftWithDecision = sample({
+  clock: detail.$slots.updates,
+  source: docEdit.$decision,
+  fn: (decision, { a, b }) => Object.keys(decision).filter((id) => !decision[id]!.busy && a?.id !== id && b?.id !== id),
+})
+sample({ clock: leftWithDecision, filter: (ids) => ids.length > 0, fn: (ids) => ({ docId: ids[0]!, ok: false }), target: docEdit.decisionResult })
+sample({ clock: leftWithDecision, filter: (ids) => ids.length > 1, fn: (ids) => ({ docId: ids[1]!, ok: false }), target: docEdit.decisionResult })
