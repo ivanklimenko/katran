@@ -203,18 +203,18 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 
 **Files:** — (только леджер, git-ignored)
 
-- [ ] **Step 1:** `git worktree add .worktrees/lane-actions -b feat/lane-actions main` в `katran`; `pnpm install`.
-- [ ] **Step 2:** `pnpm check` — зелёный. Записать в леджер числа тестов по пакетам (`tokens`, `ui`, `effector`, `apps/pi`) и e2e (`pnpm --filter pi e2e`, передний план) — это база для приращений.
-- [ ] **Step 3:** записать в `/Users/shaman/_CODE/VTB/.claude/launch.json` **и** его `.bak` конфигурацию `katran-lane` (`--dir katran/.worktrees/lane-actions`, порт 5185) — удалить после слияния.
+- [x] **Step 1:** `git worktree add .worktrees/lane-actions -b feat/lane-actions main` в `katran`; `pnpm install`.
+- [x] **Step 2:** `pnpm check` — зелёный. Записать в леджер числа тестов по пакетам (`tokens`, `ui`, `effector`, `apps/pi`) и e2e (`pnpm --filter pi e2e`, передний план) — это база для приращений.
+- [x] **Step 3:** записать в `/Users/shaman/_CODE/VTB/.claude/launch.json` **и** его `.bak` конфигурацию `katran-lane` (`--dir katran/.worktrees/lane-actions`, порт 5185) — удалить после слияния.
 
 ### Task 1: Сверка 2d
 
 **Files:**
 - Modify: `docs/reference/detail-drift.md` (раздел «2d — сверяется в начале своего подсреза», строки Д6, Д15)
 
-- [ ] **Step 1:** по `pi-constructor@e065bfb` (`git show e065bfb:grid.html`, `rub-grid.html`) выписать фактическое поведение каждой кнопки лейна (по обработчику клика `.dw`: отрабатывают только `.ib.hasmenu` → меню и `[data-print]` → тост «Печать: {форма} — формируется PDF»; остальные — без обработчика), горячих клавиш (нет обработчика F5/E — только подсказка), истории правки (статусы «ожидает»/«утверждено», кнопки утверждения нет).
-- [ ] **Step 2:** заменить заглушку раздела «2d» таблицей в формате раздела «2c» (Д-номера продолжают последний занятый): строки класса D — «Редактировать» убран (г7), печать — PDF во вкладке вместо тоста (г5), «Утвердить»/«Отклонить» и `rejected` (г2–г4), «Скачать» и «Ссылка» с действием (на эталоне — без действия), F5 обновляет деталь (г8); класс C — номера слотов (Д6, без изменений). В Д15 — «Действия — 2e».
-- [ ] **Step 3:** коммит `Сверка 2d: действия лейна и история правки против e065bfb`.
+- [x] **Step 1:** по `pi-constructor@e065bfb` (`git show e065bfb:grid.html`, `rub-grid.html`) выписать фактическое поведение каждой кнопки лейна (по обработчику клика `.dw`: отрабатывают только `.ib.hasmenu` → меню и `[data-print]` → тост «Печать: {форма} — формируется PDF»; остальные — без обработчика), горячих клавиш (нет обработчика F5/E — только подсказка), истории правки (статусы «ожидает»/«утверждено», кнопки утверждения нет).
+- [x] **Step 2:** заменить заглушку раздела «2d» таблицей в формате раздела «2c» (Д-номера продолжают последний занятый): строки класса D — «Редактировать» убран (г7), печать — PDF во вкладке вместо тоста (г5), «Утвердить»/«Отклонить» и `rejected` (г2–г4), «Скачать» и «Ссылка» с действием (на эталоне — без действия), F5 обновляет деталь (г8); класс C — номера слотов (Д6, без изменений). В Д15 — «Действия — 2e».
+- [x] **Step 3:** коммит `Сверка 2d: действия лейна и история правки против e065bfb`.
 
 ### Task 2: Кит — `Prompt`, `EditHistory`, `EditMark`, `EditStatus`, `Drawer.onKeyDown`
 
@@ -226,23 +226,23 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 
 **Interfaces:** Produces — раздел «Кит» сквозного контракта.
 
-- [ ] **Step 1: падающие тесты `Prompt`:**
+- [x] **Step 1: падающие тесты `Prompt`:**
   - `children` рисуется между note и кнопками; при открытии фокус на `textarea` тела;
   - Tab с последней кнопки возвращается к `textarea` (ловушка по всем фокусируемым);
   - `okDisabled` → основная кнопка `disabled`, клик не вызывает `onResult`;
   - `busy` → обе `disabled`, `aria-busy="true"` у `role=alertdialog`, Esc и mousedown по подложке **не** вызывают `onResult`;
   - `error="Нет прав"` → `getByRole('alert')` с этим текстом;
   - без новых свойств — все тесты 2c зелёные без правок.
-- [ ] **Step 2: падающие тесты `EditHistory`/`EditMark`:**
+- [x] **Step 2: падающие тесты `EditHistory`/`EditMark`:**
   - `onConfirm`+`onReject` и последняя запись `pending` → две кнопки «Утвердить», «Отклонить» только в последней записи; клик вызывает обработчик;
   - последняя запись `confirmed` → кнопок нет; обработчики не заданы → кнопок нет;
   - запись `rejected` → бейдж «отклонено», подсказка «Отклонил(а) Смирнова Е. В., 23.09.2026 10:00», строка «Причина: BIC не по справочнику»;
   - `EditMark status="rejected"` → `data-status="rejected"`;
   - axe без нарушений для истории с кнопками.
-- [ ] **Step 3: падающий тест `Drawer`:** `onKeyDown` вызывается на keydown из кнопки закрытия и из содержимого.
-- [ ] **Step 4:** реализовать. Кнопки решения — `Button size="s"`, «Отклонить» — тон danger существующего варианта `Button` (если такого нет — `variant="ghost"` + токен bad, без новых цветов вне токенов). Бейдж `rejected` — `StatusBadge tone="bad"`.
-- [ ] **Step 5:** `pnpm --filter @katran/ui exec vitest run src/overlay src/form src/value src/drawer` — PASS; `pnpm check` — зелёный.
-- [ ] **Step 6:** коммит `Кит: Prompt с телом/блокировкой/ошибкой, EditHistory с решением, статус rejected, Drawer.onKeyDown`.
+- [x] **Step 3: падающий тест `Drawer`:** `onKeyDown` вызывается на keydown из кнопки закрытия и из содержимого.
+- [x] **Step 4:** реализовать. Кнопки решения — `Button size="s"`, «Отклонить» — тон danger существующего варианта `Button` (если такого нет — `variant="ghost"` + токен bad, без новых цветов вне токенов). Бейдж `rejected` — `StatusBadge tone="bad"`.
+- [x] **Step 5:** `pnpm --filter @katran/ui exec vitest run src/overlay src/form src/value src/drawer` — PASS; `pnpm check` — зелёный.
+- [x] **Step 6:** коммит `Кит: Prompt с телом/блокировкой/ошибкой, EditHistory с решением, статус rejected, Drawer.onKeyDown`.
 
 ### Task 3: Контракт сущности — `canConfirm`, `rejected`, `reason`
 
@@ -251,10 +251,10 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Modify: `apps/pi/src/entities/fx-doc/api/detail.mapper.ts` (`parseEdits`), `detail.mapper.test.ts`, `detail.example.ts`
 - Modify: `docs/reference/pi-api.md` — §1.7 (задел → утверждение и отклонение, тела, таблица ошибок спеки §3.1 п. 5), новые §1.9 `GET …/message`, §1.10 `GET …/print/{form}` (с таблицей кодов форм), §7.6 (`canConfirm`, `rejected`, `reason`)
 
-- [ ] **Step 1: падающие тесты маппера:** нет ключа `canConfirm` → `false`; `canConfirm: "yes"` → контрактная ошибка с путём `ответ.edits.field:57.canConfirm`; `status: "rejected"` разбирается; `status: "denied"` → ошибка с путём `…hist[0].status`; `reason` отсутствует → `null`, строка → строка.
-- [ ] **Step 2:** реализовать (`oneOf` статусов + `'rejected'`; `canConfirm` — boolean-guard рядом с `str`/`strOrNull` в `shared/api/guards.ts`, если его нет — `bool(o, key, path)` с тестом в `guards.test.ts`).
-- [ ] **Step 3:** обновить `pi-api.md` по спеке §3.1 дословно (тела, коды, тексты). Пример ответа отклонения `accKt` — фрагмент `edits.accKt.hist[0]` со `status: "rejected"`, `by`, `at`, `reason` и запись `edits.route` от «система».
-- [ ] **Step 4:** `pnpm check` — зелёный; коммит `Контракт 2d: canConfirm, статус rejected и reason у правки; эндпоинты решения, сообщения и печати в pi-api`.
+- [x] **Step 1: падающие тесты маппера:** нет ключа `canConfirm` → `false`; `canConfirm: "yes"` → контрактная ошибка с путём `ответ.edits.field:57.canConfirm`; `status: "rejected"` разбирается; `status: "denied"` → ошибка с путём `…hist[0].status`; `reason` отсутствует → `null`, строка → строка.
+- [x] **Step 2:** реализовать (`oneOf` статусов + `'rejected'`; `canConfirm` — boolean-guard рядом с `str`/`strOrNull` в `shared/api/guards.ts`, если его нет — `bool(o, key, path)` с тестом в `guards.test.ts`).
+- [x] **Step 3:** обновить `pi-api.md` по спеке §3.1 дословно (тела, коды, тексты). Пример ответа отклонения `accKt` — фрагмент `edits.accKt.hist[0]` со `status: "rejected"`, `by`, `at`, `reason` и запись `edits.route` от «система».
+- [x] **Step 4:** `pnpm check` — зелёный; коммит `Контракт 2d: canConfirm, статус rejected и reason у правки; эндпоинты решения, сообщения и печати в pi-api`.
 
 ### Task 4: Фейк — решения, сид «чужих» правок, сообщение, PDF
 
@@ -266,7 +266,7 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 **Interfaces:**
 - Produces: `FakeEditStore.decide(id, detail, target, kind: 'confirm'|'reject', body, when): Detail`; `createFakeFileServer(grids, opts): (req: FileRequest) => Promise<FileResponse>`; в `overlay` у каждой цели — `canConfirm` по правилу «последняя `pending` и `who !== 'Вы'`», у `route`/`valueDate` — `false`.
 
-- [ ] **Step 1: падающие тесты фейка (server.test.ts):**
+- [x] **Step 1: падающие тесты фейка (server.test.ts):**
   - деталь второго документа: `edits['field:57'].canConfirm === true`; своя правка после `POST …/edits` — `false`;
   - `confirm` с `when` последней записи → 200, запись `confirmed`, `by: 'Вы'`, `at` = `now()` фейка, `canConfirm: false`;
   - `confirm` с чужим `when` → 409 `urn:katran:edit-conflict`; повторный `confirm` → 409;
@@ -275,14 +275,14 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
   - `reject` сид-правки `accKt` (Task 4 сид) → значение `accKt` = `was` записи, маршрут пересчитан, в `edits.route` новая запись от «система», запись `rejected` с `reason`;
   - `POST …/edits/field%3AB.57/confirm` у MT202COV без правок цели → 404;
   - `GET /grids/rub-docs/documents/{id}/edits/x/confirm` (нет `edit` у грида) → 404.
-- [ ] **Step 2: падающие тесты `files.test.ts`:**
+- [x] **Step 2: падающие тесты `files.test.ts`:**
   - `swiftMessage` начинается с `{1:F01`, содержит `{4:` и `:20:`, заканчивается `-}`;
   - `edMessage` начинается с `<?xml`, содержит `<ED101`;
   - `pdfForm` начинается с `%PDF-1.4`, заканчивается `%%EOF\n`, смещения в `xref` указывают на `N 0 obj` (проверка разбором строки);
   - файловый сервер: `message` fx → `name` `<номер>.txt`, `blob.type` `text/plain;charset=utf-8`; rub → `.xml`, `application/xml`; `print/swift-form` у рубля → 404 Problem; неизвестный документ → 404.
-- [ ] **Step 3:** реализовать. Сид: в `edits.data.ts` — ожидающая правка `accKt` от «Кузнецов Д. А.» у MT103 (взять документ сида, у которого `accKt` — счёт из `CLIENT_ACCOUNTS` той же валюты; `now` — другой счёт той же валюты). PDF — строкой: каталог, страницы, страница A4 (595×842), шрифт Helvetica, поток с `BT … Tj … ET` (латиница: `form`, номер, дата, сумма и валюта), `xref` по фактическим смещениям, `trailer`, `startxref`. Имя файла фейк отдаёт как `name` (транспорт стенда — без заголовков).
-- [ ] **Step 4:** обновить `contract.test.ts` — новые маршруты против `pi-api.md`.
-- [ ] **Step 5:** `pnpm --filter pi exec vitest run src/app/fake` — PASS; `pnpm check`; коммит `Фейк 2d: утверждение и отклонение правки, чужие правки в сиде, сообщение SWIFT/ED и PDF формы`.
+- [x] **Step 3:** реализовать. Сид: в `edits.data.ts` — ожидающая правка `accKt` от «Кузнецов Д. А.» у MT103 (взять документ сида, у которого `accKt` — счёт из `CLIENT_ACCOUNTS` той же валюты; `now` — другой счёт той же валюты). PDF — строкой: каталог, страницы, страница A4 (595×842), шрифт Helvetica, поток с `BT … Tj … ET` (латиница: `form`, номер, дата, сумма и валюта), `xref` по фактическим смещениям, `trailer`, `startxref`. Имя файла фейк отдаёт как `name` (транспорт стенда — без заголовков).
+- [x] **Step 4:** обновить `contract.test.ts` — новые маршруты против `pi-api.md`.
+- [x] **Step 5:** `pnpm --filter pi exec vitest run src/app/fake` — PASS; `pnpm check`; коммит `Фейк 2d: утверждение и отклонение правки, чужие правки в сиде, сообщение SWIFT/ED и PDF формы`.
 
 ### Task 5: Порты — файловый транспорт, решения, действия
 
@@ -294,14 +294,14 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 
 **Interfaces:** Produces — раздел `shared/api` сквозного контракта.
 
-- [ ] **Step 1: падающие тесты:**
+- [x] **Step 1: падающие тесты:**
   - `fileNameOf('attachment; filename="a b.txt"')` → `'a b.txt'`; `filename*=UTF-8''%D0%9F.xml` → `'П.xml'` (приоритет над `filename`); `null` и `'inline'` → `null`;
   - `requestFileFx` без обработчика → `ApiError` с текстом про `requestFileFx.use`;
   - `confirmEditFx({ id: 'x', target: 'field:B.57', when: 'w' })` → запрос `POST /grids/fx-docs/documents/x/edits/field%3AB.57/confirm`, тело `{ when: 'w' }`; ответ разобран `parseDetail`;
   - `rejectEditFx` → `…/reject`, тело `{ when, reason }`;
   - `createActionPorts('rub-docs').printFx({ id: 'a/b', form: 'payment-order' })` → `GET /grids/rub-docs/documents/a%2Fb/print/payment-order` через `requestFileFx`.
-- [ ] **Step 2:** реализовать; `requestFileFx` — `createEffect` с той же заглушкой-ошибкой, что `requestFx`.
-- [ ] **Step 3:** `pnpm check`; коммит `Порты 2d: файловый транспорт requestFileFx, утверждение и отклонение правки, сообщение и печать`.
+- [x] **Step 2:** реализовать; `requestFileFx` — `createEffect` с той же заглушкой-ошибкой, что `requestFx`.
+- [x] **Step 3:** `pnpm check`; коммит `Порты 2d: файловый транспорт requestFileFx, утверждение и отклонение правки, сообщение и печать`.
 
 ### Task 6: Деталь — `refreshDoc` и намерение `refresh`
 
@@ -309,12 +309,12 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Modify: `apps/pi/src/shared/lib/detail/types.ts` (`LeaveIntent` + `{ kind: 'refresh'; id }`)
 - Modify: `apps/pi/src/widgets/doc-detail/lib/createDetail.ts`, его тест
 
-- [ ] **Step 1: падающие тесты `createDetail`:**
+- [x] **Step 1: падающие тесты `createDetail`:**
   - `refreshDoc(id)` при готовой детали и загруженной вкладке «Статусы» → `detailFx` вызван с `id`, кэш вкладок `id:*` очищен, активная нелокальная вкладка перезапрошена; кэш детали до ответа остаётся (слот `ready`, без скелетона);
   - `refreshDoc` при закрытом экране — без запросов;
   - `leave({ kind: 'refresh', id })` — слоты не меняются, запросов нет.
-- [ ] **Step 2:** реализовать: сброс вкладок — тем же `dropDoc`, что у `replaced`; перезапрос детали — через `reloadDetail`; перезапрос активной вкладки — тот же путь, что после `replaced`.
-- [ ] **Step 3:** `pnpm check`; коммит `Деталь: refreshDoc — перезапрос детали и вкладок документа; намерение ухода refresh`.
+- [x] **Step 2:** реализовать: сброс вкладок — тем же `dropDoc`, что у `replaced`; перезапрос детали — через `reloadDetail`; перезапрос активной вкладки — тот же путь, что после `replaced`.
+- [x] **Step 3:** `pnpm check`; коммит `Деталь: refreshDoc — перезапрос детали и вкладок документа; намерение ухода refresh`.
 
 ### Task 7: «Вторая рука» в `features/doc-edit`
 
@@ -326,7 +326,7 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Consumes: `EditPorts.confirmEditFx`/`rejectEditFx` (Task 5).
 - Produces: раздел `features/doc-edit` сквозного контракта; `EditContext.decision`, `canDecide`, `confirmEdit`, `rejectEdit`, `changeReason`, `onDecision`.
 
-- [ ] **Step 1: падающие тесты модели (`fork`, порты-заглушки):**
+- [x] **Step 1: падающие тесты модели (`fork`, порты-заглушки):**
   - `confirmRequested` → `$decision[docId]` = `{ kind: 'confirm', target, when, reason: '', busy: false, error: null }`; `decisionResult(true)` → `confirmEditFx` вызван с `{ id, target, when }`, `busy: true`; успех → `$decision[docId]` нет, `docEdited` с деталью ответа, `$decided` `{ count: 1, text: 'Правка утверждена' }`;
   - `rejectRequested`, `reasonChanged('  BIC  ')`, `decisionResult(true)` → `rejectEditFx` с `reason: 'BIC'` (trim);
   - `reasonChanged('   ')` и `decisionResult(true)` → запроса нет;
@@ -336,9 +336,9 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
   - `decisionResult(false)` при `busy` — игнор; без `busy` — снят;
   - `confirmRequested` при открытом редакторе того же документа (`$editing` в `editScope(docId)`) или при сохранении в полёте — игнор; в другом документе — работает;
   - **поздний ответ:** решение в полёте, `lifecycle.pageClosed` → `$decision` пуст; ответ пришёл — `$decided` не растёт, `$decision` пуст (`docEdited` выпускается — `replaceDetail` сам фильтрует закрытый экран).
-- [ ] **Step 2: падающие тесты `useEditContexts`:** `canDecide('field:57', true)` — `true` без редактора; `false` при открытом редакторе документа, при `decision`, при `canConfirm=false`; рост `$decided.count` → `announce(text)`; на монтировании — без объявления.
-- [ ] **Step 3:** реализовать. `docEdited` = `merge([saved, confirmEditFx.done, rejectEditFx.done])` с фильтром визита экрана, как у сохранения; `conflict` — `merge` с 409 решений. `$decision.reset(lifecycle.pageClosed)`.
-- [ ] **Step 4:** `pnpm check`; коммит `Правка: утверждение и отклонение чужой правки — модель, контекст, объявления`.
+- [x] **Step 2: падающие тесты `useEditContexts`:** `canDecide('field:57', true)` — `true` без редактора; `false` при открытом редакторе документа, при `decision`, при `canConfirm=false`; рост `$decided.count` → `announce(text)`; на монтировании — без объявления.
+- [x] **Step 3:** реализовать. `docEdited` = `merge([saved, confirmEditFx.done, rejectEditFx.done])` с фильтром визита экрана, как у сохранения; `conflict` — `merge` с 409 решений. `$decision.reset(lifecycle.pageClosed)`.
+- [x] **Step 4:** `pnpm check`; коммит `Правка: утверждение и отклонение чужой правки — модель, контекст, объявления`.
 
 ### Task 8: Сущности — решение в видах, лейн без «Редактировать», формы печати
 
@@ -347,15 +347,15 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Modify: `apps/pi/src/widgets/doc-detail/ui/icons.tsx` (убрать `edit`, если не используется)
 - Test: тесты видов `entities/fx-doc` (рядом с `edit.tsx`), `swift.test.ts`
 
-- [ ] **Step 1: падающие тесты:**
+- [x] **Step 1: падающие тесты:**
   - список действий fx и rub — 6 id в порядке `refresh, esid, down, print, link, ban`; у `print` fx — `[{ label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Мемориальный ордер', form: 'memorial-order' }, { label: 'Форма SWIFT', form: 'swift-form' }]`; у rub — `payment-order`, `collection-order`, `payment-ordr`, `memorial-order` в порядке эталона;
   - поле 57 сида с `canConfirm` и `edit.canDecide` → в блоке аудита `EditHistory` с кнопками; клик «Утвердить» → `edit.confirmEdit('field:57', <when последней записи>)`;
   - строка счёта Кт с ожидающей чужой правкой: рядом с `EditMark` — `IconButton` «Утвердить правку счёта Кт» и «Отклонить правку счёта Кт» (то же для 20 исх: «… 20 исх», счёта Дт: «… счёта Дт») — у этих целей нет блока истории, кнопки стоят у маркера (уточнение к спеке §4.1, записать в спеку §9);
   - `decisionNote(d, 'accKt', when)` содержит подпись «Счёт Кт», `PromptChange` «было → стало» значениями записи и строку «{who}, {дд.мм.гггг чч:мм}»;
   - заблокированный документ — кнопок решения нет.
-- [ ] **Step 2:** реализовать; `historyOf` передаёт `reason`; маркер «изменено» — без изменений.
-- [ ] **Step 3:** дописать в спеку §9: «Кнопки решения у 20 исх и счетов — у маркера (блока истории у этих целей нет)».
-- [ ] **Step 4:** `pnpm check`; коммит `Виды правки: кнопки утверждения и отклонения, тело Prompt решения; лейн без «Редактировать», коды печатных форм`.
+- [x] **Step 2:** реализовать; `historyOf` передаёт `reason`; маркер «изменено» — без изменений.
+- [x] **Step 3:** дописать в спеку §9: «Кнопки решения у 20 исх и счетов — у маркера (блока истории у этих целей нет)».
+- [x] **Step 4:** `pnpm check`; коммит `Виды правки: кнопки утверждения и отклонения, тело Prompt решения; лейн без «Редактировать», коды печатных форм`.
 
 ### Task 9: `features/doc-actions`
 
@@ -366,21 +366,21 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Consumes: `ActionPorts` (Task 5), `ActionsView`, `DetailAction`, `PrintFormItem` (сквозной контракт).
 - Produces: раздел `features/doc-actions` сквозного контракта.
 
-- [ ] **Step 1: падающие тесты модели:**
+- [x] **Step 1: падающие тесты модели:**
   - `refreshRequested('x')` → `refresh` выпущен с `'x'` (охрану решает страница);
   - `copyLink('x')` при `clipboard.writeText` успехе → `$notice.text` `'Ссылка скопирована'`; при отказе или отсутствии `navigator.clipboard` → `$linkFallback` = `buildLink('fx-docs','x')`; `closeLinkFallback` → `null`;
   - `download('x')` → `messageFx('x')`, `<a download>` с именем ответа (нет имени → `fallbackName('x')`), `URL.revokeObjectURL` вызван; `$pending['x:down']` в полёте;
   - повторный `download('x')` в полёте — второго запроса нет;
   - `print({ id, form, win })` успех → `win.location.href` = blob URL; `win === null` → файл скачан, `$notice.text` = `PRINT_BLOCKED_TEXT`; ошибка 404 → `win.close()` вызван, `$notice.text` = `detail` Problem;
   - `lifecycle.pageClosed` → созданные для печати blob URL освобождены, `$pending` и `$linkFallback` сброшены.
-- [ ] **Step 2: падающие тесты `useActionsOf`:**
+- [x] **Step 2: падающие тесты `useActionsOf`:**
   - `run(refresh)` → `refreshRequested(docId)`; `run(link)` → `copyLink`; `run(down)` → `download`;
   - `run(print, form)` вызывает `window.open('', '_blank')` **синхронно** (шпион вызван до любого `await`), выставляет `win.opener = null`, `win.document.title` = `PRINT_PENDING_TEXT`, затем `print({ id, form: form.form, win })`;
   - `run(print)` при `pending('print')` — `window.open` не вызывается;
   - `run(esid)`, `run(ban)` — без действия (это 2e; объявление 2a для них делает виджет, Task 10);
   - рост `$notice.count` → `announce(text)`.
-- [ ] **Step 3:** реализовать. Побочные эффекты — эффекты `writeClipboardFx`, `saveFileFx({ blob, name })`, `showInWindowFx({ win, blob })`, `closeWindowFx`.
-- [ ] **Step 4:** `pnpm check`; коммит `Фича doc-actions: обновить, ссылка, скачать сообщение, печать формы во вкладке`.
+- [x] **Step 3:** реализовать. Побочные эффекты — эффекты `writeClipboardFx`, `saveFileFx({ blob, name })`, `showInWindowFx({ win, blob })`, `closeWindowFx`.
+- [x] **Step 4:** `pnpm check`; коммит `Фича doc-actions: обновить, ссылка, скачать сообщение, печать формы во вкладке`.
 
 ### Task 10: Виджет — действия, `Prompt` решения, ссылка вручную, F5
 
@@ -390,7 +390,7 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 **Interfaces:**
 - Consumes: `ActionsView`, `EditContext.decision`/`onDecision`/`changeReason`, `DetailDomain.decisionNote`, `Drawer.onKeyDown`, `Prompt` (`children`, `okDisabled`, `busy`, `error`).
 
-- [ ] **Step 1: падающие тесты:**
+- [x] **Step 1: падающие тесты:**
   - лейн: `actionsOf` задан → клик «Обновить» вызывает `run(refresh)`; `pending('down')` → кнопка «Скачать» `disabled` и `aria-busy`; меню «Печать» → пункт «Форма SWIFT» → `run(print, { label: 'Форма SWIFT', form: 'swift-form' })`; без `actionsOf` — объявление 2a (тесты 2c не меняются);
   - `esid`, `ban` — объявление 2a и при заданном `actionsOf`;
   - `edit.decision = { kind: 'confirm', … }` → `Prompt` «Утвердить правку?», кнопки «Утвердить»/«Отмена», тело — `decisionNote`; `kind: 'reject'` → «Отклонить правку?», tone danger, `textarea` с подписью «Причина», `maxLength=140`, счётчик «0/140»; пустая или из пробелов причина → «Отклонить» `disabled`; ввод → `changeReason`; `busy` → `Prompt busy`; `error` → `role=alert`;
@@ -398,8 +398,8 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
   - `linkFallback` → в drawer `role=status` с `input readonly` (значение — ссылка, выделено при появлении) и текстом «Скопируйте ссылку: Ctrl+C», кнопка «Закрыть» → `closeLinkFallback`;
   - **F5:** keydown `F5` на кнопке лейна → `run(refresh)` и `defaultPrevented`; `F5` в `textarea` причины, в `input` — нет; `Ctrl+F5`, `Shift+F5` — нет; при открытом редакторе (`edit.editing !== null`) или `Prompt` — нет;
   - axe: `Prompt` отклонения, лейн с `aria-busy`.
-- [ ] **Step 2:** реализовать; `textarea` причины — `useStableId` для подписи и счётчика (`aria-describedby`).
-- [ ] **Step 3:** `pnpm check`; коммит `Деталка: настоящие действия лейна, Prompt утверждения и отклонения, ссылка для ручного копирования, F5`.
+- [x] **Step 2:** реализовать; `textarea` причины — `useStableId` для подписи и счётчика (`aria-describedby`).
+- [x] **Step 3:** `pnpm check`; коммит `Деталка: настоящие действия лейна, Prompt утверждения и отклонения, ссылка для ручного копирования, F5`.
 
 ### Task 11: Страницы и `app` — связи, `docLinkOpened`, роутер
 
@@ -409,14 +409,14 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Modify: `apps/pi/src/app/routes.ts`, `routes.test.ts`, `App.tsx` (если подключение страницы требует)
 - Test: `pages/*/model/*.test.ts`
 
-- [ ] **Step 1: падающие тесты:**
+- [x] **Step 1: падающие тесты:**
   - fx: `docActions.refreshRequested(id)` без черновика → `detail.refreshDoc(id)` и `registry.refreshRequested`; с грязным черновиком → `Prompt` «Отменить правку?»; «Отменить правку» → обновление; «Продолжить» → нет;
   - rub: `refreshRequested` → сразу `refreshDoc` и реестр;
   - `docEdit.model.leave` с `{ kind: 'refresh' }` идёт в `docActions` (выполнить обновление), а не в `detail.leave`; остальные — в `detail.leave`, как в 2c;
   - `docLinkOpened('id3')` → `detail.open({ id: 'id3', secondary: false })` (не quiet); **после него первый ответ реестра не открывает первую запись** (`$autoOpened` → `true`);
   - `parseDocParam()` для `#/fx-docs?doc=a%2Fb` → `'a/b'`; без `doc` → `null`; роутер после `pageOpened` вызывает `docLinkOpened` страницы маршрута, если `doc` есть.
-- [ ] **Step 2:** реализовать. `fallbackName` — номер документа из строки реестра или кэша детали, иначе `id`. `buildLink` — `defaultDocLink`; точка подмены хостом — `configureDocLinks({ build })` рядом с подключением транспорта в `app/transport.ts`; это имя описывает `pi-usage.md` (Task 13).
-- [ ] **Step 3:** `pnpm check`; коммит `Страницы: связи действий и решения правки, открытие документа по ссылке ?doc=`.
+- [x] **Step 2:** реализовать. `fallbackName` — номер документа из строки реестра или кэша детали, иначе `id`. `buildLink` — `defaultDocLink`; точка подмены хостом — `configureDocLinks({ build })` рядом с подключением транспорта в `app/transport.ts`; это имя описывает `pi-usage.md` (Task 13).
+- [x] **Step 3:** `pnpm check`; коммит `Страницы: связи действий и решения правки, открытие документа по ссылке ?doc=`.
 
 ### Task 12: e2e
 
@@ -424,7 +424,7 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 - Create: `apps/pi/e2e/lane-actions.spec.ts`
 - Modify: `apps/pi/e2e/detail.spec.ts` (лейн: 6 кнопок, нет «Редактировать»), `detail-edit.spec.ts` (если опирался на число кнопок лейна)
 
-- [ ] **Step 1:** тесты (Chromium, контекст с `permissions: ['clipboard-read', 'clipboard-write']`):
+- [x] **Step 1:** тесты (Chromium, контекст с `permissions: ['clipboard-read', 'clipboard-write']`):
   - утвердить поле 57 второго документа: `Prompt`, «Утвердить» → бейдж «утверждено», подсказка «Утвердил(а) Вы, …», кнопок решения нет;
   - отклонить `accKt` сида с причиной «Счёт не тот»: «Отклонить» недоступна до ввода; после — счёт и маршрут как до правки, плашка «отклонено», «Причина: Счёт не тот» в подсказке/истории;
   - скачать: `page.waitForEvent('download')`, `suggestedFilename()` оканчивается на `.txt`, содержимое начинается с `{1:F01`;
@@ -432,19 +432,19 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
   - F5 с фокусом на кнопке лейна: `detailFx` пришёл повторно (счётчик запросов транспорта стенда через `observe`), `page` не перезагружалась (метка в `window` сохранилась);
   - ссылка: «Скопировать ссылку» → `navigator.clipboard.readText()` содержит `?doc=`; `page.goto(ссылка)` → в A открыт этот документ, а не первая запись;
   - контраст плашки «отклонено» — существующей проверкой контраста e2e.
-- [ ] **Step 2:** `pnpm --filter pi e2e` — **на переднем плане**, все зелёные; число — в леджер.
-- [ ] **Step 3:** коммит `e2e 2d: утверждение и отклонение, скачать, печать, F5, ссылка`.
+- [x] **Step 2:** `pnpm --filter pi e2e` — **на переднем плане**, все зелёные; число — в леджер.
+- [x] **Step 3:** коммит `e2e 2d: утверждение и отклонение, скачать, печать, F5, ссылка`.
 
 ### Task 13: Документы
 
 **Files:**
 - Modify: `docs/guides/pi-usage.md` (новые разделы: действия лейна; утверждение и отклонение; ссылка и подключение хоста — `configureDocLinks`, `docLinkOpened`; файловый транспорт `requestFileFx.use`), `packages/ui/CHANGELOG.md` (проверить запись Task 2), `README.md` (состав деталки), `docs/STATE.md` (§6 состояние ветки, §7 техдолг 2d, §9 следующий шаг — 2e), спека 2c §8 п. 2 («Обновить» — сделано в 2d), спека 2d — статус «исполнена в `feat/lane-actions`», §9 уточнения из леджера
 
-- [ ] **Step 1:** обновить документы; каждое имя, путь и текст — сверить с кодом (`grep`).
-- [ ] **Step 2:** `pnpm check`; коммит `Документы 2d: pi-usage, CHANGELOG, README, STATE, спеки`.
+- [x] **Step 1:** обновить документы; каждое имя, путь и текст — сверить с кодом (`grep`).
+- [x] **Step 2:** `pnpm check`; коммит `Документы 2d: pi-usage, CHANGELOG, README, STATE, спеки`.
 
 ### Task 14: Финальное ревью и фикс-волна
 
-- [ ] **Step 1:** ревью всей ветки против спеки 2d и Review Focus (Opus); замечания — в леджер.
-- [ ] **Step 2:** фикс-волна — по задаче на замечание, тест на каждое; повторное ревью волны.
-- [ ] **Step 3:** `pnpm check` и `pnpm --filter pi e2e` (передний план) — зелёные; итоговые числа — в STATE §6 и леджер. Слияние в `main` — **только по слову владельца**.
+- [x] **Step 1:** ревью всей ветки против спеки 2d и Review Focus (Opus); замечания — в леджер.
+- [x] **Step 2:** фикс-волна — по задаче на замечание, тест на каждое; повторное ревью волны.
+- [x] **Step 3:** `pnpm check` и `pnpm --filter pi e2e` (передний план) — зелёные; итоговые числа — в STATE §6 и леджер. Слияние в `main` — **только по слову владельца**.
