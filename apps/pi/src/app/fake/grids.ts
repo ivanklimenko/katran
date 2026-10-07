@@ -30,10 +30,6 @@ export const createFxDocsEditStore = (seedId: string | null, accKtSeedId: string
 const FX_PRINT_FORMS = ['payment-order', 'memorial-order', 'swift-form'] as const
 const RUB_PRINT_FORMS = ['payment-order', 'collection-order', 'payment-ordr', 'memorial-order'] as const
 
-/**
- * Гриды фейка. Правки валюты живут в памяти своего набора: приложению — один набор на сессию (fakeGrids),
- * тестам — свежий на тест (createFakeGrids), чтобы правки одного теста не видел другой (preflight D8).
- */
 /** Сиды правок валюты: поле 57 — первый документ с полем 57 (первый в реестре — MT199, Ruling: makeFxDocs()[1]); Кт — второй MT103 в USD без блокировки (первый такой — документ примеров pi-api.md). */
 export const editSeedIdsOf = (fx: readonly FxDoc[]): { seedId: string | null; accKtSeedId: string | null } => ({
   seedId: fx.find((r) => r.type !== 'MT199')?.id ?? null,

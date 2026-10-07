@@ -80,23 +80,26 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
     const labels = opts.sortLabels?.[key]
     return labels && typeof v === 'string' ? (labels[v] ?? v) : v
   }
+  // представление строк реестра: итог аннулирования (REJECTED у done) виден в search/facets/suggest до фильтра, сортировки и фасетов
+  const annulStore = opts.annul
+  const view = (): Row[] => (annulStore ? rows.map((r) => annulStore.row(String(r.id), r)) : rows)
   const grid: FakeGrid = {
     meta,
     search: (b) => {
-      const sorted = sortRows(applyFilter(rows, b.filter.conditions), fromSortDto(b.sort), columns, get)
+      const sorted = sortRows(applyFilter(view(), b.filter.conditions), fromSortDto(b.sort), columns, get)
       const { number, size } = b.page
       const total = sorted.length
       return { content: sorted.slice(number * size, (number + 1) * size), page: { number, size, totalElements: total, totalPages: Math.ceil(total / size), hasNext: (number + 1) * size < total } }
     },
     facets: (b) => {
       const counts = new Map<string, number>()
-      for (const r of applyFilter(rows, b.filter.conditions)) { const k = String(r[b.field]); counts.set(k, (counts.get(k) ?? 0) + 1) }
+      for (const r of applyFilter(view(), b.filter.conditions)) { const k = String(r[b.field]); counts.set(k, (counts.get(k) ?? 0) + 1) }
       return [...counts].map(([value, count]) => ({ value, count }))
     },
     suggest: (b) => {
       const q = b.query.trim().toLowerCase()
       const counts = new Map<string, number>()
-      for (const r of applyFilter(rows, b.filter.conditions)) {
+      for (const r of applyFilter(view(), b.filter.conditions)) {
         const v = r[b.field]
         if (v === null || v === undefined || v === '') continue
         const t = String(v)
@@ -115,7 +118,7 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
       return i < 0 ? null : (toDetail(rows[i]!, i, rows) as Record<string, unknown>)
     }
     const store = opts.edits
-    const annul = opts.annul
+    const annul = annulStore
     const edited = (id: string): Record<string, unknown> | null => {
       const d = base(id)
       return d && store ? store.overlay(id, d) : d

@@ -23,8 +23,6 @@ import { REASON_MAX } from '../../shared/lib/detail'
 
 type Detail = Record<string, unknown>
 type AnnulDto = { status: 'pending' | 'done' | 'rejected'; who: string; when: string; reason: string; by: string | null; at: string | null; rejectReason: string | null }
-/** Режим регулятора ?annul=: instant — сразу, pending — через утверждение, fail — команда принята, документ не меняется. */
-export type AnnulMode = 'instant' | 'pending' | 'fail'
 
 /** Порог суммы 32A (у рубля — суммы документа), выше которого нужно утверждение. */
 export const APPROVAL_THRESHOLD = 1_000_000
@@ -52,6 +50,8 @@ export function annulSeedsOf(rows: readonly SeedRow[], exclude: readonly (string
 export type FakeAnnulStore = {
   /** Деталь с итогом аннулирования: annul, canAnnul и (у done) статус REJECTED; документ без аннулирования — деталь как есть. */
   overlay: (id: string, detail: Detail) => Detail
+  /** Строка реестра с итогом аннулирования: у done статус REJECTED (реестр перезапрашивается после команды); иначе строка как есть. */
+  row: <R extends Record<string, unknown>>(id: string, row: R) => R
   /**
    * Команда: annul { reason } / confirm { when } / reject { when, reason }. Бросает ApiError 400 (тело, причина), 403 (блокировка, свой запрос),
    * 409 (нельзя аннулировать, нет ожидающего запроса или when не совпал). Успех — ничего (ответ 202 без тела).
@@ -108,6 +108,11 @@ export function createAnnulStore(cfg: FakeAnnulStoreConfig): FakeAnnulStore {
     return { ...detail, status: statusOf(detail, st), canAnnul: canAnnulOf(detail, st), annul: { ...st, canConfirm: st.status === 'pending' && st.who !== ME } }
   }
 
+  const row = <R extends Record<string, unknown>>(id: string, r: R): R => {
+    seed(id, r)
+    return states.get(id)?.status === 'done' ? { ...r, status: 'REJECTED' } : r
+  }
+
   const command: FakeAnnulStore['command'] = (id, detail, kind, body, when, mode) => {
     seed(id, detail)
     const st = states.get(id)
@@ -135,5 +140,5 @@ export function createAnnulStore(cfg: FakeAnnulStoreConfig): FakeAnnulStore {
     }
     states.set(id, { ...st, status: 'done', by: ME, at: when })
   }
-  return { overlay, command }
+  return { overlay, row, command }
 }

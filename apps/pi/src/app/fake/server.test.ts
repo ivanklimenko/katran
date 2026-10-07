@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@katran/ui'
 import { ApiError, type HttpRequest } from '../../shared/api'
-import { canAnnulBase, annulSeedsOf } from './annul'
+import { annulSeedsOf, canAnnulBase, createAnnulStore } from './annul'
 import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
 import { makeRubDocs } from './rub-docs.data'
 import { makeFxDocDetail } from './fx-docs.detail'
@@ -458,12 +458,50 @@ describe('фейковый сервер: аннулирование, курсы,
     expect(await s(post(annulUrl(rubSeed.pending!, '/confirm', 'rub-docs'), { when: r.annul!.when }))).toBeNull()
     expect(await detail(s, rubSeed.pending!, 'rub-docs')).toMatchObject({ status: 'REJECTED', annul: { status: 'done', by: 'Вы' } })
   })
-  it('аннулирование не трогает реестр и чужие гриды; состояние — на набор гридов (свежий на тест)', async () => {
+  it('реестр отражает итог: после annul (done) и confirm — REJECTED, фасет обновился; pending и ?annul=fail — статус прежний', async () => {
     const s = fresh()
+    const rowOf = async (srv: ReturnType<typeof fresh>, id: string, grid = 'fx-docs') => {
+      const page = (await srv(post(`/grids/${grid}/search`, search({ page: { number: 0, size: 500 } })))) as { content: { id: string; status: string }[] }
+      return page.content.find((r) => r.id === id)!.status
+    }
+    const facet = async (srv: ReturnType<typeof fresh>, status: string) => {
+      const f = (await srv(post('/grids/fx-docs/facets', { filter: { conditions: [] }, field: 'status' }))) as { value: string; count: number }[]
+      return f.find((x) => x.value === status)?.count ?? 0
+    }
+    const rejected0 = await facet(s, 'REJECTED')
     await s(post(annulUrl(small.id), { reason: 'X' }))
-    const page = (await s(post('/grids/fx-docs/search', search()))) as { content: { id: string; status: string }[] }
-    expect(page.content.find((r) => r.id === small.id)?.status).toBe(small.status)
+    expect(await rowOf(s, small.id)).toBe('REJECTED')
+    expect(await facet(s, 'REJECTED')).toBe(rejected0 + 1)
+    // фильтр по статусу видит новый статус
+    const byStatus = (await s(post('/grids/fx-docs/search', search({ filter: { conditions: [{ field: 'status', op: 'EQ', value: 'REJECTED' }] }, page: { number: 0, size: 500 } })))) as { content: { id: string }[] }
+    expect(byStatus.content.some((r) => r.id === small.id)).toBe(true)
+    // сид pending: статус прежний, после confirm — REJECTED
+    expect(await rowOf(s, fxSeed.pending!)).toBe(fxRows.find((r) => r.id === fxSeed.pending)!.status)
+    await s(post(annulUrl(fxSeed.pending!, '/confirm'), { when: (await detail(s, fxSeed.pending!)).annul!.when }))
+    expect(await rowOf(s, fxSeed.pending!)).toBe('REJECTED')
+    // сид done виден как REJECTED, pending от «Вы» и fail — прежний
+    expect(await rowOf(s, fxSeed.done!)).toBe('REJECTED')
+    await s(post(annulUrl(big.id), { reason: 'X' }))
+    expect(await rowOf(s, big.id)).toBe(big.status)
+    const failing = fresh({ annulMode: () => 'fail' })
+    await failing(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'X' }))
+    expect(await rowOf(failing, rubSmall.id, 'rub-docs')).toBe(rubRows.find((r) => r.id === rubSmall.id)!.status)
+    // рубль, done — REJECTED в реестре рубля
+    await s(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'X' }))
+    expect(await rowOf(s, rubSmall.id, 'rub-docs')).toBe('REJECTED')
     expect((await detail(fresh(), small.id)).annul).toBeNull()
+  })
+  it('порог 1 000 000 считается от настоящей суммы документа: у обеих деталей amount — конечное число; рубль с суммой выше порога — pending', async () => {
+    const s = fresh()
+    expect(Number.isFinite(Number((await s(get(`/grids/rub-docs/documents/${rubSmall.id}`)) as { amount: number }).amount))).toBe(true)
+    expect(typeof ((await s(get(`/grids/rub-docs/documents/${rubSmall.id}`))) as { amount: unknown }).amount).toBe('number')
+    // хранилище напрямую: деталь с суммой выше порога — через утверждение, ниже — сразу
+    const store = createAnnulStore({ pendingId: null })
+    const mk = (amount: number) => ({ status: 'IN_PROGRESS', lock: null, created: '2026-09-23T10:00:00', amount })
+    store.command('r1', mk(2_000_000), 'annul', { reason: 'X' }, WHEN, null)
+    store.command('r2', mk(999_999.99), 'annul', { reason: 'X' }, WHEN, null)
+    expect(store.overlay('r1', mk(2_000_000)).annul).toMatchObject({ status: 'pending' })
+    expect(store.overlay('r2', mk(999_999.99)).annul).toMatchObject({ status: 'done' })
   })
 
   it('rates валюты: детерминирован; deal — у документа с полем 36, у прочих нет; рубль — 404', async () => {
