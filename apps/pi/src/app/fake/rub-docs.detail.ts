@@ -1,4 +1,5 @@
 import { RUB_OPERATION, TYPE_NAME, type RubDoc } from '../../entities/rub-doc'
+import { canAnnulBase } from './annul'
 import { corrOf } from './rub-docs.data'
 import { RUB_TRAIL_TABS, rubCorrAcc, rubDocTrail, rubScenario } from './rub-docs.trail'
 import { pad, tabsOffOf } from './trail.data'
@@ -65,6 +66,9 @@ export function makeRubDocDetail(row: RubDoc, i: number, rows: readonly RubDoc[]
       { dir: 'DEBIT', st: 'EXECUTED', acc: inbound ? corr : client, reg: inbound ? '00000_CorrCBR' : '00010_ClientCurrent', time: at(6), amount: row.amount, currency: 'RUB' },
       { dir: 'CREDIT', st: pending ? 'PENDING' : 'EXECUTED', acc: inbound ? client : corr, reg: inbound ? '00010_ClientCurrent' : '00000_CorrCBR', time: pending ? null : at(6), amount: row.amount, currency: 'RUB' },
     ],
+    // аннулирование (срез 2e): без состояния — по статусу и блокировке; итог команд и сид кладёт поверх хранилище annul.ts
+    canAnnul: canAnnulBase(row),
+    annul: null,
     tabsOff: tabsOffOf(RUB_TRAIL_TABS, rubDocTrail(row, i, rows)),
   }
 }

@@ -7,6 +7,10 @@ export type FakeServerOptions = {
   failing?: (() => string | null) | undefined
   /** ?conflict=edit — 409 на любой правке (план 2c). */
   conflicting?: (() => string | null) | undefined
+  /** ?annul=instant|pending|fail — принудительный итог аннулирования (срез 2e); null — по правилу бека (сумма > 1 000 000 — через утверждение). */
+  annulMode?: (() => string | null) | undefined
+  /** Часы сервера в мс для окна повторной переотправки (409); по умолчанию Date.now — тесты подменяют. */
+  clock?: (() => number) | undefined
   /** Время правки: ISO без зоны до минут; по умолчанию — локальное «сейчас». */
   now?: (() => string) | undefined
   /** Каждый пришедший запрос — до задержки и регуляторов: транспорт стенда в странице, сеть его не видит (e2e считает запросы). */
@@ -19,6 +23,12 @@ const TAB = /^\/grids\/([^/]+)\/documents\/([^/]+)\/tabs\/([^/]+)$/
 const EDITS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits$/
 const DECIDE = /^\/grids\/([^/]+)\/documents\/([^/]+)\/edits\/([^/]+)\/(confirm|reject)$/
 const ACCOUNTS = /^\/grids\/([^/]+)\/documents\/([^/]+)\/accounts$/
+const ANNUL = /^\/grids\/([^/]+)\/documents\/([^/]+)\/annul(?:\/(confirm|reject))?$/
+const RATES = /^\/grids\/([^/]+)\/documents\/([^/]+)\/rates$/
+const BALANCES = /^\/grids\/([^/]+)\/documents\/([^/]+)\/balances$/
+const NOTIF_MESSAGE = /^\/grids\/([^/]+)\/documents\/([^/]+)\/notifications\/([^/]+)\/message$/
+const RESEND_ALL = /^\/grids\/([^/]+)\/documents\/([^/]+)\/notifications\/resend$/
+const RESEND_ONE = /^\/grids\/([^/]+)\/documents\/([^/]+)\/notifications\/([^/]+)\/resend$/
 const pad2 = (n: number) => String(n).padStart(2, '0')
 /** Локальное «сейчас» до минут: «ГГГГ-ММ-ДДTчч:мм:00». */
 const localMinute = () => {
@@ -86,6 +96,56 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
       if (opts.failing?.() === 'decide') return fail(500, 'Сбой сервера', 'Регулятор ?fail=decide')
       const id = decodeURIComponent(rawId)
       const body = grid.decide(id, decodeURIComponent(rawTarget), kind === 'confirm' ? 'confirm' : 'reject', req.body, opts.now?.() ?? localMinute())
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const annulRoute = ANNUL.exec(req.url)
+    if (annulRoute) {
+      const [, gridId = '', rawId = '', sub = ''] = annulRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'POST' || !grid.annul) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'annul') return fail(500, 'Сбой сервера', 'Регулятор ?fail=annul')
+      const id = decodeURIComponent(rawId)
+      const kind = sub === 'confirm' ? 'confirm' : sub === 'reject' ? 'reject' : 'annul'
+      // команда: 202 без тела; итог — в детали (pi-api.md §1.11)
+      if (!grid.annul(id, kind, req.body, opts.now?.() ?? localMinute(), opts.annulMode?.() ?? null)) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return null
+    }
+    const lookupRoute = RATES.exec(req.url) ?? BALANCES.exec(req.url)
+    if (lookupRoute) {
+      const [, gridId = '', rawId = ''] = lookupRoute
+      const kind = req.url.endsWith('/rates') ? 'rates' : 'balances'
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'GET' || !grid[kind]) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === kind) return fail(500, 'Сбой сервера', `Регулятор ?fail=${kind}`)
+      const id = decodeURIComponent(rawId)
+      const body = kind === 'rates' ? grid.rates?.(id) : grid.balances?.(id, opts.now?.() ?? localMinute())
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const messageRoute = NOTIF_MESSAGE.exec(req.url)
+    if (messageRoute) {
+      const [, gridId = '', rawId = '', rawNid = ''] = messageRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'GET' || !grid.notifMessage) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'notifmsg') return fail(500, 'Сбой сервера', 'Регулятор ?fail=notifmsg')
+      const id = decodeURIComponent(rawId)
+      const body = grid.notifMessage(id, decodeURIComponent(rawNid))
+      if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
+      return body
+    }
+    const resendRoute = RESEND_ALL.exec(req.url) ?? RESEND_ONE.exec(req.url)
+    if (resendRoute) {
+      const [, gridId = '', rawId = '', rawNid] = resendRoute
+      const grid = grids[gridId]
+      if (!grid) return fail(404, 'Неизвестный грид', gridId)
+      if (req.method !== 'POST' || !grid.resend) return fail(404, 'Не найдено', `Нет маршрута ${req.method} ${req.url}`)
+      if (opts.failing?.() === 'resend') return fail(500, 'Сбой сервера', 'Регулятор ?fail=resend')
+      const id = decodeURIComponent(rawId)
+      const body = grid.resend(id, rawNid === undefined ? null : decodeURIComponent(rawNid), opts.now?.() ?? localMinute(), opts.clock?.() ?? Date.now())
       if (body === null || body === undefined) return fail(404, 'Документ не найден', `${gridId}/${id}`)
       return body
     }

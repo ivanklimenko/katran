@@ -1,8 +1,11 @@
 import type { Sort } from '@katran/effector'
 import { sortRows, type ColumnDef } from '@katran/ui'
 import type { FacetsBody, FilterMetaDto, SearchBody, SortDto, SuggestBody } from '../../shared/api'
+import type { FakeAnnulStore } from './annul'
 import type { FakeEditStore } from './edits'
 import { applyFilter } from './filter'
+import { balancesOf } from './lookups'
+import type { FakeNotifStore } from './notif'
 
 /** Один грид фейкового сервера: данные, колонки (ключи сортировки) и каталог. Наружу — только JSON контракта. */
 export type FakeGrid = {
@@ -21,6 +24,16 @@ export type FakeGrid = {
   accounts?: ((id: string, side: unknown) => unknown) | undefined
   /** Утверждение или отклонение чужой правки (срез 2d): деталь после решения; null — документа нет (404). Нет поля — у грида нет правки. */
   decide?: ((id: string, target: string, kind: 'confirm' | 'reject', body: unknown, when: string) => unknown) | undefined
+  /** Команда аннулирования (срез 2e): ответ 202 без тела; бросает ApiError; false — документа нет (404). Нет поля — у грида нет аннулирования. */
+  annul?: ((id: string, kind: 'annul' | 'confirm' | 'reject', body: unknown, when: string, mode: string | null) => boolean) | undefined
+  /** Курсы документа; null — документа нет (404). Нет поля — у грида нет курсов (404 у рубля). */
+  rates?: ((id: string) => unknown) | undefined
+  /** Остатки по счетам проводок на момент asOf; null — документа нет (404). */
+  balances?: ((id: string, asOf: string) => unknown) | undefined
+  /** Исходное сообщение нотификации; null — документа нет (404); нет строки — ApiError 404. */
+  notifMessage?: ((id: string, nid: string) => unknown) | undefined
+  /** Переотправка нотификаций (nid null — все): вкладка notif целиком; null — документа нет (404); бросает 404 (нет строки), 409 (окно). */
+  resend?: ((id: string, nid: string | null, when: string, nowMs: number) => unknown) | undefined
   /** Файл сообщения документа; null — документа нет (404). Нет поля — у грида нет файлов. */
   message?: ((id: string) => FakeMessage | null) | undefined
   /** Коды печатных форм, доступных документам грида. */
@@ -49,6 +62,14 @@ export type FakeGridOptions<Row> = {
   edits?: FakeEditStore | undefined
   /** Файлы документа (срез 2d): сообщение и печатные формы. Нужна detail. */
   files?: FakeFiles | undefined
+  /** Аннулирование (срез 2e): итог ложится на деталь поверх правок. Нужна detail. */
+  annul?: FakeAnnulStore | undefined
+  /** Курсы по детали (только валюта) и остатки — справочные запросы 2e. Нужна detail. */
+  rates?: ((detail: Record<string, unknown>) => unknown) | undefined
+  /** Остатки по проводкам детали включены (оба реестра). Нужна detail. */
+  balances?: boolean | undefined
+  /** Нотификации (срез 2e): сообщение и переотправка; вкладка notif получает дописанные попытки. Нужны tabs. */
+  notif?: FakeNotifStore | undefined
 }
 
 const fromSortDto = (dto: SortDto[]): Sort => dto.map((s) => ({ key: s.field, dir: s.direction === 'ASC' ? 'asc' : 'desc' }))
@@ -94,10 +115,26 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
       return i < 0 ? null : (toDetail(rows[i]!, i, rows) as Record<string, unknown>)
     }
     const store = opts.edits
-    grid.detail = (id) => {
+    const annul = opts.annul
+    const edited = (id: string): Record<string, unknown> | null => {
       const d = base(id)
       return d && store ? store.overlay(id, d) : d
     }
+    grid.detail = (id) => {
+      const d = edited(id)
+      return d && annul ? annul.overlay(id, d) : d
+    }
+    if (annul) {
+      grid.annul = (id, kind, body, when, mode) => {
+        const d = edited(id)
+        if (!d) return false
+        annul.command(id, annul.overlay(id, d), kind, body, when, mode)
+        return true
+      }
+    }
+    const toRates = opts.rates
+    if (toRates) grid.rates = (id) => { const d = base(id); return d && toRates(d) }
+    if (opts.balances) grid.balances = (id, asOf) => { const d = base(id); return d && balancesOf(d, asOf) }
     if (store) {
       grid.edit = (id, body, when) => {
         const d = base(id)
@@ -132,12 +169,21 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
   }
   const toTabs = opts.tabs
   if (toTabs) {
+    const raw = (id: string, tab: string): unknown => {
+      const i = rows.findIndex((r) => r.id === id)
+      return i < 0 ? null : (toTabs.data(rows[i]!, i, rows)[tab] ?? null)
+    }
+    const notif = opts.notif
     grid.tabs = {
       ids: toTabs.ids,
       get: (id, tab) => {
-        const i = rows.findIndex((r) => r.id === id)
-        return i < 0 ? null : (toTabs.data(rows[i]!, i, rows)[tab] ?? null)
+        const body = raw(id, tab)
+        return body !== null && tab === 'notif' && notif ? notif.overlay(id, body) : body
       },
+    }
+    if (notif) {
+      grid.notifMessage = (id, nid) => { const t = raw(id, 'notif'); return t === null ? null : notif.message(id, t, nid) }
+      grid.resend = (id, nid, when, nowMs) => { const t = raw(id, 'notif'); return t === null ? null : notif.resend(id, t, nid, when, nowMs) }
     }
   }
   return grid

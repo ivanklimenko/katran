@@ -3,9 +3,10 @@ import { STATUS_LABEL } from '../../entities/doc-status'
 import { TRAIL_EXAMPLES, TRAIL_PARSERS, trailViewsFor, type TrailTabId } from '../../entities/doc-trail'
 import { FX_TABS, FX_TYPES, currentOf, fxDocPorts, fxEditPorts, isChanged, originalOf, parseFxDocDetail, type FxDocDetail } from '../../entities/fx-doc'
 import { RUB_TABS, RUB_TYPES, parseRubDocDetail, rubDocPorts } from '../../entities/rub-doc'
-import { ApiError, createGridPorts, requestFx, type EditValue, type HttpRequest, type TabQuery } from '../../shared/api'
+import { ApiError, createGridPorts, parseBalances, parseNotifMessage, parseRates, requestFx, type EditValue, type HttpRequest, type TabQuery } from '../../shared/api'
 import { BANK_ACCOUNTS, CLIENT_ACCOUNTS, ROUTES } from './edits.data'
-import { createFakeGrids, fakeGrids } from './grids'
+import { annulSeedsOf, canAnnulBase } from './annul'
+import { createFakeGrids, editSeedIdsOf, fakeGrids } from './grids'
 import { makeFxDocs } from './fx-docs.data'
 import { FX_TRAIL_TABS, fxDocTrail } from './fx-docs.trail'
 import { makeRubDocs } from './rub-docs.data'
@@ -541,5 +542,71 @@ describe('контракт решения, сообщения и печати (�
     expect((await textOf(pdf.blob)).startsWith('%PDF-1.4')).toBe(true)
     await expect(file({ url: `/grids/rub-docs/documents/${rubDoc.id}/print/swift-form` })).rejects.toMatchObject({ status: 404 })
     await expect(file({ url: `${fx(seed57.id)}/print/payment-ordr` })).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('контракт 2e: аннулирование, курсы, остатки, нотификации — ответы фейка проходят разборщики и мапперы', () => {
+  const WHEN = '2026-10-07T16:40:00'
+  const fxRows = makeFxDocs()
+  const rubRows = makeRubDocs()
+  const { seedId, accKtSeedId } = editSeedIdsOf(fxRows)
+  const fxSeed = annulSeedsOf(fxRows, [seedId, accKtSeedId])
+  const rubSeed = annulSeedsOf(rubRows, [], 0)
+  const handleOf = (over: Parameters<typeof createFakeServer>[1] = {}) => createFakeServer(createFakeGrids(), { now: () => WHEN, clock: () => 0, ...over })
+  const get = (url: string): HttpRequest => ({ method: 'GET', url })
+  const post = (url: string, body: unknown): HttpRequest => ({ method: 'POST', url, body })
+  const fx = (id: string) => `/grids/fx-docs/documents/${id}`
+  const rub = (id: string) => `/grids/rub-docs/documents/${id}`
+
+  it('маппер деталей читает canAnnul и annul всех трёх состояний: нет, pending (сид), done (сид); rejected после отклонения', async () => {
+    const h = handleOf()
+    const plain = fxRows.find((r) => canAnnulBase(r) && r.id !== seedId && r.id !== accKtSeedId && r.id !== fxSeed.pending)!
+    expect(parseFxDocDetail(await h(get(fx(plain.id))), 'ответ')).toMatchObject({ canAnnul: true, annul: null })
+    const pending = parseFxDocDetail(await h(get(fx(fxSeed.pending!))), 'ответ')
+    expect(pending).toMatchObject({ canAnnul: false, annul: { status: 'pending', who: 'Кузнецов Д. А.', canConfirm: true } })
+    expect(parseFxDocDetail(await h(get(fx(fxSeed.done!))), 'ответ')).toMatchObject({ status: 'REJECTED', canAnnul: false, annul: { status: 'done', by: 'Смирнова Е. В.' } })
+    await h(post(`${fx(fxSeed.pending!)}/annul/reject`, { when: pending.annul!.when, reason: 'Нет оснований' }))
+    expect(parseFxDocDetail(await h(get(fx(fxSeed.pending!))), 'ответ')).toMatchObject({ canAnnul: true, annul: { status: 'rejected', rejectReason: 'Нет оснований', by: 'Вы', at: WHEN } })
+    const rubPending = parseRubDocDetail(await h(get(rub(rubSeed.pending!))), 'ответ')
+    expect(rubPending).toMatchObject({ canAnnul: false, annul: { status: 'pending', who: 'Кузнецов Д. А.', canConfirm: true } })
+  })
+  it('каждая деталь обеих реестров с аннулированием разбирается; 202 — тела нет', async () => {
+    const h = handleOf()
+    for (const r of fxRows) parseFxDocDetail(await h(get(fx(r.id))), 'ответ')
+    for (const r of rubRows) parseRubDocDetail(await h(get(rub(r.id))), 'ответ')
+    const id = fxRows.find((r) => canAnnulBase(r) && r.id !== seedId && r.id !== accKtSeedId && r.id !== fxSeed.pending && r.amount <= 1_000_000)!.id
+    expect(await h(post(`${fx(id)}/annul`, { reason: 'Дубликат' }))).toBeNull()
+    expect(parseFxDocDetail(await h(get(fx(id))), 'ответ')).toMatchObject({ status: 'REJECTED', canAnnul: false, annul: { status: 'done', who: 'Вы', canConfirm: false } })
+  })
+  it('rates: parseRates разбирает курс каждого валютного документа; deal — только у документа с полем 36', async () => {
+    const h = handleOf()
+    let deals = 0
+    for (const [i, r] of fxRows.entries()) {
+      const rates = parseRates(await h(get(`${fx(r.id)}/rates`)))
+      expect(rates.deal !== null).toBe(i % 4 === 0)
+      if (rates.deal) deals++
+    }
+    expect(deals).toBeGreaterThan(0)
+    await expect(h(get(`${rub(rubRows[0]!.id)}/rates`))).rejects.toMatchObject({ status: 404 })
+  })
+  it('balances: parseBalances разбирает остатки каждого документа обоих реестров; ошибка по счёту не рушит ответ', async () => {
+    const h = handleOf()
+    let errors = 0
+    for (const r of fxRows) errors += parseBalances(await h(get(`${fx(r.id)}/balances`))).items.filter((x) => 'error' in x).length
+    for (const r of rubRows) parseBalances(await h(get(`${rub(r.id)}/balances`)))
+    expect(errors).toBeGreaterThan(0)
+  })
+  it('notif: вкладка с id разбирается TRAIL_PARSERS до и после переотправки; message — parseNotifMessage (три contentType)', async () => {
+    const h = handleOf()
+    const done = fxRows.find((r) => r.status === 'DONE' || r.status === 'EXPORTED')!
+    const before = (TRAIL_PARSERS.notif(await h(get(`${fx(done.id)}/tabs/notif`)), 'ответ')) as { id: string }[]
+    const after = (TRAIL_PARSERS.notif(await h(post(`${fx(done.id)}/notifications/resend`, {})), 'ответ')) as { id: string }[]
+    expect(after.length).toBeGreaterThan(before.length)
+    expect(new Set(after.map((n) => n.id)).size).toBe(after.length)
+    const types = new Set<string>()
+    for (const n of after) types.add(parseNotifMessage(await h(get(`${fx(done.id)}/notifications/${n.id}/message`))).contentType)
+    expect(types).toEqual(new Set(['application/json', 'text/plain']))
+    const rubDone = rubRows.find((r, i) => (r.status === 'DONE' || r.status === 'EXPORTED') && i % 2 === 0)!
+    expect(parseNotifMessage(await h(get(`${rub(rubDone.id)}/notifications/n1/message`))).contentType).toBe('application/xml')
   })
 })
