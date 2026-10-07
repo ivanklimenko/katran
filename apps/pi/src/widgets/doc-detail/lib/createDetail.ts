@@ -66,6 +66,12 @@ export type Detail<D> = {
   /** Перезапрос детали по id (Р5, 409): кэш остаётся до ответа — слот ready со старой деталью, без скелетона; уже грузящийся — без запроса. */
   reloadDetail: EventCallable<string>
   /**
+   * «Обновить» документ (план 2d §3.5): кэш и ошибки вкладок `${id}:*` сбрасываются (как при replaceDetail), деталь
+   * перезапрашивается через reloadDetail (слот ready со старой деталью, без скелетона), затем перезапрашивается активная
+   * нелокальная вкладка слота с этим документом. Закрытый экран — без запросов.
+   */
+  refreshDoc: EventCallable<string>
+  /**
    * Уход из документа при guard (Р6): close/closeTop с документом в слоте, open в слот, занятый другим документом.
    * Охрана решений не принимает: спрашивать ли (черновик, сохранение в полёте — без вопроса), решает потребитель.
    */
@@ -123,10 +129,14 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   // --- правка (план 2c, Р5): ответ сохранения в кэш, перезапрос по 409 ---
   const replaceDetail = createEvent<{ id: string; detail: D }>()
   const reloadDetail = createEvent<string>()
+  const refreshDoc = createEvent<string>()
   // ответ сохранения после ухода с экрана не пишется: при возврате деталь запросится заново (Review Focus 1)
   const replaced = sample({ clock: replaceDetail, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, x) => x })
-  // эпоха документа: запросы детали и вкладок, ушедшие до replaceDetail, своими ответами кэш не трогают
-  const $epoch = createStore<Epochs>({}).on(replaced, (m, { id }) => ({ ...m, [id]: (m[id] ?? 0) + 1 }))
+  // refreshDoc — то же устаревание вкладок, что при replaceDetail, но детали в кэш не кладёт; после ухода с экрана — ничего
+  const refreshed = sample({ clock: refreshDoc, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, id) => ({ id }) })
+  const restale = merge([replaced, refreshed])
+  // эпоха документа: запросы детали и вкладок, ушедшие до replaceDetail/refreshDoc, своими ответами кэш не трогают
+  const $epoch = createStore<Epochs>({}).on(restale, (m, { id }) => ({ ...m, [id]: (m[id] ?? 0) + 1 }))
   const epochOf = (m: Epochs, id: string) => m[id] ?? 0
   const currentEpoch = { ...current, epoch: $epoch }
 
@@ -154,7 +164,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $loading
     .on(loadFx, (l, { id }) => ({ ...l, [id]: true }))
     .on(settled, (l, { params }) => without(l, params.id))
-    .on(replaced, (l, { id }) => without(l, id))
+    .on(restale, (l, { id }) => without(l, id))
   $errors.on(loadFx, (e, { id }) => without(e, id))
   $cache.on(done, (c, { params, result }) => ({ ...c, [params.id]: result }))
   $errors.on(failed, (e, { params, error }) => ({ ...e, [params.id]: error.message }))
@@ -169,6 +179,8 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     fn: ({ visit, epoch }, id): Load => ({ id, visit, epoch: epochOf(epoch, id) }),
     target: loadFx,
   })
+  // обновление: reducers выше уже сбросили загрузку и подняли эпоху — перезапрос уходит сразу
+  sample({ clock: refreshed, fn: ({ id }) => id, target: reloadDetail })
 
   // --- вкладки (спека 2b §3.3) ---
   const localTabs = cfg.localTabs ?? ['main']
@@ -190,9 +202,9 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     for (const k of keys) delete next[k]
     return next
   }
-  $tabCache.on(replaced, (c, { id }) => dropDoc(c, id))
-  $tabErrors.on(replaced, (e, { id }) => dropDoc(e, id))
-  $tabLoading.on(replaced, (l, { id }) => dropDoc(l, id))
+  $tabCache.on(restale, (c, { id }) => dropDoc(c, id))
+  $tabErrors.on(restale, (e, { id }) => dropDoc(e, id))
+  $tabLoading.on(restale, (l, { id }) => dropDoc(l, id))
 
   if (tabFx) {
     // своя копия порта, как у детали; порту уходит только { id, tab }
@@ -217,9 +229,9 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
       fn: ({ visit, epoch }, e) => load(e, visit, epoch),
       target: loadTabFx,
     })
-    // replaceDetail: активная нелокальная вкладка этого документа — заново (кэш уже сброшен редьюсером выше)
+    // replaceDetail и refreshDoc: активная нелокальная вкладка этого документа — заново (кэш уже сброшен редьюсером выше)
     sample({
-      clock: replaced,
+      clock: restale,
       source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
       filter: (src, { id }) => need(src, entryOf(src.st, id)),
       fn: ({ st, visit, epoch }, { id }) => load(entryOf(st, id), visit, epoch),
@@ -356,6 +368,6 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     stack, $slots, $marks, $focus, $quiet,
     open, close, closeTop, setTab: stack.setTab, retry,
     retryTab, $expanded, setExpanded,
-    replaceDetail, reloadDetail, leaveRequested, leave,
+    replaceDetail, reloadDetail, refreshDoc, leaveRequested, leave,
   }
 }

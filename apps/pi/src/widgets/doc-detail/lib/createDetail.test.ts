@@ -700,3 +700,48 @@ describe('createDetail: replaceDetail и летящие ответы (эпоха
     expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 3 } })
   })
 })
+
+describe('createDetail: refreshDoc и намерение refresh (спека 2d §3.5)', () => {
+  it('refreshDoc: деталь перезапрошена, кэш и ошибки вкладок сброшены, активная вкладка перезапрошена, слот без скелетона', async () => {
+    const { d, scope, lifecycle, open, tab, detailCalls, tabCalls, hold, release } = setupEdit({ failTab: 'u1:audit' })
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await tab('a', 'audit')
+    await tab('a', 'statuses')
+    expect(tabCalls).toEqual(['u1:audit', 'u1:statuses'])
+    hold(true)
+    const done = allSettled(d.refreshDoc, { scope, params: 'u1' })
+    expect(detailCalls).toEqual(['u1', 'u1'])
+    // до ответа: старая деталь, слот ready
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 1 }, error: null })
+    expect(tabCalls).toEqual(['u1:audit', 'u1:statuses', 'u1:statuses'])
+    release()
+    await done
+    expect(scope.getState(d.$slots).a).toMatchObject({ state: 'ready', data: { n: 2 } })
+    expect(scope.getState(d.$slots).a?.tabView).toMatchObject({ state: 'ready' })
+    // кэш и ошибка «Аудита» сброшены: возврат на вкладку — новый запрос
+    await tab('a', 'audit')
+    expect(tabCalls).toHaveLength(4)
+  })
+
+  it('refreshDoc при закрытом экране — без запросов', async () => {
+    const { d, scope, lifecycle, open, tab, detailCalls, tabCalls } = setupEdit()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await tab('a', 'statuses')
+    await allSettled(lifecycle.pageClosed, { scope })
+    await allSettled(d.refreshDoc, { scope, params: 'u1' })
+    expect(detailCalls).toEqual(['u1'])
+    expect(tabCalls).toEqual(['u1:statuses'])
+  })
+
+  it('leave с kind refresh игнорируется: слоты не меняются, запросов нет', async () => {
+    const { d, scope, lifecycle, open, ids, detailCalls, tabCalls } = setupEdit({ guard: true })
+    await allSettled(lifecycle.pageOpened, { scope })
+    await open('u1')
+    await allSettled(d.leave, { scope, params: { kind: 'refresh', id: 'u1' } })
+    expect(ids()).toEqual({ a: 'u1', b: null })
+    expect(detailCalls).toEqual(['u1'])
+    expect(tabCalls).toEqual([])
+  })
+})

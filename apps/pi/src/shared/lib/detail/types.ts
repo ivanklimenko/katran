@@ -77,8 +77,11 @@ export type DetailDomain<D, Row> = {
   formEdit?: ((d: D, edit: EditContext) => FormEdit) | undefined
 }
 
-/** Уход из документа, который ждёт ответа на «Отменить правку?» (план 2c, Р6): закрыть слот или открыть другой документ. */
-export type LeaveIntent = { kind: 'close'; slot: DrawerSlot } | { kind: 'open'; open: DrawerOpen }
+/**
+ * Уход из документа, который ждёт ответа на «Отменить правку?» (план 2c, Р6): закрыть слот или открыть другой документ.
+ * refresh (план 2d) — «Обновить» поверх правки: деталь не уходит, leave его игнорирует, перезапрос делает refreshDoc страницы.
+ */
+export type LeaveIntent = { kind: 'close'; slot: DrawerSlot } | { kind: 'open'; open: DrawerOpen } | { kind: 'refresh'; id: string }
 /** Справочник счетов стороны документа: null у EditContext.accounts — ещё не запрашивался. */
 export type AccountsSlot = { state: 'loading' | 'ready' | 'error'; items: AccountItem[]; error: string | null }
 /** Текст Prompt правки (отмена черновика, подтверждение даты валютирования) — ложится на PromptProps кита. */
