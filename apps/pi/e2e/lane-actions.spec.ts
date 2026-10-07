@@ -64,6 +64,12 @@ const said = (page: Page) => page.evaluate(() => (window as unknown as { __said:
 const f5 = (page: Page) => page.evaluate(() => (window as unknown as { __f5: boolean[] }).__f5.slice())
 const DECIDE = /^POST \/grids\/fx-docs\/documents\/[^/]+\/edits\/[^/]+\/(confirm|reject)$/
 const digits = (s: string | null) => (s ?? '').replace(/\D/g, '')
+/** F5 сейчас: перехвачен ли деталкой (последняя запись журнала). */
+const pressF5 = async (page: Page) => {
+  await page.keyboard.press('F5')
+  const log = await f5(page)
+  return log[log.length - 1]
+}
 
 /** Контраст текста элемента к его фактическому фону (WCAG 2.x): фон — первый непрозрачный предок, полупрозрачные смешаны. */
 const contrastOf = (loc: Locator) => loc.evaluate((el) => {
@@ -86,7 +92,7 @@ const contrastOf = (loc: Locator) => loc.evaluate((el) => {
   return (hi + 0.05) / (lo + 0.05)
 })
 
-test('утвердить чужую правку поля 57: Prompt «Утвердить правку?», в полёте фокус на Prompt и Esc деталку не закрывает; бейдж «утверждено», «Утвердил(а) Вы, …», кнопок решения нет', async ({ page }) => {
+test('утвердить чужую правку поля 57: Prompt «Утвердить правку?», в полёте фокус на Prompt и Esc деталку не закрывает; бейдж «утверждено», «Утвердил(а) Вы, …», кнопок решения нет, фокус на карандаше', async ({ page }) => {
   // медленный фейк — видно состояние «в полёте»
   await start(page, 'slow=600')
   const dw = await open(page, SEED_57.n)
@@ -113,6 +119,9 @@ test('утвердить чужую правку поля 57: Prompt «Утве�
   expect(await reqs(page, DECIDE)).toBe(1)
   await expect(cell.getByText('утверждено', { exact: true })).toBeVisible()
   await expect(cell.getByRole('button', { name: /^(Утвердить|Отклонить)$/ })).toHaveCount(0)
+  // кнопка, открывшая Prompt, пропала — фокус на карандаше цели, не в body; F5 перехвачен (Ruling R19)
+  await expect(dw.getByRole('button', { name: 'Редактировать поле 57' })).toBeFocused()
+  expect(await pressF5(page)).toBe(true)
   await cell.getByRole('button', { name: 'История' }).click()
   const last = cell.getByRole('list', { name: /^История изменений/ }).getByRole('listitem').last()
   await expect(last).toContainText('Иванова М. П.')
@@ -120,7 +129,7 @@ test('утвердить чужую правку поля 57: Prompt «Утве�
   await expect(dialogs(page)).toHaveCount(1)
 })
 
-test('отклонить правку счёта Кт: «Отклонить» недоступна без причины и при пробелах, 141-й символ обрезан; после — счёт и маршрут как до правки, объявление «Правка отклонена»', async ({ page }) => {
+test('отклонить правку счёта Кт: «Отклонить» недоступна без причины и при пробелах, 141-й символ обрезан; после — счёт и маршрут как до правки, маркер «отклонено» с причиной, фокус на карандаше, «Правка отклонена»', async ({ page }) => {
   const dw = await openDoc(page, SEED_KT.id)
   const route = dw.getByRole('img', { name: /^Маршрут пересчитан после смены счёта Кт · было: / })
   const before = /было: (.+?) · система/.exec((await route.getAttribute('aria-label'))!)![1]!
@@ -162,6 +171,12 @@ test('отклонить правку счёта Кт: «Отклонить» н
   const [, kind, acc, recv] = /^(\S+) (\d+) → (\S+)$/.exec(before)!
   await expect(accounts).toContainText(new RegExp(`Маршрут\\s*${kind}\\s*Счёт\\s*${acc}\\s*→\\s*Receiver\\s*${recv}`))
   await expect(dw.getByRole('button', { name: /правку счёта Кт$/ })).toHaveCount(0)
+  // след решения у строки: маркер «отклонено» с причиной в подсказке, хотя счёт вернулся к исходному (Ruling R19)
+  const mark = dw.getByRole('img', { name: /^Правка отклонена · Вы, \d{2}\.\d{2}\.\d{4} \d{2}:\d{2} · Причина: Счёт не тот$/ })
+  await expect(mark).toHaveAttribute('data-status', 'rejected')
+  await expect(mark).toHaveAttribute('data-k-tip', /Причина: Счёт не тот$/)
+  await expect(dw.getByRole('button', { name: 'Изменить счёт Кт' })).toBeFocused()
+  expect(await pressF5(page)).toBe(true)
   await expect(dialogs(page)).toHaveCount(1)
 })
 
@@ -199,20 +214,27 @@ test('отклонить правку поля 57: бейдж «отклонен
   await page.screenshot({ path: test.info().outputPath('reject-57.png') })
 })
 
-test('скачать: событие download, имя <номер>.txt, содержимое начинается с {1:F01; в полёте кнопка недоступна', async ({ page }) => {
+test('скачать: событие download, имя <номер>.txt, содержимое начинается с {1:F01; в полёте кнопка недоступна, фокус и F5 — на ней', async ({ page }) => {
   await start(page, 'slow=400')
   const dw = await open(page, 1)
   const number = /№ (\d+)/.exec((await dw.getAttribute('aria-label'))!)![1]!
   const down = dw.getByRole('button', { name: 'Скачать SWIFT-сообщение' })
   const event = page.waitForEvent('download')
   await down.click()
-  await expect(down).toBeDisabled()
+  // в полёте недоступна, но фокус держит (aria-disabled, Ruling R19): F5 перехвачен, повторный клик запроса не даёт
+  await expect(down).toHaveAttribute('aria-disabled', 'true')
+  await expect(down).toBeFocused()
+  expect(await pressF5(page)).toBe(true)
+  // force: Playwright сам не кликает по aria-disabled — ждал бы конца полёта
+  await down.click({ force: true })
   const file = await event
   expect(file.suggestedFilename()).toBe(`${number}.txt`)
   const path = await file.path()
   const { readFileSync } = await import('node:fs')
   expect(readFileSync(path!, 'utf8').startsWith('{1:F01')).toBe(true)
-  await expect(down).toBeEnabled()
+  await expect(down).not.toHaveAttribute('aria-disabled')
+  await expect(down).toBeFocused()
+  expect(await pressF5(page)).toBe(true)
   expect(await reqs(page, /^GET \/grids\/fx-docs\/documents\/[^/]+\/message$/)).toBe(1)
 })
 
@@ -226,7 +248,9 @@ test('печать «Форма SWIFT»: новая вкладка «Форми�
   const tab = await popup
   await expect(tab).toHaveTitle('Формируется…')
   // повторная печать, пока первая в полёте, недоступна (Review Focus 3)
-  await expect(printBtn).toBeDisabled()
+  await expect(printBtn).toHaveAttribute('aria-disabled', 'true')
+  await printBtn.click({ force: true })
+  await expect(page.getByRole('menu')).toHaveCount(0)
   // headless Chromium не показывает PDF: переход вкладки на blob: заканчивается загрузкой — ловим её адрес
   const shown = await tab.waitForEvent('download')
   const url = shown.url()
@@ -239,7 +263,7 @@ test('печать «Форма SWIFT»: новая вкладка «Форми�
   expect(pdf.head).toBe('%PDF-1.4')
   expect(pdf.type).toBe('application/pdf')
   expect(context.pages()).toHaveLength(2)
-  await expect(printBtn).toBeEnabled()
+  await expect(printBtn).not.toHaveAttribute('aria-disabled')
   await expect(dialogs(page)).toHaveCount(1)
   await tab.close()
 })
@@ -291,14 +315,20 @@ test('ссылка: «Скопировать ссылку» кладёт в бу
   expect(await page.evaluate(() => document.activeElement?.closest('[data-k-drawer]') != null)).toBe(true)
 })
 
-test('буфер недоступен: уведомление с полем только для чтения, ссылка выделена, «Скопируйте ссылку: Ctrl+C»; «Закрыть» убирает его', async ({ page }) => {
+test('буфер недоступен: уведомление с полем только для чтения, ссылка выделена, «Скопируйте ссылку: Ctrl+C»; «Закрыть» убирает его и возвращает фокус на кнопку', async ({ page }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('denied')) } })
+    // отказ с задержкой (как после вопроса о разрешении): кнопка успевает стать недоступной
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true, value: { writeText: () => new Promise((_, reject) => setTimeout(() => reject(new Error('denied')), 300)) },
+    })
   })
   await start(page)
   const dw = await open(page, 1)
   const id = await idOf(dw)
-  await dw.getByRole('button', { name: 'Скопировать ссылку на документ' }).click()
+  const copy = dw.getByRole('button', { name: 'Скопировать ссылку на документ' })
+  await copy.click()
+  await expect(copy).toHaveAttribute('aria-disabled', 'true')
+  await expect(copy).toBeFocused()
   const note = dw.locator('[data-part="link-fallback"]')
   await expect(note).toHaveAttribute('role', 'status')
   const field = note.getByRole('textbox', { name: 'Ссылка на документ' })
@@ -310,5 +340,7 @@ test('буфер недоступен: уведомление с полем то
   await expect(note).toContainText('Скопируйте ссылку: Ctrl+C')
   await note.getByRole('button', { name: 'Закрыть' }).click()
   await expect(note).toHaveCount(0)
+  // фокус вернулся на «Скопировать ссылку» и при задержанном отказе буфера (Ruling R19)
+  await expect(copy).toBeFocused()
   await expect(dialogs(page)).toHaveCount(1)
 })
