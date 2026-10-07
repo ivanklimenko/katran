@@ -8,7 +8,7 @@ import { RUB_TYPES, parseRubDocDetail, rubDocDetailDomain, rubDocLayout, rubDocP
 import { FX_LOCAL_TABS, detail as fxDetail, docEdit, fxDetailDomain, lifecycle as fxLifecycle } from '../pages/fx-docs'
 import { RUB_LOCAL_TABS, rubDetailDomain } from '../pages/rub-docs'
 import { requestFx, type ApiError, type TabQuery } from '../shared/api'
-import type { DetailDomain } from '../shared/lib/detail'
+import type { ActionsView, DetailDomain } from '../shared/lib/detail'
 import { createPageLifecycle } from '../shared/lib/lifecycle'
 import { renderK } from '../shared/lib/test'
 import { createDetail, DocDetail } from '../widgets/doc-detail'
@@ -138,6 +138,38 @@ describe('a11y правки деталки (план 2c, Task 12)', () => {
       docEdit.model.confirmResult(false)
       fxLifecycle.pageClosed()
     })
+    unmount()
+  }, 60_000)
+})
+
+/** Вид действий с «Скачать» в полёте — лейн с aria-busy (модель действий связывает страница, Task 11). */
+const downPending = (): ActionsView => ({ run: () => {}, pending: (id) => id === 'down', linkFallback: null, closeLinkFallback: () => {} })
+
+function FxDecisionDetail() {
+  const editOf = useEditContexts(docEdit, fxCommitView)
+  return <DocDetail detail={fxDetail} domain={fxDetailDomain} editOf={editOf} actionsOf={downPending} />
+}
+
+describe('a11y решения второй руки и лейна 2d (план 2d, Task 10)', () => {
+  it('валюта: Prompt «Отклонить правку?» с причиной и лейн со «Скачать» в полёте — axe без нарушений', async () => {
+    // сид чужой правки accKt — второй MT103 USD фейка (Task 4)
+    const id = '0f3c0014-7b1d-4c8e-9f0a-508698803372'
+    const { container, unmount } = renderK(<FxDecisionDetail />)
+    act(() => { fxLifecycle.pageOpened() })
+    await waitFor(() => expect(fxDetail.$slots.getState().a?.state).toBe('ready'))
+    act(() => { fxDetail.open({ id, secondary: false }) })
+    await waitFor(() => expect(fxDetail.$slots.getState().a).toMatchObject({ id, state: 'ready' }))
+    const drawer = screen.getByRole('dialog', { name: /^Платёжная инструкция/ })
+    expect(within(drawer).getByRole('button', { name: 'Скачать SWIFT-сообщение' })).toHaveAttribute('aria-busy', 'true')
+
+    await userEvent.click(within(drawer).getAllByRole('button', { name: /^Отклонить правку/ })[0]!)
+    const prompt = await within(drawer).findByRole('alertdialog', { name: 'Отклонить правку?' })
+    await userEvent.type(within(prompt).getByRole('textbox', { name: 'Причина' }), 'Счёт не согласован')
+    expect(within(prompt).getByRole('button', { name: 'Отклонить' })).toBeEnabled()
+    expect(await axe(container)).toHaveNoViolations()
+
+    await userEvent.click(within(prompt).getByRole('button', { name: 'Отмена' }))
+    act(() => { fxLifecycle.pageClosed() })
     unmount()
   }, 60_000)
 })
