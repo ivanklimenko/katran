@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
-import { ConfigForm, Prompt } from '@katran/ui'
+import { ConfigForm, Dialog, Prompt } from '@katran/ui'
 import type { AccountsSlot, EditContext } from '../../../shared/lib/detail'
 import { renderK } from '../../../shared/lib/test'
 import { FX_DETAIL_EXAMPLE } from '../api/detail.example'
@@ -103,6 +103,22 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     fireEvent.mouseDown(within(dialog).getByRole('button', { name: 'Отменить правку' }))
     fireEvent.mouseDown(dialog)
     fireEvent.mouseDown(dialog.parentElement!) // подложка Prompt
+    expect(edit.cancel).not.toHaveBeenCalled()
+  })
+
+  it('20 исх: mousedown внутри Dialog поверх деталки («Исходное сообщение») — не «клик вне», правка не отменяется', () => {
+    const edit = ctx({ editing: 'refOut', draft: 'FX1' })
+    renderK(
+      <>
+        <ConfigForm schema={dom.schemaOf(d)} fields={dom.fields} value={(t) => dom.value(d, t)} present={dom.present}
+          renderHero={(id) => dom.renderHero(d, id, edit)} renderBlock={(id) => dom.renderBlock(d, id, edit)} edit={dom.formEdit!(d, edit)} />
+        <Dialog open title="Исходное сообщение" onClose={vi.fn()} footer={<button>Скопировать</button>}>Текст сообщения</Dialog>
+      </>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Исходное сообщение' })
+    fireEvent.mouseDown(within(dialog).getByRole('button', { name: 'Скопировать' }))
+    fireEvent.mouseDown(within(dialog).getByText('Текст сообщения'))
+    fireEvent.mouseDown(dialog)
     expect(edit.cancel).not.toHaveBeenCalled()
   })
 

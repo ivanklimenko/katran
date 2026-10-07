@@ -32,7 +32,8 @@ export type DialogProps = {
 
 /**
  * Внутренние расширения для Prompt (не экспортируются из пакета): Prompt рисуется поверх Dialog без изменения поведения 2c–2d.
- * `describedBy` — id пояснения; `scrimMark` — data-k-prompt на подложке (по нему Popover и правка приложения узнают слой Prompt);
+ * `describedBy` — id пояснения; `scrimMark` — data-k-prompt на подложке Prompt (на него опирается e2e 2d; модальный слой Popover и правка приложения
+ * узнают по data-k-dialog — его несёт подложка любого Dialog);
  * `bare` — тело без обёртки (отступы блоков Prompt — свои); `refocusKey` — смена при открытом окне заново ставит начальный фокус
  * (Prompt: tone); `watchKey` — смена заново проверяет потерю фокуса (Prompt: okDisabled).
  */
@@ -44,8 +45,8 @@ export type DialogFrameProps = DialogProps & {
   watchKey?: boolean | undefined
 }
 
-/** Фокусируемые элементы окна (ловушка Tab): поля, кнопки и элементы с неотрицательным tabindex, кроме недоступных. */
-const FOCUSABLE = 'input, textarea, select, button, [tabindex]:not([tabindex="-1"])'
+/** Фокусируемые элементы окна (ловушка Tab): поля, кнопки, ссылки и элементы с неотрицательным tabindex, кроме недоступных. */
+const FOCUSABLE = 'input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])'
 const focusables = (box: HTMLElement): HTMLElement[] =>
   Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !(el as HTMLButtonElement).disabled && el.getAttribute('type') !== 'hidden')
 

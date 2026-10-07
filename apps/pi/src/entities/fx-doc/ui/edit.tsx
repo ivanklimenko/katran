@@ -153,11 +153,12 @@ function RefOutEditor({ edit }: { edit: EditContext }) {
   // открытие — фокус и выделение (эталон :1456)
   useEffect(() => { input.current?.focus(); input.current?.select() }, [])
   // клик вне блока правки — отмена (эталон, Р15); фаза захвата — раньше обработчиков под курсором.
-  // Prompt «Отменить правку?» поверх деталки — не «вне»: его кнопки решают сами (иначе черновик сброшен до click)
+  // окно поверх деталки ([data-k-dialog]: Prompt «Отменить правку?», «Исходное сообщение») — не «вне»: его кнопки решают сами
+  // (иначе черновик сброшен до click)
   useEffect(() => {
     const onDown = (ev: MouseEvent) => {
       if (!(ev.target instanceof Element) || !box.current || box.current.contains(ev.target)) return
-      if (ev.target.closest('[data-k-prompt]')) return
+      if (ev.target.closest('[data-k-dialog]')) return
       cancel.current()
     }
     document.addEventListener('mousedown', onDown, true)

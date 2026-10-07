@@ -64,6 +64,21 @@ describe('Dialog (спека 2e §2.1)', () => {
     expect(close).toHaveFocus()
   })
 
+  it('ссылка в теле окна — в ловушке Tab', async () => {
+    renderK(
+      <Dialog open title="Окно" onClose={vi.fn()} footer={<Footer onClose={vi.fn()} />}>
+        <a href="#doc">Документ</a>
+      </Dialog>,
+    )
+    const link = screen.getByRole('link', { name: 'Документ' })
+    expect(link).toHaveFocus()
+    screen.getByRole('button', { name: 'Закрыть' }).focus()
+    await userEvent.tab()
+    expect(link).toHaveFocus()
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Скопировать' })).toHaveFocus()
+  })
+
   it('Esc → onClose один раз, обработчик keydown на родителе не вызван', async () => {
     const onClose = vi.fn()
     const parent = vi.fn()

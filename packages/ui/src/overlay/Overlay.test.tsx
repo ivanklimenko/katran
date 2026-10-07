@@ -3,17 +3,19 @@ import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
+import { Dialog } from './Dialog'
 import { Menu, type MenuItem } from './Menu'
 import { Popover } from './Popover'
 
-function PopoverHost({ prompt = false }: { prompt?: boolean }) {
+function PopoverHost({ prompt = false, dialog = false }: { prompt?: boolean; dialog?: boolean }) {
   const [open, setOpen] = useState(false)
   const a = useRef<HTMLButtonElement>(null)
   return (
     <>
       <button ref={a} onClick={() => setOpen(true)}>Открыть</button>
       <button>Снаружи</button>
-      {prompt && <div data-k-prompt=""><button>Продолжить правку</button></div>}
+      {prompt && <div data-k-dialog=""><button>Продолжить правку</button></div>}
+      {dialog && <Dialog open title="Исходное сообщение" onClose={() => undefined} footer={<button>Скопировать</button>}>Текст</Dialog>}
       <Popover open={open} anchor={a} onClose={() => setOpen(false)} label="Панель">
         <input aria-label="Поле" />
       </Popover>
@@ -78,7 +80,7 @@ describe('Popover', () => {
     await userEvent.click(screen.getByText('Снаружи'))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('pointerdown и Esc внутри Prompt ([data-k-prompt]) — не «снаружи»: Prompt решает сам, поповер открыт', async () => {
+  it('pointerdown и Esc внутри слоя окна ([data-k-dialog]) — не «снаружи»: окно решает само, поповер открыт', async () => {
     renderK(<PopoverHost prompt />)
     await userEvent.click(screen.getByText('Открыть'))
     const inPrompt = screen.getByRole('button', { name: 'Продолжить правку' })
@@ -87,6 +89,17 @@ describe('Popover', () => {
     expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
     fireEvent.pointerDown(screen.getByText('Снаружи'))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('открытый Dialog поверх: mousedown/pointerdown внутри окна не закрывают поповер, Esc в окне — тоже', async () => {
+    renderK(<PopoverHost dialog />)
+    fireEvent.click(screen.getByText('Открыть'))
+    expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
+    const inDialog = screen.getByRole('button', { name: 'Скопировать' })
+    fireEvent.pointerDown(inDialog)
+    fireEvent.mouseDown(inDialog)
+    fireEvent.pointerDown(screen.getByRole('dialog', { name: 'Исходное сообщение' }))
+    fireEvent.keyDown(inDialog, { key: 'Escape' })
+    expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
   })
   it('returnFocus: при закрытии фокус уходит в указанный элемент, а не в якорь', async () => {
     renderK(<ReturnFocusHost />)
