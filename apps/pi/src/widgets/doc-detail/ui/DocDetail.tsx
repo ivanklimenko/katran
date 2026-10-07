@@ -4,8 +4,9 @@ import {
   Button, ConfigForm, Drawer, DrawerStack, ErrorState, IconButton, Input, LinkValue, Menu, Prompt, Skeleton, StatusDot, TabPanel, Tabs, Tag,
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
 } from '@katran/ui'
-import type {
-  ActionsView, DecisionState, DetailAction, DetailDomain, DetailSummary, EditContext, PrintFormItem, RemoteTabView, TabContext,
+import {
+  REASON_MAX, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailSummary, type EditContext, type PrintFormItem,
+  type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
@@ -35,8 +36,6 @@ type OnAction = (a: DetailAction, form?: PrintFormItem) => void
 
 /** Действия среза 2e: у модели действий их нет — и при actionsOf объявление-заглушка 2a. */
 const LATER = ['esid', 'ban']
-/** Длина причины отклонения — REJECT_MAX правки (features/doc-edit; виджет features не импортирует). */
-const REASON_MAX = 140
 /** Цель keydown, где F5 остаётся браузеру: поле ввода (спека 2d §4 п. 4). */
 const FIELD = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
 

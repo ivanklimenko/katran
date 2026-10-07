@@ -13,7 +13,7 @@ import { DISCARD_VIEW, editKey, editScope, targetOf, type DocEdit } from '../mod
  * «Изменения не сохранены: …» (отказ ↺ и отказ после ухода из редактора).
  *
  * Вторая рука (план 2d §3.3): decision — Prompt решения своего документа; canDecide — кнопки «Утвердить»/«Отклонить» цели
- * (canConfirm цели, нет своего редактора, нет решения, не saving); пока решение открыто, open и revert документа не действуют
+ * (canConfirm цели, нет своего редактора, нет решения, правка этого документа не сохраняется); пока решение открыто, open и revert документа не действуют
  * (одна операция за раз). Рост $decided — объявление его текста («Правка утверждена» / «Правка отклонена» / 409).
  *
  * commitView получает initial модели (нормализованное текущее) и черновик как он есть, без нормализации: запрос уйдёт с
@@ -24,9 +24,9 @@ export function useEditContexts<D extends { id: string }>(
   commitView: (target: string, was: EditValue, now: EditValue) => EditConfirmView,
 ): (docId: string) => EditContext {
   const { model } = edit
-  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount, unsaved, decisions, decided] = useUnit([
+  const [editing, drafts, errors, saving, saveError, confirm, accounts, savedCount, unsaved, decisions, decided, savingDoc] = useUnit([
     model.$editing, model.$drafts, model.$errors, model.$saving, model.$saveError, model.$confirm, edit.$accounts, edit.$savedCount, edit.$unsaved,
-    edit.$decision, edit.$decided,
+    edit.$decision, edit.$decided, edit.$savingDoc,
   ])
   const [open, change, cancel, save, submit, confirmResult, loadAccounts, confirmRequested, rejectRequested, reasonChanged, decisionResult] = useUnit([
     model.open, model.change, model.cancel, model.save, model.submit, model.confirmResult, edit.loadAccounts,
@@ -81,14 +81,15 @@ export function useEditContexts<D extends { id: string }>(
       accounts: (side) => accounts[`${docId}:${side}`] ?? null,
       retryAccounts: (side) => loadAccounts({ id: docId, side }),
       decision,
-      canDecide: (_target, canConfirm) => canConfirm && own === null && decision === null && !saving,
+      // сохранение другого документа решению не мешает: блокирует только своё (M2)
+      canDecide: (_target, canConfirm) => canConfirm && own === null && decision === null && savingDoc !== docId,
       confirmEdit: (target, when) => confirmRequested({ docId, target, when }),
       rejectEdit: (target, when) => rejectRequested({ docId, target, when }),
       changeReason: (text) => reasonChanged({ docId, text }),
       onDecision: (ok) => decisionResult({ docId, ok }),
     }
   }, [
-    editing, drafts, errors, saving, saveError, confirm, accounts, decisions, commitView, open, change, cancel, save, submit, confirmResult, loadAccounts,
+    editing, drafts, errors, saving, saveError, confirm, accounts, decisions, savingDoc, commitView, open, change, cancel, save, submit, confirmResult, loadAccounts,
     confirmRequested, rejectRequested, reasonChanged, decisionResult,
   ])
 }

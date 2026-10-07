@@ -409,7 +409,7 @@ describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
     await t.settle()
   })
 
-  it('одна операция над документом: открытый редактор документа или сохранение в полёте — запрос решения игнорируется; другой документ — работает', async () => {
+  it('одна операция над документом: открытый редактор документа или сохранение его правки в полёте — запрос решения игнорируется; другой документ — работает', async () => {
     const t = setup()
     const { edit, scope, saves } = t
     await allSettled(t.lifecycle.pageOpened, { scope })
@@ -420,18 +420,21 @@ describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
     await ask(t, 'confirm', 'u2')
     expect(Object.keys(scope.getState(edit.$decision))).toEqual(['u2'])
     await allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: false } })
-    // сохранение в полёте (редактор уже закрыт уходом) — решение не начинается ни в каком документе
+    // сохранение правки u1 в полёте (редактор уже закрыт уходом) — решение по u1 не начинается; по u2 — начинается (M2)
     await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
     t.fire(allSettled(edit.model.save, { scope }))
     t.fire(allSettled(edit.model.requestLeave, { scope, params: { scope: 'u1:', next: { kind: 'close', slot: 'a' } } }))
     expect(scope.getState(edit.model.$editing)).toBeNull()
     expect(scope.getState(edit.model.$saving)).toBe(true)
+    expect(scope.getState(edit.$savingDoc)).toBe('u1')
     // allSettled ждёт висящее сохранение — шаги копятся в fire
     t.fire(ask(t, 'confirm'))
     t.fire(ask(t, 'confirm', 'u2'))
-    expect(scope.getState(edit.$decision)).toEqual({})
+    expect(Object.keys(scope.getState(edit.$decision))).toEqual(['u2'])
+    t.fire(allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: false } }))
     saves[0]!.ok({ id: 'u1', rev: 2 })
     await t.settle()
+    expect(scope.getState(edit.$savingDoc)).toBeNull()
     // решение уже открыто — второй запрос по документу его не подменяет
     await ask(t, 'confirm')
     await ask(t, 'reject')

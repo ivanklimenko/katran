@@ -1,5 +1,6 @@
 import { fieldTarget, sameEditValue } from '../../entities/fx-doc'
 import { toApiError, type EditValue, type Problem } from '../../shared/api'
+import { REASON_MAX } from '../../shared/lib/detail'
 import { BANK_ACCOUNTS, CLIENT_ACCOUNTS, ROUTES, type FakeAccount, type FakeRoute } from './edits.data'
 
 type Detail = Record<string, unknown>
@@ -34,7 +35,6 @@ export type FakeEditStoreConfig = {
 const FIELD = 'field:'
 const NOT_CLIENT = 'Счёт не из карточки клиента — выберите из списка'
 const NOT_BANK = 'Счёт не из списка счетов банка — выберите из списка'
-const REASON_MAX = 140
 /** Автор правок пользователя фейка; чужие записи — любые другие. */
 const ME = 'Вы'
 

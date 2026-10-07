@@ -149,14 +149,15 @@ describe('useEditContexts (план 2c §3.2)', () => {
     expect(ctx.d1?.decision).toBeNull()
   })
 
-  it('canDecide — false, пока идёт сохранение', async () => {
+  it('canDecide — false, пока сохраняется правка этого документа; сохранение другого документа решения не блокирует (финальное ревью 2d, M2)', async () => {
     let release: () => void = () => undefined
     const { ctx } = setup((q) => new Promise<Doc>((ok) => { release = () => ok({ id: q.id, rev: 2 }) }))
     act(() => { ctx.d1!.revert('refOut', 'REF2', 'REF1') })
     expect(ctx.d2?.saving).toBe(true)
-    expect(ctx.d2?.canDecide('field:57', true)).toBe(false)
+    expect(ctx.d1?.canDecide('field:57', true)).toBe(false)
+    expect(ctx.d2?.canDecide('field:57', true)).toBe(true)
     await act(async () => { release() })
-    await waitFor(() => expect(ctx.d2?.canDecide('field:57', true)).toBe(true))
+    await waitFor(() => expect(ctx.d1?.canDecide('field:57', true)).toBe(true))
   })
 
   it('отклонение: changeReason → причина, onDecision(true) → запрос; успех — объявление «Правка отклонена»; на монтировании — без объявления', async () => {

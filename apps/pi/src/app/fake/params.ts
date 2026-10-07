@@ -3,7 +3,8 @@ import type { FakeServerOptions } from './server'
 /**
  * Регуляторы стенда в адресе: ?slow=N — задержка ровно N мс (иначе 0,25–0,65 с); ?fail=search|facets|suggest|meta|detail — отказ 500;
  * ?fail=tab — 500 на любой вкладке деталки, ?fail=tab:<id> — только на вкладке <id>;
- * ?fail=edit — 500 на сохранении правки, ?fail=accounts — 500 на справочнике счетов; ?conflict=edit — 409 «Документ изменили» на любой правке (план 2c).
+ * ?fail=edit — 500 на сохранении правки, ?fail=accounts — 500 на справочнике счетов; ?conflict=edit — 409 «Документ изменили» на любой правке (план 2c);
+ * ?fail=decide — 500 на «Утвердить»/«Отклонить» правки, ?fail=message — 500 на «Скачать», ?fail=print — 500 на печатной форме (план 2d).
  * Каждый запрос — событие окна FAKE_REQUEST_EVENT с { method, url }: фейк живёт в странице, сеть его не видит, e2e считает запросы по событию.
  */
 export const FAKE_REQUEST_EVENT = 'k-fake-request'

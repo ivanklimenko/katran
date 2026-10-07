@@ -135,7 +135,7 @@ export type EditContext = {
   retryAccounts: (side: AccountSide) => void
   /** Prompt решения этого документа (утвердить/отклонить чужую правку), иначе null. */
   decision: DecisionState | null
-  /** Можно ли сейчас решать по цели: canConfirm цели && нет открытого редактора документа && нет decision && не saving. */
+  /** Можно ли сейчас решать по цели: canConfirm цели && нет открытого редактора документа && нет decision && правка этого документа не сохраняется. */
   canDecide: (target: string, canConfirm: boolean) => boolean
   /** «Утвердить» у записи правки цели (when — время записи) — Prompt решения. */
   confirmEdit: (target: string, when: string) => void

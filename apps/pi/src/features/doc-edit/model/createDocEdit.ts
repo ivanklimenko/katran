@@ -36,9 +36,14 @@ export type DocEdit<D> = {
    * сохранения). count растёт — объявление text «Изменения не сохранены: {текст отказа}».
    */
   $unsaved: Store<{ count: number; text: string }>
+  /**
+   * Документ, чья правка сейчас сохраняется (id ключа запроса в полёте), иначе null. $saving модели кита — общий на экран;
+   * решения блокирует только сохранение своего документа (финальное ревью 2d, M2).
+   */
+  $savingDoc: Store<string | null>
   /** Prompt решения по документам (ключ — docId; одна операция на документ); сброс при уходе с экрана. */
   $decision: Store<Record<string, DecisionState>>
-  /** «Утвердить» чужую правку цели; игнорируется при открытом редакторе документа, сохранении в полёте, открытом решении документа. */
+  /** «Утвердить» чужую правку цели; игнорируется при открытом редакторе документа, сохранении его правки в полёте, открытом решении документа. */
   confirmRequested: EventCallable<{ docId: string; target: string; when: string }>
   /** «Отклонить» чужую правку цели — те же условия, что у confirmRequested. */
   rejectRequested: EventCallable<{ docId: string; target: string; when: string }>
@@ -68,8 +73,8 @@ export const DISCARD_VIEW: EditConfirmView = {
   tone: 'danger',
 }
 
-/** Наибольшая длина причины отклонения (контракт: длиннее — 400 по пути reason). */
-export const REJECT_MAX = 140
+/** Наибольшая длина причины отклонения (контракт: длиннее — 400 по пути reason) — REASON_MAX shared/lib/detail под именем контракта правки. */
+export { REASON_MAX as REJECT_MAX } from '../../../shared/lib/detail'
 /** Объявления решения второй руки (спека 2d §4). */
 export const DECISION_TEXT = { confirmed: 'Правка утверждена', rejected: 'Правка отклонена', conflict: 'Правку уже обработали — данные обновлены' }
 
@@ -157,6 +162,12 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   $was.on(submitted, (m, { key, initial }) => ({ ...m, [key]: initial }))
   sample({ clock: submit, fn: ({ key, initial, draft }) => ({ key, initial: cfg.normalize(targetOf(key), initial), draft }), target: inner.submit })
   const model: EditModel<EditValue, D, LeaveIntent, ApiError> = { ...inner, open, submit }
+  // ключ запроса в полёте — как $saving кита: ставится вызовом saveFx (своя копия транспорта модели), снимается ответом
+  // своего визита (saved/failed модели) и уходом с экрана (reset модели)
+  const $savingDoc = createStore<string | null>(null)
+    .on(saveFx, (_, q) => idOf(q.key))
+    .on([inner.saved, inner.failed], () => null)
+    .reset(lifecycle.pageClosed)
 
   const savedDoc = sample({ clock: inner.saved, fn: ({ result }) => ({ id: result.id, detail: result }) })
   const savedConflict = sample({ clock: inner.failed, filter: ({ error }) => error.status === 409, fn: ({ key }) => ({ id: idOf(key) }) })
@@ -215,13 +226,13 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   const rejectFx = attach({ effect: ports.rejectEditFx, mapParams: ({ id, target, when, reason }: RejectRun): RejectQuery => ({ id, target, when, reason }) })
 
   const kindOf = (kind: DecisionKind) => (q: DecisionAsk) => ({ ...q, kind })
-  // решение начинается только на открытом экране, без своего открытого редактора документа, без сохранения в полёте и
-  // без уже открытого решения этого документа (оно не подменяется)
+  // решение начинается только на открытом экране, без своего открытого редактора документа, без сохранения правки этого
+  // документа в полёте и без уже открытого решения этого документа (оно не подменяется)
   const asked = sample({
     clock: merge([confirmRequested.map(kindOf('confirm')), rejectRequested.map(kindOf('reject'))]),
-    source: { opened: lifecycle.$opened, decision: $decision, editing: inner.$editing, saving: inner.$saving },
-    filter: ({ opened, decision, editing, saving }, q) =>
-      opened && !saving && decision[q.docId] === undefined && (editing === null || !editing.key.startsWith(editScope(q.docId))),
+    source: { opened: lifecycle.$opened, decision: $decision, editing: inner.$editing, savingDoc: $savingDoc },
+    filter: ({ opened, decision, editing, savingDoc }, q) =>
+      opened && savingDoc !== q.docId && decision[q.docId] === undefined && (editing === null || !editing.key.startsWith(editScope(q.docId))),
     fn: (_, q) => q,
   })
   // запрос: решение не в полёте; у отклонения — причина не пуста после trim
@@ -296,6 +307,6 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
 
   return {
     model, $accounts, loadAccounts, docEdited, conflict, $savedCount, $unsaved,
-    $decision, confirmRequested, rejectRequested, reasonChanged, decisionResult, $decided,
+    $savingDoc, $decision, confirmRequested, rejectRequested, reasonChanged, decisionResult, $decided,
   }
 }
