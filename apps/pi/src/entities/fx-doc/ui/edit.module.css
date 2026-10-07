@@ -126,3 +126,53 @@
 .routeEdited h3 {
   color: var(--k-warn);
 }
+
+/* решение второй руки у маркера (20 исх, счета; план 2d): видны всегда, не по наведению — действие ждёт пользователя */
+.ok.ok,
+.no.no {
+  flex: none;
+  width: var(--k-pen);
+  height: var(--k-pen);
+  border-radius: var(--k-r-s);
+  background: none;
+}
+
+.ok.ok {
+  border-color: var(--k-ok);
+  color: var(--k-ok);
+}
+
+.no.no {
+  border-color: var(--k-bad);
+  color: var(--k-bad);
+}
+
+.ok.ok:hover:not(:disabled) {
+  border-color: var(--k-ok);
+  background: var(--k-ok-soft);
+  color: var(--k-ok);
+}
+
+.no.no:hover:not(:disabled) {
+  border-color: var(--k-bad);
+  background: var(--k-bad-soft);
+  color: var(--k-bad);
+}
+
+/* тело Prompt решения: цель, «было → стало», автор и время записи */
+.decision {
+  display: grid;
+  gap: var(--k-sp-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.decisionTarget {
+  font-weight: 600;
+  color: var(--k-ink);
+}
+
+.decisionWho {
+  font: 400 var(--k-fs-3) / var(--k-lh-3) var(--k-sans);
+  color: var(--k-muted);
+}

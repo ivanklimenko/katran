@@ -21,9 +21,13 @@ describe('профили MT (PROFILES стенда)', () => {
   })
   it('вкладки и действия — порядок эталона', () => {
     expect(FX_TABS.map((t) => t.id)).toEqual(['main', 'extra', 'statuses', 'compliance', 'linked', 'tasks', 'notif', 'source', 'stream', 'mpu', 'audit'])
-    expect(FX_ACTIONS.map((a) => a.id)).toEqual(['refresh', 'edit', 'esid', 'down', 'print', 'link', 'ban'])
+    // лейн 2d — без «Редактировать» (спека §4 п. 8); пункты печати — с кодом формы (план 2d, «Коды печатных форм»)
+    expect(FX_ACTIONS.map((a) => a.id)).toEqual(['refresh', 'esid', 'down', 'print', 'link', 'ban'])
     expect(FX_ACTIONS[FX_ACTIONS.length - 1]).toMatchObject({ label: 'Аннулировать', danger: true })
-    expect(FX_ACTIONS.find((a) => a.id === 'print')?.menu).toHaveLength(3)
+    expect(FX_ACTIONS.find((a) => a.id === 'print')?.menu).toEqual([
+      { label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Мемориальный ордер', form: 'memorial-order' },
+      { label: 'Форма SWIFT', form: 'swift-form' },
+    ])
   })
   it('заголовок — как на эталоне (В-Д1, index.html:1369)', () => {
     expect(FX_DETAIL_TITLE).toBe('Платёжная инструкция ВАЛЮТА')

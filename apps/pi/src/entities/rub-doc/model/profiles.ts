@@ -79,13 +79,15 @@ export const RUB_TABS: DetailTab[] = [
   { id: 'ed244', label: 'ED244' }, { id: 'stream', label: 'Стриминг' }, { id: 'mpu', label: 'MPU' }, { id: 'audit', label: 'Аудит' },
 ]
 
-/** Действия — ACTIONS_RUB стенда (index.html:734): как у валюты, кроме скачивания и форм печати. */
+/** Действия — ACTIONS_RUB стенда (index.html:734) без «Редактировать» (спека 2d §4 п. 8): как у валюты, кроме скачивания и форм печати. */
 export const RUB_ACTIONS: DetailAction[] = [
   { id: 'refresh', label: 'Обновить', icon: 'refresh', hotkey: 'F5' },
-  { id: 'edit', label: 'Редактировать', icon: 'edit', hotkey: 'E' },
   { id: 'esid', label: 'Создать служебный документ', icon: 'doc' },
   { id: 'down', label: 'Скачать сообщение ED (XML)', icon: 'download' },
-  { id: 'print', label: 'Печать', icon: 'print', menu: ['Платёжное поручение', 'Инкассовое поручение', 'Платёжный ордер', 'Мемориальный ордер'] },
+  { id: 'print', label: 'Печать', icon: 'print', menu: [
+    { label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Инкассовое поручение', form: 'collection-order' },
+    { label: 'Платёжный ордер', form: 'payment-ordr' }, { label: 'Мемориальный ордер', form: 'memorial-order' },
+  ] },
   { id: 'link', label: 'Скопировать ссылку на документ', icon: 'link' },
   { id: 'ban', label: 'Аннулировать', icon: 'ban', danger: true },
 ]

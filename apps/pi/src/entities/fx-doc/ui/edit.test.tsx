@@ -9,7 +9,7 @@ import { parseFxDocDetail } from '../api/detail.mapper'
 import type { FxDocDetail } from '../model/detail'
 import type { FxHistEntry } from '../model/edit'
 import { fxDocDetailDomain as dom } from './detail'
-import { fxCommitView } from './edit'
+import { fxCommitView, fxDecisionNote } from './edit'
 
 const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
 const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
@@ -278,5 +278,111 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(await axe(acc.container)).toHaveNoViolations()
     expect(await axe(screen.getByRole('listbox'))).toHaveNoViolations()
     acc.unmount()
+  })
+})
+
+describe('вторая рука в видах валюты (план 2d, Task 8)', () => {
+  const f57 = () => document.querySelector('[data-field="57"]') as HTMLElement
+  // строка поля сетки свёрнута: аудит — в её панели (FieldRow кита)
+  const expand57 = () => userEvent.click(within(f57()).getByRole('button', { expanded: false }))
+  const can57: FxDocDetail = { ...d, edits: { ...d.edits, 'field:57': { ...d.edits['field:57']!, canConfirm: true } } }
+  const ktWas = '40702840719992365220'
+  const foreign = (target: 'accKt' | 'accDt' | 'refOut', was: string, now: string): FxDocDetail => ({
+    ...d, ...(target === 'refOut' ? { refOut: now } : { [target]: now }),
+    edits: { [target]: { now, canConfirm: true, hist: [entry({ who: 'Кузнецов Д. А.', when: '2026-09-23T11:05:00', was, now })] } },
+  })
+
+  it('поле 57 с canConfirm и canDecide — «Утвердить»/«Отклонить» в сводке аудита без раскрытия; клик — решение по when последней записи', async () => {
+    const canDecide = vi.fn(() => true)
+    const edit = ctx({ canDecide })
+    renderEdit(can57, edit)
+    expect(canDecide).toHaveBeenCalledWith('field:57', true)
+    await expand57()
+    expect(within(f57()).getByRole('button', { name: 'История', expanded: false })).toBeInTheDocument() // сводка, история свёрнута
+    await userEvent.click(within(f57()).getByRole('button', { name: 'Утвердить' }))
+    expect(edit.confirmEdit).toHaveBeenCalledWith('field:57', '2026-09-23T10:42:00')
+    await userEvent.click(within(f57()).getByRole('button', { name: 'Отклонить' }))
+    expect(edit.rejectEdit).toHaveBeenCalledWith('field:57', '2026-09-23T10:42:00')
+  })
+
+  it('поле 57: canDecide false (открыт редактор, Prompt, сохранение) — кнопок решения нет', async () => {
+    renderEdit(can57, ctx({ canDecide: () => false }))
+    await expand57()
+    expect(f57()).toHaveTextContent('2 изменения')
+    expect(within(f57()).queryByRole('button', { name: 'Утвердить' })).toBeNull()
+    expect(within(f57()).queryByRole('button', { name: 'Отклонить' })).toBeNull()
+  })
+
+  it('счета и 20 исх с ожидающей чужой правкой — кнопки решения у маркера (блока истории у этих целей нет)', async () => {
+    const cases = [
+      { target: 'accKt', name: 'счёта Кт', doc: foreign('accKt', ktWas, d.accKt) },
+      { target: 'accDt', name: 'счёта Дт', doc: foreign('accDt', '30110840700000009999', d.accDt) },
+      { target: 'refOut', name: '20 исх', doc: foreign('refOut', '', 'FX1') },
+    ] as const
+    for (const c of cases) {
+      const canDecide = vi.fn(() => true)
+      const edit = ctx({ canDecide })
+      const { unmount } = renderEdit(c.doc, edit)
+      expect(canDecide, c.target).toHaveBeenCalledWith(c.target, true)
+      const ok = screen.getByRole('button', { name: `Утвердить правку ${c.name}` })
+      // у маркера «изменено» той же строки
+      expect(ok.parentElement?.querySelector('[data-k-editmark], [role="img"]'), c.target).not.toBeNull()
+      await userEvent.click(ok)
+      expect(edit.confirmEdit, c.target).toHaveBeenCalledWith(c.target, '2026-09-23T11:05:00')
+      await userEvent.click(screen.getByRole('button', { name: `Отклонить правку ${c.name}` }))
+      expect(edit.rejectEdit, c.target).toHaveBeenCalledWith(c.target, '2026-09-23T11:05:00')
+      unmount()
+    }
+    // своя правка (canConfirm false) или нельзя решать сейчас — кнопок нет
+    const own: FxDocDetail = { ...foreign('accKt', ktWas, d.accKt) }
+    own.edits = { accKt: { ...own.edits.accKt!, canConfirm: false } }
+    const { unmount } = renderEdit(own, ctx({ canDecide: (_t, can) => can }))
+    expect(screen.queryByRole('button', { name: /правку счёта Кт$/ })).toBeNull()
+    unmount()
+    renderEdit(foreign('accKt', ktWas, d.accKt), ctx({ canDecide: () => false }))
+    expect(screen.queryByRole('button', { name: /правку счёта Кт$/ })).toBeNull()
+  })
+
+  it('заблокированный документ — кнопок решения нет ни у полей, ни у маркеров', async () => {
+    const lock = { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' }
+    const kt = foreign('accKt', ktWas, d.accKt)
+    const locked: FxDocDetail = { ...kt, lock, edits: { ...can57.edits, ...kt.edits } }
+    renderEdit(locked, ctx({ canDecide: () => true }))
+    await expand57()
+    expect(f57()).toHaveTextContent('2 изменения')
+    expect(screen.queryAllByRole('button', { name: /^(Утвердить|Отклонить)/ })).toHaveLength(0)
+  })
+
+  it('decisionNote: подпись цели, «было → стало» значениями записи, автор и время', () => {
+    const kt = foreign('accKt', ktWas, d.accKt)
+    const { container, unmount } = renderK(<div>{fxDecisionNote(kt, 'accKt', '2026-09-23T11:05:00')}</div>)
+    expect(container).toHaveTextContent('Счёт Кт')
+    expect(container).toHaveTextContent('40702 840 7 1999 2365220 → 40817 840 1 0005 0017762')
+    expect(container).toHaveTextContent('Кузнецов Д. А., 23.09.2026 11:05')
+    unmount()
+    // поле — подпись «Поле 57 · Банк получателя», строки диффа записи (не первой правки)
+    const field = renderK(<div>{fxDecisionNote(can57, 'field:57', '2026-09-23T10:42:00')}</div>)
+    expect(field.container).toHaveTextContent('Поле 57 · Банк получателя')
+    expect(field.container).toHaveTextContent('VOSTOCHNY KREDIT BANK KHABAROVSK → VOSTOCHNY KREDIT BANK KHABAROVSK BR')
+    expect(field.container).toHaveTextContent('Иванова М. П., 23.09.2026 10:42')
+    field.unmount()
+    const ref = renderK(<div>{fxDecisionNote(foreign('refOut', '', 'FX1'), 'refOut', '2026-09-23T11:05:00')}</div>)
+    expect(ref.container).toHaveTextContent('20 исх')
+    expect(ref.container).toHaveTextContent('— → FX1')
+  })
+
+  it('история отклонённой правки — «Причина: …» (historyOf передаёт reason)', async () => {
+    const rejected: FxDocDetail = {
+      ...d, edits: {
+        'field:57': {
+          ...d.edits['field:57']!,
+          hist: [...d.edits['field:57']!.hist.slice(0, 1), { ...d.edits['field:57']!.hist[1]!, status: 'rejected', by: 'Вы', at: '2026-09-23T12:00:00', reason: 'Нет в справочнике' }],
+        },
+      },
+    }
+    renderEdit(rejected, ctx())
+    await expand57()
+    await userEvent.click(within(f57()).getByRole('button', { name: 'История' }))
+    expect(f57()).toHaveTextContent('Причина: Нет в справочнике')
   })
 })

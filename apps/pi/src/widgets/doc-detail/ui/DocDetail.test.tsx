@@ -43,7 +43,7 @@ const domain: DetailDomain<Doc, Doc> = {
   ],
   actions: [
     { id: 'refresh', label: 'Обновить', icon: 'refresh', hotkey: 'F5' },
-    { id: 'print', label: 'Печать', icon: 'print', menu: ['Платёжное поручение', 'Форма SWIFT'] },
+    { id: 'print', label: 'Печать', icon: 'print', menu: [{ label: 'Платёжное поручение', form: 'payment-order' }, { label: 'Форма SWIFT', form: 'swift-form' }] },
     { id: 'ban', label: 'Аннулировать', icon: 'ban', danger: true },
   ],
   fields: { '20': { label: 'Референс отправителя', kind: 'ref' } },

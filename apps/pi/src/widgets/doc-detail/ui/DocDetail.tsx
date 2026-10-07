@@ -46,7 +46,7 @@ function ActionButton({ action, onAction }: { action: DetailAction; onAction: On
       </IconButton>
       {menu && (
         <Menu open={open} anchor={ref} onClose={() => setOpen(false)} title={`${action.label} — печатная форма`}
-          items={menu.map((f) => ({ id: f, label: f, onSelect: () => onAction(action, f) }))} />
+          items={menu.map((f) => ({ id: f.form, label: f.label, onSelect: () => onAction(action, f.label) }))} />
       )}
     </>
   )

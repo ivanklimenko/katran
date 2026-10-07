@@ -5,8 +5,10 @@ import type { AccountItem, AccountSide, EditValue } from '../../api'
 
 /** Вкладка деталки (эталон TABS/TAB_KEY, index.html:647–648). */
 export type DetailTab = { id: string; label: string }
-/** Иконка действия лейна — ключ набора widgets/doc-detail. */
-export type ActionIcon = 'refresh' | 'edit' | 'doc' | 'download' | 'print' | 'link' | 'ban'
+/** Иконка действия лейна — ключ набора widgets/doc-detail; 'edit' ушла вместе с «Редактировать» (спека 2d §3.4). */
+export type ActionIcon = 'refresh' | 'doc' | 'download' | 'print' | 'link' | 'ban'
+/** Пункт меню печати: подпись и код формы — сегмент пути GET …/print/{form} (план 2d, «Коды печатных форм»). */
+export type PrintFormItem = { label: string; form: string }
 /** Действие лейна (эталон ACTIONS, index.html:729): в 2a — заглушка с объявлением; menu — печатные формы. */
 export type DetailAction = {
   id: string
@@ -14,7 +16,7 @@ export type DetailAction = {
   icon: ActionIcon
   /** Горячая клавиша — только в подсказке (привязка — вместе с настоящими действиями, 2d). */
   hotkey?: string | undefined
-  menu?: string[] | undefined
+  menu?: PrintFormItem[] | undefined
   /** За разделителем, красное при наведении («Аннулировать»). */
   danger?: boolean | undefined
 }
@@ -75,6 +77,8 @@ export type DetailDomain<D, Row> = {
   tabViews?: Record<string, TabView<D>> | undefined
   /** Правка полей «Общих данных» в ConfigForm (план 2c); нет — поля только для просмотра. */
   formEdit?: ((d: D, edit: EditContext) => FormEdit) | undefined
+  /** Тело Prompt решения (план 2d): подпись цели, «было → стало» (PromptChange), автор и время записи; when — ISO записи, как с бека. */
+  decisionNote?: ((d: D, target: string, when: string) => ReactNode) | undefined
 }
 
 /**

@@ -19,6 +19,8 @@ import e from './edit.module.css'
  */
 
 const Pen = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
+const Check = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+const Cross = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg>
 
 const lastOf = (hist: FxHistEntry[]): FxHistEntry | undefined => hist[hist.length - 1]
 const whoWhen = (h: FxHistEntry) => `${h.who}, ${formatDateTimeMinutes(h.when)}`
@@ -61,6 +63,34 @@ function editedText(d: FxDocDetail, target: string, show: (was: string) => strin
   const last = lastOf(d.edits[target]?.hist ?? [])
   if (!last || !isChanged(d, target)) return null
   return { tip: `Было ${show(asText(originalOf(d, target)))} · ${whoWhen(last)}` }
+}
+
+/**
+ * Запись, по которой текущий пользователь может решать сейчас (план 2d, вторая рука): последняя запись цели pending,
+ * бек разрешил (canConfirm), контекст не занят (canDecide: нет редактора, Prompt, сохранения); заблокированный документ — нет (Д66).
+ */
+function decidable(d: FxDocDetail, edit: EditContext, target: string): FxHistEntry | null {
+  const ed = d.edits[target]
+  const last = lastOf(ed?.hist ?? [])
+  if (lockedOf(d) || !ed || !last || last.status !== 'pending') return null
+  return edit.canDecide(target, ed.canConfirm) ? last : null
+}
+
+/**
+ * «Утвердить»/«Отклонить» у маркера строки (20 исх, счета): блока истории у этих целей нет — кнопки рядом с маркером
+ * «изменено» (уточнение спеки 2d §9); видны сразу, не по наведению: второй руке действие нужно без поиска.
+ */
+function Decide({ d, edit, target, name }: { d: FxDocDetail; edit: EditContext; target: string; name: string }) {
+  const last = decidable(d, edit, target)
+  if (!last) return null
+  return (
+    <>
+      <IconButton size="s" className={e.ok} label={`Утвердить правку ${name}`} data-k-tip={`Утвердить правку ${name}`}
+        onClick={() => edit.confirmEdit(target, last.when)}><Check /></IconButton>
+      <IconButton size="s" className={e.no} label={`Отклонить правку ${name}`} data-k-tip={`Отклонить правку ${name}`}
+        onClick={() => edit.rejectEdit(target, last.when)}><Cross /></IconButton>
+    </>
+  )
 }
 
 function Revert({ d, edit, target }: { d: FxDocDetail; edit: EditContext; target: string }) {
@@ -117,6 +147,7 @@ export function RefOutRow({ d, edit, value }: { d: FxDocDetail; edit: EditContex
       <span className={e.val}>
         {value(edited !== null)}
         {edited && <EditMark tip={edited.tip} />}
+        <Decide d={d} edit={edit} target="refOut" name="20 исх" />
         {edited && !locked && <Revert d={d} edit={edit} target="refOut" />}
         {!locked && (
           <IconButton ref={pen} size="s" className={e.pen} label="Изменить 20 исх" data-k-tip="Изменить 20 исх"
@@ -183,6 +214,7 @@ export function AccountRow({ d, edit, side, value }: { d: FxDocDetail; edit: Edi
       <span className={e.val}>
         {value(edited !== null)}
         {edited && <EditMark tip={edited.tip} />}
+        <Decide d={d} edit={edit} target={target} name={`счёта ${label}`} />
         {edited && !locked && <Revert d={d} edit={edit} target={target} />}
         {!locked && (
           <IconButton ref={pen} size="s" className={e.pen} label={`Изменить счёт ${label}`} data-k-tip={`Изменить счёт ${label}`}
@@ -286,7 +318,7 @@ export function fxCommitView(target: string, was: EditValue, now: EditValue): Ed
 const historyOf = (hist: FxHistEntry[]): EditHistoryEntry[] => hist.map((h) => ({
   who: h.who, when: formatDateTimeMinutes(h.when), status: h.status,
   // бек: null — нет значения; кит: необязательное поле (T3 → T9)
-  by: h.by ?? undefined, at: h.at === null ? undefined : formatDateTimeMinutes(h.at), note: h.note ?? undefined,
+  by: h.by ?? undefined, at: h.at === null ? undefined : formatDateTimeMinutes(h.at), note: h.note ?? undefined, reason: h.reason ?? undefined,
   diff: diffFieldValues(asField(h.was), asField(h.now)),
 }))
 
@@ -305,11 +337,17 @@ export function fxFormEdit(d: FxDocDetail, edit: EditContext): FormEdit {
       const hist = d.edits[target]?.hist ?? []
       const last = lastOf(hist)
       if (!last) return null
+      // вторая рука (план 2d): кнопки решения кит рисует в сводке блока у последней записи pending
+      const decide = decidable(d, edit, target)
       return {
         changed: isChanged(d, target),
         was: asField(originalOf(d, target)),
         tip: `Изменено: ${whoWhen(last)}`,
-        audit: <EditHistory label={`поля ${base(tag)}`} entries={historyOf(hist)} />,
+        audit: (
+          <EditHistory label={`поля ${base(tag)}`} entries={historyOf(hist)}
+            onConfirm={decide ? () => edit.confirmEdit(target, decide.when) : undefined}
+            onReject={decide ? () => edit.rejectEdit(target, decide.when) : undefined} />
+        ),
       }
     },
     renderEditor: (tag) => {
@@ -327,4 +365,49 @@ export function fxFormEdit(d: FxDocDetail, edit: EditContext): FormEdit {
       )
     },
   }
+}
+
+/** Подпись цели в Prompt решения: поле — как заголовок его редактора, строки — как подписи строк «Сообщений и счетов». */
+function targetLabel(target: string): string {
+  if (target.startsWith('field:')) {
+    const tag = target.slice('field:'.length)
+    const def = FX_FIELDS[tag.replace(/^B\./, '')]
+    return def ? `Поле ${tag} · ${def.label}` : `Поле ${tag}`
+  }
+  switch (target) {
+    case 'refOut': return '20 исх'
+    case 'accDt': return 'Счёт Дт'
+    case 'accKt': return 'Счёт Кт'
+    case 'valueDate': return 'Дата валютирования'
+    default: return target
+  }
+}
+
+/** «Было → стало» записи: поле — строки диффа (опция, счёт, N/), строки — значение целиком; пустое — «—». */
+function recordChange(target: string, h: FxHistEntry): ReactNode {
+  const dash = (v: string) => v || '—'
+  if (target.startsWith('field:')) {
+    const lines = diffFieldValues(asField(h.was), asField(h.now))
+    if (!lines.length) return <div>без изменений</div>
+    return lines.map((l, i) => <div key={i}>{l.label && `${l.label} `}<PromptChange was={dash(l.was)} now={dash(l.now)} /></div>)
+  }
+  const show = target === 'accDt' || target === 'accKt' ? groupAccount : target === 'valueDate' ? formatDate : (v: string) => v
+  return <div><PromptChange was={dash(show(asText(h.was)))} now={dash(show(asText(h.now)))} /></div>
+}
+
+/**
+ * Тело Prompt решения (спека 2d §4 п. 1–2): подпись цели, «было → стало» значениями записи, «{who}, {дд.мм.гггг чч:мм}».
+ * Запись — по when (ISO, как пришло с бека); не нашлась (деталь обновилась) — последняя запись цели; правок нет — ничего.
+ */
+export function fxDecisionNote(d: FxDocDetail, target: string, when: string): ReactNode {
+  const hist = d.edits[target]?.hist ?? []
+  const h = hist.find((x) => x.when === when) ?? lastOf(hist)
+  if (!h) return null
+  return (
+    <div className={e.decision}>
+      <div className={e.decisionTarget}>{targetLabel(target)}</div>
+      {recordChange(target, h)}
+      <div className={e.decisionWho}>{whoWhen(h)}</div>
+    </div>
+  )
 }
