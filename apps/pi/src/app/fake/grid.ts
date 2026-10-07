@@ -139,8 +139,14 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
     if (toRates) grid.rates = (id) => { const d = base(id); return d && toRates(d) }
     if (opts.balances) grid.balances = (id, asOf) => { const d = base(id); return d && balancesOf(d, asOf) }
     if (store) {
-      grid.edit = (id, body, when) => {
+      // правка и решение — по детали с итогом аннулирования (срез 2e): цели правки считаются по ней (ожидающее или исполненное
+      // аннулирование — целей нет), и ответ несёт annul/canAnnul/статус, как GET детали
+      const annulled = (id: string): Record<string, unknown> | null => {
         const d = base(id)
+        return d && annul ? annul.overlay(id, d) : d
+      }
+      grid.edit = (id, body, when) => {
+        const d = annulled(id)
         return d && store.save(id, d, body, when)
       }
       grid.accounts = (id, side) => {
@@ -148,7 +154,7 @@ export function fakeGrid<Row extends Record<string, unknown>>(rows: Row[], colum
         return d && store.accounts(d, side)
       }
       grid.decide = (id, target, kind, body, when) => {
-        const d = base(id)
+        const d = annulled(id)
         return d && store.decide(id, d, target, kind, body, when)
       }
     }

@@ -101,10 +101,13 @@ const partRefs = (p: FormPart | undefined): FieldRef[] => [
 /**
  * Правимые цели документа (спека 2c §1.1): поля сетки, текста и последовательности B схемы профиля с FX_FIELDS[база].editable —
  * поле с hideIfEmpty (56 у MT103) только заполненное или уже с правками (Ruling S5); затем 20 исх, Дт, Кт и дата валютирования
- * (у MT199 её нет). Ею же фейк проверяет цель правки. Заблокированный документ (lock) — только просмотр: целей нет (Д66).
+ * (у MT199 её нет). Ею же фейк проверяет цель правки. Заблокированный документ (lock) — только просмотр: целей нет (Д66);
+ * так же при ожидающем или исполненном аннулировании (спека 2e §1.3, решение по умолчанию); отклонённое правку не запрещает.
  */
 export function fxEditableTargets(d: FxDocDetail): string[] {
   if (d.lock !== null) return []
+  const annul = d.annul?.status
+  if (annul === 'pending' || annul === 'done') return []
   const schema = fxSchemaOf(d)
   const fields = [...partRefs(schema), ...partRefs(schema.seqB)].flatMap((r) => {
     const tag = typeof r === 'string' ? r : r.tag

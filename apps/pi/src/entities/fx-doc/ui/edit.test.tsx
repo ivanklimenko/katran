@@ -11,7 +11,8 @@ import type { FxHistEntry } from '../model/edit'
 import { fxDocDetailDomain as dom } from './detail'
 import { fxCommitView, fxDecisionFocus, fxDecisionNote } from './edit'
 
-const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+// правка — без аннулирования: у примера контракта ожидающий запрос, при нём целей правки нет (срез 2e)
+const d = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
 const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
   who: 'Вы', when: '2026-09-23T11:05:00', was: '', now: '', note: null, status: 'pending', by: null, at: null, reason: null, ...p,
 })

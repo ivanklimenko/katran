@@ -238,7 +238,9 @@ describe('фейковый сервер: утверждение и отклон�
   // сид поля 57 — первый документ с полем 57 (MT202, CNY); сид accKt — второй MT103 в USD без блокировки (чужая ожидающая правка)
   const doc57 = fxRows[1]!
   const accDoc = fxRows[14]!
-  const own = fxRows[3]!
+  // свой документ правки — не из сидов аннулирования: при ожидающем или исполненном аннулировании целей правки нет (срез 2e)
+  const annulSeeds = Object.values(annulSeedsOf(fxRows, [doc57.id, accDoc.id]))
+  const own = fxRows.find((r, i) => i >= 3 && r.lock === null && !annulSeeds.includes(r.id))!
   const fresh = () => createFakeServer(createFakeGrids(), { now: () => WHEN })
   const decideUrl = (id: string, target: string, kind: string, grid = 'fx-docs') => `/grids/${grid}/documents/${encodeURIComponent(id)}/edits/${encodeURIComponent(target)}/${kind}`
   type Hist = { who: string; when: string; was: unknown; now: unknown; status: string; by?: string; at?: string; reason?: string; note?: string }
@@ -449,6 +451,26 @@ describe('фейковый сервер: аннулирование, курсы,
     expect((await err(s(post(annulUrl(big.id, '/reject'), { when: mine, reason: 'нет' })))).status).toBe(403)
     // запроса нет — 409
     expect((await err(s(post(annulUrl(small.id, '/confirm'), { when: mine })))).status).toBe(409)
+  })
+  it('правка после аннулирования: pending и done — цели нет, POST edits 400 по пути target; rejected — правится, ответ правки несёт annul (срез 2e)', async () => {
+    const s = fresh()
+    const editUrl = (id: string) => `/grids/fx-docs/documents/${id}/edits`
+    const refOf = async (id: string) => ((await s(get(`/grids/fx-docs/documents/${id}`))) as { refOut?: string }).refOut ?? ''
+    // до аннулирования 20 исх правится
+    const before = await refOf(small.id)
+    expect(await s(post(editUrl(small.id), { target: 'refOut', was: before, now: 'NEWREF1' }))).toMatchObject({ refOut: 'NEWREF1' })
+    await s(post(annulUrl(small.id), { reason: 'X' }))
+    await s(post(annulUrl(big.id), { reason: 'X' }))
+    for (const id of [small.id, big.id]) {
+      const e = await err(s(post(editUrl(id), { target: 'refOut', was: await refOf(id), now: 'NEWREF2' })))
+      expect(e).toMatchObject({ status: 400, problem: { type: 'urn:katran:edit-validation', errors: [{ path: 'target' }] } })
+    }
+    // отклонённый запрос — документ снова правится; деталь ответа правки — с итогом аннулирования (как GET)
+    const d0 = await detail(s, fxSeed.pending!)
+    await s(post(annulUrl(fxSeed.pending!, '/reject'), { when: d0.annul!.when, reason: 'Нет' }))
+    const edited = (await s(post(editUrl(fxSeed.pending!), { target: 'refOut', was: await refOf(fxSeed.pending!), now: 'NEWREF3' }))) as D
+    expect(edited).toMatchObject({ refOut: 'NEWREF3', canAnnul: true, annul: { status: 'rejected' } })
+    expect(await s(get(`/grids/fx-docs/documents/${fxSeed.pending!}`))).toEqual(edited)
   })
   it('сид: уже аннулированный (done) — REJECTED, canAnnul false; рублёвый чужой pending — canConfirm true', async () => {
     const s = fresh()
