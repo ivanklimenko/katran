@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { Disclosure, LinkValue, StatusDot, formatAmount, formatDateTimeFull, formatDateTimeShort, type StatusTone } from '@katran/ui'
+import type { Balances } from '../../../shared/api'
+import type { LookupView } from '../../../shared/lib/detail'
 import type { Tx, TxDir, TxState } from '../model/posting'
+import { BalancesView } from './BalancesView'
+import { LookupLink } from './LookupLink'
 import s from './posting.module.css'
 
 const TONE: Record<TxState, StatusTone> = { EXECUTED: 'ok', PENDING: 'warn', CANCELED: 'bad' }
@@ -18,12 +22,17 @@ export type TxBlockProps = {
   txAt: string
   /** Эталон: блок свёрнут (mkui(true), grid.html:2154). */
   defaultOpen?: boolean | undefined
-  /** Сверх заголовка — между сводкой и txId (у рубля на эталоне «Проверить баланс», в 2a не переносится). */
+  /** Сверх заголовка — между сводкой и txId. */
   aside?: ReactNode | undefined
+  /**
+   * Остатки по счетам проводок (спека 2e §4 п. 7): есть — кнопка-ссылка «Проверить баланс» после сводки (оба реестра;
+   * на эталоне только у рубля, сверка Д79). Ссылка — в aside Disclosure, вне кнопки заголовка: блок не сворачивает.
+   */
+  balances?: LookupView<Balances> | undefined
 }
 
 /** Блок «Транзакции» (эталон txBlockHtml, index.html:1023): число, сводка по состояниям, txId и время; строки проводок. */
-export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside }: TxBlockProps) {
+export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances }: TxBlockProps) {
   const counts = ORDER.map((st) => ({ st, n: txs.filter((t) => t.st === st).length })).filter((x) => x.n > 0)
   return (
     <Disclosure
@@ -35,6 +44,7 @@ export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside }: TxBlock
           <span className={s.summary}>
             {counts.map(({ st, n }) => <span key={st} className={s.sumItem}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</span>)}
           </span>
+          {balances && <LookupLink label="Проверить баланс" onOpen={balances.load}><BalancesView view={balances} /></LookupLink>}
           {aside}
           <span className={s.ids}><LinkValue name="txId" value={txId} /><span className={s.at}>{formatDateTimeFull(txAt)}</span></span>
         </>

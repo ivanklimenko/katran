@@ -4,7 +4,7 @@ import { axe } from 'jest-axe'
 import { createEffect, createEvent, createStore } from 'effector'
 import { useUnit } from 'effector-react'
 import { ApiError, type TabQuery } from '../../../shared/api'
-import { remoteTab, type ActionsView, type DetailDomain, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
+import { remoteTab, type ActionsView, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
 import { createDetail } from '../lib/createDetail'
@@ -61,7 +61,10 @@ const domain: DetailDomain<Doc, Doc> = {
 function setup(
   handler: (id: string) => Promise<Doc> = async (id) => rows.find((r) => r.id === id)!,
   tabHandler: (q: TabQuery) => Promise<unknown> = async (q) => ({ rows: [`${q.tab} ${q.id}`] }),
-  opts: { domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext; actionsOf?: ((docId: string) => ActionsView) | undefined } = {},
+  opts: {
+    domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext; actionsOf?: ((docId: string) => ActionsView) | undefined
+    lookupsOf?: ((docId: string) => DetailLookups) | undefined
+  } = {},
 ) {
   const detailFx = createEffect<string, Doc, ApiError>(handler)
   const tabFx = createEffect<TabQuery, unknown, ApiError>(tabHandler)
@@ -70,7 +73,7 @@ function setup(
   const utils = renderK(
     <>
       <button type="button">Кнопка открытия</button>
-      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
+      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} lookupsOf={opts.lookupsOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
     </>,
   )
   act(() => { lifecycle.pageOpened() })
@@ -384,8 +387,8 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
     const first = setup(undefined, undefined, { domain: { ...domain, ...withEdit }, editOf: () => ctx })
     first.open('d1')
     expect(await screen.findByText('Блок b1')).toBeInTheDocument()
-    expect(withEdit.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', ctx)
-    expect(withEdit.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', ctx)
+    expect(withEdit.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', ctx, null)
+    expect(withEdit.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', ctx, null)
     expect(withEdit.formEdit).toHaveBeenLastCalledWith(rows[0], ctx)
     await userEvent.click(screen.getByRole('button', { name: 'Редактировать поле 20' }))
     expect(onEdit).toHaveBeenCalledWith('20')
@@ -395,11 +398,43 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
     const second = setup(undefined, undefined, { domain: { ...domain, ...plain } })
     second.open('d1')
     expect(await screen.findByText('Блок b1')).toBeInTheDocument()
-    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null)
-    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null)
+    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null, null)
+    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null, null)
     expect(plain.formEdit).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Редактировать поле 20' })).toBeNull()
     expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+})
+
+describe('DocDetail: справочные запросы (спека 2e §3.5)', () => {
+  it('lookupsOf: renderHero/renderBlock получают lookups своего документа четвёртым аргументом; без lookupsOf — null', async () => {
+    const make = () => ({
+      renderHero: vi.fn((d: Doc) => ({ label: 'Номер', value: d.num })),
+      renderBlock: vi.fn((_d: Doc, id: string) => <div>Блок {id}</div>),
+    })
+    const lookupsByDoc: Record<string, DetailLookups> = { d1: { rates: undefined }, d2: { balances: undefined } }
+    const asked: string[] = []
+    const withLookups = make()
+    const first = setup(undefined, undefined, {
+      domain: { ...domain, ...withLookups },
+      lookupsOf: (id) => { asked.push(id); return lookupsByDoc[id]! },
+    })
+    first.open('d1')
+    first.open('d2', true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    expect(withLookups.renderHero).toHaveBeenCalledWith(rows[0], 'num', null, lookupsByDoc.d1)
+    expect(withLookups.renderBlock).toHaveBeenCalledWith(rows[0], 'b1', null, lookupsByDoc.d1)
+    expect(withLookups.renderHero).toHaveBeenCalledWith(rows[1], 'num', null, lookupsByDoc.d2)
+    expect(withLookups.renderBlock).toHaveBeenCalledWith(rows[1], 'b1', null, lookupsByDoc.d2)
+    expect(new Set(asked)).toEqual(new Set(['d1', 'd2']))
+    first.unmount()
+
+    const plain = make()
+    const second = setup(undefined, undefined, { domain: { ...domain, ...plain } })
+    second.open('d1')
+    expect(await screen.findByText('Блок b1')).toBeInTheDocument()
+    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null, null)
+    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null, null)
   })
 })
 

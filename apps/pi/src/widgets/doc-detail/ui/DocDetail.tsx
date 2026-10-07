@@ -5,7 +5,7 @@ import {
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
 } from '@katran/ui'
 import {
-  REASON_MAX, type ActionNotice, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailSummary, type EditContext,
+  REASON_MAX, type ActionNotice, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
   type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
@@ -30,6 +30,11 @@ export type DocDetailProps<D, Row> = {
    * запасная ссылка — уведомление под лейном. Нет — действия объявляют себя заглушкой, как в 2a (демо кита).
    */
   actionsOf?: ((docId: string) => ActionsView) | undefined
+  /**
+   * Справочные запросы документа по id (спека 2e §3.5): «Курс», «Проверить баланс» — четвёртым аргументом renderHero/renderBlock
+   * домена, виды сущностей рисуют по нему кнопки-ссылки и поповеры. Нет — null, ссылок нет (демо кита).
+   */
+  lookupsOf?: ((docId: string) => DetailLookups) | undefined
 }
 
 type OnAction = (a: DetailAction, form?: PrintFormItem) => void
@@ -256,10 +261,11 @@ type BodyProps<D, Row> = {
   onRetry: () => void
   onRetryTab: () => void
   edit: EditContext | null
+  lookups: DetailLookups | null
 }
 
 /** Содержимое панели. Монтируется только у активной вкладки (TabPanel), поэтому view.tabView — её состояние. */
-function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpanded, onMainExpanded, onRetry, onRetryTab, edit }: BodyProps<D, Row>) {
+function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpanded, onMainExpanded, onRetry, onRetryTab, edit, lookups }: BodyProps<D, Row>) {
   const first = tabId === domain.tabs[0]?.id
   const tv = first ? undefined : domain.tabViews?.[tabId]
   // нелокальная вкладка не зависит от загрузки детали: свой запрос, свои скелетон и ошибка
@@ -279,8 +285,8 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
       value={(tag) => domain.value(d, tag)}
       present={domain.present}
       optionLabels={domain.optionLabels}
-      renderHero={(id) => domain.renderHero(d, id, edit)}
-      renderBlock={(id) => domain.renderBlock(d, id, edit)}
+      renderHero={(id) => domain.renderHero(d, id, edit, lookups)}
+      renderBlock={(id) => domain.renderBlock(d, id, edit, lookups)}
       renderSection={renderSection ? (id) => renderSection(d, id) : undefined}
       // M-g: раскрытое — в модели по `${id}:main`; до первого изменения undefined — форма берёт свои умолчания
       expanded={mainExpanded}
@@ -292,7 +298,7 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
 
 type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, focusKey, quiet }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, focusKey, quiet }: PaneProps<D, Row>) {
   const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
     detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
   ])
@@ -300,6 +306,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   const skeleton = useLoadingGate(view.state === 'loading')
   const edit = editOf?.(view.id) ?? null
   const actions = actionsOf?.(view.id) ?? null
+  const lookups = lookupsOf?.(view.id) ?? null
   const row = view.data === null && rowOf ? rowOf(view.id) : null
   const summary = view.data !== null ? domain.summary(view.data) : row !== null ? domain.rowSummary(row) : null
   const label = summary?.label ?? domain.title
@@ -405,6 +412,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
             onRetry={() => retry(view.slot)}
             onRetryTab={() => retryTab(view.slot)}
             edit={edit}
+            lookups={lookups}
           />
         </TabPanel>
       ))}
@@ -413,7 +421,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
 }
 
 /** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
-export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf }: DocDetailProps<D, Row>) {
+export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
@@ -422,7 +430,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, 
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
       })
     }
   }
