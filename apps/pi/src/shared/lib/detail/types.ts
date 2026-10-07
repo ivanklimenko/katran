@@ -20,6 +20,18 @@ export type DetailAction = {
   /** За разделителем, красное при наведении («Аннулировать»). */
   danger?: boolean | undefined
 }
+/**
+ * Действия лейна документа для виджета (план 2d §3.3): виджет не знает о модели действий, получает вид своего документа.
+ * run — по id действия (refresh, link, down, print с формой; esid и ban — срез 2e, без действия); pending — действие в полёте
+ * (кнопка недоступна).
+ */
+export type ActionsView = {
+  run: (action: DetailAction, form?: PrintFormItem | undefined) => void
+  pending: (actionId: string) => boolean
+  /** Буфер обмена недоступен — ссылку показать для ручного копирования. */
+  linkFallback: string | null
+  closeLinkFallback: () => void
+}
 /** Шапка и лейн деталки: из загруженной детали или, до загрузки и при ошибке, из строки реестра (спека 2a §4.3). */
 export type DetailSummary = {
   /** Доступное имя drawer: «Платёжная инструкция № 812345». */
