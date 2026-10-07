@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** оставшиеся заглушки деталки работают по-настоящему: «Аннулировать» (сразу или через утверждение второй рукой, с плашкой под лейном), «Курс» и «Проверить баланс» (поповеры), «Переотправить» и «Исходное сообщение» во вкладке «Нотификации», переход к ручным отклонениям в новой вкладке; «Создать служебный документ» остаётся заглушкой.
+**Goal:** оставшиеся заглушки деталки работают по-настоящему: «Аннулировать» (команда прикладному уровню и перезапрос детали; итог — сразу, через утверждение второй рукой или без изменений — по данным бека, с плашкой под лейном), «Курс» и «Проверить баланс» (поповеры), «Переотправить все», «Переотправить» (одну) и «Исходное сообщение» во вкладке «Нотификации», переход к ручным отклонениям в новой вкладке; «Создать служебный документ» остаётся заглушкой.
 
 **Architecture:** кит получает `Dialog` (на нём теперь `Prompt`) и `Banner`. В `apps/pi`: разборщики и порты в `shared/api`, `host-links` в `shared/lib`; три новые фичи — `features/doc-annul` (аннулирование и решения, вид `annulOf`), `features/doc-lookups` (`createLookup` — кэш справочных запросов по документу), `features/doc-notif` (переотправка, окно сообщения); `createDetail.replaceTab`; сущности рисуют «Курс», «Проверить баланс», кнопки вкладок через контексты из `shared/lib/detail` — виджет фичи не импортирует; страницы связывают всё, включая взаимную блокировку аннулирования и правки. Фейк аннулирует, отдаёт курсы, остатки, тела сообщений и переотправляет.
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-10-07-katran-detail-ops-design.md` (утверждена владельцем 07.10). Эталон — `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`grid.html`: «Курс» ~1250, «Проверить баланс» ~1342, `tasksHtml` ~1359, `notifHtml` ~1373, `ACTIONS` 919–928; `rub-grid.html` — те же места выше на ~13 строк). Образец плана — `docs/superpowers/plans/2026-10-07-katran-lane-actions.md` (2d).
+**Spec:** `docs/superpowers/specs/2026-10-07-katran-detail-ops-design.md` (утверждена владельцем 07.10, ответы на открытые вопросы — г7–г11 в §1.3). Эталон — `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`grid.html`: «Курс» ~1250, «Проверить баланс» ~1342, `tasksHtml` ~1359, `notifHtml` ~1373, `ACTIONS` 919–928; `rub-grid.html` — те же места выше на ~13 строк). Образец плана — `docs/superpowers/plans/2026-10-07-katran-lane-actions.md` (2d).
 
 ## Global Constraints
 
@@ -105,11 +105,11 @@ export type DetailLookups = { rates?: LookupView<Rates> | undefined; balances?: 
 // DetailDomain.renderHero / renderBlock — четвёртый необязательный параметр lookups?: DetailLookups | null
 
 // TabContext — новые необязательные поля
-resend?: (() => void) | undefined
+resend?: ((nid?: string, n?: number) => void) | undefined   // без nid — все
 resendBusy?: boolean | undefined
 openMessage?: ((nid: string, n: number) => void) | undefined
 
-export type NotifView = { resend: () => void; resendBusy: boolean; openMessage: (nid: string, n: number) => void }
+export type NotifView = { resend: (nid?: string, n?: number) => void; resendBusy: boolean; openMessage: (nid: string, n: number) => void }
 ```
 
 ### `apps/pi/src/shared/api`
@@ -124,9 +124,10 @@ export type AnnulQuery = { id: string; reason: string }
 export type AnnulDecisionQuery = { id: string; when: string }
 export type AnnulRejectQuery = AnnulDecisionQuery & { reason: string }
 export type AnnulPorts<D> = {
-  annulFx: Effect<AnnulQuery, D, ApiError>               // POST /grids/{gridId}/documents/{id}/annul  { reason }
-  confirmAnnulFx: Effect<AnnulDecisionQuery, D, ApiError> // POST …/annul/confirm  { when }
-  rejectAnnulFx: Effect<AnnulRejectQuery, D, ApiError>    // POST …/annul/reject   { when, reason }
+  annulFx: Effect<AnnulQuery, void, ApiError>                 // POST /grids/{gridId}/documents/{id}/annul  { reason } → 202 (любой 2xx — принято)
+  confirmAnnulFx: Effect<AnnulDecisionQuery, void, ApiError>  // POST …/annul/confirm  { when } → 202
+  rejectAnnulFx: Effect<AnnulRejectQuery, void, ApiError>     // POST …/annul/reject   { when, reason } → 202
+  detailFx: Effect<string, D, ApiError>                       // GET /grids/{gridId}/documents/{id} — перезапрос после команды
 }
 export function createAnnulPorts<D>(gridId: string, parseDetail: (v: unknown) => D): AnnulPorts<D>
 
@@ -141,8 +142,9 @@ export function createBalancesFx(gridId: string): Effect<string, Balances, ApiEr
 
 // notif-ports.ts (новый)
 export type NotifMessage = { contentType: 'application/json' | 'application/xml' | 'text/plain'; body: string }
+export type ResendQuery = { id: string; nid?: string | undefined }
 export type NotifPorts = {
-  resendFx: Effect<string, unknown, ApiError>                              // POST …/notifications/resend {} → сырое тело вкладки notif
+  resendFx: Effect<ResendQuery, unknown, ApiError>                         // без nid: POST …/notifications/resend; с nid: …/notifications/{encodeURIComponent(nid)}/resend; тело {} → сырое тело вкладки notif
   messageFx: Effect<{ id: string; nid: string }, NotifMessage, ApiError>   // GET …/notifications/{encodeURIComponent(nid)}/message
 }
 export function createNotifPorts(gridId: string): NotifPorts
@@ -168,6 +170,7 @@ export type DocAnnulConfig<D extends { id: string }> = {
   ports: AnnulPorts<D>
   lifecycle: PageLifecycle
   blockedDocs?: Store<Record<string, true>> | undefined    // документы с операцией правки; нет — блокировки нет (рубль)
+  statusLabelOf: (d: D) => string                           // подпись статуса свежей детали — для «пока в статусе «…»»
 }
 export type DocAnnul<D> = {
   annulRequested: EventCallable<string>
@@ -178,17 +181,21 @@ export type DocAnnul<D> = {
   $prompt: Store<Record<string, AnnulPromptState>>
   $busyDocs: Store<Record<string, true>>                  // ключи $prompt
   $blockedDocs: Store<Record<string, true>>               // переданный blockedDocs или пустой
-  docAnnulled: Event<{ id: string; detail: D; kind: AnnulPromptKind }>
-  conflict: Event<{ id: string }>
+  docAnnulled: Event<{ id: string; detail: D; kind: AnnulPromptKind }>   // свежая деталь после принятой команды
+  refreshNeeded: Event<{ id: string }>                                   // 409 или сбой перезапроса после 202
   $done: Store<{ count: number; text: string }>
 }
 export function createDocAnnul<D extends { id: string; annul: AnnulState | null }>(cfg: DocAnnulConfig<D>): DocAnnul<D>
 export function useAnnulOf<D>(model: DocAnnul<D>): (docId: string) => AnnulView   // ui/useAnnulOf.tsx; объявляет $done через useKatran().announce
 export const ANNUL_TEXT = {
-  done: 'Документ аннулирован', pending: 'Запрос на аннулирование отправлен',
+  done: 'Документ аннулирован', pending: 'Запрос на аннулирование отправлен на утверждение',
   confirmed: 'Аннулирование утверждено', rejected: 'Аннулирование отклонено',
+  unchanged: (label: string) => `Команда отправлена — документ пока в статусе «${label}»`,
+  refreshFailed: 'Команда отправлена — не удалось обновить данные',
   conflict: 'Документ изменили — данные обновлены',
 }
+/** Текст итога по свежей детали (спека §3.3, г8). */
+export function annulOutcome(kind: AnnulPromptKind, annul: AnnulState | null, statusLabel: string): string
 export const ANNUL_HINT = {
   locked: (who: string) => `Документ заблокирован: ${who}`,
   pending: 'Запрос на аннулирование ожидает утверждения',
@@ -198,7 +205,7 @@ export const ANNUL_HINT = {
 }
 ```
 
-Правило ветвления `annulFx`: ответ с `annul.status === 'pending'` → `$done` «Запрос на аннулирование отправлен», иначе «Документ аннулирован». Причина — `REASON_MAX` из `shared/lib/detail`.
+`annulOutcome`: `annul` + `done` → `done`; `annul` + `pending` → `pending`; `confirm` + `done` → `confirmed`; `reject` + `rejected` → `rejected`; иначе → `unchanged(statusLabel)`. Причина — `REASON_MAX` из `shared/lib/detail`.
 
 ### `features/doc-edit` (расширение)
 
@@ -227,10 +234,10 @@ export function useLookupOf<T>(lookup: Lookup<T>): (docId: string) => LookupView
 ```ts
 export type NotifMessageState = { docId: string; nid: string; n: number; state: 'loading' | 'ready' | 'error'; message: NotifMessage | null; error: string | null }
 export type DocNotif = {
-  resendRequested: EventCallable<string>
+  resendRequested: EventCallable<{ docId: string; nid?: string | undefined; n?: number | undefined }>   // без nid — все
   resendResult: EventCallable<{ docId: string; ok: boolean }>
-  $resendPrompt: Store<string | null>                     // docId открытого Prompt переотправки
-  $resendBusy: Store<Record<string, true>>
+  $resendPrompt: Store<{ docId: string; nid: string | null; n: number | null } | null>
+  $resendBusy: Store<Record<string, string>>              // docId → nid в полёте или '*' (все); одна переотправка документа за раз
   resent: Event<{ id: string; data: unknown }>
   resendConflict: Event<{ id: string }>
   openMessage: EventCallable<{ docId: string; nid: string; n: number }>
@@ -243,6 +250,7 @@ export function createDocNotif(cfg: { ports: NotifPorts; lifecycle: PageLifecycl
 export function useNotifOf(model: DocNotif): (docId: string) => NotifView
 export function NotifOverlay({ model }: { model: DocNotif }): JSX.Element   // Prompt переотправки + MessageDialog, один на страницу
 export const RESEND_TEXT = 'Нотификация переотправлена'
+export const RESEND_PROMPT = { all: 'Переотправить все нотификации?', one: (n: number) => `Переотправить нотификацию № ${n}?`, note: 'Будет создана новая попытка отправки' }
 export const COPIED_TEXT = 'Скопировано'
 export const COPY_FAILED = 'Не удалось скопировать — выделите текст'
 ```
@@ -258,7 +266,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 ### Регуляторы фейка (дополняют `params.ts`)
 
-`?annul=instant|pending`; `?fail=annul|rates|balances|resend|notifmsg` — `500`; `?hostlinks=1` — стенд (`app`, не фейк) вызывает `configureHostLinks({ manualDeviations: (id) => \`${origin}${pathname}#/manual-deviations?doc=${encodeURIComponent(id)}\` })`.
+`?annul=instant|pending|fail` (`fail` — `202`, документ не меняется); `?fail=annul|rates|balances|resend|notifmsg` — `500`; `?hostlinks=1` — стенд (`app`, не фейк) вызывает `configureHostLinks({ manualDeviations: (id) => \`${origin}${pathname}#/manual-deviations?doc=${encodeURIComponent(id)}\` })`.
 
 ---
 
@@ -290,7 +298,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 - Modify: `apps/pi/src/entities/fx-doc/model/detail.ts`, `api/detail.mapper.ts`, `detail.mapper.test.ts`, `detail.example.ts`; то же в `entities/rub-doc`
 - Modify: `apps/pi/src/entities/doc-trail/model/types.ts` (`DocNotification.id`), `api/trail.mapper.ts`, `trail.mapper.test.ts`, `trail.example.ts`
 - Modify: `apps/pi/src/shared/api/index.ts`
-- Modify: `docs/reference/pi-api.md` — §1 новые §1.11 `annul` (+ confirm/reject), §1.12 `rates`, §1.13 `balances`, §1.14 нотификации; §7.2/§7.3 `canAnnul`, `annul`; §8.5 `id`; таблица ошибок спеки §3.1 п. 8; §1.x «Решения 2e» (кратко г2 и пороги фейка — «не контракт»)
+- Modify: `docs/reference/pi-api.md` — §1 новые §1.11 `annul` (+ confirm/reject), §1.12 `rates`, §1.13 `balances`, §1.14 нотификации; §7.2/§7.3 `canAnnul`, `annul`; §8.5 `id`; таблица ошибок спеки §3.1 п. 8; §1.x «Решения 2e» (г2, г8 — команда `202` и перезапрос, фронт статусами не управляет; г9 — пример условия на CEL из спеки §3.1 п. 4, помечен «не контракт»); у нотификаций — `resend` всех и одной
 
 **Interfaces:** Produces — `parseAnnul`, `parseCanAnnul`, `parseRates`, `parseBalances`, `parseNotifMessage`, типы раздела «shared/lib/detail» сквозного контракта; `FxDocDetail`/`RubDocDetail` получают `canAnnul: boolean`, `annul: AnnulState | null`.
 
@@ -312,17 +320,17 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 - [ ] **Step 1: падающие тесты `server.test.ts`** (по одному на правило спеки §3.7):
   - `canAnnul` — `true` у `IN_PROGRESS`/`TO_EXPORT`/`ERROR`/`DEFERRED` без `lock` и без открытого запроса; `false` у `DONE`;
-  - `annul` суммы ≤ 1 000 000 → `200`, `annul.status: "done"`, статус `REJECTED`, `canAnnul: false`; > 1 000 000 → `pending`, `who: "Вы"`, `canConfirm: false`;
-  - `annulMode: () => 'instant'` у суммы > 1 000 000 → `done`; `'pending'` у малой → `pending`;
+  - `annul` → `202` без тела; последующий `GET …/documents/{id}`: суммы ≤ 1 000 000 — `annul.status: "done"`, статус `REJECTED`, `canAnnul: false`; > 1 000 000 — `pending`, `who: "Вы"`, `canConfirm: false`;
+  - `annulMode: () => 'instant'` у суммы > 1 000 000 → `done`; `'pending'` у малой → `pending`; `'fail'` → `202`, деталь не изменилась;
   - причина `"   "` → `400`, `errors[0].path === "reason"`; 141 символ → `400`; документ `DONE` → `409`; заблокированный → `403`;
-  - сид: чужой `pending` (Кузнецов Д. А., `canConfirm: true`) — `confirm` с его `when` → `done`, `by: "Вы"`; `reject` с причиной → `rejected`, `rejectReason`, статус прежний, `canAnnul: true`; чужой `when` → `409`; `confirm` своего запроса → `403`;
+  - сид: чужой `pending` (Кузнецов Д. А., `canConfirm: true`) — `confirm` с его `when` → `202`, в детали `done`, `by: "Вы"`; `reject` с причиной → `202`, в детали `rejected`, `rejectReason`, статус прежний, `canAnnul: true`; чужой `when` → `409`; `confirm` своего запроса → `403`;
   - `rates` валюты — детерминирован (два вызова равны), `deal` есть у документа с полем 36, нет у прочих; `rates` рубля → `404`;
   - `balances` — счета уникальны и в порядке проводок; у счёта сида `error: "Счёт не найден в АБС"`;
   - вкладка `notif` — у каждой строки `id`; `message` валюты — `application/json`, рубля — `application/xml`, одна строка сида — `text/plain`; неизвестный `nid` → `404`;
-  - `resend` → `200`, в `notifications` на одну строку больше, последняя `status: "OK"`; повтор в пределах задержки → `409`; `GET …/tabs/notif` после `resend` видит дописанную попытку;
+  - `resend` всех → `200`, по новой попытке `OK` к каждой нотификации не в `OK` (все в `OK` — к последней); `resend` одной (`…/notifications/{nid}/resend`) — одна новая попытка; неизвестный `nid` → `404`; повтор в пределах задержки → `409`; `GET …/tabs/notif` после `resend` видит дописанные попытки;
   - `?fail=annul|rates|balances|resend|notifmsg` → `500` на своём запросе.
 - [ ] **Step 2:** `contract.test.ts` — все новые ответы проходят разборщики Task 2 (как для 2d).
-- [ ] **Step 3:** реализовать. Состояние аннулирований и дописанных попыток — модульные `Map` по `id`, сбрасываемые тем же способом, что состояние правок (`edits.ts`). Курсы — таблица `{ USD, EUR, CNY, … } × дата` от хеша даты (вымышленные числа, 4 знака), форматирование — функциями формата фейка (запятая, неразрывные пробелы). Сид — выбрать документы по существующим индексам данных и описать в JSDoc `annul.ts`.
+- [ ] **Step 3:** реализовать. Состояние аннулирований и дописанных попыток — модульные `Map` по `id`, сбрасываемые тем же способом, что состояние правок (`edits.ts`). Курсы — таблица `{ USD, EUR, CNY, … } × дата` от хеша даты (вымышленные числа, 4 знака), форматирование — функциями формата фейка (запятая, неразрывные пробелы). Сид — выбрать документы по существующим индексам данных и описать в JSDoc `annul.ts`; там же — правило в CEL из спеки §3.1 п. 4 (фейк его исполняет кодом).
 - [ ] **Step 4:** `pnpm --filter pi exec vitest run src/app/fake` — PASS; `pnpm check` — зелёный.
 - [ ] **Step 5:** коммит `Фейк 2e: аннулирование сразу и через утверждение, курсы, остатки, id и тела нотификаций, переотправка, регуляторы`.
 
@@ -334,7 +342,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 **Interfaces:** Produces — `createAnnulPorts`, `ratesFx`, `createBalancesFx`, `createNotifPorts` (сквозной контракт); `fxAnnulPorts: AnnulPorts<FxDocDetail>`, `rubAnnulPorts: AnnulPorts<RubDocDetail>`.
 
-- [ ] **Step 1: падающие тесты** (через `requestFx.use` в `fork`, как `edit-ports.test.ts`): `annulFx({ id: 'a/b', reason: 'x' })` → `POST /grids/fx-docs/documents/a%2Fb/annul`, тело `{ reason: 'x' }`; `confirmAnnulFx` → `…/annul/confirm` `{ when }`; `rejectAnnulFx` → `…/annul/reject` `{ when, reason }`; ответ — через `parseDetail`; `ratesFx('1')` → `GET /grids/fx-docs/documents/1/rates`; `createBalancesFx('rub-docs')('1')` → `GET /grids/rub-docs/documents/1/balances`; `resendFx('1')` → `POST …/notifications/resend` с телом `{}`; `messageFx({ id: '1', nid: 'n:1' })` → `GET …/notifications/n%3A1/message`; не-2xx → `ApiError` со статусом.
+- [ ] **Step 1: падающие тесты** (через `requestFx.use` в `fork`, как `edit-ports.test.ts`): `annulFx({ id: 'a/b', reason: 'x' })` → `POST /grids/fx-docs/documents/a%2Fb/annul`, тело `{ reason: 'x' }`, ответ `202` с пустым телом → `undefined` (и `204`, `200` — тоже успех); `confirmAnnulFx` → `…/annul/confirm` `{ when }`; `rejectAnnulFx` → `…/annul/reject` `{ when, reason }`; `detailFx('1')` → `GET /grids/fx-docs/documents/1` через `parseDetail`; `ratesFx('1')` → `GET /grids/fx-docs/documents/1/rates`; `createBalancesFx('rub-docs')('1')` → `GET /grids/rub-docs/documents/1/balances`; `resendFx({ id: '1' })` → `POST …/notifications/resend` с телом `{}`; `resendFx({ id: '1', nid: 'n:1' })` → `POST …/notifications/n%3A1/resend`; `messageFx({ id: '1', nid: 'n:1' })` → `GET …/notifications/n%3A1/message`; не-2xx → `ApiError` со статусом.
 - [ ] **Step 2:** реализовать.
 - [ ] **Step 3:** `pnpm check` — зелёный; коммит `Порты 2e: аннулирование, курсы, остатки, нотификации`.
 
@@ -382,13 +390,15 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 - Modify: `apps/pi/src/features/doc-edit/model/createDocEdit.ts` (`blockedDocs`, `$busyDocs`, `$blockedDocs`), `createDocEdit.test.ts`, `ui/useEditContexts.ts`, `useEditContexts.test.tsx`
 - Modify: `apps/pi/src/entities/fx-doc/model/rules.ts` (цели правки пусты при `annul?.status` `pending`/`done`), `rules.test.ts`, `apps/pi/src/app/fake/server.test.ts`
 
-**Interfaces:** Consumes — `AnnulPorts` (Task 4), `AnnulState` (Task 2), `REASON_MAX`. Produces — `createDocAnnul`, `DocAnnul`, `ANNUL_TEXT`, `ANNUL_HINT` (сквозной контракт), расширение `DocEdit`.
+**Interfaces:** Consumes — `AnnulPorts` (Task 4), `AnnulState` (Task 2), `REASON_MAX`. Produces — `createDocAnnul`, `DocAnnul`, `ANNUL_TEXT`, `ANNUL_HINT`, `annulOutcome` (сквозной контракт), расширение `DocEdit`.
 
 - [ ] **Step 1: падающие тесты `createDocAnnul`:**
   - `annulRequested('1')` → `$prompt['1'] = { kind: 'annul', when: null, reason: '', busy: false, error: null }`; `reasonChanged`; `promptResult({ ok: true })` с причиной `"  "` — запроса нет;
-  - успех `annulFx` с `annul.status: 'done'` → `docAnnulled({ kind: 'annul' })`, `$prompt` без `'1'`, `$done.text === 'Документ аннулирован'`; с `'pending'` → «Запрос на аннулирование отправлен»;
-  - `confirmRequested({ docId, when })` → `kind: 'confirm'`, запрос `{ id, when }`, «Аннулирование утверждено»; `rejectRequested` → причина обязательна, запрос `{ id, when, reason }`, «Аннулирование отклонено»;
-  - `400` → `error` из `errors[0].message`, `busy: false`, `Prompt` открыт; `403`/`5xx` → `error` текста; `409` → `$prompt` без документа, `conflict({ id })`, `$done.text === ANNUL_TEXT.conflict`;
+  - `annulFx` принят → `detailFx('1')` (пока он идёт, `$prompt['1'].busy === true`) → `docAnnulled({ id, detail, kind: 'annul' })` со свежей деталью, `$prompt` без `'1'`; текст по свежей детали: `done` → «Документ аннулирован», `pending` → «Запрос на аннулирование отправлен на утверждение», `annul: null` → «Команда отправлена — документ пока в статусе «В работе»» (`statusLabelOf`);
+  - `detailFx` упал после принятой команды → `$prompt` без `'1'`, `refreshNeeded({ id })`, `$done.text === ANNUL_TEXT.refreshFailed`, `docAnnulled` не выпущен;
+  - `confirmRequested({ docId, when })` → `kind: 'confirm'`, запрос `{ id, when }`, затем `detailFx`; `done` → «Аннулирование утверждено»; `rejectRequested` → причина обязательна, запрос `{ id, when, reason }`; `rejected` → «Аннулирование отклонено»; итог не наступил → `unchanged`;
+  - `annulOutcome` — таблица всех сочетаний `kind` × `annul.status` (+ `null`);
+  - `400` → `error` из `errors[0].message`, `busy: false`, `Prompt` открыт; `403`/`5xx` команды → `error` текста; `409` → `$prompt` без документа, `refreshNeeded({ id })`, `$done.text === ANNUL_TEXT.conflict`;
   - `promptResult({ ok: false })` при `busy` — игнор; без `busy` — закрыть;
   - документ в `blockedDocs` → `annulRequested`/`confirmRequested`/`rejectRequested` игнорируются; **другой** документ — нет (Review Focus 2);
   - второй `annulRequested` того же документа при открытом `Prompt` — игнор;
@@ -397,14 +407,14 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 - [ ] **Step 2: падающие тесты `createDocEdit`/`useEditContexts`:** `$busyDocs` содержит документ при открытом редакторе, решении, сохранении и не содержит после; при `blockedDocs = { '1': true }` — `confirmRequested` документа `'1'` игнорируется, `open`/`revert` контекста `'1'` не действуют, `canDecide` → `false`; документ `'2'` не затронут; без `blockedDocs` — тесты 2d зелёные без правок.
 - [ ] **Step 3: падающие тесты `rules.ts` и фейка:** деталь с `annul.status: 'pending'` и `'done'` → целей нет; `'rejected'` → цели как без `annul`. Фейк проверяет цель правки теми же правилами — `server.test.ts`: после `annul` валютного документа `POST …/edits` отвечает так же, как сейчас на цель вне правил (код и путь — по факту `edits.ts`).
 - [ ] **Step 4:** реализовать; при открытом `Prompt` аннулирования открытый редактор того же документа невозможен (блокировка взаимна), отдельного закрытия не нужно.
-- [ ] **Step 5:** `pnpm check` — зелёный; коммит `Модель аннулирования: Prompt, решения второй руки, 409, поздний ответ; взаимная блокировка с правкой`.
+- [ ] **Step 5:** `pnpm check` — зелёный; коммит `Модель аннулирования: команда и перезапрос детали, итог по свежим данным, решения второй руки, 409, поздний ответ; взаимная блокировка с правкой`.
 
 ### Task 8: Вид аннулирования — кнопка лейна, плашка, `Prompt`
 
 **Files:**
 - Create: `apps/pi/src/features/doc-annul/ui/useAnnulOf.tsx`, `useAnnulOf.test.tsx`
 - Modify: `apps/pi/src/widgets/doc-detail/ui/DocDetail.tsx` (свойство `annulOf`; кнопка `ban` через `lane`; плашка между лейном и сводкой; `prompt` — в `Drawer.overlay`; `LATER` — только `esid`), `DocDetail.module.css`, `DocDetail.test.tsx`
-- Modify: `apps/pi/src/pages/fx-docs/ui/detailDomain.ts`, `pages/rub-docs/ui/detailDomain.ts` — `annulInfo` (подпись статуса — из `entities/doc-status`, `subject` — номер, сумма и валюта из детали)
+- Modify: `apps/pi/src/pages/fx-docs/ui/detailDomain.ts`, `pages/rub-docs/ui/detailDomain.ts` — `annulInfo` (подпись статуса — из `entities/doc-status`, `subject` — номер, сумма и валюта из детали); та же подпись статуса — функция `statusLabelOf` сущностей для `createDocAnnul` (экспорт из `index.ts` сущностей)
 - Modify: `apps/pi/src/entities/doc-trail/ui/lib.ts` — `STUB = 'Действие пока недоступно'`; тот же текст у заглушки лейна виджета
 
 **Interfaces:** Consumes — `DocAnnul`, `ANNUL_TEXT`, `ANNUL_HINT` (Task 7), `Banner`, `Prompt` (Task 5), `AnnulInfo`/`AnnulView` (Task 2). Produces — `useAnnulOf`.
@@ -427,7 +437,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 **Interfaces:** Consumes — `NotifPorts` (Task 4). Produces — `createDocNotif`, `DocNotif`, `RESEND_TEXT`, `COPIED_TEXT`, `COPY_FAILED`; `Detail<D>.replaceTab`.
 
 - [ ] **Step 1: падающие тесты `replaceTab`:** после `replaceTab({ id, tab: 'notif', data })` вкладка документа — `{ state: 'ready', data, error: null }`, другие вкладки и деталь не тронуты; запрос вкладки `notif`, ушедший **до** `replaceTab`, по ответу кэш не перезаписывает (Review Focus 4); запрос после `replaceTab` — перезаписывает; `replaceTab` закрытого документа (нет в слотах) — кэш пишется, как у `replaceDetail` (решение исполнителя по образцу `replaceDetail`, записать в леджер).
-- [ ] **Step 2: падающие тесты `createDocNotif`:** `resendRequested('1')` → `$resendPrompt === '1'`; `resendResult({ ok: false })` → `null`, запроса нет; `ok: true` → `$resendBusy['1']`, `resendFx('1')`; успех → `resent({ id: '1', data })`, `$notice.text === RESEND_TEXT`, `$resendPrompt === null`; `409` → `resendConflict({ id })`, `$notice` — текст Problem; `5xx` → `$notice` — текст; повторный `resendRequested` при `busy` — игнор; `openMessage({ docId, nid, n: 2 })` → `$message.state === 'loading'`, затем `ready` с `message`; ошибка → `error`; `retryMessage` → запрос заново; `closeMessage` → `null`; ответ для закрытого окна или окна другого `nid` отброшен; `pageClosed` — всё сброшено.
+- [ ] **Step 2: падающие тесты `createDocNotif`:** `resendRequested({ docId: '1' })` → `$resendPrompt` `{ docId: '1', nid: null, n: null }`; с `nid: 'n2', n: 2` — `{ docId: '1', nid: 'n2', n: 2 }`; `resendResult({ ok: false })` → `null`, запроса нет; `ok: true` → `$resendBusy['1'] === '*'` (или `'n2'`), `resendFx({ id: '1' })` (или `{ id: '1', nid: 'n2' })`; второй `resendRequested` документа при `busy` (любой `nid`) — игнор; успех → `resent({ id: '1', data })`, `$notice.text === RESEND_TEXT`, `$resendPrompt === null`; `409` → `resendConflict({ id })`, `$notice` — текст Problem; `5xx` → `$notice` — текст; `openMessage({ docId, nid, n: 2 })` → `$message.state === 'loading'`, затем `ready` с `message`; ошибка → `error`; `retryMessage` → запрос заново; `closeMessage` → `null`; ответ для закрытого окна или окна другого `nid` отброшен; `pageClosed` — всё сброшено.
 - [ ] **Step 3:** реализовать. В `createDetail` — отметка вкладки (`${id}:${tab}`), растущая на `replaceTab`; ответ запроса с прежней отметкой отбрасывается.
 - [ ] **Step 4:** `pnpm check` — зелёный; коммит `Нотификации: модель переотправки и исходного сообщения, createDetail.replaceTab`.
 
@@ -440,10 +450,10 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 **Interfaces:** Consumes — `DocNotif` (Task 9), `Dialog`, `Prompt` (Task 5), `CodeView`, `NotifView`/`TabContext` (Task 2). Produces — `useNotifOf`, `NotifOverlay`.
 
-- [ ] **Step 1: падающие тесты `NotificationsTab`:** с `ctx.resend` «Переотправить» вызывает его; `resendBusy` → `aria-disabled="true"`, `aria-busy="true"`, клик не вызывает; «Исходное сообщение» строки 2 → `openMessage(nid строки, 2)`; без `ctx.resend`/`ctx.openMessage` — объявление `STUB` (как в 2b).
-- [ ] **Step 2: падающие тесты `NotifOverlay`/`MessageDialog`:** `$resendPrompt` → `Prompt` «Переотправить нотификацию?», пояснение «Будет создана новая попытка отправки», «Переотправить»/«Отмена»; `$message` `loading` → скелетон; `ready` `application/json` → `CodeView language="json"`, `application/xml` → `xml`, `text/plain` → `text`; заголовок «Исходное сообщение · отправка 2»; «Скопировать» → `navigator.clipboard.writeText(body)` (эффектом), объявление «Скопировано»; отказ буфера → «Не удалось скопировать — выделите текст»; «Закрыть» и Esc → `closeMessage`, `keydown` до drawer не дошёл, фокус — на ссылку строки (Review Focus 5); `error` → текст и «Повторить»; axe без нарушений; `$notice` объявляется.
+- [ ] **Step 1: падающие тесты `NotificationsTab`:** с `ctx.resend` в панели «Переотправить все» → `resend()`; в строке 2 ссылка «Переотправить» (имя «Переотправить, отправка 2») → `resend(nid строки, 2)`; без `ctx.resend` в строке ссылки нет, в панели — прежняя «Переотправить» с объявлением `STUB`; `resendBusy` → все кнопки переотправки `aria-disabled="true"`, клик не вызывает; «Исходное сообщение» строки 2 → `openMessage(nid строки, 2)`; без `ctx.resend`/`ctx.openMessage` — объявление `STUB` (как в 2b).
+- [ ] **Step 2: падающие тесты `NotifOverlay`/`MessageDialog`:** `$resendPrompt` всех → `Prompt` «Переотправить все нотификации?», одной (`n: 2`) → «Переотправить нотификацию № 2?»; пояснение «Будет создана новая попытка отправки», «Переотправить»/«Отмена»; `$message` `loading` → скелетон; `ready` `application/json` → `CodeView language="json"`, `application/xml` → `xml`, `text/plain` → `text`; заголовок «Исходное сообщение · отправка 2»; «Скопировать» → `navigator.clipboard.writeText(body)` (эффектом), объявление «Скопировано»; отказ буфера → «Не удалось скопировать — выделите текст»; «Закрыть» и Esc → `closeMessage`, `keydown` до drawer не дошёл, фокус — на ссылку строки (Review Focus 5); `error` → текст и «Повторить»; axe без нарушений; `$notice` объявляется.
 - [ ] **Step 3:** реализовать.
-- [ ] **Step 4:** `pnpm check` — зелёный; коммит `Вкладка «Нотификации»: Переотправить с подтверждением, окно исходного сообщения с подсветкой и копированием`.
+- [ ] **Step 4:** `pnpm check` — зелёный; коммит `Вкладка «Нотификации»: Переотправить все и одну с подтверждением, окно исходного сообщения с подсветкой и копированием`.
 
 ### Task 11: Переход к ручным отклонениям
 
@@ -467,7 +477,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 **Interfaces:** Consumes — всё выше.
 
 - [ ] **Step 1: падающие тесты связей** (`fork`, порты подменены `fork({ handlers })`):
-  - `docAnnulled` → `detail.replaceDetail` + `registry.refreshRequested` + `reset` остатков (и курсов) документа; `conflict` аннулирования → `detail.refreshDoc(id)`;
+  - `docAnnulled` → `detail.replaceDetail` + `registry.refreshRequested` + `reset` остатков (и курсов) документа; `refreshNeeded` → `detail.refreshDoc(id)` + `registry.refreshRequested`;
   - `detail.refreshDoc(id)` и `replaceDetail` → `reset` lookup-ов документа;
   - `resent` → `detail.replaceTab({ id, tab: 'notif', data })`; `resendConflict` → `detail.refreshDoc`;
   - валюта: открыт редактор документа `'1'` → `annulRequested('1')` игнорируется; открыт `Prompt` аннулирования `'1'` → `open` правки `'1'` не действует;
@@ -483,19 +493,20 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 - [ ] **Step 1:** сценарии спеки §5 (e2e), каждый — отдельный `test`:
   - `?annul=instant`: аннулировать документ `IN_PROGRESS` с причиной → плашка «Документ аннулирован», статус в шапке «Отказ», кнопка `aria-disabled` с подсказкой «Документ аннулирован», карандашей нет;
+  - несостоявшееся (`?annul=fail`): объявление «Команда отправлена — документ пока в статусе «{статус}»», статус в шапке прежний, плашки нет, кнопка снова доступна;
   - через ожидание (`?annul=pending`): плашка warn без кнопок решения; сидовый чужой запрос — «Утвердить» → плашка `done`, объявление «Аннулирование утверждено»;
   - отклонение сидового запроса с причиной → плашка «Запрос на аннулирование отклонён · … · {причина}», «Закрыть» прячет, закрыть и открыть деталку — снова видна;
   - кнопка у документа `DONE` — подсказка «Аннулирование недоступно для документа в статусе «Обработан»»;
   - блокировка: открыт редактор поля → «Аннулировать» с подсказкой «Завершите текущую операцию с документом»;
   - «Курс»: три строки текста (документ с полем 36), Esc закрывает, деталь открыта, фокус на «Курс»;
   - «Проверить баланс» (валюта и рубль): таблица, строка «Счёт не найден в АБС», «Обновить» — запрос по `FAKE_REQUEST_EVENT`;
-  - переотправка: подтверждение → строк на одну больше, объявление «Нотификация переотправлена»;
+  - переотправка всех: «Переотправить все» → «Переотправить все нотификации?» → новые строки, объявление «Нотификация переотправлена»; одной: «Переотправить» в строке 2 → «Переотправить нотификацию № 2?» → строк на одну больше;
   - исходное сообщение: окно с подсветкой (`CodeView`), Esc закрывает окно, деталь открыта, фокус на ссылке строки;
   - «Ручные отклонения»: без регулятора — `aria-disabled`; `?hostlinks=1` — `context.waitForEvent('page')`, адрес содержит `manual-deviations?doc=<id>`;
   - `?fail=annul|rates|balances|resend|notifmsg` — текст ошибки на месте действия, повтор доступен;
   - контраст текста плашек warn/bad/neutral ≥ 4,5 (тем же помощником, что в `lane-actions.spec.ts`).
 - [ ] **Step 2:** `pnpm --filter pi exec playwright test e2e/detail-ops.spec.ts` — **на переднем плане**, PASS; затем весь `pnpm --filter pi e2e` — PASS (прежние 81 + новые).
-- [ ] **Step 3:** коммит `e2e 2e: аннулирование, решения, курс, баланс, переотправка, исходное сообщение, ручные отклонения, отказы, контраст плашек`.
+- [ ] **Step 3:** коммит `e2e 2e: аннулирование командой (сразу, через утверждение, без изменений), решения, курс, баланс, переотправка, исходное сообщение, ручные отклонения, отказы, контраст плашек`.
 
 ### Task 14: Документы
 
