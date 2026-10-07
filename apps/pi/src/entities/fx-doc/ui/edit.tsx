@@ -66,6 +66,25 @@ function editedText(d: FxDocDetail, target: string, show: (was: string) => strin
 }
 
 /**
+ * Отклонённая правка строковой цели (спека 2d §4 п. 2, Ruling R19): пока последняя запись rejected — маркер «отклонено»
+ * с подсказкой «Правка отклонена · {by}, {at} · Причина: {reason}», даже когда значение вернулось к исходному
+ * (у 20 исх и счетов нет блока истории — иначе следа решения в деталке не остаётся).
+ */
+function rejectedTip(d: FxDocDetail, target: string): string | null {
+  const last = lastOf(d.edits[target]?.hist ?? [])
+  if (!last || last.status !== 'rejected') return null
+  const who = [last.by, last.at ? formatDateTimeMinutes(last.at) : null].filter(Boolean).join(', ')
+  return ['Правка отклонена', who, last.reason ? `Причина: ${last.reason}` : ''].filter(Boolean).join(' · ')
+}
+
+/** Маркер строки: отклонённая правка — «отклонено»; иначе изменённая цель — «изменено»; иначе ничего. */
+function RowMark({ d, target, edited }: { d: FxDocDetail; target: string; edited: EditedView }) {
+  const rejected = rejectedTip(d, target)
+  if (rejected) return <EditMark tip={rejected} status="rejected" />
+  return edited ? <EditMark tip={edited.tip} /> : null
+}
+
+/**
  * Запись, по которой текущий пользователь может решать сейчас (план 2d, вторая рука): последняя запись цели pending,
  * бек разрешил (canConfirm), контекст не занят (canDecide: нет редактора, Prompt, сохранения); заблокированный документ — нет (Д66).
  */
@@ -146,7 +165,7 @@ export function RefOutRow({ d, edit, value }: { d: FxDocDetail; edit: EditContex
     <>
       <span className={e.val}>
         {value(edited !== null)}
-        {edited && <EditMark tip={edited.tip} />}
+        <RowMark d={d} target="refOut" edited={edited} />
         <Decide d={d} edit={edit} target="refOut" name="20 исх" />
         {edited && !locked && <Revert d={d} edit={edit} target="refOut" />}
         {!locked && (
@@ -213,7 +232,7 @@ export function AccountRow({ d, edit, side, value }: { d: FxDocDetail; edit: Edi
     <>
       <span className={e.val}>
         {value(edited !== null)}
-        {edited && <EditMark tip={edited.tip} />}
+        <RowMark d={d} target={target} edited={edited} />
         <Decide d={d} edit={edit} target={target} name={`счёта ${label}`} />
         {edited && !locked && <Revert d={d} edit={edit} target={target} />}
         {!locked && (
@@ -410,4 +429,17 @@ export function fxDecisionNote(d: FxDocDetail, target: string, when: string): Re
       <div className={e.decisionWho}>{whoWhen(h)}</div>
     </div>
   )
+}
+
+/**
+ * Карандаш цели решения в drawer (Ruling R19): поле — «Редактировать поле {tag}» (FieldRow кита), 20 исх и счета — «Изменить …»
+ * (подписи RefOutRow/AccountRow). Заблокированный документ карандашей не имеет — null.
+ */
+export function fxDecisionFocus(root: HTMLElement, target: string): HTMLElement | null {
+  const label = target.startsWith('field:') ? `Редактировать поле ${target.slice('field:'.length)}`
+    : target === 'refOut' ? 'Изменить 20 исх'
+      : target === 'accKt' || target === 'accDt' ? `Изменить счёт ${SIDE[target === 'accKt' ? 'kt' : 'dt'].label}`
+        : null
+  if (label === null) return null
+  return Array.from(root.querySelectorAll<HTMLElement>('button[aria-label]')).find((b) => b.getAttribute('aria-label') === label) ?? null
 }

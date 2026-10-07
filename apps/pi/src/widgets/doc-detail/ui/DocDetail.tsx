@@ -54,10 +54,16 @@ function ActionButton({ action, onAction, pending }: { action: DetailAction; onA
         className={action.danger ? s.danger : undefined}
         aria-haspopup={menu ? 'menu' : undefined}
         aria-expanded={menu ? open : undefined}
-        // запрос действия в полёте (скачать, печать, ссылка) — кнопка недоступна до ответа (спека 2d §4 п. 7)
-        disabled={pending || undefined}
+        // запрос действия в полёте (скачать, печать, ссылка) — кнопка недоступна до ответа (спека 2d §4 п. 7):
+        // aria-disabled, а не disabled — Chromium снимает фокус с отключённой кнопки в body (F5 деталки и место клавиатуры
+        // терялись, Ruling R19); клик в полёте игнорируется
+        aria-disabled={pending || undefined}
         aria-busy={pending || undefined}
-        onClick={() => (menu ? setOpen(true) : onAction(action))}
+        onClick={() => {
+          if (pending) return
+          if (menu) setOpen(true)
+          else onAction(action)
+        }}
       >
         <ActionGlyph icon={action.icon} />
       </IconButton>
@@ -119,11 +125,13 @@ function LinkFallback({ link, onClose }: { link: string; onClose: () => void }) 
  * Prompt решения второй руки (спека 2d §4 п. 1–2): утвердить — тело decisionNote домена; отклонить — плюс обязательное поле
  * «Причина» (до 140, счётчик в описании поля), «Отклонить» недоступна, пока причина пуста после trim. busy и error — модели.
  */
-function DecisionPrompt({ decision, note, onResult, onReason }: {
+function DecisionPrompt({ decision, note, onResult, onReason, fallbackFocus }: {
   decision: DecisionState
   note: ReactNode
   onResult: (ok: boolean) => void
   onReason: (text: string) => void
+  /** Кнопка решения пропала вместе с решённой правкой — фокус на карандаш цели или заголовок drawer (Ruling R19). */
+  fallbackFocus: () => HTMLElement | null
 }) {
   const reasonId = useStableId()
   const countId = useStableId()
@@ -140,6 +148,7 @@ function DecisionPrompt({ decision, note, onResult, onReason }: {
       busy={decision.busy}
       error={decision.error ?? undefined}
       onResult={onResult}
+      fallbackFocus={fallbackFocus}
     >
       {reject ? (
         <div className={s.reason}>
@@ -272,6 +281,13 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   }
   // один Prompt на документ: правки 2c (отмена черновика, дата валютирования) или решения второй руки
   const decision = edit?.confirm ? null : edit?.decision ?? null
+  const laneBox = useRef<HTMLDivElement>(null)
+  // в момент закрытия Prompt: карандаш цели (домен), иначе заголовок drawer — фокус не уходит в body (Ruling R19)
+  const decisionFocus = (target: string): HTMLElement | null => {
+    const root = laneBox.current?.closest<HTMLElement>('[data-k-drawer]') ?? null
+    if (!root) return null
+    return domain.decisionFocus?.(root, target) ?? root.querySelector<HTMLElement>('h2[tabindex]')
+  }
   const overlay = edit?.confirm
     ? <Prompt open {...edit.confirm} onResult={edit.onConfirm} />
     : edit && decision
@@ -281,6 +297,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
           note={view.data !== null ? domain.decisionNote?.(view.data, decision.target, decision.when) : undefined}
           onResult={edit.onDecision}
           onReason={edit.changeReason}
+          fallbackFocus={() => decisionFocus(decision.target)}
         />
       )
       : undefined
@@ -324,7 +341,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
       overlay={overlay}
       onKeyDown={onKeyDown}
     >
-      <div className={s.laneBox}>
+      <div ref={laneBox} className={s.laneBox}>
         <Lane summary={summary} actions={domain.actions} onAction={onAction} pending={actions ? actions.pending : never} />
         {actions?.linkFallback && <LinkFallback link={actions.linkFallback} onClose={actions.closeLinkFallback} />}
       </div>

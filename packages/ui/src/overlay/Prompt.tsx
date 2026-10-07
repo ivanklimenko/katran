@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
 import s from './Prompt.module.css'
@@ -27,6 +27,11 @@ export type PromptProps = {
   busy?: boolean | undefined
   /** Строка ошибки над кнопками (role="alert"). */
   error?: string | undefined
+  /**
+   * Куда вернуть фокус при закрытии, если элемент, бывший в фокусе при открытии, уже не в DOM или фокуса не было (body):
+   * кнопка, открывшая окно, исчезла (решение правки) — иначе фокус ушёл бы в body, вне drawer. Вызывается в момент закрытия.
+   */
+  fallbackFocus?: (() => HTMLElement | null | undefined) | undefined
 }
 
 /** Фокусируемые элементы коробки (ловушка Tab): поля, кнопки и элементы с неотрицательным tabindex, кроме недоступных. */
@@ -40,11 +45,12 @@ const focusables = (box: HTMLElement): HTMLElement[] =>
  * положен (слой Drawer.overlay), подложка накрывает только этот drawer. Коробка — alertdialog с aria-modal;
  * Tab ходит по кругу по всем фокусируемым коробки (без тела — между двумя кнопками), Esc — отказ без всплытия
  * (деталка не закрывается). Тело `children`, `okDisabled`, `busy`, `error` — спека 2d §2.1; `busy` гасит Esc и подложку.
- * Закрытие (open → false или размонтирование) возвращает фокус туда, где он был при открытии, если тот элемент ещё в DOM.
+ * Закрытие (open → false или размонтирование) возвращает фокус туда, где он был при открытии, если тот элемент ещё в DOM;
+ * иначе — на `fallbackFocus()` (спека 2d, Ruling R19).
  */
 export function Prompt({
   open, title = 'Подтвердите действие', note, okLabel = 'Подтвердить', cancelLabel = 'Отмена', tone = 'neutral', onResult,
-  children, okDisabled = false, busy = false, error,
+  children, okDisabled = false, busy = false, error, fallbackFocus,
 }: PromptProps): ReactElement | null {
   const titleId = useStableId()
   const noteId = useStableId()
@@ -52,6 +58,8 @@ export function Prompt({
   const body = useRef<HTMLDivElement>(null)
   const ok = useRef<HTMLButtonElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
+  const fallback = useRef(fallbackFocus)
+  useLayoutEffect(() => { fallback.current = fallbackFocus })
 
   useEffect(() => {
     if (!open) return undefined
@@ -62,7 +70,9 @@ export function Prompt({
     const target = field ?? (preferred && !preferred.disabled ? preferred : (box.current && focusables(box.current)[0]))
     target?.focus()
     return () => {
-      if (before instanceof HTMLElement && before.isConnected) before.focus()
+      // body — фокуса не было (открывшая кнопка пропала, едва окно открылось): тоже запасной
+      if (before instanceof HTMLElement && before !== document.body && before.isConnected) before.focus()
+      else fallback.current?.()?.focus()
     }
   }, [open, tone])
 

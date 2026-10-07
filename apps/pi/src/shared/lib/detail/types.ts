@@ -91,6 +91,11 @@ export type DetailDomain<D, Row> = {
   formEdit?: ((d: D, edit: EditContext) => FormEdit) | undefined
   /** Тело Prompt решения (план 2d): подпись цели, «было → стало» (PromptChange), автор и время записи; when — ISO записи, как с бека. */
   decisionNote?: ((d: D, target: string, when: string) => ReactNode) | undefined
+  /**
+   * Карандаш цели решения в drawer документа (Ruling R19): после решения кнопка «Утвердить»/«Отклонить» пропадает,
+   * фокус возвращается сюда; нет — на заголовок drawer.
+   */
+  decisionFocus?: ((root: HTMLElement, target: string) => HTMLElement | null) | undefined
 }
 
 /**

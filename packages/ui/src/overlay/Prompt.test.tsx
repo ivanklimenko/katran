@@ -146,6 +146,52 @@ describe('Prompt (спека 2c §2.1, эталон prompt.js)', () => {
     expect(screen.getByRole('button', { name: 'Сохранить' })).toHaveFocus()
   })
 
+  it('открывший элемент исчез вместе с окном — фокус на fallbackFocus(); элемент на месте — fallbackFocus не зовётся', async () => {
+    const fallbackFocus = vi.fn(() => document.getElementById('pen'))
+    function Host() {
+      const [shown, setShown] = useState(false)
+      const [decided, setDecided] = useState(false)
+      return (
+        <>
+          <button id="pen">Изменить</button>
+          {!decided && <button onClick={() => setShown(true)}>Утвердить правку</button>}
+          {shown && <Prompt open onResult={(ok) => { setShown(false); setDecided(ok) }} fallbackFocus={fallbackFocus} />}
+          <button onClick={() => setShown(true)}>Ещё</button>
+        </>
+      )
+    }
+    renderK(<Host />)
+    // открывшая кнопка пропадает вместе с окном (как кнопка решения вместе с решённой правкой)
+    await userEvent.click(screen.getByRole('button', { name: 'Утвердить правку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(fallbackFocus).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Изменить' })).toHaveFocus()
+    // открывший элемент на месте — возврат на него
+    await userEvent.click(screen.getByRole('button', { name: 'Ещё' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByRole('button', { name: 'Ещё' })).toHaveFocus()
+    expect(fallbackFocus).toHaveBeenCalledTimes(1)
+  })
+
+  it('открывшая кнопка пропала, едва окно открылось (фокус был в body), — при закрытии фокус на fallbackFocus()', async () => {
+    function Host() {
+      const [shown, setShown] = useState(false)
+      return (
+        <>
+          <button id="pen">Изменить</button>
+          {/* как кнопки решения правки: пока открыт Prompt документа, их нет */}
+          {!shown && <button onClick={() => setShown(true)}>Утвердить правку</button>}
+          {shown && <Prompt open onResult={() => setShown(false)} fallbackFocus={() => document.getElementById('pen')} />}
+        </>
+      )
+    }
+    renderK(<Host />)
+    await userEvent.click(screen.getByRole('button', { name: 'Утвердить правку' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(screen.getByRole('button', { name: 'Изменить' })).toHaveFocus()
+  })
+
   it('PromptChange: было → стало; axe без нарушений', async () => {
     const { container } = renderK(<Prompt open note={<PromptChange was="23.09.2026" now="24.09.2026" />} onResult={vi.fn()} />)
     expect(screen.getByRole('alertdialog')).toHaveAccessibleDescription('23.09.2026 → 24.09.2026')

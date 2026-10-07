@@ -11,7 +11,9 @@
   transition: background var(--k-t-fast), border-color var(--k-t-fast), color var(--k-t-fast);
 }
 
-.button:disabled {
+/* aria-disabled — недоступна, но держит фокус (действие в полёте: кнопка не теряет клавиатуру, F5 деталки работает) */
+.button:disabled,
+.button[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
 }
@@ -41,7 +43,7 @@
   color: var(--k-paper);
 }
 
-.primary:hover:not(:disabled) {
+.primary:hover:not(:disabled, [aria-disabled="true"]) {
   filter: brightness(0.95);
 }
 
@@ -51,7 +53,7 @@
   color: var(--k-ink2);
 }
 
-.ghost:hover:not(:disabled) {
+.ghost:hover:not(:disabled, [aria-disabled="true"]) {
   border-color: var(--k-val);
   color: var(--k-val);
 }

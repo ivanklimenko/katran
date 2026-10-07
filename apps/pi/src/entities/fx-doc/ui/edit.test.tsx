@@ -9,7 +9,7 @@ import { parseFxDocDetail } from '../api/detail.mapper'
 import type { FxDocDetail } from '../model/detail'
 import type { FxHistEntry } from '../model/edit'
 import { fxDocDetailDomain as dom } from './detail'
-import { fxCommitView, fxDecisionNote } from './edit'
+import { fxCommitView, fxDecisionFocus, fxDecisionNote } from './edit'
 
 const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
 const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
@@ -341,6 +341,36 @@ describe('вторая рука в видах валюты (план 2d, Task 8)
     unmount()
     renderEdit(foreign('accKt', ktWas, d.accKt), ctx({ canDecide: () => false }))
     expect(screen.queryByRole('button', { name: /правку счёта Кт$/ })).toBeNull()
+  })
+
+  it('отклонённая правка счёта и 20 исх — маркер «отклонено» с причиной, даже когда значение вернулось к исходному (Ruling R19)', () => {
+    const rej = (target: 'accKt' | 'refOut', was: string, now: string, cur: string, reason: string | null): FxDocDetail => ({
+      ...d, ...(target === 'refOut' ? { refOut: cur } : { [target]: cur }),
+      edits: { [target]: { now: cur, canConfirm: false, hist: [entry({ who: 'Кузнецов Д. А.', was, now, status: 'rejected', by: 'Вы', at: '2026-09-23T12:07:00', reason })] } },
+    })
+    // первая правка отклонена: текущее = исходному — без отметки «изменено» и ↺, но с «отклонено»
+    const kt = renderEdit(rej('accKt', d.accKt, ktWas, d.accKt, 'Счёт не тот'), ctx())
+    const mark = screen.getByRole('img', { name: 'Правка отклонена · Вы, 23.09.2026 12:07 · Причина: Счёт не тот' })
+    expect(mark).toHaveAttribute('data-status', 'rejected')
+    expect(mark).toHaveAttribute('data-k-tip', 'Правка отклонена · Вы, 23.09.2026 12:07 · Причина: Счёт не тот')
+    expect(screen.queryByRole('img', { name: /^Было / })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Вернуть исходное' })).toBeNull()
+    kt.unmount()
+    // без причины — без хвоста «Причина»
+    renderEdit(rej('refOut', '', 'FX1', '', null), ctx())
+    expect(screen.getByRole('img', { name: 'Правка отклонена · Вы, 23.09.2026 12:07' })).toHaveAttribute('data-status', 'rejected')
+  })
+
+  it('fxDecisionFocus — карандаш цели после решения: поле, 20 исх, счета; route и заблокированный документ — null', () => {
+    const { container, unmount } = renderEdit(d, ctx())
+    expect(fxDecisionFocus(container, 'field:57')).toBe(screen.getByRole('button', { name: 'Редактировать поле 57' }))
+    expect(fxDecisionFocus(container, 'refOut')).toBe(screen.getByRole('button', { name: 'Изменить 20 исх' }))
+    expect(fxDecisionFocus(container, 'accKt')).toBe(screen.getByRole('button', { name: 'Изменить счёт Кт' }))
+    expect(fxDecisionFocus(container, 'accDt')).toBe(screen.getByRole('button', { name: 'Изменить счёт Дт' }))
+    expect(fxDecisionFocus(container, 'route')).toBeNull()
+    unmount()
+    const locked = renderEdit({ ...d, lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' } }, ctx())
+    expect(fxDecisionFocus(locked.container, 'accKt')).toBeNull()
   })
 
   it('заблокированный документ — кнопок решения нет ни у полей, ни у маркеров', async () => {
