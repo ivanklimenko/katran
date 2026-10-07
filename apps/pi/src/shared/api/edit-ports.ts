@@ -8,6 +8,9 @@ import { requestFx } from './request'
 export type EditValue = { opt?: string | undefined; acc?: string | undefined; lines: string[] } | string
 /** Правка одной цели документа: was — значение, от которого начата правка (бек сверяет с текущим, иначе 409), now — новое. */
 export type EditQuery = { id: string; target: string; was: EditValue; now: EditValue }
+/** Решение по правке: when — метка последней записи цели (бек сверяет, иначе 409). */
+export type DecisionQuery = { id: string; target: string; when: string }
+export type RejectQuery = DecisionQuery & { reason: string }
 export type AccountSide = 'dt' | 'kt'
 export type AccountsQuery = { id: string; side: AccountSide }
 /** Счёт из справочника: Кт — карточка клиента, Дт — счета банка; оба — по валюте документа. */
@@ -16,6 +19,10 @@ export type AccountItem = { account: string; ccy: string; kind: string }
 export type EditPorts<D> = {
   saveEditFx: Effect<EditQuery, D, ApiError>
   accountsFx: Effect<AccountsQuery, AccountItem[], ApiError>
+  /** POST …/edits/{target}/confirm { when } → документ целиком. */
+  confirmEditFx: Effect<DecisionQuery, D, ApiError>
+  /** POST …/edits/{target}/reject { when, reason } → документ целиком. */
+  rejectEditFx: Effect<RejectQuery, D, ApiError>
 }
 
 /** Ответ GET /grids/{gridId}/documents/{id}/accounts: { items: [{ account, ccy, kind }] }; иначе contractError с путём. */
@@ -36,5 +43,11 @@ export function createEditPorts<D>({ gridId, parseDetail }: { gridId: string; pa
     parseDetail(obj(await requestFx({ method: 'POST', url: `${doc(id)}/edits`, body: { target, was, now } }), 'ответ'), 'ответ'))
   const accountsFx = createEffect<AccountsQuery, AccountItem[], ApiError>(async ({ id, side }) =>
     fromAccountsResponse(await requestFx({ method: 'GET', url: `${doc(id)}/accounts`, query: { side } })))
-  return { saveEditFx, accountsFx }
+  const decide = (kind: 'confirm' | 'reject', id: string, target: string, body: object) =>
+    requestFx({ method: 'POST', url: `${doc(id)}/edits/${encodeURIComponent(target)}/${kind}`, body })
+  const confirmEditFx = createEffect<DecisionQuery, D, ApiError>(async ({ id, target, when }) =>
+    parseDetail(obj(await decide('confirm', id, target, { when }), 'ответ'), 'ответ'))
+  const rejectEditFx = createEffect<RejectQuery, D, ApiError>(async ({ id, target, when, reason }) =>
+    parseDetail(obj(await decide('reject', id, target, { when, reason }), 'ответ'), 'ответ'))
+  return { saveEditFx, accountsFx, confirmEditFx, rejectEditFx }
 }

@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { createEffect } from 'effector'
-import { ApiError, type AccountItem, type AccountsQuery, type EditQuery, type EditValue } from '../../../shared/api'
+import { ApiError, type AccountItem, type AccountsQuery, type DecisionQuery, type EditQuery, type RejectQuery, type EditValue } from '../../../shared/api'
 import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
@@ -19,7 +19,7 @@ function setup(save: (q: EditQuery) => Promise<Doc> = async (q) => ({ id: q.id, 
   const accountsFx = createEffect<AccountsQuery, AccountItem[], ApiError>(async () => [])
   const lifecycle = createPageLifecycle()
   const edit = createDocEdit<Doc>({
-    ports: { saveEditFx, accountsFx },
+    ports: { saveEditFx, accountsFx, confirmEditFx: createEffect<DecisionQuery, Doc, ApiError>(async (q) => ({ id: q.id, rev: 2 })), rejectEditFx: createEffect<RejectQuery, Doc, ApiError>(async (q) => ({ id: q.id, rev: 2 })) },
     validate: (_t, v) => (typeof v === 'string' && v.includes('!') ? 'Недопустимый символ' : null),
     normalize: (_t, v) => (typeof v === 'string' ? v.trim() : v),
     confirmTargets: ['valueDate'],

@@ -24,6 +24,22 @@ describe('createEditPorts', () => {
     expect((conflict.value as ApiError).status).toBe(409)
     expect((conflict.value as ApiError).problem?.type).toBe('urn:katran:edit-conflict')
   })
+  it('confirmEditFx: POST …/edits/{target}/confirm с { when }; ответ — через parseDetail', async () => {
+    const reqs: HttpRequest[] = []
+    const ports = createEditPorts({ gridId: 'fx-docs', parseDetail: (raw, path) => ({ ...(raw as object), path }) })
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { reqs.push(r); return { id: 'x' } }]] })
+    const r = await allSettled(ports.confirmEditFx, { scope, params: { id: 'x', target: 'field:B.57', when: 'w' } })
+    expect(reqs[0]).toEqual({ method: 'POST', url: '/grids/fx-docs/documents/x/edits/field%3AB.57/confirm', body: { when: 'w' } })
+    expect(r).toEqual({ status: 'done', value: { id: 'x', path: 'ответ' } })
+  })
+  it('rejectEditFx: POST …/reject с { when, reason }', async () => {
+    const reqs: HttpRequest[] = []
+    const ports = createEditPorts({ gridId: 'fx-docs', parseDetail: (raw) => raw })
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { reqs.push(r); return { id: 'a/b' } }]] })
+    const r = await allSettled(ports.rejectEditFx, { scope, params: { id: 'a/b', target: 'field:B.57', when: 'w', reason: 'BIC' } })
+    expect(reqs[0]).toEqual({ method: 'POST', url: '/grids/fx-docs/documents/a%2Fb/edits/field%3AB.57/reject', body: { when: 'w', reason: 'BIC' } })
+    expect(r.status).toBe('done')
+  })
   it('accountsFx: GET …/accounts?side=kt → items', async () => {
     const reqs: HttpRequest[] = []
     const ports = createEditPorts({ gridId: 'g', parseDetail: (raw) => raw })
