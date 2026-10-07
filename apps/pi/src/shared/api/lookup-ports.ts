@@ -1,5 +1,7 @@
+import { createEffect, type Effect } from 'effector'
 import { arr, obj, str, strOrNull, type Obj } from './guards'
-import { contractError } from './problem'
+import { contractError, type ApiError } from './problem'
+import { requestFx } from './request'
 
 /** Курсы документа (pi-api.md §1.12): числа — строками, уже отформатированными беком. deal — при конверсии, иначе null. */
 export type Rates = {
@@ -39,4 +41,14 @@ function parseBalanceItem(v: unknown, path: string): BalanceItem {
 export function parseBalances(v: unknown): Balances {
   const o = obj(v, 'ответ')
   return { asOf: str(o, 'asOf', 'ответ'), items: arr(o.items, 'ответ.items').map((x, i) => parseBalanceItem(x, `ответ.items[${i}]`)) }
+}
+
+/** GET /grids/fx-docs/documents/{id}/rates — курсы валютного документа. */
+export const ratesFx = createEffect<string, Rates, ApiError>(async (id) =>
+  parseRates(await requestFx({ method: 'GET', url: `/grids/fx-docs/documents/${encodeURIComponent(id)}/rates` })))
+
+/** GET /grids/{gridId}/documents/{id}/balances — остатки по счетам проводок. */
+export function createBalancesFx(gridId: string): Effect<string, Balances, ApiError> {
+  return createEffect<string, Balances, ApiError>(async (id) =>
+    parseBalances(await requestFx({ method: 'GET', url: `/grids/${gridId}/documents/${encodeURIComponent(id)}/balances` })))
 }

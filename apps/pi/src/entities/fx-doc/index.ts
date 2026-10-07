@@ -1,5 +1,5 @@
 export { CURRENCIES, DIRECTION_LABEL, DIRECTIONS, FX_TYPES, ROUTE_TYPES, type Direction, type FxDoc, type RouteType } from './model/fxDoc'
-export { fxDocPorts, fxEditPorts } from './api/ports'
+export { fxAnnulPorts, fxDocPorts, fxEditPorts } from './api/ports'
 export { fxDocLayout } from './ui/layout'
 export type { FxDocDetail, SwiftValue } from './model/detail'
 export { currentOf, fieldTarget, isChanged, originalOf, sameEditValue, type FxEdit, type FxHistEntry } from './model/edit'

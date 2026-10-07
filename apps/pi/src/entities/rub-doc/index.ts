@@ -1,5 +1,5 @@
 export { ED_BY_TYPE, ED_CODES, RUB_TYPES, TYPE_NAME, type RubDoc, type RubType } from './model/rubDoc'
-export { rubDocPorts } from './api/ports'
+export { rubAnnulPorts, rubDocPorts } from './api/ports'
 export { rubDocLayout } from './ui/layout'
 export type { RubAgent, RubDocDetail, RubEd107, RubParty } from './model/detail'
 export {

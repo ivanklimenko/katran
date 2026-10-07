@@ -1,4 +1,7 @@
-import { parseBalances, parseRates } from './lookup-ports'
+import { allSettled, fork } from 'effector'
+import { createBalancesFx, parseBalances, parseRates, ratesFx } from './lookup-ports'
+import { ApiError, toApiError } from './problem'
+import { requestFx, type HttpRequest } from './request'
 
 const cb = { rate: '92,4517', date: '2026-10-07', rub: '924 517,00' }
 const deal = { rate: '1,0850', from: 'EUR', to: 'USD', amount: '10 000,00' }
@@ -37,5 +40,32 @@ describe('parseBalances', () => {
   it('битые поля — ошибка с путём', () => {
     expect(() => parseBalances({ items: [] })).toThrow('ответ.asOf: ожидалась строка')
     expect(() => parseBalances({ asOf: 'x', items: [{ ...ok, balance: 1 }] })).toThrow('ответ.items[0].balance: ожидалась строка')
+  })
+})
+
+describe('порты курсов и остатков', () => {
+  it('ratesFx: GET /grids/fx-docs/documents/{id}/rates через parseRates', async () => {
+    const reqs: HttpRequest[] = []
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { reqs.push(r); return { cb, deal: null } }]] })
+    const r = await allSettled(ratesFx, { scope, params: 'a/b' })
+    expect(reqs[0]).toEqual({ method: 'GET', url: '/grids/fx-docs/documents/a%2Fb/rates' })
+    expect(r).toEqual({ status: 'done', value: { cb, deal: null } })
+  })
+  it('createBalancesFx: GET /grids/{gridId}/documents/{id}/balances через parseBalances', async () => {
+    const reqs: HttpRequest[] = []
+    const body = { asOf: '2026-10-07 10:00', items: [{ acc: '1', ccy: 'RUB', balance: '1', available: null }] }
+    const scope = fork({ handlers: [[requestFx, async (r: HttpRequest) => { reqs.push(r); return body }]] })
+    const r = await allSettled(createBalancesFx('rub-docs'), { scope, params: '1' })
+    expect(reqs[0]).toEqual({ method: 'GET', url: '/grids/rub-docs/documents/1/balances' })
+    expect(r).toEqual({ status: 'done', value: body })
+  })
+  it('битый ответ — contractError; не-2xx — ApiError со статусом', async () => {
+    const bad = await allSettled(ratesFx, { scope: fork({ handlers: [[requestFx, async () => 'x']] }), params: '1' })
+    expect(bad.status).toBe('fail')
+    expect((bad.value as ApiError).message).toContain('ответ: ожидался объект')
+    const fail = await allSettled(createBalancesFx('fx-docs'), {
+      scope: fork({ handlers: [[requestFx, async () => { throw toApiError(500, { type: 'about:blank', title: 'Сбой', status: 500 }) }]] }), params: '1',
+    })
+    expect((fail.value as ApiError).status).toBe(500)
   })
 })
