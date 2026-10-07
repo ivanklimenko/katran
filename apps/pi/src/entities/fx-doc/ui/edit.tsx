@@ -23,6 +23,24 @@ const Check = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const Cross = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg>
 
 const lastOf = (hist: FxHistEntry[]): FxHistEntry | undefined => hist[hist.length - 1]
+/**
+ * Последняя действующая (не отклонённая) запись — автор текущего значения: отклонённая правка значение вернула, атрибутировать
+ * «Изменено» ей нельзя (финальное ревью 2d, I2).
+ */
+const lastKeptOf = (hist: FxHistEntry[]): FxHistEntry | undefined => {
+  for (let i = hist.length - 1; i >= 0; i -= 1) {
+    const h = hist[i]
+    if (h && h.status !== 'rejected') return h
+  }
+  return undefined
+}
+/** «Правка отклонена · {by}, {at}» последней записи, если она rejected; иначе null. */
+const rejectedHead = (hist: FxHistEntry[]): string | null => {
+  const last = lastOf(hist)
+  if (!last || last.status !== 'rejected') return null
+  const who = [last.by, last.at ? formatDateTimeMinutes(last.at) : null].filter(Boolean).join(', ')
+  return ['Правка отклонена', who].filter(Boolean).join(' · ')
+}
 const whoWhen = (h: FxHistEntry) => `${h.who}, ${formatDateTimeMinutes(h.when)}`
 const asField = (v: EditValue | null | undefined): FieldValue => (v && typeof v !== 'string' ? v : { lines: [] })
 const asText = (v: EditValue | null | undefined): string => (typeof v === 'string' ? v : '')
@@ -58,11 +76,14 @@ type EditedView = { tip: string } | null
 /** Заблокированный документ — только просмотр (Д66): ни карандашей, ни ↺, ни редакторов; маркеры и подсказки остаются. */
 const lockedOf = (d: FxDocDetail) => d.lock !== null
 
-/** Изменённая строковая цель: «Было {was} · {who}, {when}» (эталон txtRowHtml/accRowHtml) — исходное и последняя запись. */
+/**
+ * Изменённая строковая цель: «Было {was} · {who}, {when}» (эталон txtRowHtml/accRowHtml) — исходное и последняя действующая
+ * запись (отклонённая значение не меняла).
+ */
 function editedText(d: FxDocDetail, target: string, show: (was: string) => string): EditedView {
-  const last = lastOf(d.edits[target]?.hist ?? [])
-  if (!last || !isChanged(d, target)) return null
-  return { tip: `Было ${show(asText(originalOf(d, target)))} · ${whoWhen(last)}` }
+  const kept = lastKeptOf(d.edits[target]?.hist ?? [])
+  if (!kept || !isChanged(d, target)) return null
+  return { tip: `Было ${show(asText(originalOf(d, target)))} · ${whoWhen(kept)}` }
 }
 
 /**
@@ -71,16 +92,20 @@ function editedText(d: FxDocDetail, target: string, show: (was: string) => strin
  * (у 20 исх и счетов нет блока истории — иначе следа решения в деталке не остаётся).
  */
 function rejectedTip(d: FxDocDetail, target: string): string | null {
-  const last = lastOf(d.edits[target]?.hist ?? [])
-  if (!last || last.status !== 'rejected') return null
-  const who = [last.by, last.at ? formatDateTimeMinutes(last.at) : null].filter(Boolean).join(', ')
-  return ['Правка отклонена', who, last.reason ? `Причина: ${last.reason}` : ''].filter(Boolean).join(' · ')
+  const hist = d.edits[target]?.hist ?? []
+  const head = rejectedHead(hist)
+  if (head === null) return null
+  const reason = lastOf(hist)?.reason
+  return reason ? `${head} · Причина: ${reason}` : head
 }
 
-/** Маркер строки: отклонённая правка — «отклонено»; иначе изменённая цель — «изменено»; иначе ничего. */
+/**
+ * Маркер строки: отклонённая правка — «отклонено»; значение при этом ещё изменено прежней действующей правкой — подсказка
+ * с обеими частями («Было … · {who}, {when} · Правка отклонена · …»); иначе изменённая цель — «изменено»; иначе ничего.
+ */
 function RowMark({ d, target, edited }: { d: FxDocDetail; target: string; edited: EditedView }) {
   const rejected = rejectedTip(d, target)
-  if (rejected) return <EditMark tip={rejected} status="rejected" />
+  if (rejected) return <EditMark tip={edited ? `${edited.tip} · ${rejected}` : rejected} status="rejected" />
   return edited ? <EditMark tip={edited.tip} /> : null
 }
 
@@ -354,14 +379,16 @@ export function fxFormEdit(d: FxDocDetail, edit: EditContext): FormEdit {
     state: (tag) => {
       const target = fieldTarget(tag)
       const hist = d.edits[target]?.hist ?? []
-      const last = lastOf(hist)
-      if (!last) return null
-      // вторая рука (план 2d): кнопки решения кит рисует в сводке блока у последней записи pending
+      if (!lastOf(hist)) return null
+      // «Изменено» — автор действующего значения (последняя не отклонённая запись); последняя отклонена — её след в конце
+      const kept = lastKeptOf(hist)
+      const head = rejectedHead(hist)
+      // вторая рука (план 2d): кнопки решения кит рисует в сводке блока, пока последняя запись pending
       const decide = decidable(d, edit, target)
       return {
         changed: isChanged(d, target),
         was: asField(originalOf(d, target)),
-        tip: `Изменено: ${whoWhen(last)}`,
+        tip: [kept ? `Изменено: ${whoWhen(kept)}` : null, head].filter(Boolean).join(' · '),
         audit: (
           <EditHistory label={`поля ${base(tag)}`} entries={historyOf(hist)}
             onConfirm={decide ? () => edit.confirmEdit(target, decide.when) : undefined}

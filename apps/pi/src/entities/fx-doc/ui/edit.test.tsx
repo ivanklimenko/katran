@@ -401,6 +401,50 @@ describe('вторая рука в видах валюты (план 2d, Task 8)
     expect(ref.container).toHaveTextContent('— → FX1')
   })
 
+  it('поле 57 после отклонения (сид: утверждённая правка Кузнецова, отклонённая — Ивановой): «Изменено» — по последней не отклонённой записи, плюс след отклонения', () => {
+    const h = d.edits['field:57']!.hist
+    const back = h[0]!.now
+    const rejected: FxDocDetail = {
+      ...d, fields: { ...d.fields, '57': back as FxDocDetail['fields'][string] },
+      edits: { 'field:57': { now: back, canConfirm: false, hist: [h[0]!, { ...h[1]!, status: 'rejected', by: 'Вы', at: '2026-09-23T12:00:00', reason: 'Нет в справочнике' }] } },
+    }
+    renderEdit(rejected, ctx())
+    const f = f57()
+    expect(f).toHaveAttribute('data-edited')
+    expect(f).toHaveAttribute('data-k-tip', 'Изменено: Кузнецов Д. А., 23.09.2026 09:15 · Правка отклонена · Вы, 23.09.2026 12:00')
+  })
+
+  it('поле: последняя запись не отклонена — подсказка без следа отклонения (по последней записи)', () => {
+    const h = d.edits['field:57']!.hist
+    const earlier: FxDocDetail = {
+      ...d, edits: { 'field:57': { ...d.edits['field:57']!, hist: [{ ...h[0]!, status: 'rejected', by: 'Вы', at: '2026-09-23T09:20:00' }, h[1]!] } },
+    }
+    renderEdit(earlier, ctx())
+    expect(f57()).toHaveAttribute('data-k-tip', 'Изменено: Иванова М. П., 23.09.2026 10:42')
+  })
+
+  it('счёт Кт: отклонена вторая правка, первая (утверждённая) действует — маркер «отклонено» с «Было …» первой правки и следом отклонения, ↺ есть', () => {
+    const mid = '40817840100050017762'
+    const third = '40817840900050099999'
+    const doc: FxDocDetail = {
+      ...d, accKt: mid,
+      edits: {
+        accKt: {
+          now: mid, canConfirm: false, hist: [
+            entry({ who: 'Кузнецов Д. А.', when: '2026-09-23T09:15:00', was: ktWas, now: mid, status: 'confirmed', by: 'Смирнова Е. В.', at: '2026-09-23T09:40:00' }),
+            entry({ who: 'Иванова М. П.', when: '2026-09-23T10:42:00', was: mid, now: third, status: 'rejected', by: 'Вы', at: '2026-09-23T12:07:00', reason: 'Счёт не тот' }),
+          ],
+        },
+      },
+    }
+    renderEdit(doc, ctx())
+    const tip = 'Было 40702 840 7 1999 2365220 · Кузнецов Д. А., 23.09.2026 09:15 · Правка отклонена · Вы, 23.09.2026 12:07 · Причина: Счёт не тот'
+    const mark = screen.getByRole('img', { name: tip })
+    expect(mark).toHaveAttribute('data-status', 'rejected')
+    expect(mark).toHaveAttribute('data-k-tip', tip)
+    expect(screen.getByRole('button', { name: 'Вернуть исходное' })).toBeInTheDocument()
+  })
+
   it('история отклонённой правки — «Причина: …» (historyOf передаёт reason)', async () => {
     const rejected: FxDocDetail = {
       ...d, edits: {
