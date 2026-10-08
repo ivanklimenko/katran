@@ -5,9 +5,10 @@ import {
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
 } from '@katran/ui'
 import {
-  REASON_MAX, type ActionNotice, type ActionsView, type AnnulLane, type AnnulView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
+  type ActionNotice, type ActionsView, type AnnulLane, type AnnulView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
   type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
+import { ReasonField } from '../../../shared/ui'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
 import s from './DocDetail.module.css'
@@ -172,7 +173,7 @@ function ActionNoticeBar({ notice, onClose }: { notice: ActionNotice; onClose: (
 
 /**
  * Prompt решения второй руки (спека 2d §4 п. 1–2): утвердить — тело decisionNote домена; отклонить — плюс обязательное поле
- * «Причина» (до 140, счётчик в описании поля), «Отклонить» недоступна, пока причина пуста после trim. busy и error — модели.
+ * «Причина» (ReasonField: до 140, счётчик в описании поля), «Отклонить» недоступна, пока причина пуста после trim. busy и error — модели.
  */
 function DecisionPrompt({ decision, note, onResult, onReason, fallbackFocus }: {
   decision: DecisionState
@@ -182,8 +183,6 @@ function DecisionPrompt({ decision, note, onResult, onReason, fallbackFocus }: {
   /** Кнопка решения пропала вместе с решённой правкой — фокус на карандаш цели или заголовок drawer (Ruling R19). */
   fallbackFocus: () => HTMLElement | null
 }) {
-  const reasonId = useStableId()
-  const countId = useStableId()
   const reject = decision.kind === 'reject'
   return (
     <Prompt
@@ -199,24 +198,7 @@ function DecisionPrompt({ decision, note, onResult, onReason, fallbackFocus }: {
       onResult={onResult}
       fallbackFocus={fallbackFocus}
     >
-      {reject ? (
-        <div className={s.reason}>
-          <label htmlFor={reasonId} className={s.reasonLabel}>Причина</label>
-          <textarea
-            id={reasonId}
-            className={s.reasonField}
-            rows={3}
-            maxLength={REASON_MAX}
-            required
-            // запрос в полёте — причину уже не меняют (модель тоже игнорирует ввод при busy)
-            readOnly={decision.busy}
-            aria-describedby={countId}
-            value={decision.reason}
-            onChange={(e) => onReason(e.target.value)}
-          />
-          <span id={countId} className={s.reasonCount}>{decision.reason.length}/{REASON_MAX}</span>
-        </div>
-      ) : undefined}
+      {reject ? <ReasonField value={decision.reason} busy={decision.busy} onChange={onReason} /> : undefined}
     </Prompt>
   )
 }

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, type ReactElement } from 'react'
 import { useUnit } from 'effector-react'
-import { Banner, Button, Prompt, formatDateTimeMinutes, useKatran, useStableId } from '@katran/ui'
-import { REASON_MAX, type AnnulInfo, type AnnulLane, type AnnulState, type AnnulView } from '../../../shared/lib/detail'
+import { Banner, Button, Prompt, formatDateTimeMinutes, useKatran } from '@katran/ui'
+import type { AnnulInfo, AnnulLane, AnnulState, AnnulView } from '../../../shared/lib/detail'
+import { ReasonField } from '../../../shared/ui'
 import { ANNUL_HINT, type AnnulPromptState, type DocAnnul } from '../model/createDocAnnul'
-import s from './useAnnulOf.module.css'
 
 const noop = (): void => undefined
 
@@ -25,7 +25,7 @@ const TITLE = { annul: 'Аннулировать документ?', confirm: '�
 const OK = { annul: 'Аннулировать', confirm: 'Утвердить', reject: 'Отклонить' }
 
 /**
- * Prompt аннулирования или решения по запросу (спека 2e §4 п. 2–3): у annul и reject — обязательное поле «Причина» (до 140,
+ * Prompt аннулирования или решения по запросу (спека 2e §4 п. 2–3): у annul и reject — обязательное поле «Причина» (ReasonField: до 140,
  * счётчик в описании поля), основная кнопка недоступна, пока причина пуста после trim. busy и error — модели.
  * Кнопка, открывшая окно, пропала (решение убрало кнопки плашки) — фокус на заголовок drawer, а не в body (как fallbackFocus 2d,
  * Ruling R19): drawer запоминается при открытии по скрытой метке в слое overlay.
@@ -36,8 +36,6 @@ function AnnulPrompt({ state, info, onResult, onReason }: {
   onResult: (ok: boolean) => void
   onReason: (reason: string) => void
 }): ReactElement {
-  const reasonId = useStableId()
-  const countId = useStableId()
   const mark = useRef<HTMLSpanElement>(null)
   const drawer = useRef<HTMLElement | null>(null)
   useEffect(() => {
@@ -66,24 +64,7 @@ function AnnulPrompt({ state, info, onResult, onReason }: {
         onResult={onResult}
         fallbackFocus={fallbackFocus}
       >
-        {withReason ? (
-          <div className={s.reason}>
-            <label htmlFor={reasonId} className={s.reasonLabel}>Причина</label>
-            <textarea
-              id={reasonId}
-              className={s.reasonField}
-              rows={3}
-              maxLength={REASON_MAX}
-              required
-              // команда в полёте — причину уже не меняют (модель тоже игнорирует ввод при busy)
-              readOnly={state.busy}
-              aria-describedby={countId}
-              value={state.reason}
-              onChange={(e) => onReason(e.target.value)}
-            />
-            <span id={countId} className={s.reasonCount}>{state.reason.length}/{REASON_MAX}</span>
-          </div>
-        ) : undefined}
+        {withReason ? <ReasonField value={state.reason} busy={state.busy} onChange={onReason} /> : undefined}
       </Prompt>
     </>
   )

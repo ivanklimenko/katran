@@ -80,7 +80,7 @@ function setup(
   act(() => { lifecycle.pageOpened() })
   const open = (id: string, secondary = false, quiet?: boolean) => act(() => { detail.open(quiet ? { id, secondary, quiet } : { id, secondary }) })
   const close = (slot: 'a' | 'b' = 'a') => act(() => { detail.close(slot) })
-  return { ...utils, open, close }
+  return { ...utils, open, close, detail }
 }
 const names = () => screen.queryAllByRole('dialog').map((d) => d.getAttribute('aria-label'))
 const tabSkeleton = () => document.querySelector('[data-part="tab-skeleton"]')
@@ -897,6 +897,23 @@ describe('DocDetail: аннулирование (спека 2e §3.5, §4 п. 1�
     await waitFor(() => expect(names()).toEqual([]))
     open('d1')
     expect(await screen.findByText('Запрос на аннулирование отклонён · № 417')).toBeInTheDocument()
+  })
+
+  it('тот же drawer: закрыта плашка rejected, пришёл новый rejected с другим annul.when — снова видна', async () => {
+    let when = '2026-09-23T10:00:00'
+    const domainWhen: DetailDomain<Doc, Doc> = { ...laneDomain, annulInfo: (d) => ({ ...infoOf(d), annul: d.id === 'd1' ? { ...rejectedAnnul, when } : null }) }
+    const { open, detail } = setup(undefined, undefined, { domain: domainWhen, annulOf: () => annulStub({ banner: bannerStub }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    await userEvent.click(screen.getByRole('button', { name: 'Закрыть плашку' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    // та же деталь заново (тот же when) — плашка закрыта
+    act(() => { detail.replaceDetail({ id: 'd1', detail: rows[0]! }) })
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    // новый запрос отклонён — другой when: плашка снова видна в том же drawer
+    when = '2026-09-25T12:00:00'
+    act(() => { detail.replaceDetail({ id: 'd1', detail: { ...rows[0]! } }) })
+    expect(screen.getByText('Запрос на аннулирование отклонён · № 417')).toBeInTheDocument()
   })
 
   it('Prompt аннулирования — в overlay drawer своего документа; F5 при нём — браузеру', async () => {
