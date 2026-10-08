@@ -8,6 +8,7 @@ import type { FakeServerOptions } from './server'
  * Срез 2e: ?annul=instant|pending|fail — итог аннулирования: instant — сразу (статус «Отказ»), pending — через утверждение, fail — команда принята,
  * документ не изменился (без регулятора — по правилу фейка: сумма > 1 000 000 — через утверждение);
  * ?fail=annul|rates|balances|resend|notifmsg — 500 на аннулировании (annul, confirm, reject), курсах, остатках, переотправке нотификаций, исходном сообщении.
+ * ?hostlinks=1 — не фейк, а стенд (transport.ts): включает ссылку «Перейти в блок «Ручные отклонения»» (configureHostLinks).
  * Повторная переотправка документа в течение 2 с — 409 (RESEND_WINDOW_MS, notif.ts).
  * Каждый запрос — событие окна FAKE_REQUEST_EVENT с { method, url }: фейк живёт в странице, сеть его не видит, e2e считает запросы по событию.
  */

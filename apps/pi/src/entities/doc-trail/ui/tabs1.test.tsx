@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { formatDuration } from '@katran/ui'
 import type { TabContext } from '../../../shared/lib/detail'
+import { HOST_LINK_MISSING, configureHostLinks } from '../../../shared/lib/host-links'
 import { renderK } from '../../../shared/lib/test'
 import type { Compliance, DocNotification, DocTask, StatusEvent, StreamEvent } from '../model/types'
 import { ComplianceTab } from './ComplianceTab'
@@ -155,11 +156,30 @@ describe('ComplianceTab (эталон complianceHtml)', () => {
 })
 
 describe('TasksTab (эталон tasksHtml)', () => {
-  it('счётчик «N задач, открытых M»; кнопка раздела — заглушка 2d', async () => {
-    const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+  it('счётчик «N задач, открытых M»', () => {
+    renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
     expect(screen.getByText('2 задач, открытых 1')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Перейти в блок «Ручные отклонения»' }))
-    expect(spies.announce).toHaveBeenCalledWith(STUB)
+  })
+  describe('переход в «Ручные отклонения»', () => {
+    afterEach(() => { configureHostLinks({}) })
+    it('хост настроил ссылку — ссылка-кнопка в новой вкладке с адресом на документ', () => {
+      configureHostLinks({ manualDeviations: (id) => `/md?doc=${id}` })
+      renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+      const a = screen.getByRole('link', { name: 'Перейти в блок «Ручные отклонения»' })
+      expect(a).toHaveAttribute('href', `/md?doc=${TEST_DOC_ID}`)
+      expect(a).toHaveAttribute('target', '_blank')
+      expect(a).toHaveAttribute('rel', 'noopener')
+      expect(screen.queryByRole('button', { name: 'Перейти в блок «Ручные отклонения»' })).toBeNull()
+    })
+    it('ссылки нет — кнопка aria-disabled с подсказкой, клик ничего не объявляет', async () => {
+      const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+      const b = screen.getByRole('button', { name: 'Перейти в блок «Ручные отклонения»' })
+      expect(b).toHaveAttribute('aria-disabled', 'true')
+      expect(b).toHaveAttribute('data-k-tip', HOST_LINK_MISSING)
+      expect(screen.queryByRole('link', { name: 'Перейти в блок «Ручные отклонения»' })).toBeNull()
+      await userEvent.click(b)
+      expect(spies.announce).not.toHaveBeenCalled()
+    })
   })
   it('по умолчанию свёрнуты; точка — состояние; клик по шеврону раскрывает историю и «Закрыта · кто»', async () => {
     const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
