@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { vi } from 'vitest'
@@ -112,6 +112,28 @@ describe('«Курс» в сводке 32A (спека 2e §4 п. 6, 8; Review F
     const btn = screen.getByRole('button', { name: 'Курс' })
     await userEvent.click(btn)
     await userEvent.click(screen.getByText('32A · сумма'))
+    expect(screen.queryByRole('dialog', { name: 'Курс' })).toBeNull()
+    expect(document.activeElement).toBe(btn)
+  })
+
+  it.each(['loading', 'ready'] as const)('Tab с тела поповера без остановок (%s) — поповер закрыт, фокус на «Курс», деталь открыта', async (state) => {
+    const t = renderHero({ rates: viewOf(state === 'ready' ? { state, value: RATES } : { state }) })
+    const btn = screen.getByRole('button', { name: 'Курс' })
+    await userEvent.click(btn)
+    const pop = screen.getByRole('dialog', { name: 'Курс' })
+    expect(within(pop).queryAllByRole('button')).toEqual([])
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Tab' })
+    expect(screen.queryByRole('dialog', { name: 'Курс' })).toBeNull()
+    expect(document.activeElement).toBe(btn)
+    expect(t.onEscape).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Документ' })).toBeInTheDocument()
+  })
+
+  it('Shift+Tab с тела поповера — так же: закрыт, фокус на «Курс»', async () => {
+    renderHero({ rates: viewOf({ state: 'ready', value: RATES }) })
+    const btn = screen.getByRole('button', { name: 'Курс' })
+    await userEvent.click(btn)
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Tab', shiftKey: true })
     expect(screen.queryByRole('dialog', { name: 'Курс' })).toBeNull()
     expect(document.activeElement).toBe(btn)
   })

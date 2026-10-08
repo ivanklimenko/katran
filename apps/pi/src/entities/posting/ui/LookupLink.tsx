@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Button, Popover, Skeleton, dimClass, useStableId } from '@katran/ui'
+import { Button, Popover, Skeleton, dimClass, exitOnEdgeTab, useStableId } from '@katran/ui'
 import type { LookupView } from '../../../shared/lib/detail'
 import s from './posting.module.css'
 
@@ -22,6 +22,9 @@ export type LookupLinkProps = {
  * Фокус держит само содержимое (tabIndex -1), а не первая кнопка: у скелетона и курса кнопок нет, а фокус, оставшийся на
  * ссылке внутри drawer, отдал бы Esc деталке (DrawerStack исключает только цели внутри [role="dialog"] поповера) —
  * закрылась бы деталь вместо поповера (Review Focus 5). Пропавшая кнопка («Повторить» после нажатия) фокус тоже не теряет.
+ * Tab с последней остановки, Shift+Tab с первой или с самого содержимого, Tab с содержимого без остановок (скелетон, курс)
+ * закрывают поповер с фокусом на ссылке (exitOnEdgeTab кита, как у полей дат): портал в конце документа, иначе Tab увёл бы
+ * фокус за страницу, поповер остался бы открыт, а следующий Esc закрыл бы деталь.
  */
 export function LookupLink({ label, view, framed = false, children }: LookupLinkProps) {
   const [open, setOpen] = useState(false)
@@ -65,7 +68,9 @@ export function LookupLink({ label, view, framed = false, children }: LookupLink
         {label}
       </button>
       <Popover open={open} anchor={btn} onClose={() => setOpen(false)} id={id} label={label} manualFocus className={s.lkPop}>
-        <div ref={body} tabIndex={-1} className={s.lkBody}>{children}</div>
+        <div role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, btn, () => setOpen(false))}>
+          <div ref={body} tabIndex={-1} className={s.lkBody}>{children}</div>
+        </div>
       </Popover>
     </>
   )

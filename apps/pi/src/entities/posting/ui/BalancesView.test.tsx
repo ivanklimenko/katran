@@ -162,6 +162,43 @@ describe('«Проверить баланс» в блоке «Транзакци
     expect(t.onEscape).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('Tab с «Обновить» (shift %s) — единственная остановка и первая, и последняя: поповер закрыт, фокус на ссылке', async (shiftKey) => {
+    const t = renderTx(viewOf({ state: 'ready', value: BAL }))
+    const link = screen.getByRole('button', { name: 'Проверить баланс' })
+    await userEvent.click(link)
+    const refresh = screen.getByRole('button', { name: 'Обновить' })
+    refresh.focus()
+    fireEvent.keyDown(refresh, { key: 'Tab', shiftKey })
+    expect(screen.queryByRole('dialog', { name: 'Проверить баланс' })).toBeNull()
+    expect(document.activeElement).toBe(link)
+    expect(t.onEscape).not.toHaveBeenCalled()
+  })
+
+  it('Tab с «Повторить» в ошибке — поповер закрыт, фокус на ссылке', async () => {
+    renderTx(viewOf({ state: 'error', error: 'Сеть недоступна' }))
+    const link = screen.getByRole('button', { name: 'Проверить баланс' })
+    await userEvent.click(link)
+    const retry = screen.getByRole('button', { name: 'Повторить' })
+    retry.focus()
+    fireEvent.keyDown(retry, { key: 'Tab' })
+    expect(screen.queryByRole('dialog', { name: 'Проверить баланс' })).toBeNull()
+    expect(document.activeElement).toBe(link)
+  })
+
+  it('с тела: Shift+Tab — за край (закрыт, фокус на ссылке); Tab при остановках — к первой остановке, поповер открыт', async () => {
+    renderTx(viewOf({ state: 'ready', value: BAL }))
+    const link = screen.getByRole('button', { name: 'Проверить баланс' })
+    await userEvent.click(link)
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Обновить' })).toHaveFocus()
+    expect(screen.getByRole('dialog', { name: 'Проверить баланс' })).toBeInTheDocument()
+    await userEvent.click(link)
+    await userEvent.click(link)
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Tab', shiftKey: true })
+    expect(screen.queryByRole('dialog', { name: 'Проверить баланс' })).toBeNull()
+    expect(document.activeElement).toBe(link)
+  })
+
   it('без нарушений axe: открытый поповер с ошибкой счёта и ошибкой обновления', async () => {
     const { baseElement } = renderTx(viewOf({ state: 'error', value: BAL, error: 'Остатки недоступны' }))
     await userEvent.click(screen.getByRole('button', { name: 'Проверить баланс' }))

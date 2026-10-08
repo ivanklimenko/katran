@@ -387,6 +387,41 @@ for (const [route, doc] of [['fx-docs', DOC.pending], ['rub-docs', DOC.rubPendin
   })
 }
 
+test('Tab из поповеров «Курс» (без остановок) и «Проверить баланс» (с «Обновить»): поповер закрыт, фокус в деталке сразу за ссылкой (Shift+Tab — на ссылке), деталь открыта; Esc — уже деталке', async ({ page }) => {
+  const dw = await openDoc(page, DOC.deal)
+  const inDrawer = () => dw.evaluate((el) => el.contains(document.activeElement))
+  const rates = dw.getByRole('button', { name: 'Курс', exact: true })
+  await rates.click()
+  const ratesPop = page.getByRole('dialog', { name: 'Курс', exact: true })
+  await expect(ratesPop.locator('p')).toHaveCount(3)
+  // фокус — на теле поповера (кнопок нет): Tab с него — за край
+  await page.keyboard.press('Tab')
+  await expect(ratesPop).toHaveCount(0)
+  await expect(dialogs(page)).toHaveCount(1)
+  expect(await inDrawer()).toBe(true)
+  await page.keyboard.press('Shift+Tab')
+  await expect(rates).toBeFocused()
+  // «Проверить баланс»: Tab с тела — к «Обновить», Tab с «Обновить» (последней) — за край; Shift+Tab с «Обновить» — тоже
+  const bal = dw.getByRole('button', { name: 'Проверить баланс' })
+  const balPop = page.getByRole('dialog', { name: 'Проверить баланс' })
+  for (const back of [false, true]) {
+    await bal.click()
+    await expect(balPop.getByRole('table')).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(balPop.getByRole('button', { name: 'Обновить' })).toBeFocused()
+    await page.keyboard.press(back ? 'Shift+Tab' : 'Tab')
+    await expect(balPop).toHaveCount(0)
+    await expect(dialogs(page)).toHaveCount(1)
+    expect(await inDrawer()).toBe(true)
+    await page.keyboard.press(back ? 'Tab' : 'Shift+Tab')
+    await expect(bal).toBeFocused()
+  }
+  // поповера не осталось — Esc закрывает деталь, как без поповера (дефект: открытый поповер с фокусом за страницей)
+  await page.keyboard.press('Escape')
+  await expect(dialogs(page)).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: /Курс|Проверить баланс/ })).toHaveCount(0)
+})
+
 // --- нотификации ---
 
 const rowsOf = (panel: Locator) => panel.getByRole('button', { name: /^Исходное сообщение, отправка \d+$/ })
@@ -633,7 +668,7 @@ test('?fail=notifmsg: в окне сообщения текст ошибки и 
 
 // --- слои и контраст ---
 
-test('слои: в B открыт поповер «Проверить баланс», с клавиатуры — к «Исходное сообщение» в A и Enter: окно поверх, поповер не остаётся над подложкой окна', async ({ page }) => {
+test('слои: в B открыт поповер «Проверить баланс», фокус — на «Исходное сообщение» в A (не Tab с края поповера) и Enter: окно поверх, поповер не остаётся над подложкой окна', async ({ page }) => {
   // A — документ с нотификациями (вкладка «Нотификации»), B — документ с проводками (поповер в «Общих данных»)
   await pickTab(page, await openDoc(page, DOC.notif), 'Нотификации')
   // после открытия B первым в DOM станет B — A по имени
@@ -646,15 +681,11 @@ test('слои: в B открыт поповер «Проверить балан
   await b.getByRole('button', { name: 'Проверить баланс' }).click()
   const pop = page.getByRole('dialog', { name: 'Проверить баланс' })
   await expect(pop.getByRole('table')).toBeVisible()
-  // Tab из поповера дальше по странице — до ссылки строки 1 вкладки A
+  // фокус — на ссылку строки 1 вкладки A, минуя край поповера (Tab с края теперь закрывает поповер — exitOnEdgeTab, финальная
+  // волна 2e; фокус, ушедший иначе — программно, виртуальным курсором читалки, — панель не закрывает: поповер не модальный)
   const target = a.getByRole('button', { name: 'Исходное сообщение, отправка 1' })
-  let reached = false
-  for (let i = 0; i < 200 && !reached; i++) {
-    await page.keyboard.press('Tab')
-    reached = await target.evaluate((el) => el === document.activeElement)
-  }
-  expect(reached).toBe(true)
-  // до Enter поповер открыт: Tab из него уходит по странице, панель не закрывается (поповер не модальный)
+  await target.focus()
+  await expect(target).toBeFocused()
   await expect(pop).toBeVisible()
   await page.keyboard.press('Enter')
   const win = page.getByRole('dialog', { name: 'Исходное сообщение · отправка 1' })
