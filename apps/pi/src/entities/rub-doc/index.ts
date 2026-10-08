@@ -8,4 +8,4 @@ export {
 } from './model/profiles'
 export { parseRubDocDetail } from './api/detail.mapper'
 export { RUB_DETAIL_EXAMPLE } from './api/detail.example'
-export { rubBlock, rubDocDetailDomain, rubDocSummary, rubHero, rubRowSummary, rubSection } from './ui/detail'
+export { rubBlock, rubDocDetailDomain, rubDocSummary, rubHero, rubRowSummary, rubSection, statusLabelOf } from './ui/detail'

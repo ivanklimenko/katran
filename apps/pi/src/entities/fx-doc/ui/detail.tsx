@@ -124,6 +124,9 @@ export function fxBlock(d: FxDocDetail, id: string, edit: EditContext | null = n
   return null
 }
 
+/** Подпись статуса документа («Обработан») — плашки и подсказки аннулирования, итог «пока в статусе «…»» (спека 2e §3.3). */
+export const statusLabelOf = (d: FxDoc): string => STATUS_LABEL[d.status]
+
 /** Шапка и лейн из строки реестра — до загрузки детали и при ошибке (спека 2a §4.3). */
 export function fxRowSummary(row: FxDoc): DetailSummary {
   return {

@@ -191,6 +191,9 @@ export function rubBlock(d: RubDocDetail, id: string, _edit?: EditContext | null
   return null
 }
 
+/** Подпись статуса документа («Обработан») — плашки и подсказки аннулирования, итог «пока в статусе «…»» (спека 2e §3.3). */
+export const statusLabelOf = (d: RubDoc): string => STATUS_LABEL[d.status]
+
 export function rubRowSummary(row: RubDoc): DetailSummary {
   return {
     label: `${RUB_DETAIL_TITLE} № ${row.docNumber}`,

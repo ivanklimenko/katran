@@ -5,7 +5,7 @@ import {
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
 } from '@katran/ui'
 import {
-  REASON_MAX, type ActionNotice, type ActionsView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
+  REASON_MAX, type ActionNotice, type ActionsView, type AnnulLane, type AnnulView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
   type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
@@ -35,12 +35,19 @@ export type DocDetailProps<D, Row> = {
    * домена, виды сущностей рисуют по нему кнопки-ссылки и поповеры. Нет — null, ссылок нет (демо кита).
    */
   lookupsOf?: ((docId: string) => DetailLookups) | undefined
+  /**
+   * Аннулирование документа по id (спека 2e §3.5): кнопка лейна «Аннулировать» — состояние и запуск из lane по annulInfo домена,
+   * плашка запроса — между лейном и вкладками, Prompt — в слое overlay drawer этого документа. Нет — «Аннулировать» объявляет себя заглушкой.
+   */
+  annulOf?: ((docId: string) => AnnulView) | undefined
 }
 
 type OnAction = (a: DetailAction, form?: PrintFormItem) => void
 
-/** Действия среза 2e: у модели действий их нет — и при actionsOf объявление-заглушка 2a. */
-const LATER = ['esid', 'ban']
+/** Действие без модели (служебный документ): и при actionsOf — объявление-заглушка. «Аннулировать» — своя модель (annulOf). */
+const LATER = ['esid']
+/** Объявление действия без модели при actionsOf — тот же текст, что у заглушек вкладок истории (entities/doc-trail STUB). */
+const LANE_STUB = 'Действие пока недоступно'
 /**
  * Цель keydown, где F5 остаётся браузеру: поле ввода (спека 2d §4 п. 4). Поле только для чтения (запасная ссылка) — не ввод:
  * F5 в нём — «Обновить», а не перезагрузка страницы с потерей открытых деталок (финальное ревью 2d, I3).
@@ -49,27 +56,34 @@ const FIELD = 'input:not([readonly]), textarea:not([readonly]), select, [content
 /** Подсказка запасной ссылки — видимая и описание поля. */
 const LINK_HINT = 'Скопируйте ссылку: Ctrl+C'
 
-function ActionButton({ action, onAction, pending }: { action: DetailAction; onAction: OnAction; pending: boolean }) {
+/** Состояние кнопки лейна: запрос в полёте (aria-busy), недоступна (aria-disabled), подсказка вместо подписи. */
+type ButtonState = { pending: boolean; off: boolean; hint: string | null }
+const FREE: ButtonState = { pending: false, off: false, hint: null }
+
+function ActionButton({ action, onAction, state }: { action: DetailAction; onAction: OnAction; state: ButtonState }) {
   const ref = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const menu = action.menu
+  const { pending, hint } = state
+  const off = pending || state.off
   return (
     <>
       {action.danger && <span className={s.sep} aria-hidden="true" />}
       <IconButton
         ref={ref}
         label={action.label}
-        data-k-tip={action.hotkey ? `${action.label} · ${action.hotkey}` : action.label}
+        // недоступная с причиной («Аннулировать», спека 2e §4 п. 1) — подсказка причины
+        data-k-tip={hint ?? (action.hotkey ? `${action.label} · ${action.hotkey}` : action.label)}
         className={action.danger ? s.danger : undefined}
         aria-haspopup={menu ? 'menu' : undefined}
         aria-expanded={menu ? open : undefined}
         // запрос действия в полёте (скачать, печать, ссылка) — кнопка недоступна до ответа (спека 2d §4 п. 7):
         // aria-disabled, а не disabled — Chromium снимает фокус с отключённой кнопки в body (F5 деталки и место клавиатуры
-        // терялись, Ruling R19); клик в полёте игнорируется
-        aria-disabled={pending || undefined}
+        // терялись, Ruling R19); клик в полёте и по недоступной игнорируется
+        aria-disabled={off || undefined}
         aria-busy={pending || undefined}
         onClick={() => {
-          if (pending) return
+          if (off) return
           if (menu) setOpen(true)
           else onAction(action)
         }}
@@ -85,11 +99,11 @@ function ActionButton({ action, onAction, pending }: { action: DetailAction; onA
 }
 
 /** Лейн (эталон laneHtml, index.html:1034): тег типа, статус, «название · направление», действия; «Аннулировать» — за разделителем. */
-function Lane({ summary, actions, onAction, pending }: {
+function Lane({ summary, actions, onAction, stateOf }: {
   summary: DetailSummary | null
   actions: DetailAction[]
   onAction: OnAction
-  pending: (actionId: string) => boolean
+  stateOf: (actionId: string) => ButtonState
 }) {
   return (
     <div className={s.lane} data-part="lane">
@@ -101,7 +115,7 @@ function Lane({ summary, actions, onAction, pending }: {
         </>
       )}
       <div role="group" aria-label="Действия с документом" className={s.acts}>
-        {actions.map((a) => <ActionButton key={a.id} action={a} onAction={onAction} pending={pending(a.id)} />)}
+        {actions.map((a) => <ActionButton key={a.id} action={a} onAction={onAction} state={stateOf(a.id)} />)}
       </div>
     </div>
   )
@@ -247,8 +261,6 @@ function RemoteBody({ tab, view, ctx, onRetry }: { tab: TabSlot; view: RemoteTab
   return <>{view.render(tab.data, ctx)}</>
 }
 
-const never = () => false
-
 type BodyProps<D, Row> = {
   view: DetailSlot<D>
   domain: DetailDomain<D, Row>
@@ -298,7 +310,7 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
 
 type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, focusKey, quiet }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, focusKey, quiet }: PaneProps<D, Row>) {
   const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
     detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
   ])
@@ -307,16 +319,34 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   const edit = editOf?.(view.id) ?? null
   const actions = actionsOf?.(view.id) ?? null
   const lookups = lookupsOf?.(view.id) ?? null
+  const annul = annulOf?.(view.id) ?? null
+  // доменное для аннулирования — из загруженной детали; до загрузки и при ошибке — null (кнопка недоступна, плашки нет)
+  const annulInfo = view.data !== null && domain.annulInfo ? domain.annulInfo(view.data) : null
+  const lane: AnnulLane | null = annul ? annul.lane(annulInfo) : null
+  // «плашка отклонённого запроса закрыта» — состояние drawer по ключу id + annul.when: новый запрос снова виден,
+  // закрытие деталки (размонтирование drawer) сбрасывает (спека 2e §3.5)
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null)
+  const bannerKey = annulInfo?.annul ? `${view.id}:${annulInfo.annul.when}` : null
+  const banner = annul && annulInfo ? annul.banner(annulInfo, bannerKey !== null && bannerKey === dismissedKey, () => setDismissedKey(bannerKey)) : null
+  const annulPrompt = annul ? annul.prompt(annulInfo) : null
   const row = view.data === null && rowOf ? rowOf(view.id) : null
   const summary = view.data !== null ? domain.summary(view.data) : row !== null ? domain.rowSummary(row) : null
   const label = summary?.label ?? domain.title
   const off = summary?.tabsOff ?? []
   const tabsId = `doc-detail-${view.slot}`
   const onAction: OnAction = (a, form) => {
-    if (actions && !LATER.includes(a.id)) actions.run(a, form)
-    else announce(form ? `${a.label}: ${form.label} · ${label}` : `${a.label} · ${label}`)
+    if (a.id === 'ban' && lane) {
+      if (!lane.disabled) lane.run()
+    } else if (actions && a.id !== 'ban' && !LATER.includes(a.id)) actions.run(a, form)
+    // действие без модели: при actionsOf — заглушка 2e, без него — объявление 2a (демо кита)
+    else announce(actions ? LANE_STUB : form ? `${a.label}: ${form.label} · ${label}` : `${a.label} · ${label}`)
   }
-  // один Prompt на документ: правки 2c (отмена черновика, дата валютирования) или решения второй руки
+  const stateOf = (actionId: string): ButtonState => {
+    if (actionId === 'ban' && lane) return { pending: lane.busy, off: lane.disabled, hint: lane.disabled ? lane.hint : null }
+    return actions ? { ...FREE, pending: actions.pending(actionId) } : FREE
+  }
+  // один Prompt на документ: правки 2c (отмена черновика, дата валютирования), решения второй руки или аннулирования
+  // (правка и аннулирование документа взаимно блокируются моделями — вместе не открываются)
   const decision = edit?.confirm ? null : edit?.decision ?? null
   const laneBox = useRef<HTMLDivElement>(null)
   // в момент закрытия Prompt: карандаш цели (домен), иначе заголовок drawer — фокус не уходит в body (Ruling R19)
@@ -337,13 +367,14 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
           fallbackFocus={() => decisionFocus(decision.target)}
         />
       )
-      : undefined
+      : annulPrompt ?? undefined
   const refresh = domain.actions.find((a) => a.id === 'refresh')
-  // F5 — «Обновить» (спека 2d §4 п. 4): только чистое F5, не из поля ввода, без открытого редактора и Prompt документа
+  // F5 — «Обновить» (спека 2d §4 п. 4): только чистое F5, не из поля ввода, без открытого редактора и Prompt документа (правки и аннулирования)
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'F5' || e.ctrlKey || e.altKey || e.shiftKey || e.metaKey || !actions || !refresh) return
     if (e.target instanceof Element && e.target.closest(FIELD) !== null) return
     if (edit && (edit.editing !== null || edit.confirm !== null || edit.decision !== null)) return
+    if (annulPrompt !== null && annulPrompt !== undefined) return
     e.preventDefault()
     actions.run(refresh)
   }
@@ -374,12 +405,14 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
       focusKey={focusKey}
       // R10: автооткрытие (quiet) фокус не забирает — он остаётся в реестре, как на стенде
       initialFocus={!quiet}
-      // Prompt этого документа (правка 2c или решение 2d) — поверх панели, только этого drawer
+      // Prompt этого документа (правка 2c, решение 2d, аннулирование 2e) — поверх панели, только этого drawer
       overlay={overlay}
       onKeyDown={onKeyDown}
     >
       <div ref={laneBox} className={s.laneBox}>
-        <Lane summary={summary} actions={domain.actions} onAction={onAction} pending={actions ? actions.pending : never} />
+        <Lane summary={summary} actions={domain.actions} onAction={onAction} stateOf={stateOf} />
+        {/* плашка запроса на аннулирование — под лейном, над вкладками (спека 2e §4 п. 4); уведомления действий — поверх под ней */}
+        {banner !== null && banner !== undefined && <div className={s.annul} data-part="annul-banner">{banner}</div>}
         {actions && (actions.linkFallback || actions.notice) && (
           <div className={s.under}>
             {actions.notice && <ActionNoticeBar notice={actions.notice} onClose={actions.closeNotice} />}
@@ -421,7 +454,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
 }
 
 /** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
-export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf }: DocDetailProps<D, Row>) {
+export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
@@ -430,7 +463,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, 
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} annulOf={annulOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
       })
     }
   }
