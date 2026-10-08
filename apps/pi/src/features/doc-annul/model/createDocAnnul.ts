@@ -1,6 +1,7 @@
 import { attach, createEvent, createStore, merge, sample, type Event, type EventCallable, type Store } from 'effector'
 import type { AnnulDecisionQuery, AnnulPorts, AnnulQuery, AnnulRejectQuery, ApiError } from '../../../shared/api'
 import type { AnnulState } from '../../../shared/lib/detail'
+import { stableKeySet } from '../../../shared/lib/key-set'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type AnnulPromptKind = 'annul' | 'confirm' | 'reject'
@@ -207,11 +208,12 @@ export function createDocAnnul<D extends { id: string; annul: AnnulState | null 
     .on(lost, ({ count }) => ({ count: count + 1, text: ANNUL_TEXT.refreshFailed }))
     .on(conflicted, ({ count }) => ({ count: count + 1, text: ANNUL_TEXT.conflict }))
 
-  const $busyDocs = $prompt.map((m) => {
+  // прежний объект, пока набор документов тот же: ввод причины не перерисовывает подписчиков набора
+  const $busyDocs = stableKeySet($prompt.map((m) => {
     const out: Record<string, true> = {}
     for (const id of Object.keys(m)) out[id] = true
     return out
-  })
+  }))
   const refreshNeeded = merge([conflicted, lost])
 
   return {

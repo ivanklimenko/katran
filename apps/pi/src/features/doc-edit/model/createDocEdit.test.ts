@@ -488,6 +488,25 @@ describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
 })
 
 describe('createDocEdit: взаимная блокировка с аннулированием (срез 2e)', () => {
+  it('$busyDocs — прежний объект, пока набор документов тот же: ввод в редакторе и причины решения не меняет ссылку (ревью Task 7)', async () => {
+    const t = setup()
+    const { edit, scope } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    const editing = scope.getState(edit.$busyDocs)
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref3' } })
+    expect(scope.getState(edit.$busyDocs)).toBe(editing)
+    await allSettled(edit.model.cancel, { scope })
+    await ask(t, 'reject', 'u2')
+    const deciding = scope.getState(edit.$busyDocs)
+    expect(deciding).toEqual({ u2: true })
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u2', text: 'Н' } })
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u2', text: 'Не' } })
+    expect(scope.getState(edit.$decision).u2?.reason).toBe('Не')
+    expect(scope.getState(edit.$busyDocs)).toBe(deciding)
+  })
+
   it('$busyDocs: открыт редактор, открыто решение, сохранение в полёте — документ занят; после — нет', async () => {
     const t = setup()
     const { edit, scope, saves } = t

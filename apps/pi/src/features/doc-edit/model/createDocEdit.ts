@@ -2,6 +2,7 @@ import { attach, combine, createEvent, createStore, merge, sample, type Event, t
 import { createEditModel, type EditModel, type SaveQuery } from '@katran/effector'
 import type { ApiError, AccountSide, AccountsQuery, DecisionQuery, EditPorts, EditQuery, EditValue, RejectQuery } from '../../../shared/api'
 import type { AccountsSlot, DecisionKind, DecisionState, EditConfirmView, LeaveIntent } from '../../../shared/lib/detail'
+import { stableKeySet } from '../../../shared/lib/key-set'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type DocEditConfig<D extends { id: string }> = {
@@ -313,13 +314,14 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
   const docEdited = merge([savedDoc, decidedDoc])
 
   // занятые правкой документы — обратная блокировка для аннулирования (одна операция над документом за раз)
-  const $busyDocs = combine(inner.$editing, $decision, $savingDoc, (editing, decision, savingDoc) => {
+  // прежний объект, пока набор документов тот же: черновик и причина решения не перерисовывают подписчиков набора
+  const $busyDocs = stableKeySet(combine(inner.$editing, $decision, $savingDoc, (editing, decision, savingDoc) => {
     const out: Record<string, true> = {}
     if (editing !== null) out[idOf(editing.key)] = true
     for (const id of Object.keys(decision)) out[id] = true
     if (savingDoc !== null) out[savingDoc] = true
     return out
-  })
+  }))
   const conflict = merge([savedConflict, decisionConflict])
 
   return {

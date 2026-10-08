@@ -95,6 +95,20 @@ describe('annulOutcome и константы (спека 2e §3.3, г8)', () => 
 })
 
 describe('createDocAnnul (спека 2e §3.3)', () => {
+  it('$busyDocs — прежний объект, пока набор документов тот же: ввод причины не меняет ссылку (ревью Task 7)', async () => {
+    const t = setup()
+    const { annul, scope } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await allSettled(annul.annulRequested, { scope, params: '1' })
+    const before = scope.getState(annul.$busyDocs)
+    await allSettled(annul.reasonChanged, { scope, params: { docId: '1', reason: 'Д' } })
+    await allSettled(annul.reasonChanged, { scope, params: { docId: '1', reason: 'Ду' } })
+    expect(scope.getState(annul.$prompt)['1']?.reason).toBe('Ду')
+    expect(scope.getState(annul.$busyDocs)).toBe(before)
+    await allSettled(annul.annulRequested, { scope, params: '2' })
+    expect(scope.getState(annul.$busyDocs)).toEqual({ '1': true, '2': true })
+  })
+
   it('annulRequested — Prompt; причина из пробелов — запроса нет', async () => {
     const t = setup()
     const { annul, scope } = t
