@@ -64,6 +64,23 @@ function MenuHost({ items }: { items: MenuItem[] }) {
   )
 }
 
+/** Окно открывается позже поповера (с клавиатуры, из другого места страницы): фокус уходит в окно. */
+function LaterDialogHost({ role }: { role?: 'dialog' | 'presentation' }) {
+  const [open, setOpen] = useState(false)
+  const [win, setWin] = useState(false)
+  const a = useRef<HTMLButtonElement>(null)
+  return (
+    <>
+      <button ref={a} onClick={() => setOpen(true)}>Открыть</button>
+      <button onClick={() => setWin(true)}>Окно</button>
+      {win && <Dialog open title="Исходное сообщение" onClose={() => setWin(false)} footer={<button>Закрыть окно</button>}>Текст</Dialog>}
+      <Popover open={open} anchor={a} onClose={() => setOpen(false)} label="Панель" role={role}>
+        <button>Внутри</button>
+      </Popover>
+    </>
+  )
+}
+
 describe('Popover', () => {
   it('открывается с фокусом внутрь, закрывается по Escape с возвратом фокуса', async () => {
     renderK(<PopoverHost />)
@@ -99,6 +116,41 @@ describe('Popover', () => {
     fireEvent.mouseDown(inDialog)
     fireEvent.pointerDown(screen.getByRole('dialog', { name: 'Исходное сообщение' }))
     fireEvent.keyDown(inDialog, { key: 'Escape' })
+    expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
+  })
+  it('фокус ушёл в окно, открытое поверх ([data-k-dialog]), — поповер закрывается и над подложкой окна не остаётся; список комбобокса (presentation) — нет', async () => {
+    const { unmount } = renderK(<LaterDialogHost />)
+    fireEvent.click(screen.getByText('Открыть'))
+    expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
+    // с клавиатуры: Enter на кнопке вне поповера, окно забирает фокус
+    fireEvent.click(screen.getByText('Окно'))
+    const win = screen.getByRole('dialog', { name: 'Исходное сообщение' })
+    expect(win.contains(document.activeElement)).toBe(true)
+    expect(screen.queryByRole('dialog', { name: 'Панель' })).toBeNull()
+    // фокус остался в окне — закрытие поповера его не отнимает
+    expect(win.contains(document.activeElement)).toBe(true)
+    unmount()
+
+    renderK(<LaterDialogHost role="presentation" />)
+    fireEvent.click(screen.getByText('Открыть'))
+    fireEvent.click(screen.getByText('Окно'))
+    expect(screen.getByText('Внутри')).toBeInTheDocument()
+  })
+  it('поповер внутри окна: фокус на другом элементе того же окна поповер не закрывает', () => {
+    function InDialog() {
+      const [open, setOpen] = useState(false)
+      const a = useRef<HTMLButtonElement>(null)
+      return (
+        <Dialog open title="Окно" onClose={() => undefined} footer={<button>Другая кнопка</button>}>
+          <button ref={a} onClick={() => setOpen(true)}>Открыть</button>
+          <Popover open={open} anchor={a} onClose={() => setOpen(false)} label="Панель"><button>Внутри</button></Popover>
+        </Dialog>
+      )
+    }
+    renderK(<InDialog />)
+    fireEvent.click(screen.getByText('Открыть'))
+    screen.getByText('Открыть').focus()
+    screen.getByText('Другая кнопка').focus()
     expect(screen.getByRole('dialog', { name: 'Панель' })).toBeInTheDocument()
   })
   it('returnFocus: при закрытии фокус уходит в указанный элемент, а не в якорь', async () => {
