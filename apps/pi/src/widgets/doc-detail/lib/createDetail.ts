@@ -72,6 +72,13 @@ export type Detail<D> = {
    */
   refreshDoc: EventCallable<string>
   /**
+   * Готовые данные вкладки документа (спека 2e §3.5: ответ переотправки нотификаций — содержимое вкладки целиком) — в кэш
+   * `${id}:${tab}` (ready, без ошибки, загрузка снята) без запроса; другие вкладки и деталь не трогаются. Только при открытом
+   * экране; документ может быть и не в слоте (как replaceDetail). Запрос этой вкладки, ушедший до replaceTab, своим ответом
+   * кэш не перезаписывает и ошибки не ставит (отметка вкладки, Review Focus 4 2e).
+   */
+  replaceTab: EventCallable<{ id: string; tab: string; data: unknown }>
+  /**
    * Уход из документа при guard (Р6): close/closeTop с документом в слоте, open в слот, занятый другим документом.
    * Охрана решений не принимает: спрашивать ли (черновик, сохранение в полёте — без вопроса), решает потребитель.
    */
@@ -92,7 +99,8 @@ type Load = { id: string; visit: number; epoch: number }
 type LeaveRequest = { docId: string; intent: LeaveIntent }
 type CloseIntent = Extract<LeaveIntent, { kind: 'close' }>
 type OpenIntent = Extract<LeaveIntent, { kind: 'open' }>
-type TabLoad = TabQuery & { visit: number; epoch: number }
+/** mark — отметка вкладки `${id}:${tab}` при запросе: растёт с каждым replaceTab, ответ прежней отметки — до замены. */
+type TabLoad = TabQuery & { visit: number; epoch: number; mark: number }
 type Visit = { opened: boolean; visit: number }
 type Epochs = Record<string, number>
 const tabKey = (id: string, tab: string) => `${id}:${tab}`
@@ -101,6 +109,9 @@ const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.open
 /** Ответ своего визита и эпохи документа: летевший до replaceDetail не возвращает в кэш данные до правки. */
 const fresh = (cur: Visit & { epoch: Epochs }, x: { params: { id: string; visit: number; epoch: number } }) =>
   mine(cur, x) && x.params.epoch === (cur.epoch[x.params.id] ?? 0)
+/** Ответ вкладки своего визита, эпохи документа и отметки вкладки: летевший до replaceTab не затирает замену. */
+const freshTab = (cur: Visit & { epoch: Epochs; marks: Epochs }, x: { params: TabLoad }) =>
+  fresh(cur, x) && x.params.mark === (cur.marks[tabKey(x.params.id, x.params.tab)] ?? 0)
 const entryOf = (st: DrawerStackState, id: string): DrawerEntry | null => (st.a?.id === id ? st.a : st.b?.id === id ? st.b : null)
 
 /**
@@ -206,50 +217,67 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $tabErrors.on(restale, (e, { id }) => dropDoc(e, id))
   $tabLoading.on(restale, (l, { id }) => dropDoc(l, id))
 
+  // --- готовые данные вкладки (спека 2e §3.5) ---
+  const replaceTab = createEvent<{ id: string; tab: string; data: unknown }>()
+  // как replaceDetail: только на открытом экране, документ в слоте не обязателен
+  const tabReplaced = sample({ clock: replaceTab, source: lifecycle.$opened, filter: (opened) => opened, fn: (_, x) => x })
+  // отметка вкладки: эпоха документа — общая для всех его вкладок, замене одной вкладки нужна своя
+  const $tabMarks = createStore<Epochs>({}).on(tabReplaced, (m, { id, tab }) => {
+    const k = tabKey(id, tab)
+    return { ...m, [k]: (m[k] ?? 0) + 1 }
+  })
+  const currentTab = { ...currentEpoch, marks: $tabMarks }
+  $tabCache.on(tabReplaced, (c, { id, tab, data }) => ({ ...c, [tabKey(id, tab)]: data }))
+  $tabErrors.on(tabReplaced, (e, { id, tab }) => without(e, tabKey(id, tab)))
+  // загрузка снимается сразу: старый запрос её уже не снимет (его finally отбросит отметка)
+  $tabLoading.on(tabReplaced, (l, { id, tab }) => without(l, tabKey(id, tab)))
+
   if (tabFx) {
     // своя копия порта, как у детали; порту уходит только { id, tab }
     const loadTabFx = attach({ effect: tabFx, mapParams: (p: TabLoad): TabQuery => ({ id: p.id, tab: p.tab }) })
-    type Need = { cache: Record<string, unknown>; loading: Record<string, true> }
+    type Need = { cache: Record<string, unknown>; loading: Record<string, true>; marks: Epochs }
     // вкладку грузим, если она нелокальная, её нет в кэше и она уже не грузится (ошибка — не препятствие: повторный выбор = повтор)
     const need = ({ cache, loading }: Need, e: DrawerEntry | null): boolean => {
       if (e === null || !remote(e.tab)) return false
       const k = tabKey(e.id, e.tab)
       return !(k in cache) && !(k in loading)
     }
-    const load = (e: DrawerEntry | null, visit: number, epoch: Epochs): TabLoad => {
+    const load = (e: DrawerEntry | null, visit: number, epoch: Epochs, marks: Epochs): TabLoad => {
       const id = e?.id ?? ''
-      return { id, tab: e?.tab ?? '', visit, epoch: epochOf(epoch, id) }
+      const tab = e?.tab ?? ''
+      return { id, tab, visit, epoch: epochOf(epoch, id), mark: marks[tabKey(id, tab)] ?? 0 }
     }
     // вкладка стала активной в слоте: setTab, открытие, сдвиг B в A. $a/$b обновляются только при смене своей записи —
     // открытие B и переключение вкладки в B запись A не трогают. Деталь не ждём: эндпоинт вкладки самостоятелен (§3.1)
     sample({
       clock: merge([stack.$a.updates, stack.$b.updates]),
-      source: { cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
+      source: { cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch, marks: $tabMarks },
       filter: need,
-      fn: ({ visit, epoch }, e) => load(e, visit, epoch),
+      fn: ({ visit, epoch, marks }, e) => load(e, visit, epoch, marks),
       target: loadTabFx,
     })
     // replaceDetail и refreshDoc: активная нелокальная вкладка этого документа — заново (кэш уже сброшен редьюсером выше)
     sample({
       clock: restale,
-      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch, marks: $tabMarks },
       filter: (src, { id }) => need(src, entryOf(src.st, id)),
-      fn: ({ st, visit, epoch }, { id }) => load(entryOf(st, id), visit, epoch),
+      fn: ({ st, visit, epoch, marks }, { id }) => load(entryOf(st, id), visit, epoch, marks),
       target: loadTabFx,
     })
     sample({
       clock: retryTab,
-      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch },
+      source: { st: stack.$stack, cache: $tabCache, loading: $tabLoading, visit: $visit, epoch: $epoch, marks: $tabMarks },
       filter: (src, slot) => need(src, src.st[slot]),
-      fn: ({ st, visit, epoch }, slot) => load(st[slot], visit, epoch),
+      fn: ({ st, visit, epoch, marks }, slot) => load(st[slot], visit, epoch, marks),
       target: loadTabFx,
     })
     // счётчик визитов — тот же, что у детали; внутри визита дубли исключает карта загрузок,
     // а ответ другой вкладки при быстром переключении ложится в кэш своего ключа
-    // эпоха и на finally: загрузку ключа после replaceDetail держит уже новый запрос — старый её не снимает
-    const tabDone = sample({ clock: loadTabFx.done, source: currentEpoch, filter: fresh, fn: (_, x) => x })
-    const tabFailed = sample({ clock: loadTabFx.fail, source: currentEpoch, filter: fresh, fn: (_, x) => x })
-    const tabSettled = sample({ clock: loadTabFx.finally, source: currentEpoch, filter: fresh, fn: (_, x) => x })
+    // эпоха и на finally: загрузку ключа после replaceDetail держит уже новый запрос — старый её не снимает;
+    // отметка вкладки — то же для replaceTab: ответ, ушедший до замены, кэш не затирает и ошибки не ставит
+    const tabDone = sample({ clock: loadTabFx.done, source: currentTab, filter: freshTab, fn: (_, x) => x })
+    const tabFailed = sample({ clock: loadTabFx.fail, source: currentTab, filter: freshTab, fn: (_, x) => x })
+    const tabSettled = sample({ clock: loadTabFx.finally, source: currentTab, filter: freshTab, fn: (_, x) => x })
     $tabLoading
       .on(loadTabFx, (l, p) => ({ ...l, [tabKey(p.id, p.tab)]: true }))
       .on(tabSettled, (l, { params }) => without(l, tabKey(params.id, params.tab)))
@@ -331,6 +359,7 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
   $tabCache.reset(lifecycle.pageClosed)
   $tabErrors.reset(lifecycle.pageClosed)
   $tabLoading.reset(lifecycle.pageClosed)
+  $tabMarks.reset(lifecycle.pageClosed)
   $expanded.reset(lifecycle.pageClosed)
 
   type Maps = { cache: Record<string, D>; errors: Record<string, string>; tabCache: Record<string, unknown>; tabErrors: Record<string, string> }
@@ -368,6 +397,6 @@ export function createDetail<D>(cfg: DetailConfig<D>): Detail<D> {
     stack, $slots, $marks, $focus, $quiet,
     open, close, closeTop, setTab: stack.setTab, retry,
     retryTab, $expanded, setExpanded,
-    replaceDetail, reloadDetail, refreshDoc, leaveRequested, leave,
+    replaceDetail, reloadDetail, refreshDoc, replaceTab, leaveRequested, leave,
   }
 }
