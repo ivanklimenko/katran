@@ -8,7 +8,7 @@ import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
 import { groupAccount } from '../model/account'
 import type { FxDocDetail } from '../model/detail'
 import { currentOf, fieldTarget, isChanged, originalOf, type FxHistEntry } from '../model/edit'
-import { fxEditRule, fxEditableTargets, swiftFieldInvalid } from '../model/rules'
+import { fxEditRule, fxEditableTargets, fxViewOnly, swiftFieldInvalid } from '../model/rules'
 import { FX_FIELDS } from '../model/swift'
 import e from './edit.module.css'
 
@@ -73,8 +73,11 @@ function useLatest<T>(value: T) {
 }
 
 type EditedView = { tip: string } | null
-/** Заблокированный документ — только просмотр (Д66): ни карандашей, ни ↺, ни редакторов; маркеры и подсказки остаются. */
-const lockedOf = (d: FxDocDetail) => d.lock !== null
+/**
+ * Только просмотр — заблокирован (Д66) или аннулирование ожидает утверждения либо исполнено (спека 2e §1.3): ни карандашей,
+ * ни ↺, ни редакторов, ни кнопок решения; маркеры и подсказки остаются.
+ */
+const lockedOf = fxViewOnly
 
 /**
  * Изменённая строковая цель: «Было {was} · {who}, {when}» (эталон txtRowHtml/accRowHtml) — исходное и последняя действующая

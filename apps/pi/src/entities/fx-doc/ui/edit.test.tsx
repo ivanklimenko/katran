@@ -145,6 +145,25 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     }
   })
 
+  it('аннулирование pending или done — только просмотр, как блокировка: ни карандашей полей, 20 исх, счетов и даты, ни ↺, ни редакторов (спека 2e §1.3; найдено e2e Task 13)', () => {
+    const annul = { who: 'Вы', when: '2026-09-23T11:00:00', reason: 'Дубликат', by: null, at: null, rejectReason: null, canConfirm: false }
+    const edits = { ...d.edits, refOut: { now: 'FX1', canConfirm: false, hist: [entry({ was: '', now: 'FX1' })] } }
+    for (const status of ['pending', 'done'] as const) {
+      const doc: FxDocDetail = { ...d, refOut: 'FX1', edits, annul: { ...annul, status } }
+      for (const editing of [null, 'refOut', 'accKt', 'valueDate', 'field:57']) {
+        const { unmount } = renderEdit(doc, ctx({ editing, draft: editing === 'field:57' ? d.fields['57']! : 'FX1' }))
+        expect(screen.queryAllByRole('button', { name: /^(Редактировать поле|Изменить|Вернуть исходное)/ }), `${status} ${String(editing)}`).toHaveLength(0)
+        expect(document.querySelector('[data-k-edit]'), `${status} ${String(editing)}`).toBeNull()
+        unmount()
+      }
+    }
+    // отклонённый запрос правку не запрещает
+    const rejected: FxDocDetail = { ...d, annul: { ...annul, status: 'rejected', by: 'Вы', at: '2026-09-23T11:10:00', rejectReason: 'Нужен' } }
+    renderEdit(rejected, ctx())
+    expect(screen.getByRole('button', { name: 'Изменить 20 исх' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Изменить счёт Кт' })).toBeInTheDocument()
+  })
+
   it('счёт Кт: подсказка «Только из карточки клиента · USD · 6 сч.»; выбор — change(счёт) и save; ошибка загрузки — «Повторить»', async () => {
     const items = ['40817840100050017762', '40817840200050017763', '40817840300050017764', '40817840400050017765', '40817840500050017766', '40817840600050017767']
       .map((account) => ({ account, ccy: 'USD', kind: 'Текущий' }))
