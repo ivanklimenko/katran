@@ -79,6 +79,21 @@ describe('Dialog (спека 2e §2.1)', () => {
     expect(screen.getByRole('button', { name: 'Скопировать' })).toHaveFocus()
   })
 
+  it('ссылка с tabindex="-1" — не в ловушке: ни первый фокус, ни остановка Tab', async () => {
+    renderK(
+      <Dialog open title="Окно" onClose={vi.fn()} footer={<Footer onClose={vi.fn()} />}>
+        <a href="#doc" tabIndex={-1}>Документ</a>
+      </Dialog>,
+    )
+    const copy = screen.getByRole('button', { name: 'Скопировать' })
+    expect(copy).toHaveFocus()
+    screen.getByRole('button', { name: 'Закрыть' }).focus()
+    await userEvent.tab()
+    expect(copy).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(screen.getByRole('button', { name: 'Закрыть' })).toHaveFocus()
+  })
+
   it('Esc → onClose один раз, обработчик keydown на родителе не вызван', async () => {
     const onClose = vi.fn()
     const parent = vi.fn()

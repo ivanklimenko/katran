@@ -45,8 +45,8 @@ export type DialogFrameProps = DialogProps & {
   watchKey?: boolean | undefined
 }
 
-/** Фокусируемые элементы окна (ловушка Tab): поля, кнопки, ссылки и элементы с неотрицательным tabindex, кроме недоступных. */
-const FOCUSABLE = 'input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])'
+/** Фокусируемые элементы окна (ловушка Tab): поля, кнопки, ссылки (кроме tabindex="-1") и элементы с неотрицательным tabindex, кроме недоступных. */
+const FOCUSABLE = 'input, textarea, select, button, a[href]:not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])'
 const focusables = (box: HTMLElement): HTMLElement[] =>
   Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !(el as HTMLButtonElement).disabled && el.getAttribute('type') !== 'hidden')
 
