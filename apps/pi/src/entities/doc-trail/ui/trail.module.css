@@ -62,13 +62,24 @@
   cursor: pointer;
 }
 
-.lnk:hover {
-  text-decoration: underline;
-}
-
 .lnk:focus-visible {
   outline: 2px solid var(--k-val);
   outline-offset: 1px;
+}
+
+.lnk:hover:not([aria-disabled="true"]) {
+  text-decoration: underline;
+}
+
+/* недоступна, но держит фокус (как Button кита): переотправка документа в полёте */
+.lnk[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lnkPair {
+  display: inline-flex;
+  gap: var(--k-sp-3);
 }
 
 .lnkMono {

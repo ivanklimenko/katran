@@ -1,0 +1,17 @@
+/* Окно «Исходное сообщение»: ошибка загрузки — текст и «Повторить» в строку (как отказ поповеров деталки) */
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--k-sp-2);
+  color: var(--k-bad);
+}
+
+/* Текст только для чтения с экрана («Загрузка» у скелетона) */
+.sr {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

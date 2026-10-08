@@ -6,7 +6,7 @@ import {
 } from '@katran/ui'
 import {
   type ActionNotice, type ActionsView, type AnnulLane, type AnnulView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
-  type PrintFormItem, type RemoteTabView, type TabContext,
+  type NotifView, type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
 import { ReasonField } from '../../../shared/ui'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
@@ -41,6 +41,11 @@ export type DocDetailProps<D, Row> = {
    * плашка запроса — между лейном и вкладками, Prompt — в слое overlay drawer этого документа. Нет — «Аннулировать» объявляет себя заглушкой.
    */
   annulOf?: ((docId: string) => AnnulView) | undefined
+  /**
+   * Нотификации документа по id (спека 2e §3.5): переотправка и окно «Исходное сообщение» — полями resend, resendBusy, openMessage
+   * TabContext вкладок. Нет — полей нет, вкладка «Нотификации» ведёт себя как в 2b (объявление-заглушка).
+   */
+  notifOf?: ((docId: string) => NotifView) | undefined
 }
 
 type OnAction = (a: DetailAction, form?: PrintFormItem) => void
@@ -292,7 +297,7 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
 
 type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, focusKey, quiet }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf, focusKey, quiet }: PaneProps<D, Row>) {
   const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
     detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
   ])
@@ -302,6 +307,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   const actions = actionsOf?.(view.id) ?? null
   const lookups = lookupsOf?.(view.id) ?? null
   const annul = annulOf?.(view.id) ?? null
+  const notif = notifOf?.(view.id) ?? null
   // доменное для аннулирования — из загруженной детали; до загрузки и при ошибке — null (кнопка недоступна, плашки нет)
   const annulInfo = view.data !== null && domain.annulInfo ? domain.annulInfo(view.data) : null
   const lane: AnnulLane | null = annul ? annul.lane(annulInfo) : null
@@ -375,6 +381,8 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
     announce,
     expanded: expanded[keyOf(tab)] ?? null,
     setExpanded: (keys) => setExpanded({ id: view.id, tab, keys }),
+    // нотификации (срез 2e) — только если страница передала notifOf
+    ...(notif ? { resend: notif.resend, resendBusy: notif.resendBusy, openMessage: notif.openMessage } : {}),
   })
   return (
     <Drawer
@@ -436,7 +444,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
 }
 
 /** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
-export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf }: DocDetailProps<D, Row>) {
+export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
@@ -445,7 +453,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, 
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} annulOf={annulOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} annulOf={annulOf} notifOf={notifOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
       })
     }
   }

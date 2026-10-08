@@ -12,12 +12,23 @@ export type LinkButtonProps = {
   /** Доступное имя, если видимого текста мало («Исходное сообщение, отправка 2»); видимый текст — его начало. */
   label?: string | undefined
   mono?: boolean | undefined
+  /** Недоступна (aria-disabled — держит фокус, клик игнорируется): переотправка документа в полёте. */
+  disabled?: boolean | undefined
+  /** Действие этой кнопки в полёте — aria-busy. */
+  busy?: boolean | undefined
 }
 
-/** Ссылка-кнопка вкладки (эталон a.lnk): заглушки 2d и переход к связанному документу. */
-export function LinkButton({ children, onClick, label, mono }: LinkButtonProps) {
+/** Ссылка-кнопка вкладки (эталон a.lnk): заглушки, переход к связанному документу, переотправка и исходное сообщение нотификации. */
+export function LinkButton({ children, onClick, label, mono, disabled = false, busy = false }: LinkButtonProps) {
   return (
-    <button type="button" className={[s.lnk, mono ? s.lnkMono : ''].filter(Boolean).join(' ')} aria-label={label} onClick={onClick}>
+    <button
+      type="button"
+      className={[s.lnk, mono ? s.lnkMono : ''].filter(Boolean).join(' ')}
+      aria-label={label}
+      aria-disabled={disabled || undefined}
+      aria-busy={busy || undefined}
+      onClick={() => { if (!disabled) onClick() }}
+    >
       {children}
     </button>
   )

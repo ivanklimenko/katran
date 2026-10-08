@@ -5,7 +5,7 @@ import { Banner, Prompt } from '@katran/ui'
 import { createEffect, createEvent, createStore } from 'effector'
 import { useUnit } from 'effector-react'
 import { ApiError, type TabQuery } from '../../../shared/api'
-import { remoteTab, type ActionsView, type AnnulInfo, type AnnulView, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
+import { remoteTab, type ActionsView, type AnnulInfo, type AnnulView, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext, type LocalTabView, type NotifView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
 import { createDetail } from '../lib/createDetail'
@@ -65,6 +65,7 @@ function setup(
   opts: {
     domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext; actionsOf?: ((docId: string) => ActionsView) | undefined
     lookupsOf?: ((docId: string) => DetailLookups) | undefined; annulOf?: ((docId: string) => AnnulView) | undefined
+    notifOf?: ((docId: string) => NotifView) | undefined
   } = {},
 ) {
   const detailFx = createEffect<string, Doc, ApiError>(handler)
@@ -74,7 +75,7 @@ function setup(
   const utils = renderK(
     <>
       <button type="button">Кнопка открытия</button>
-      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} lookupsOf={opts.lookupsOf} annulOf={opts.annulOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
+      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} lookupsOf={opts.lookupsOf} annulOf={opts.annulOf} notifOf={opts.notifOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
     </>,
   )
   act(() => { lifecycle.pageOpened() })
@@ -437,6 +438,58 @@ describe('DocDetail: справочные запросы (спека 2e §3.5)',
     expect(await screen.findByText('Блок b1')).toBeInTheDocument()
     expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null, null)
     expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null, null)
+  })
+})
+
+describe('DocDetail: нотификации (спека 2e §3.5)', () => {
+  // вкладка «Связанные» как «Нотификации»: показывает и вызывает поля TabContext переотправки и окна сообщения
+  const notifTab = remoteTab<Rows>({
+    render: (_data, ctx) => (
+      <div data-part="notif" data-busy={String(ctx.resendBusy)}>
+        {ctx.resend && <button type="button" onClick={() => ctx.resend?.()}>Переотправить все</button>}
+        {ctx.resend && <button type="button" onClick={() => ctx.resend?.('n2', 2)}>Переотправить, отправка 2</button>}
+        {ctx.openMessage && <button type="button" onClick={() => ctx.openMessage?.('n2', 2)}>Исходное сообщение, отправка 2</button>}
+      </div>
+    ),
+  })
+  const notifDomain: DetailDomain<Doc, Doc> = { ...domain, tabViews: { ...domain.tabViews, linked: notifTab } }
+
+  it('notifOf: TabContext получает resend, resendBusy, openMessage своего документа', async () => {
+    const calls: unknown[][] = []
+    const notifOf = (id: string): NotifView => ({
+      resend: (...a) => calls.push([id, 'resend', ...a]),
+      resendBusy: id === 'd2',
+      openMessage: (...a) => calls.push([id, 'open', ...a]),
+    })
+    const { open, detail } = setup(undefined, undefined, { domain: notifDomain, notifOf })
+    open('d1')
+    open('d2', true)
+    act(() => { detail.setTab({ slot: 'a', tab: 'linked' }) })
+    act(() => { detail.setTab({ slot: 'b', tab: 'linked' }) })
+    // часть вкладки — в drawer своего документа (порядок drawer в DOM — забота DrawerStack)
+    const partOf = (name: string) => screen.getByRole('dialog', { name }).querySelector<HTMLElement>('[data-part="notif"]')
+    await waitFor(() => expect(document.querySelectorAll('[data-part="notif"]')).toHaveLength(2))
+    const a = partOf('Платёжная инструкция № 417')
+    const b = partOf('Платёжная инструкция № 418')
+    expect(a).toHaveAttribute('data-busy', 'false')
+    expect(b).toHaveAttribute('data-busy', 'true')
+    await userEvent.click(within(a!).getByRole('button', { name: 'Переотправить все' }))
+    await userEvent.click(within(b!).getByRole('button', { name: 'Переотправить, отправка 2' }))
+    await userEvent.click(within(a!).getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
+    expect(calls).toEqual([['d1', 'resend'], ['d2', 'resend', 'n2', 2], ['d1', 'open', 'n2', 2]])
+  })
+
+  it('без notifOf — полей в TabContext нет (вкладка как в 2b)', async () => {
+    const { open, detail } = setup(undefined, undefined, { domain: notifDomain })
+    open('d1')
+    act(() => { detail.setTab({ slot: 'a', tab: 'linked' }) })
+    const part = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-part="notif"]')
+      expect(el).not.toBeNull()
+      return el as HTMLElement
+    })
+    expect(part).toHaveAttribute('data-busy', 'undefined')
+    expect(within(part).queryAllByRole('button')).toHaveLength(0)
   })
 })
 
