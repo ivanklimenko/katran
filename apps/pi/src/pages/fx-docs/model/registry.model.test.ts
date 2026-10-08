@@ -92,7 +92,8 @@ describe('страница fx-docs: вкладки деталки (спека 2b
 })
 
 describe('страница fx-docs: правка деталки (план 2c, Task 12)', () => {
-  const doc = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+  // пример детали — с ожидающим аннулированием (только просмотр, fxViewOnly); для правки — документ без аннулирования
+  const doc = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
   /** Экран со счётчиками запросов детали и реестра; saveEditFx — свой обработчик. */
   function page(save: (q: EditQuery) => Promise<FxDocDetail>, load: (id: string, n: number) => FxDocDetail = (id) => ({ ...doc, id })) {
     const calls = { detail: [] as string[], search: 0 }

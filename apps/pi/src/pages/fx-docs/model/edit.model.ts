@@ -1,5 +1,5 @@
 import { createStore, sample } from 'effector'
-import { FX_CONFIRM_TARGETS, fxEditPorts, normalizeFxEdit, sameEditValue, validateFxEdit } from '../../../entities/fx-doc'
+import { FX_CONFIRM_TARGETS, fxEditPorts, fxViewOnly, normalizeFxEdit, sameEditValue, validateFxEdit } from '../../../entities/fx-doc'
 import { createDocEdit, editScope } from '../../../features/doc-edit'
 import { detail, lifecycle, registry } from './registry.model'
 
@@ -32,12 +32,13 @@ sample({ clock: docEdit.docEdited, target: detail.replaceDetail })
 sample({ clock: docEdit.docEdited, target: registry.refreshRequested })
 // 409: документ изменили — деталь перезапрашивается, редактор с черновиком остаётся
 sample({ clock: docEdit.conflict, fn: ({ id }) => id, target: detail.reloadDetail })
-// документ пришёл заблокированным (перезапрос по 409) — только просмотр (Д66): вид редактор не рисует, модель его закрывает,
-// иначе невидимый грязный черновик держал бы Prompt «Отменить правку?» при уходе
+// документ пришёл только для просмотра (перезапрос по 409, свежая деталь): только просмотр = fxViewOnly (lock — Д66, или
+// аннулирование ожидает утверждения либо исполнено — спека 2e §1.3). Вид редактор не рисует, модель его закрывает, иначе
+// невидимый грязный черновик держал бы Prompt «Отменить правку?» при уходе и документ — в $busyDocs
 sample({
   source: { slots: detail.$slots, editing: docEdit.model.$editing },
   filter: ({ slots, editing }) => editing !== null
-    && [slots.a, slots.b].some((s) => s !== null && s.data !== null && s.data.lock !== null && editing.key.startsWith(editScope(s.id))),
+    && [slots.a, slots.b].some((s) => s !== null && s.data !== null && fxViewOnly(s.data) && editing.key.startsWith(editScope(s.id))),
   target: docEdit.model.cancel,
 })
 

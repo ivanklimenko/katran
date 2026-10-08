@@ -8,7 +8,8 @@ import { balances, fxBalancesFx, rates } from './lookups.model'
 import { docNotif, fxNotifPorts } from './notif.model'
 import { detail, lifecycle, registry } from './registry.model'
 
-const doc = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+// пример детали — с ожидающим аннулированием (только просмотр, fxViewOnly); для правки — документ без аннулирования
+const doc = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
 const RATES: Rates = { cb: { rate: '92.5', date: '2026-10-01', rub: '925000.00' }, deal: null }
 const BALANCES: Balances = { asOf: '2026-10-01T10:00:00Z', items: [] }
 const conflict = () => new ApiError(409, { type: 'urn:katran:x', title: 'Конфликт', status: 409 }, 'Конфликт')
@@ -157,6 +158,36 @@ describe('страница fx-docs: взаимная блокировка анн
     // Prompt закрыт — блокировка снята
     await allSettled(docAnnul.promptResult, { scope, params: { docId: 'u1', ok: false } })
     expect(scope.getState(docEdit.$blockedDocs)).toEqual({})
+    await allSettled(lifecycle.pageClosed, { scope })
+  })
+})
+
+describe('страница fx-docs: только просмотр при аннулировании снаружи (fxViewOnly, спека 2e §1.3)', () => {
+  const pendingAnnul = {
+    status: 'pending' as const, who: 'Петров А. С.', when: '2026-10-01T10:00:00', reason: 'Дубль',
+    by: null, at: null, rejectReason: null, canConfirm: false,
+  }
+
+  it.each(['pending', 'done'] as const)('открыт грязный редактор, деталь пришла с annul: %s — редактор закрыт, документ не занят', async (status) => {
+    const { scope } = page()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await openDoc(scope, 'u1')
+    await allSettled(docEdit.model.open, { scope, params: { key: 'u1:refOut', initial: currentOf(doc, 'refOut') } })
+    await allSettled(docEdit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ДРУГОЙ-20' } })
+    expect(scope.getState(docEdit.model.$editing)).not.toBeNull()
+    await allSettled(detail.replaceDetail, { scope, params: { id: 'u1', detail: { ...doc, id: 'u1', annul: { ...pendingAnnul, status } } } })
+    expect(scope.getState(docEdit.model.$editing)).toBeNull()
+    expect(scope.getState(docEdit.$busyDocs)).toEqual({})
+    await allSettled(lifecycle.pageClosed, { scope })
+  })
+
+  it('аннулирование отклонено — правка разрешена, редактор остаётся', async () => {
+    const { scope } = page()
+    await allSettled(lifecycle.pageOpened, { scope })
+    await openDoc(scope, 'u1')
+    await allSettled(docEdit.model.open, { scope, params: { key: 'u1:refOut', initial: currentOf(doc, 'refOut') } })
+    await allSettled(detail.replaceDetail, { scope, params: { id: 'u1', detail: { ...doc, id: 'u1', annul: { ...pendingAnnul, status: 'rejected' } } } })
+    expect(scope.getState(docEdit.model.$editing)).toMatchObject({ key: 'u1:refOut' })
     await allSettled(lifecycle.pageClosed, { scope })
   })
 })
