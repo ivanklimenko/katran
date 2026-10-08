@@ -809,7 +809,7 @@ describe('createDetail: replaceTab (спека 2e §3.5, Review Focus 4)', () =>
     tabCalls[0]!.ok({ rows: ['старый GET'] })
     await tick()
     expect(a()?.tabView).toEqual({ state: 'ready', data: { rows: ['переотправка'] }, error: null })
-    // второй летящий запрос (после retry ошибки и т. п.) отказом тоже не пишет
+    // уход на другую вкладку и возврат: notif — из кэша replaceTab, нового запроса notif нет (ушёл только audit)
     tab('a', 'audit')
     tab('a', 'notif')
     await tick()

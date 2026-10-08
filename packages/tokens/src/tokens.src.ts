@@ -114,7 +114,8 @@ export const sizes: Record<string, number> = {
   'fe-line': 21, 'fe-pt': 7, 'fe-px': 9, 'fe-pb': 8, 'fe-box-py': 5, 'fe-box-px': 7, 'fe-gap': 10, 'opt-btn': 18, 'opt-min': 22,
   'h-inline': 22, 'fs-edit': 12, 'sug-row': 24, 'sug-w': 320, 'sug-tag': 34, 'sug-kind': 120,
   'pen': 17, 'mark-dot': 6, 'fs-mark': 8, 'edit-dot': 8,
-  // окно Dialog размера l поверх деталки (спека 2e §2.1, «Исходное сообщение»): 640 — помещается в drawer 800 с отступами подложки
+  // окно Dialog размера l (спека 2e §2.1, «Исходное сообщение»): 640 — окно сообщения центрируется по экрану в слое окон
+  // страницы (--k-z-modal, NotifOverlay), а не в drawer
   'dialog-l': 640,
 }
 
