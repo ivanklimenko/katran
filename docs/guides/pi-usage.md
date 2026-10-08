@@ -14,10 +14,13 @@ apps/pi/src/
   pages/          fx-docs, rub-docs — экраны (модель реестра и деталки + компонент страницы)
   widgets/        doc-registry — «грид + фильтры + лейн + жизненный цикл» как единый блок;
                   doc-detail — деталка документа: drawer A/B, шапка, лейн, вкладки, «Общие данные» (раздел 13)
-  features/       doc-edit — правка документа в деталке: модель правки, счета, контекст правки для деталки (раздел 14)
+  features/       doc-edit — правка документа в деталке: модель правки, счета, контекст правки для деталки (раздел 14);
+                  doc-actions — действия лейна (раздел 15); doc-annul, doc-lookups, doc-notif — аннулирование, курс и остатки,
+                  нотификации (раздел 16)
   entities/       fx-doc, rub-doc, doc-status, doc-trail, posting — типы документов, порты (searchFx/facetsFx/filterMetaFx/detailFx/tabFx;
                   у валюты ещё fxEditPorts — saveEditFx/accountsFx, раздел 14), раскладка колонок, профили деталки, проводки
-  shared/         api (транспорт requestFx, контракт grid-contract.ts, guards, problem), lib (lifecycle, detail, test)
+  shared/         api (транспорт requestFx, контракт grid-contract.ts, guards, problem, порты правки, действий и операций),
+                  lib (lifecycle, detail, doc-link, host-links, key-set, test), ui (ReasonField — с 2e)
 ```
 
 **Шов между нашим кодом и вашим бекендом — один эффект**, `requestFx` (`apps/pi/src/shared/api/request.ts`). Всё выше него (`entities`, `widgets`, `pages`) не знает про `fetch`/`axios`/адрес бека — оно вызывает `requestFx` и получает `unknown`, который сам же и разбирает по контракту (`shared/api/grid-contract.ts`). Всё, что нужно для переноса — подключить свой обработчик этого эффекта (раздел 4) и, если состав строки бека отличается от `docs/reference/pi-api.md`, поправить два файла мапперов (раздел 6).
@@ -101,7 +104,7 @@ export const requestFx = createEffect<HttpRequest, unknown, ApiError>(...)
 requestFx.use(myHandler)
 ```
 
-**Правило обработчика**: 2xx-ответ → разобранный JSON (или `null`/`undefined`, если тела нет); не 2xx → отказ (`throw`) значением `toApiError(status, body)` из `apps/pi/src/shared/api/problem.ts`. `toApiError` сам распознаёт тело в формате Problem Details (RFC 9457, `docs/reference/pi-api.md` §2) и собирает читаемое сообщение; если тело не Problem Details — подставляет заглушку по коду статуса.
+**Правило обработчика**: 2xx-ответ → разобранный JSON, а если тела нет (`202`/`204` — команды аннулирования, раздел 16.1) — `null`; не 2xx → отказ (`throw`) значением `toApiError(status, body)` из `apps/pi/src/shared/api/problem.ts`. `toApiError` сам распознаёт тело в формате Problem Details (RFC 9457, `docs/reference/pi-api.md` §2) и собирает читаемое сообщение; если тело не Problem Details — подставляет заглушку по коду статуса.
 
 Файлы (сообщение документа, печатная форма) идут вторым эффектом — `requestFileFx` со своим обработчиком: раздел 15.4.
 
@@ -474,7 +477,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
 - Shift+клик — в B сразу; Enter/Space на кнопке — в A сразу.
 - Документ, уже открытый в A или B, повторно не открывается — фокус переходит в его drawer.
 - Esc или «×» — закрывает сначала B, потом A; фокус возвращается на кнопку открытия записи (`returnFocus`), если был в закрытом drawer'е (13.2). Закрытие A «×» при открытом B: B сдвигается в A, фокус — в заголовок оставшегося drawer'а, а не в грид (R11). Esc в поле ввода, в меню и в поповере drawer не закрывает — у них Esc свой (меню «••• N» вкладок закрывается, деталка остаётся). Видимый тултип тоже забирает Esc первым: первое нажатие прячет подсказку, второе закрывает drawer. Пока деталка открыта, Esc из интерактивного элемента внутри ячейки грида тоже закрывает drawer (без деталки он возвращает фокус в ячейку).
-- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d (раздел 15). Кнопки вкладок 2b («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — тоже заглушки: `announce` «Действие будет в 2d».
+- Действия лейна в 2a — заглушки: объявляют действие через `announce`, как массовые действия реестра; настоящие — срез 2d (раздел 15). Кнопки вкладок 2b («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — тоже заглушки: `announce` «Действие будет в 2d». С 2e переотправка, исходное сообщение и переход к ручным отклонениям — настоящие (раздел 16), заглушкой с текстом «Действие пока недоступно» осталась «История».
 - Раскрываемые строки вкладок («Связанные», «Задачи») — мышью и Enter/Space на шевроне, `aria-expanded`; клик по ссылке или кнопке внутри строки её не раскрывает. ID связанного документа — ссылка-кнопка «Открыть … в соседней панели»: документ открывается в B (уже открытый — фокус в его drawer). Esc внутри `CodeView` и раскрытых строк не перехватывается — работает, как в остальной деталке.
 
 ### 13.6. Как проверить
@@ -643,7 +646,7 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 
 ## 15. Действия лейна и «вторая рука» (срез 2d)
 
-Кнопки лейна деталки делают настоящую работу, а чужую правку можно утвердить или отклонить. Лейн — шесть действий: «Обновить» (и F5), «Создать служебный документ», «Скачать» (SWIFT-сообщение у валюты, сообщение ED XML у рубля), «Печать» (меню форм), «Скопировать ссылку на документ», «Аннулировать»; «Редактировать» убран — правка идёт карандашами. «Создать служебный документ» и «Аннулировать» остаются заглушками с `announce` до среза 2e. «Вторая рука» — у цели правки, где бек вернул `canConfirm`: «Утвердить» и «Отклонить» (с обязательной причиной до 140 символов). Спека — `docs/superpowers/specs/2026-10-07-katran-lane-actions-design.md` (уточнения исполнения — её §9); эндпоинты для бека — `docs/reference/pi-api.md` §1.7 (решения `confirm`/`reject`), §1.9 (сообщение), §1.10 (печать), правки в детали с `canConfirm`/`reason` — §7.6; сверка с эталоном — `docs/reference/detail-drift.md`, раздел «2d».
+Кнопки лейна деталки делают настоящую работу, а чужую правку можно утвердить или отклонить. Лейн — шесть действий: «Обновить» (и F5), «Создать служебный документ», «Скачать» (SWIFT-сообщение у валюты, сообщение ED XML у рубля), «Печать» (меню форм), «Скопировать ссылку на документ», «Аннулировать»; «Редактировать» убран — правка идёт карандашами. «Создать служебный документ» и «Аннулировать» остаются заглушками с `announce` до среза 2e (в 2e «Аннулировать» сделано — раздел 16; «Создать служебный документ» по-прежнему заглушка). «Вторая рука» — у цели правки, где бек вернул `canConfirm`: «Утвердить» и «Отклонить» (с обязательной причиной до 140 символов). Спека — `docs/superpowers/specs/2026-10-07-katran-lane-actions-design.md` (уточнения исполнения — её §9); эндпоинты для бека — `docs/reference/pi-api.md` §1.7 (решения `confirm`/`reject`), §1.9 (сообщение), §1.10 (печать), правки в детали с `canConfirm`/`reason` — §7.6; сверка с эталоном — `docs/reference/detail-drift.md`, раздел «2d».
 
 ### 15.0. Если деталка у вас уже перенесена
 
@@ -724,7 +727,7 @@ const actionsOf = useActionsOf(docActions)
 <DocDetail detail={detail} domain={rubDetailDomain} rowOf={…} returnFocus={…} actionsOf={actionsOf} />
 ```
 
-`DocDetail` вызывает `actionsOf(docId)` и получает `ActionsView` (`run`, `pending`, `linkFallback`, `closeLinkFallback`, `notice`, `closeNotice`); «Создать служебный документ» и «Аннулировать» (`esid`, `ban`) остаются объявлением-заглушкой. Без `actionsOf` все действия — заглушки, как в 2a (демо кита). F5 — `keydown` на корне drawer: «Обновить» только при чистом F5 (без Ctrl/Alt/Shift/Meta), не из поля ввода (поле только для чтения — запасная ссылка — не ввод: F5 в нём — «Обновить»), без открытого редактора и `Prompt` документа; иначе браузер ведёт себя как обычно. Запасная ссылка — группа «Ссылка на документ» (не живая область: в ней поле и кнопка), появление объявляется отдельно; подсказка «Скопируйте ссылку: Ctrl+C» — описание поля; Esc в поле или на «Закрыть ссылку» закрывает ссылку, а не деталку, фокус возвращается на «Скопировать ссылку».
+`DocDetail` вызывает `actionsOf(docId)` и получает `ActionsView` (`run`, `pending`, `linkFallback`, `closeLinkFallback`, `notice`, `closeNotice`); «Создать служебный документ» и «Аннулировать» (`esid`, `ban`) остаются объявлением-заглушкой (с 2e: `ban` — модель аннулирования через `annulOf`, раздел 16.1; `esid` объявляет «Действие пока недоступно»). Без `actionsOf` все действия — заглушки, как в 2a (демо кита). F5 — `keydown` на корне drawer: «Обновить» только при чистом F5 (без Ctrl/Alt/Shift/Meta), не из поля ввода (поле только для чтения — запасная ссылка — не ввод: F5 в нём — «Обновить»), без открытого редактора и `Prompt` документа; иначе браузер ведёт себя как обычно. Запасная ссылка — группа «Ссылка на документ» (не живая область: в ней поле и кнопка), появление объявляется отдельно; подсказка «Скопируйте ссылку: Ctrl+C» — описание поля; Esc в поле или на «Закрыть ссылку» закрывает ссылку, а не деталку, фокус возвращается на «Скопировать ссылку».
 
 Коды печатных форм — в пунктах меню действия `print` профиля (`PrintFormItem`, `entities/fx-doc/model/swift.ts`: `payment-order`, `memorial-order`, `swift-form`; `entities/rub-doc/model/profiles.ts`: `payment-order`, `collection-order`, `payment-ordr`, `memorial-order`). Настоящие коды — у бека: поменяйте `form` в пунктах, отдельного словаря нет.
 
@@ -735,7 +738,7 @@ const actionsOf = useActionsOf(docActions)
 - **Одна связь на странице сверх 14.2** — открытое (не в полёте) решение документа, ушедшего из слотов не уходом с экрана, снимается (`apps/pi/src/pages/fx-docs/model/edit.model.ts`: слежение за `detail.$slots` и `decisionResult({ docId, ok: false })`); решение в полёте снимет его ответ. Без неё при повторном открытии документа всплыл бы старый `Prompt`.
 - **Виды.** `useEditContexts` отдаёт виду `EditContext` с `decision`, `canDecide(target, canConfirm)`, `confirmEdit`, `rejectEdit`, `changeReason`, `onDecision` и объявляет `$decided`. Тело `Prompt` (цель, «Было → Стало», автор и время) — `decisionNote` домена (`fxDecisionNote`), фокус после решения — `decisionFocus` (`fxDecisionFocus`: карандаш цели; нет — заголовок drawer). Оба — в домене страницы: `{ ...fxDocDetailDomain, tabViews, decisionNote: fxDecisionNote, decisionFocus: fxDecisionFocus }` (`pages/fx-docs/ui/detailDomain.ts`). Без `decisionNote` `Prompt` решения открывается без тела.
 - **Где кнопки.** У полей сетки — в сводке блока аудита раскрытой строки; у 20 исх, счетов Дт/Кт — рядом с маркером «изменено» (блока истории у этих целей нет). Пока у документа открыт редактор или идёт сохранение, кнопок нет; пока открыт `Prompt` решения, карандаши и ↺ документа не действуют (одна операция за раз). У даты валютирования и маршрута `canConfirm` всегда `false`. После отклонения у 20 исх и счетов остаётся маркер «отклонено» с причиной в подсказке.
-- **Поле «Причина»** — в виджете (`DecisionPrompt` в `widgets/doc-detail/ui/DocDetail.tsx`): обязательное, счётчик `n/140`; «Отклонить» недоступна, пока причина пуста. Длина 140 — `REJECT_MAX` (`features/doc-edit`); виджет `features` не импортирует и держит свою константу `REASON_MAX` — меняйте обе, и лимит бека.
+- **Поле «Причина»** — в виджете (`DecisionPrompt` в `widgets/doc-detail/ui/DocDetail.tsx`, с 2e — общий `ReasonField` из `shared/ui`): обязательное, счётчик `n/140`; «Отклонить» недоступна, пока причина пуста. Длина 140 — одна константа `REASON_MAX` в `shared/lib/detail` (`REJECT_MAX` `features/doc-edit` — её реэкспорт; ею же ограничена причина аннулирования 2e); меняйте её и лимит бека.
 - **Другая форма** `canConfirm`/`reason` в детали — только `parseEdits` в `entities/fx-doc/api/detail.mapper.ts` (после правки обновите `api/detail.example.ts`); тексты решений — `DECISION_TEXT` и `Prompt` в `DocDetail.tsx`, `entities/fx-doc/ui/edit.tsx`.
 
 ### 15.3. Ссылка на документ и подключение хоста
@@ -802,6 +805,242 @@ requestFileFx.use(async ({ url }) => {
 - **Юнит-тесты слайсов** переезжают вместе с ними: `features/doc-actions/model/createDocActions.test.ts`, `features/doc-actions/ui/useActionsOf.test.tsx`, `features/doc-edit/model/createDocEdit.test.ts`, `shared/lib/doc-link.test.ts`, `shared/api/request.test.ts`, `pages/fx-docs/model/actions.model.test.ts`, `pages/rub-docs/model/actions.model.test.ts`, `app/routes.test.ts`.
 - **e2e** — `apps/pi/e2e/lane-actions.spec.ts` (утверждение и отклонение, скачивание, печать в новой вкладке, F5, ссылка, запасное поле) и лейн из шести кнопок в `detail.spec.ts`; завязаны на данные фейка и порт 5186, как остальные спеки.
 - **Регуляторы фейка** (только стенд): `?fail=decide` — `500` на решении правки, `?fail=message` — `500` на сообщении, `?fail=print` — `500` на печатной форме (`apps/pi/README.md`).
+
+## 16. Операции деталки (срез 2e)
+
+Срез 2e добавляет в деталку четыре операции.
+
+- **«Аннулировать»** в лейне. Это команда беку: `Prompt` с обязательной причиной, затем перезапрос детали. Бек сам решает, аннулировать сразу или через утверждение второй рукой. Плашка под лейном показывает запрос и итог.
+- **«Курс»** в сводке `32A` (только валюта) и **«Проверить баланс»** в блоке «Транзакции» (оба реестра). Это справочные запросы в поповерах.
+- **Переотправка нотификаций** — всех или одной — и окно **«Исходное сообщение»** на вкладке «Нотификации».
+- **Переход в блок «Ручные отклонения»** на вкладке «Задачи». Ссылку строит хост, она открывается в новой вкладке.
+
+«Создать служебный документ» остаётся заглушкой: объявляет «Действие пока недоступно».
+
+Где смотреть подробности:
+- спека — `docs/superpowers/specs/2026-10-07-katran-detail-ops-design.md`, уточнения исполнения — её §9;
+- эндпоинты для бека — `docs/reference/pi-api.md` §1.11 (аннулирование), §1.12 (курсы), §1.13 (остатки), §1.14 (нотификации), §1.15 (решения), поля `canAnnul`/`annul` — §7.2, §7.3;
+- сверка с эталоном — `docs/reference/detail-drift.md`, раздел «2e».
+
+### 16.0. Если деталка у вас уже перенесена
+
+Срез 2e поменял и добавил файлы поверх разделов 13–15. Перенесите их по таблице или возьмите изменения из `git log` ветки `feat/detail-ops`.
+
+| Файл | Что поменялось |
+|---|---|
+| `shared/api/annul.ts`, `annul-ports.ts` (новые) | `parseCanAnnul`, `parseAnnul`. `createAnnulPorts(gridId, parseDetail)` → `annulFx`, `confirmAnnulFx`, `rejectAnnulFx` (команды, `void`) и `detailFx`. Типы `AnnulPorts`, `AnnulQuery`, `AnnulDecisionQuery`, `AnnulRejectQuery` |
+| `shared/api/lookup-ports.ts`, `notif-ports.ts` (новые), `guards.ts`, `request.ts`, `index.ts` | `ratesFx`, `createBalancesFx(gridId)`, `parseRates`, `parseBalances`. `createNotifPorts(gridId)` → `resendFx`, `messageFx`, `parseNotifMessage`. Охранник `reqBool`. В JSDoc `requestFx` — правило «2xx без тела → `null`» |
+| `shared/lib/host-links.ts` (новый) | `configureHostLinks`, `hostLink`, `HOST_LINK_MISSING` (16.4) |
+| `shared/lib/key-set.ts` (новый) | `stableKeySet`: набор документов со стабильной ссылкой для `$busyDocs` |
+| `shared/ui/ReasonField.tsx` (новый сегмент `shared/ui`) | поле «Причина» с счётчиком `n/140` — общее у `Prompt` аннулирования и решения правки 2d |
+| `shared/lib/detail/types.ts`, `index.ts` | `AnnulStatus`, `AnnulState`, `AnnulInfo`, `AnnulLane`, `AnnulView`; `LookupState`, `LookupView`, `DetailLookups`; `NotifView`. У `TabContext` — необязательные `resend`, `resendBusy`, `openMessage`. У `DetailDomain` — `annulInfo`, у `renderHero`/`renderBlock` — четвёртый параметр `lookups` |
+| `entities/fx-doc`, `entities/rub-doc`: `model/detail.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `api/ports.ts`, `ui/detail.tsx`, `index.ts` | `canAnnul`, `annul` в детали и маппере. `fxAnnulPorts`/`rubAnnulPorts`. `statusLabelOf`. «Курс» в `fxHero`, `balances` в `TxBlock` |
+| `entities/fx-doc/model/rules.ts`, `ui/edit.tsx`, `ui/RatesView.tsx` (новый) | `fxViewOnly`: при `annul` `pending`/`done` — только просмотр, как при `lock`. Модальный слой правки — `[data-k-dialog]`. Вид поповера «Курс» |
+| `entities/posting/ui/TxBlock.tsx`, `LookupLink.tsx`, `BalancesView.tsx` (новые), `@x/fx-doc.ts`, `index.ts` | свойство `TxBlock.balances`; оболочка поповера справочного запроса `LookupLink`/`LookupBody`; вид остатков |
+| `entities/doc-trail`: `model/types.ts`, `api/trail.mapper.ts`, `api/trail.example.ts`, `ui/NotificationsTab.tsx`, `ui/TasksTab.tsx`, `ui/parts.tsx`, `ui/lib.ts` | `id` нотификации (обязателен, проверяет парсер). Переотправка и «Исходное сообщение» через `ctx`. Переход хоста через `hostLink`. `LinkButton` с `disabled`/`busy`. `STUB` — «Действие пока недоступно» |
+| `features/doc-annul/`, `features/doc-lookups/`, `features/doc-notif/` (новые папки) | модели и виды: 16.1–16.3 |
+| `features/doc-edit/model/createDocEdit.ts`, `ui/useEditContexts.ts` | необязательный `blockedDocs` (без него — поведение 2d), стор `$blockedDocs`; `$busyDocs` — стабильный набор (`stableKeySet`) |
+| `widgets/doc-detail/lib/createDetail.ts` | `replaceTab({ id, tab, data })` (16.3) |
+| `widgets/doc-detail/ui/DocDetail.tsx`, `DocDetail.module.css` | свойства `annulOf`, `lookupsOf`, `notifOf`; плашка под лейном; `Prompt` аннулирования в `overlay` drawer; `ReasonField` в `Prompt` решения |
+| `pages/*/model/annul.model.ts`, `lookups.model.ts`, `notif.model.ts` (новые), `pages/fx-docs/model/edit.model.ts`, `ui/*Page.tsx`, `ui/detailDomain.ts`, `index.ts` | модели страницы и их связи (16.1–16.3), `$annulBusy`, `annulInfo` домена, `NotifOverlay` |
+| `app/transport.ts`, `app/fake/*` | комментарий-образец `configureHostLinks` и регулятор `?hostlinks=1`; фейк — аннулирование, курсы, остатки, нотификации, регуляторы (16.6) |
+
+**Кит нужен свежий** (пересобрать тарболы). Что нужно из `@katran/ui` и `@katran/tokens`:
+- `Dialog` и `Banner` — новые;
+- `ButtonLink` — новый;
+- `Prompt` — переведён на `Dialog`, свойства прежние;
+- `Popover` — модальный слой по `[data-k-dialog]`, закрытие при уходе фокуса в окно поверх;
+- токены `--k-dialog-l` и `--k-z-modal`.
+
+В `@katran/effector` изменений нет. Записи — `CHANGELOG.md`, раздел среза 2e.
+
+### 16.1. Аннулирование
+
+**Контракт.** У детали бек отдаёт `canAnnul: boolean` и `annul: null | { status: 'pending' | 'done' | 'rejected', who, when, reason, by, at, rejectReason, canConfirm }`.
+
+Команды:
+- `POST …/documents/{id}/annul` — тело `{ reason }`;
+- `POST …/annul/confirm` — тело `{ when }`;
+- `POST …/annul/reject` — тело `{ when, reason }`.
+
+Ответ команды — `202` без тела. Фронт принимает любой 2xx как «команда принята» и тело не читает. Затем фронт запрашивает деталь заново (`GET …/documents/{id}`) и итог берёт из свежих данных. Статусами фронт не управляет: аннулирование может и не случиться, это штатный исход — объявление «Команда отправлена — документ пока в статусе «…»». Ошибки — `400` (причина), `403`, `409`, `404`, `5xx` (`pi-api.md` §1.11).
+
+**Модель** — `createDocAnnul({ ports, lifecycle, blockedDocs?, statusLabelOf })` (`features/doc-annul/model/createDocAnnul.ts`). События:
+- `annulRequested(docId)`, `confirmRequested({ docId, when })`, `rejectRequested({ docId, when })` — открыть `Prompt`;
+- `reasonChanged({ docId, reason })`;
+- `promptResult({ docId, ok })` — `true` отправляет команду (у `annul` и `reject` — только с непустой причиной), `false` закрывает; в полёте оба игнорируются.
+
+Сторы — `$prompt` (`Record<docId, { kind, when, reason, busy, error }>`), `$busyDocs` (открытый `Prompt` или команда в полёте), `$blockedDocs` и `$done` (`{ count, text }`, тексты — `ANNUL_TEXT`). Факты для страницы:
+- `docAnnulled({ id, detail, kind })` — свежая деталь после `202`;
+- `refreshNeeded({ id })` — на `409` или когда деталь после команды не получена.
+
+Ответ прошлого визита экрана отбрасывается. Документ из `blockedDocs` не аннулируется: одна операция над документом за раз.
+
+**Связи страницы** (`apps/pi/src/pages/fx-docs/model/annul.model.ts`):
+
+```ts
+export const docAnnul = createDocAnnul({ ports: fxAnnulPorts, lifecycle, blockedDocs: docEdit.$busyDocs, statusLabelOf })
+sample({ clock: docAnnul.$busyDocs, target: $annulBusy })   // обратная блокировка — правке (ниже)
+
+sample({ clock: docAnnul.docAnnulled, fn: ({ id, detail: d }) => ({ id, detail: d }), target: detail.replaceDetail })
+sample({ clock: docAnnul.docAnnulled, target: registry.refreshRequested })
+sample({ clock: docAnnul.refreshNeeded, fn: ({ id }) => id, target: detail.refreshDoc })
+sample({ clock: docAnnul.refreshNeeded, target: registry.refreshRequested })
+```
+
+**Взаимная блокировка с правкой — через промежуточный стор страницы.** Правку нужно создать раньше аннулирования, но ей уже нужен набор документов аннулирования. Поэтому `edit.model.ts` объявляет `export const $annulBusy = createStore<Record<string, true>>({})` до `createDocEdit({ …, blockedDocs: $annulBusy })`, а `annul.model.ts` наполняет его из `docAnnul.$busyDocs`. Без этой связки правка и аннулирование одного документа откроются вместе. У рубля правки нет — `createDocAnnul` без `blockedDocs`.
+
+Ещё одна связь — как у решения правки 2d (15.2). Открытый, не занятый `Prompt` документа, ушедшего из слотов, снимается через `promptResult({ docId, ok: false })` по `detail.$slots.updates`. Без неё при повторном открытии документа всплыл бы старый `Prompt`.
+
+**Вид.** `useAnnulOf(docAnnul)` — один вызов на странице: второй продублирует объявления `$done`. Он даёт функцию `annulOf(docId) → AnnulView` со свойствами `lane`, `banner`, `prompt`. Деталка получает её свойством `annulOf`. Доменное деталка берёт из `DetailDomain.annulInfo(d) → AnnulInfo`: `canAnnul`, `annul`, `lockedBy`, `statusLabel`, `subject`. Образец — `pages/fx-docs/ui/detailDomain.ts`:
+
+```ts
+const annulInfo = (d: FxDocDetail): AnnulInfo => ({
+  canAnnul: d.canAnnul, annul: d.annul, lockedBy: d.lock?.who ?? null, statusLabel: statusLabelOf(d),
+  subject: `№ ${d.docNumber} · ${formatAmount(d.amount)} ${d.currency}`,
+})
+export const fxDetailDomain = { ...fxDocDetailDomain, tabViews, decisionNote: fxDecisionNote, decisionFocus: fxDecisionFocus, annulInfo }
+```
+
+Без `annulOf` или без `annulInfo` кнопка «Аннулировать» — заглушка, как в 2d.
+
+**Поведение кнопки.** Кнопка недоступна (`aria-disabled`) с подсказкой причины: «Документ заблокирован: {who}», «Запрос на аннулирование ожидает утверждения», «Документ аннулирован», «Аннулирование недоступно для документа в статусе «…»». Если `canAnnul` есть, но у документа идёт другая операция, подсказка — «Завершите текущую операцию с документом».
+
+**Плашка** (`Banner` кита) стоит под лейном:
+- `pending` — тон warn; у второй руки (`canConfirm`) — кнопки «Утвердить» / «Отклонить»;
+- `done` — тон bad;
+- `rejected` — тон neutral с «Закрыть»; закрытая плашка не видна до повторного открытия деталки.
+
+При `pending` и `done` валютный документ только для просмотра — `fxViewOnly` в `entities/fx-doc/model/rules.ts`, как при `lock`.
+
+### 16.2. «Курс» и «Проверить баланс»
+
+**Контракт.**
+- `GET /grids/fx-docs/documents/{id}/rates` → `{ cb: { rate, date, rub }, deal | null }`.
+- `GET /grids/{gridId}/documents/{id}/balances` → `{ asOf, items: [{ acc, ccy, balance, available | null } | { acc, ccy, error }] }`.
+
+Числа приходят строками, уже отформатированными беком. Ошибка по отдельному счёту — элемент с `error`, ответ в целом — `200` (`pi-api.md` §1.12, §1.13).
+
+**Модель** — `createLookup({ fx, lifecycle })` (`features/doc-lookups/model/createLookup.ts`), кэш по документу на время экрана. События:
+- `load(docId)` — первый раз запрос; запись `ready` или запрос в полёте — ничего; запись `error` — повтор;
+- `retry`;
+- `refresh` — перезапрос, прежнее значение видно до ответа;
+- `reset` — запись снята, ответ летящего запроса отбрасывается.
+
+Страница валюты создаёт два экземпляра, рубля — один (`pages/*/model/lookups.model.ts`):
+
+```ts
+export const fxBalancesFx = createBalancesFx('fx-docs')
+export const rates = createLookup({ fx: ratesFx, lifecycle })
+export const balances = createLookup({ fx: fxBalancesFx, lifecycle })
+// документ обновили (аннулирование, правка, «Обновить», 409) — его курсы и остатки устарели
+sample({ clock: [detail.refreshDoc, detail.replaceDetail.map(({ id }) => id)], target: [rates.reset, balances.reset] })
+```
+
+**Вид.** `useLookupOf(model)` → `(docId) => LookupView<T>` (состояние `idle` | `loading` | `ready` | `error`). Страница собирает `lookupsOf` и отдаёт деталке:
+
+```tsx
+const ratesOf = useLookupOf(rates)
+const balancesOf = useLookupOf(balances)
+const lookupsOf = useCallback((id: string): DetailLookups => ({ rates: ratesOf(id), balances: balancesOf(id) }), [ratesOf, balancesOf])
+```
+
+Деталка передаёт `lookupsOf(docId)` четвёртым параметром в `renderHero`/`renderBlock` домена. Ссылки рисуют сущности:
+- `fxHero` — «Курс» в ячейке `32A`;
+- `TxBlock.balances` — «Проверить баланс».
+
+Своя рукописная `renderHero`/`renderBlock` с двумя-тремя параметрами остаётся совместимой: ссылок просто не будет. Ссылка и поповер — `LookupLink` (`entities/posting/ui/LookupLink.tsx`). Это настоящая кнопка с `aria-haspopup="dialog"`; Esc закрывает поповер, а не деталку.
+
+### 16.3. Нотификации: переотправка и исходное сообщение
+
+**Контракт.** У строки вкладки `notif` есть обязательное `id`. Эндпоинты:
+- `POST …/notifications/resend` — все нотификации документа;
+- `POST …/notifications/{nid}/resend` — одна.
+
+Тело — `{}`, ответ — `200` с содержимым вкладки `notif` целиком. `GET …/notifications/{nid}/message` → `{ contentType: 'application/json' | 'application/xml' | 'text/plain', body }`. `409` — переотправка уже идёт (`pi-api.md` §1.14).
+
+**Модель** — `createDocNotif({ ports, lifecycle })` (`features/doc-notif/model/createDocNotif.ts`):
+- `resendRequested({ docId, nid?, n? })` → `$resendPrompt`: один `Prompt` на страницу, запрос другого документа при открытом `Prompt` игнорируется;
+- `resendResult({ docId, ok })` → `resendFx`; в полёте — `$resendBusy` (`Record<docId, nid | '*'>`), одна переотправка документа за раз;
+- успех — `resent({ id, data })`, где `data` — **сырое** тело вкладки, и объявление «Нотификация переотправлена»;
+- `409` — `resendConflict({ id })` и объявление текста ошибки;
+- окно — `openMessage({ docId, nid, n })`, `closeMessage`, `retryMessage`, `$message` (одно окно на экран); итог копирования — `copied(ok)`, объявления — `$notice`.
+
+**Связи страницы** (`pages/*/model/notif.model.ts`). Ответ переотправки страница сначала разбирает тем же парсером, что `GET` вкладки, и только потом кладёт в кэш вкладки через `detail.replaceTab`:
+
+```ts
+type Resent = { id: string; ok: true; data: unknown } | { id: string; ok: false }
+const parsed = docNotif.resent.map(({ id, data }): Resent => {
+  try {
+    return { id, ok: true, data: TRAIL_PARSERS.notif(data, 'ответ') }
+  } catch {
+    return { id, ok: false }
+  }
+})
+sample({ clock: parsed.filterMap((r) => (r.ok ? { id: r.id, tab: 'notif', data: r.data } : undefined)), target: detail.replaceTab })
+sample({ clock: parsed, filter: (r) => !r.ok, fn: ({ id }) => id, target: detail.refreshDoc })   // тело не по контракту
+sample({ clock: docNotif.resendConflict, fn: ({ id }) => id, target: detail.refreshDoc })
+```
+
+Без разбора вкладка получит объект вместо массива и упадёт. `detail.replaceTab({ id, tab, data })` кладёт готовые данные в кэш `${id}:${tab}` без запроса: состояние `ready`, ошибка и загрузка сняты. Другие вкладки и деталь он не трогает. Ответ запроса вкладки, ушедшего до замены, кэш не перезаписывает. На закрытом экране событие игнорируется.
+
+**Вид.**
+- `useNotifOf(docNotif)` → `notifOf(docId) → NotifView`. Деталка получает его свойством `notifOf` и кладёт `resend`, `resendBusy`, `openMessage` в `TabContext`. Без `notifOf` вкладка ведёт себя как в 2b: одна «Переотправить» с объявлением-заглушкой.
+- `<NotifOverlay model={docNotif} />` — **один на страницу**, рядом с `DocDetail`. Он рисует `Prompt` переотправки, окно «Исходное сообщение» (`MessageDialog`: `Dialog` размера `l`, `CodeView` с языком по `contentType`, «Скопировать» / «Закрыть») и объявляет `$notice`.
+- Окна живут в своём портале в корне `KatranProvider`: `div[data-k-layer="notif"]`, `position: fixed; inset: 0; z-index: var(--k-z-modal)` (150 — выше drawer 100, ниже поповеров 200). Пустой слой не рисуется. `Dialog` кита портала не имеет и накрывает ближайший позиционированный предок, поэтому в разметке страницы окно оказалось бы под drawer'ами. Своё окно поверх деталки делайте так же или держите внутри `Drawer.overlay`, как `Prompt` аннулирования. Esc в окне закрывает окно, а не деталку.
+
+### 16.4. Переход в блок «Ручные отклонения» и подключение хоста
+
+Адрес чужого блока метаприложения знает только хост. По умолчанию ссылки нет: кнопка на вкладке «Задачи» недоступна (`aria-disabled`) с подсказкой «Переход не настроен для этого стенда». Хост задаёт строители **один раз, рядом с подключением транспорта** и `configureDocLinks` (15.3). У нас образец — комментарий в `apps/pi/src/app/transport.ts`:
+
+```ts
+import { configureHostLinks } from '../shared/lib/host-links'
+
+configureHostLinks({ manualDeviations: (docId) => `${hostOrigin}/manual-deviations?doc=${encodeURIComponent(docId)}` })
+```
+
+Вкладка читает ссылку в момент отрисовки (`hostLink('manualDeviations', docId)`) и показывает `ButtonLink` кита: `<a href target="_blank" rel="noopener">` в виде кнопки. `configureHostLinks` заменяет набор целиком; `configureHostLinks({})` снимает все ссылки. Имена функции и ключа — предложение, их нужно согласовать с командой хоста (спека 2e §8 п. 2).
+
+### 16.5. Сборка экрана
+
+Всё вместе на странице валюты (`apps/pi/src/pages/fx-docs/ui/FxDocsPage.tsx`; у рубля нет `rates`):
+
+```tsx
+const annulOf = useAnnulOf(docAnnul)
+const ratesOf = useLookupOf(rates)
+const balancesOf = useLookupOf(balances)
+const lookupsOf = useCallback((id: string): DetailLookups => ({ rates: ratesOf(id), balances: balancesOf(id) }), [ratesOf, balancesOf])
+const notifOf = useNotifOf(docNotif)
+// …
+<DocDetail detail={detail} domain={fxDetailDomain} … editOf={editOf} actionsOf={actionsOf}
+  annulOf={annulOf} lookupsOf={lookupsOf} notifOf={notifOf} />
+<NotifOverlay model={docNotif} />
+```
+
+Модели страницы подключаются импортом, как в 2c–2d: `pages/fx-docs/index.ts` экспортирует `docAnnul`, `rates`, `balances`, `docNotif`.
+
+### 16.6. Бек отдаёт иначе, как проверить
+
+- **Транспорт.** Обработчик `requestFx` на 2xx без тела (`202`, `204`) отдаёт `null` (раздел 4). Команды аннулирования тело не читают. Бек вернёт `200` с телом — ничего не изменится.
+- **Другие адреса.** Аннулирование — `createAnnulPorts` (`shared/api/annul-ports.ts`); курсы и остатки — `ratesFx` и `createBalancesFx` (`shared/api/lookup-ports.ts`); нотификации — `createNotifPorts` (`shared/api/notif-ports.ts`). `id` и `nid` в пути кодируются.
+- **Другая форма.** `canAnnul`/`annul` разбирают `parseCanAnnul`/`parseAnnul` (`shared/api/annul.ts`), их вызывают мапперы детали обоих реестров. После правки обновите `api/detail.example.ts`. Курсы и остатки — `parseRates`/`parseBalances`. Сообщение — `parseNotifMessage`. `id` нотификации — парсер вкладки `notif` (`entities/doc-trail/api/trail.mapper.ts`). Условия `canAnnul` и выбор «сразу или через утверждение» — правило бека. Фронт их не вычисляет, CEL-пример в `pi-api.md` §1.11 — правило фейка.
+- **Контрактные тесты против своего бека** — блок `describe('контракт 2e …')` в `apps/pi/src/app/fake/contract.test.ts`, как в разделе 7. Специфичны для фейка и уберите: сид запросов на аннулирование, таблицу курсов, «Счёт не найден в АБС», тела сообщений.
+- **Юнит-тесты слайсов** переезжают вместе с ними:
+  - `shared/api/annul.test.ts`, `annul-ports.test.ts`, `lookup-ports.test.ts`, `notif-ports.test.ts`;
+  - `shared/lib/host-links.test.ts`;
+  - `features/doc-annul/model/createDocAnnul.test.ts`, `ui/useAnnulOf.test.tsx`;
+  - `features/doc-lookups/model/createLookup.test.ts`, `ui/useLookupOf.test.tsx`;
+  - `features/doc-notif/model/createDocNotif.test.ts`, `ui/NotifOverlay.test.tsx`;
+  - `entities/fx-doc/ui/RatesView.test.tsx`, `entities/posting/ui/BalancesView.test.tsx`;
+  - `pages/fx-docs/model/ops.model.test.ts`, `pages/rub-docs/model/ops.model.test.ts`;
+  - новые блоки в `widgets/doc-detail/lib/createDetail.test.ts` и `ui/DocDetail.test.tsx`.
+- **e2e** — `apps/pi/e2e/detail-ops.spec.ts`, 25 тестов. Покрывает: аннулирование сразу, через утверждение и без изменений; решения второй руки; недоступную кнопку и блокировку правкой; «Курс» и «Проверить баланс»; переотправку всех и одной; исходное сообщение; ручные отклонения; отказы `?fail=…`; контраст плашек. Документы открываются ссылкой `?doc=`. Тесты завязаны на сид фейка и порт 5186.
+- **Регуляторы фейка** (только стенд, `apps/pi/README.md`):
+  - `?annul=instant|pending|fail` — итог аннулирования;
+  - `?fail=annul|rates|balances|resend|notifmsg` — `500` на запросе;
+  - `?hostlinks=1` — стенд включает ссылку «Ручные отклонения».
+
+  Повторная переотправка документа в течение 2 с — `409`.
 
 ## Зависимости
 
