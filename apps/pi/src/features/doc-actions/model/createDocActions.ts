@@ -1,6 +1,7 @@
 import { attach, createEffect, createEvent, createStore, sample, type Event, type EventCallable, type Store } from 'effector'
 import type { ActionPorts, ApiError, PrintQuery } from '../../../shared/api'
 import type { ActionNotice } from '../../../shared/lib/detail'
+import { writeClipboardFx } from '../../../shared/lib/clipboard'
 import { buildDocLink } from '../../../shared/lib/doc-link'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
@@ -60,13 +61,6 @@ export type ShowInWindowQuery = { win: Window; blob: Blob }
 export const pendingKey = (id: string, actionId: string): string => `${id}:${actionId}`
 
 // Побочные эффекты — эффектами уровня модуля: тесты и стенды подменяют их через fork({ handlers }).
-
-/** Записать текст в буфер обмена; нет Clipboard API (не https, старый браузер) или отказ — отказ эффекта. */
-export const writeClipboardFx = createEffect<string, void, Error>(async (text) => {
-  const clip = navigator.clipboard as Clipboard | undefined
-  if (clip === undefined || typeof clip.writeText !== 'function') throw new Error('Буфер обмена недоступен')
-  await clip.writeText(text)
-})
 
 /** Скачать файл: <a href=blobURL download=name>.click(); URL освобождается в следующем тике (загрузка уже начата). */
 export const saveFileFx = createEffect<SaveFileQuery, void>(({ blob, name }) => {

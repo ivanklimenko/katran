@@ -1,11 +1,11 @@
 import { allSettled, createEffect, createStore, fork } from 'effector'
 import { vi } from 'vitest'
 import { ApiError, type FileResponse, type PrintQuery } from '../../../shared/api'
+import { writeClipboardFx } from '../../../shared/lib/clipboard'
 import { configureDocLinks, defaultDocLink } from '../../../shared/lib/doc-link'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import {
   LINK_COPIED_TEXT, NOTICE_HIDE_MS, PRINT_BLOCKED_TEXT, closeWindowFx, createDocActions, noticeDelayFx, revokeUrlsFx, saveFileFx, showInWindowFx,
-  writeClipboardFx,
 } from './createDocActions'
 
 type Pending<P, R> = { params: P; ok: (r: R) => void; fail: (e: ApiError) => void }
@@ -351,16 +351,4 @@ describe('побочные эффекты doc-actions (настоящие обр
     expect(revoke.mock.calls).toEqual([['blob:a'], ['blob:b']])
   })
 
-  it('writeClipboardFx: navigator.clipboard.writeText(text); отказ API — отказ эффекта', async () => {
-    const writeText = vi.fn(async () => undefined)
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
-    try {
-      await writeClipboardFx('L')
-      expect(writeText).toHaveBeenCalledWith('L')
-      writeText.mockRejectedValueOnce(new Error('NotAllowedError'))
-      await expect(writeClipboardFx('L')).rejects.toThrow('NotAllowedError')
-    } finally {
-      Reflect.deleteProperty(navigator, 'clipboard')
-    }
-  })
 })
