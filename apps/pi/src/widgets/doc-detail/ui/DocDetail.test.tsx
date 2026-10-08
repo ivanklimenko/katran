@@ -225,16 +225,32 @@ describe('DocDetail: вкладки 2b (спека 2b §3.3, §4)', () => {
     open('d1')
     await screen.findByText('Блок b1')
     expect(asked).toEqual([])
-    await userEvent.click(screen.getByRole('tab', { name: 'Статусы' }))
-    expect(asked).toEqual(['d1:statuses'])
-    await waitFor(() => expect(tabSkeleton()).not.toBeNull())
-    expect(tabSkeleton()).toHaveAttribute('data-rows', '3')
-    // скелетон показан на 200 мс, ответ — на 250: ворота держат скелетон до 600 мс
-    await act(async () => { await new Promise<void>((r) => setTimeout(r, 150)) })
-    expect(tabSkeleton()).not.toBeNull()
-    expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
-    expect(await screen.findByRole('list', { name: 'Статусы' })).toHaveTextContent('statuses d1')
-    expect(tabSkeleton()).toBeNull()
+    // фейковые часы (и Date ворот скелетона) — с выбора вкладки: на реальных под нагрузкой ожидание скелетона опаздывало,
+    // и «ещё скелетон» проверялся уже после 600 мс (флейк pnpm check); waitFor/findBy под фейковыми часами не нужны
+    vi.useFakeTimers()
+    try {
+      const at = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms) }) }
+      fireEvent.click(screen.getByRole('tab', { name: 'Статусы' }))
+      await at(0)
+      expect(asked).toEqual(['d1:statuses'])
+      // порог показа — 200 мс
+      await at(199)
+      expect(tabSkeleton()).toBeNull()
+      await at(1)
+      expect(tabSkeleton()).toHaveAttribute('data-rows', '3')
+      // ответ — на 250 мс: ворота держат скелетон до 200 + 400 = 600 мс, данные до этого не показываются
+      await at(50)
+      expect(tabSkeleton()).not.toBeNull()
+      expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
+      await at(349)
+      expect(tabSkeleton()).not.toBeNull()
+      expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
+      await at(1)
+      expect(screen.getByRole('list', { name: 'Статусы' })).toHaveTextContent('statuses d1')
+      expect(tabSkeleton()).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('возврат на загруженную вкладку — без запроса и без скелетона', async () => {
