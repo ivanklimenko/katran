@@ -1,12 +1,20 @@
+import { useCallback } from 'react'
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
 import { fxCommitView, fxDocLayout } from '../../../entities/fx-doc'
 import { useEditContexts } from '../../../features/doc-edit'
 import { useActionsOf } from '../../../features/doc-actions'
+import { useAnnulOf } from '../../../features/doc-annul'
+import { useLookupOf } from '../../../features/doc-lookups'
+import { NotifOverlay, useNotifOf } from '../../../features/doc-notif'
+import type { DetailLookups } from '../../../shared/lib/detail'
 import { DocDetail } from '../../../widgets/doc-detail'
 import { DocRegistry } from '../../../widgets/doc-registry'
 import { docEdit } from '../model/edit.model'
 import { docActions } from '../model/actions.model'
+import { docAnnul } from '../model/annul.model'
+import { balances, rates } from '../model/lookups.model'
+import { docNotif } from '../model/notif.model'
 import { detail, registry } from '../model/registry.model'
 import { fxDetailDomain } from './detailDomain'
 
@@ -20,6 +28,12 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
   const editOf = useEditContexts(docEdit, fxCommitView)
   // действия лейна: один вызов на модель (иначе объявления $notice двоятся), деталка получает функцию
   const actionsOf = useActionsOf(docActions)
+  // срез 2e: аннулирование (один вызов — объявления итога не двоятся), «Курс» и «Проверить баланс», нотификации
+  const annulOf = useAnnulOf(docAnnul)
+  const ratesOf = useLookupOf(rates)
+  const balancesOf = useLookupOf(balances)
+  const lookupsOf = useCallback((id: string): DetailLookups => ({ rates: ratesOf(id), balances: balancesOf(id) }), [ratesOf, balancesOf])
+  const notifOf = useNotifOf(docNotif)
   return (
     <>
       <DocRegistry
@@ -43,7 +57,12 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
         returnFocus={(id) => gridFocusTarget(TITLE, id)}
         editOf={editOf}
         actionsOf={actionsOf}
+        annulOf={annulOf}
+        lookupsOf={lookupsOf}
+        notifOf={notifOf}
       />
+      {/* Prompt переотправки и окно исходного сообщения — один на страницу, поверх drawer */}
+      <NotifOverlay model={docNotif} />
     </>
   )
 }

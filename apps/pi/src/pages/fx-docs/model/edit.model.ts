@@ -1,7 +1,13 @@
-import { sample } from 'effector'
+import { createStore, sample } from 'effector'
 import { FX_CONFIRM_TARGETS, fxEditPorts, normalizeFxEdit, sameEditValue, validateFxEdit } from '../../../entities/fx-doc'
 import { createDocEdit, editScope } from '../../../features/doc-edit'
 import { detail, lifecycle, registry } from './registry.model'
+
+/**
+ * Документы с открытым Prompt аннулирования или его командой в полёте — промежуточный стор страницы (спека 2e §3.6): правка
+ * получает его как blockedDocs до создания модели аннулирования, а та сама берёт docEdit.$busyDocs; заполняет annul.model.ts.
+ */
+export const $annulBusy = createStore<Record<string, true>>({})
 
 /**
  * Правка валютного документа на экране (план 2c §3.2): модель правки на жизненном цикле страницы, связи с деталкой и реестром.
@@ -14,6 +20,7 @@ export const docEdit = createDocEdit({
   same: sameEditValue,
   confirmTargets: FX_CONFIRM_TARGETS,
   lifecycle,
+  blockedDocs: $annulBusy,
 })
 
 // охрана ухода деталки (guard: true): решает модель правки — черновик держит Prompt «Отменить правку?», чистый и в полёте — сразу

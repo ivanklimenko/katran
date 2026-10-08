@@ -1,4 +1,7 @@
 export { RubDocsPage } from './ui/RubDocsPage'
 export { docLinkOpened, lifecycle, RUB_LOCAL_TABS } from './model/registry.model'
 export { docActions } from './model/actions.model'
+export { docAnnul } from './model/annul.model'
+export { balances } from './model/lookups.model'
+export { docNotif } from './model/notif.model'
 export { rubDetailDomain } from './ui/detailDomain'

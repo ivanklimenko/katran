@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { createEffect } from 'effector'
+import { DrawerStack } from '@katran/ui'
 import { ApiError, type NotifMessage, type ResendQuery } from '../../../shared/api'
 import type { NotifView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -278,5 +279,73 @@ describe('NotifOverlay: окно «Исходное сообщение» (спе
     await userEvent.click(screen.getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
     await act(async () => { t.messages.calls[1]!.fail(problem(500, 'Ошибка', 'Сообщение не найдено')) })
     expect(await axe(t.container)).toHaveNoViolations()
+  })
+})
+
+describe('NotifOverlay на странице: слой поверх настоящего DrawerStack (спека 2e §3.6, ручная проверка Task 12)', () => {
+  /** Как страница реестра: деталь — в DrawerStack кита (портал в корень провайдера, z-index слоя деталки), NotifOverlay — в разметке страницы. */
+  function page() {
+    const resends = deferred<ResendQuery, unknown>()
+    const messages = deferred<{ id: string; nid: string }, NotifMessage>()
+    const lifecycle = createPageLifecycle()
+    const model = createDocNotif({ ports: { resendFx: resends.fx, messageFx: messages.fx }, lifecycle })
+    const onEscape = vi.fn()
+    function Page() {
+      const v = useNotifOf(model)('d1')
+      const node = (
+        <section role="dialog" aria-label="Деталь" data-k-drawer="">
+          <h2 tabIndex={-1}>Платёжная инструкция</h2>
+          <button type="button" onClick={() => v.resend()}>Переотправить все</button>
+          <button type="button" onClick={() => v.openMessage('n2', 2)}>Исходное сообщение, отправка 2</button>
+        </section>
+      )
+      return (
+        <div data-testid="page">
+          <DrawerStack items={[{ key: 'd1', slot: 'a', node }]} onEscape={onEscape} />
+          <NotifOverlay model={model} />
+        </div>
+      )
+    }
+    renderK(<Page />)
+    act(() => { lifecycle.pageOpened() })
+    return { model, messages, onEscape }
+  }
+
+  it('окно и Prompt — не в разметке страницы под деталью, а в своём слое в корне провайдера, как DrawerStack', async () => {
+    const t = page()
+    await userEvent.click(screen.getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
+    await act(async () => { t.messages.calls[0]!.ok({ contentType: 'text/plain', body: 'MT199' }) })
+    const win = screen.getByRole('dialog', { name: 'Исходное сообщение · отправка 2' })
+    const root = document.querySelector('[data-k-root]')
+    expect(screen.getByTestId('page').contains(win)).toBe(false)
+    const layer = win.closest('[data-k-layer="notif"]')
+    expect(layer?.parentElement).toBe(root)
+    act(() => { t.model.closeMessage() })
+    // пустой слой не рисуется: клики мимо окна проходят в реестр и деталь
+    expect(document.querySelector('[data-k-layer="notif"]')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Переотправить все' }))
+    const prompt = screen.getByRole('alertdialog', { name: RESEND_PROMPT.all })
+    expect(prompt.closest('[data-k-layer="notif"]')?.parentElement).toBe(root)
+  })
+
+  it('Esc в окне «Исходное сообщение» закрывает только окно: деталь открыта, фокус на ссылке; следующий Esc — детали', async () => {
+    const t = page()
+    const link = screen.getByRole('button', { name: 'Исходное сообщение, отправка 2' })
+    await userEvent.click(link)
+    await act(async () => { t.messages.calls[0]!.ok({ contentType: 'text/plain', body: 'MT199' }) })
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: /Исходное сообщение/ })).toBeNull()
+    expect(t.onEscape).not.toHaveBeenCalled()
+    expect(link).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(t.onEscape).toHaveBeenCalledTimes(1)
+  })
+
+  it('Esc в Prompt переотправки закрывает только Prompt', async () => {
+    const t = page()
+    await userEvent.click(screen.getByRole('button', { name: 'Переотправить все' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(t.onEscape).not.toHaveBeenCalled()
   })
 })

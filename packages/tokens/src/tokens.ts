@@ -206,6 +206,7 @@ export const fonts = {
 export const z = {
   'sticky': 10,
   'drawer': 100,
+  'modal': 150,
   'menu': 200,
   'tooltip': 300,
 } as const

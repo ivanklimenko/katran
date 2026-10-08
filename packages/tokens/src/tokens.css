@@ -5,6 +5,7 @@
   --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --k-z-sticky: 10;
   --k-z-drawer: 100;
+  --k-z-modal: 150;
   --k-z-menu: 200;
   --k-z-tooltip: 300;
   --k-t-fast: 120ms;
