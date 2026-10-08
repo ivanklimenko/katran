@@ -952,6 +952,18 @@ describe('DocDetail: аннулирование (спека 2e §3.5, §4 п. 1�
     expect(await screen.findByText('Запрос на аннулирование отклонён · № 417')).toBeInTheDocument()
   })
 
+  it('«Закрыть» плашки: кнопка пропала вместе с плашкой — фокус на заголовке своего drawer, не в body (найдено e2e Task 13)', async () => {
+    const { open } = setup(undefined, undefined, { domain: annulDomain, annulOf: () => annulStub({ banner: bannerStub }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    await userEvent.click(screen.getByRole('button', { name: 'Закрыть плашку' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    expect(document.activeElement).not.toBe(document.body)
+    expect(a.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement?.tagName).toBe('H2')
+  })
+
   it('тот же drawer: закрыта плашка rejected, пришёл новый rejected с другим annul.when — снова видна', async () => {
     let when = '2026-09-23T10:00:00'
     const domainWhen: DetailDomain<Doc, Doc> = { ...laneDomain, annulInfo: (d) => ({ ...infoOf(d), annul: d.id === 'd1' ? { ...rejectedAnnul, when } : null }) }

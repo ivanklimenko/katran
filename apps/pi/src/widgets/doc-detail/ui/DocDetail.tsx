@@ -315,6 +315,13 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   // закрытие деталки (размонтирование drawer) сбрасывает (спека 2e §3.5)
   const [dismissedKey, setDismissedKey] = useState<string | null>(null)
   const bannerKey = annulInfo?.annul ? `${view.id}:${annulInfo.annul.when}` : null
+  const laneBox = useRef<HTMLDivElement>(null)
+  // «Закрыть» пропала вместе с плашкой — фокус из body на заголовок своего drawer (Ruling R19)
+  useEffect(() => {
+    if (dismissedKey === null) return
+    const at = document.activeElement
+    if (at === null || at === document.body) laneBox.current?.closest<HTMLElement>('[data-k-drawer]')?.querySelector<HTMLElement>('h2[tabindex]')?.focus()
+  }, [dismissedKey])
   const banner = annul && annulInfo ? annul.banner(annulInfo, bannerKey !== null && bannerKey === dismissedKey, () => setDismissedKey(bannerKey)) : null
   const annulPrompt = annul ? annul.prompt(annulInfo) : null
   const row = view.data === null && rowOf ? rowOf(view.id) : null
@@ -336,7 +343,6 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
   // один Prompt на документ: правки 2c (отмена черновика, дата валютирования), решения второй руки или аннулирования
   // (правка и аннулирование документа взаимно блокируются моделями — вместе не открываются)
   const decision = edit?.confirm ? null : edit?.decision ?? null
-  const laneBox = useRef<HTMLDivElement>(null)
   // в момент закрытия Prompt: карандаш цели (домен), иначе заголовок drawer — фокус не уходит в body (Ruling R19)
   const decisionFocus = (target: string): HTMLElement | null => {
     const root = laneBox.current?.closest<HTMLElement>('[data-k-drawer]') ?? null
