@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { DrawerOpen, DrawerSlot } from '@katran/effector'
 import type { FieldDef, FieldPresenter, FieldValue, FormEdit, FormSchema, HeroCell, PromptTone, SectionContent, StatusTone } from '@katran/ui'
-import type { AccountItem, AccountSide, EditValue } from '../../api'
+import type { AccountItem, AccountSide, Balances, EditValue, Rates } from '../../api'
 
 /** Вкладка деталки (эталон TABS/TAB_KEY, index.html:647–648). */
 export type DetailTab = { id: string; label: string }
@@ -65,6 +65,12 @@ export type TabContext = {
   /** Раскрытые ключи вкладки этого документа; null — пользователь не трогал: вид берёт свои умолчания. */
   expanded: string[] | null
   setExpanded: (keys: string[]) => void
+  /** Переотправка нотификаций (срез 2e): без nid — все. Нет — вкладка ведёт себя как в 2b. */
+  resend?: ((nid?: string, n?: number) => void) | undefined
+  /** Переотправка этого документа в полёте. */
+  resendBusy?: boolean | undefined
+  /** Открыть окно «Исходное сообщение» нотификации nid (n — номер строки для заголовка). */
+  openMessage?: ((nid: string, n: number) => void) | undefined
 }
 /** Вкладка на данных детали («Общие», «Доп. поля») — без запроса. */
 export type LocalTabView<D> = { kind: 'local'; render: (detail: D, ctx: TabContext) => ReactNode }
@@ -90,8 +96,8 @@ export type DetailDomain<D, Row> = {
   summary: (d: D) => DetailSummary
   rowSummary: (row: Row) => DetailSummary
   /** edit — правка этого документа (план 2c); нет (null или не передан) — только просмотр, как в 2b. Функции с двумя параметрами (рубль) совместимы. */
-  renderHero: (d: D, id: string, edit?: EditContext | null) => HeroCell
-  renderBlock: (d: D, id: string, edit?: EditContext | null) => ReactNode
+  renderHero: (d: D, id: string, edit?: EditContext | null, lookups?: DetailLookups | null) => HeroCell
+  renderBlock: (d: D, id: string, edit?: EditContext | null, lookups?: DetailLookups | null) => ReactNode
   renderSection?: ((d: D, id: string) => SectionContent) | undefined
   /** Виды вкладок по id (спека 2b §3.3); нет вида — вкладка показывает заглушку 2a. */
   tabViews?: Record<string, TabView<D>> | undefined
@@ -104,7 +110,49 @@ export type DetailDomain<D, Row> = {
    * фокус возвращается сюда; нет — на заголовок drawer.
    */
   decisionFocus?: ((root: HTMLElement, target: string) => HTMLElement | null) | undefined
+  /** Доменное для аннулирования (срез 2e): из детали — canAnnul, annul, блокировка, подпись статуса, пояснение Prompt. Нет — «Аннулировать» без действия. */
+  annulInfo?: ((d: D) => AnnulInfo) | undefined
 }
+
+/** Статус аннулирования (спека 2e §3.1 п. 2): ставит бек. */
+export type AnnulStatus = 'pending' | 'done' | 'rejected'
+/** Аннулирование документа из детали: who/when/reason — автор запроса; by/at — кто и когда утвердил или отклонил. */
+export type AnnulState = {
+  status: AnnulStatus; who: string; when: string; reason: string
+  by: string | null; at: string | null; rejectReason: string | null; canConfirm: boolean
+}
+/** Доменное для аннулирования — из детали (DetailDomain.annulInfo). */
+export type AnnulInfo = {
+  canAnnul: boolean
+  annul: AnnulState | null
+  /** lock?.who */
+  lockedBy: string | null
+  /** Подпись статуса документа («Обработан»). */
+  statusLabel: string
+  /** «№ {номер} · {сумма} {валюта}» — пояснение Prompt. */
+  subject: string
+}
+/** Лейн «Аннулировать» документа: недоступность с подсказкой, запрос в полёте, запуск. */
+export type AnnulLane = { disabled: boolean; hint: string | null; busy: boolean; run: () => void }
+/** Аннулирование этого документа для виджета: лейн, плашка статуса, Prompt. */
+export type AnnulView = {
+  lane: (info: AnnulInfo | null) => AnnulLane
+  /** Плашка под лейном (Banner кита) или null; dismissed — локальное состояние drawer (rejected закрыта). */
+  banner: (info: AnnulInfo | null, dismissed: boolean, onDismiss: () => void) => ReactNode
+  /** Prompt аннулирования/решения этого документа или null. */
+  prompt: (info: AnnulInfo | null) => ReactNode
+}
+
+/** Состояние справочного запроса документа (курс, остатки). */
+export type LookupState = 'idle' | 'loading' | 'ready' | 'error'
+export type LookupView<T> = {
+  state: LookupState; value: T | null; error: string | null
+  load: () => void; retry: () => void; refresh: () => void
+}
+/** Справочные запросы документа для видов сущности (четвёртый параметр renderHero/renderBlock). */
+export type DetailLookups = { rates?: LookupView<Rates> | undefined; balances?: LookupView<Balances> | undefined }
+/** Нотификации документа для виджета (срез 2e). */
+export type NotifView = { resend: (nid?: string, n?: number) => void; resendBusy: boolean; openMessage: (nid: string, n: number) => void }
 
 /**
  * Уход из документа, который ждёт ответа на «Отменить правку?» (план 2c, Р6): закрыть слот или открыть другой документ.

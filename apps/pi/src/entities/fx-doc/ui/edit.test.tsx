@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
-import { ConfigForm, Prompt } from '@katran/ui'
+import { ConfigForm, Dialog, Prompt } from '@katran/ui'
 import type { AccountsSlot, EditContext } from '../../../shared/lib/detail'
 import { renderK } from '../../../shared/lib/test'
 import { FX_DETAIL_EXAMPLE } from '../api/detail.example'
@@ -11,7 +11,8 @@ import type { FxHistEntry } from '../model/edit'
 import { fxDocDetailDomain as dom } from './detail'
 import { fxCommitView, fxDecisionFocus, fxDecisionNote } from './edit'
 
-const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+// правка — без аннулирования: у примера контракта ожидающий запрос, при нём целей правки нет (срез 2e)
+const d = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
 const entry = (p: Partial<FxHistEntry>): FxHistEntry => ({
   who: 'Вы', when: '2026-09-23T11:05:00', was: '', now: '', note: null, status: 'pending', by: null, at: null, reason: null, ...p,
 })
@@ -106,6 +107,22 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(edit.cancel).not.toHaveBeenCalled()
   })
 
+  it('20 исх: mousedown внутри Dialog поверх деталки («Исходное сообщение») — не «клик вне», правка не отменяется', () => {
+    const edit = ctx({ editing: 'refOut', draft: 'FX1' })
+    renderK(
+      <>
+        <ConfigForm schema={dom.schemaOf(d)} fields={dom.fields} value={(t) => dom.value(d, t)} present={dom.present}
+          renderHero={(id) => dom.renderHero(d, id, edit)} renderBlock={(id) => dom.renderBlock(d, id, edit)} edit={dom.formEdit!(d, edit)} />
+        <Dialog open title="Исходное сообщение" onClose={vi.fn()} footer={<button>Скопировать</button>}>Текст сообщения</Dialog>
+      </>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Исходное сообщение' })
+    fireEvent.mouseDown(within(dialog).getByRole('button', { name: 'Скопировать' }))
+    fireEvent.mouseDown(within(dialog).getByText('Текст сообщения'))
+    fireEvent.mouseDown(dialog)
+    expect(edit.cancel).not.toHaveBeenCalled()
+  })
+
   it('заблокированный документ — только просмотр: ни карандашей, ни ↺, ни редакторов; маркеры и аудит на месте (Д66)', async () => {
     const locked: FxDocDetail = {
       ...d, lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' }, refOut: 'FX1',
@@ -126,6 +143,25 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
       }
       unmount()
     }
+  })
+
+  it('аннулирование pending или done — только просмотр, как блокировка: ни карандашей полей, 20 исх, счетов и даты, ни ↺, ни редакторов (спека 2e §1.3; найдено e2e Task 13)', () => {
+    const annul = { who: 'Вы', when: '2026-09-23T11:00:00', reason: 'Дубликат', by: null, at: null, rejectReason: null, canConfirm: false }
+    const edits = { ...d.edits, refOut: { now: 'FX1', canConfirm: false, hist: [entry({ was: '', now: 'FX1' })] } }
+    for (const status of ['pending', 'done'] as const) {
+      const doc: FxDocDetail = { ...d, refOut: 'FX1', edits, annul: { ...annul, status } }
+      for (const editing of [null, 'refOut', 'accKt', 'valueDate', 'field:57']) {
+        const { unmount } = renderEdit(doc, ctx({ editing, draft: editing === 'field:57' ? d.fields['57']! : 'FX1' }))
+        expect(screen.queryAllByRole('button', { name: /^(Редактировать поле|Изменить|Вернуть исходное)/ }), `${status} ${String(editing)}`).toHaveLength(0)
+        expect(document.querySelector('[data-k-edit]'), `${status} ${String(editing)}`).toBeNull()
+        unmount()
+      }
+    }
+    // отклонённый запрос правку не запрещает
+    const rejected: FxDocDetail = { ...d, annul: { ...annul, status: 'rejected', by: 'Вы', at: '2026-09-23T11:10:00', rejectReason: 'Нужен' } }
+    renderEdit(rejected, ctx())
+    expect(screen.getByRole('button', { name: 'Изменить 20 исх' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Изменить счёт Кт' })).toBeInTheDocument()
   })
 
   it('счёт Кт: подсказка «Только из карточки клиента · USD · 6 сч.»; выбор — change(счёт) и save; ошибка загрузки — «Повторить»', async () => {

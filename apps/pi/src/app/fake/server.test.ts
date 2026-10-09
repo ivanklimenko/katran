@@ -1,10 +1,13 @@
 import type { ColumnDef } from '@katran/ui'
 import { ApiError, type HttpRequest } from '../../shared/api'
+import { annulSeedsOf, canAnnulBase, createAnnulStore } from './annul'
 import { fxDocsMeta, makeFxDocs } from './fx-docs.data'
 import { makeRubDocs } from './rub-docs.data'
 import { makeFxDocDetail } from './fx-docs.detail'
 import { fakeGrid } from './grid'
-import { createFakeGrids, createFxDocsEditStore } from './grids'
+import { createFakeGrids, createFxDocsEditStore, editSeedIdsOf, plainNotifOf } from './grids'
+import { ABS_ERROR_ACCOUNT } from './lookups'
+import { RESEND_WINDOW_MS } from './notif'
 import { field, inline } from './meta'
 import { createFakeServer } from './server'
 
@@ -235,7 +238,9 @@ describe('фейковый сервер: утверждение и отклон�
   // сид поля 57 — первый документ с полем 57 (MT202, CNY); сид accKt — второй MT103 в USD без блокировки (чужая ожидающая правка)
   const doc57 = fxRows[1]!
   const accDoc = fxRows[14]!
-  const own = fxRows[3]!
+  // свой документ правки — не из сидов аннулирования: при ожидающем или исполненном аннулировании целей правки нет (срез 2e)
+  const annulSeeds = Object.values(annulSeedsOf(fxRows, [doc57.id, accDoc.id]))
+  const own = fxRows.find((r, i) => i >= 3 && r.lock === null && !annulSeeds.includes(r.id))!
   const fresh = () => createFakeServer(createFakeGrids(), { now: () => WHEN })
   const decideUrl = (id: string, target: string, kind: string, grid = 'fx-docs') => `/grids/${grid}/documents/${encodeURIComponent(id)}/edits/${encodeURIComponent(target)}/${kind}`
   type Hist = { who: string; when: string; was: unknown; now: unknown; status: string; by?: string; at?: string; reason?: string; note?: string }
@@ -334,5 +339,327 @@ describe('фейковый сервер: утверждение и отклон�
     await expect(s(post(decideUrl(makeRubDocs()[0]!.id, 'x', 'confirm', 'rub-docs'), { when: 'w' }))).rejects.toMatchObject({ status: 404 })
     await expect(s(post(decideUrl('1', 'x', 'confirm', 'nope'), { when: 'w' }))).rejects.toMatchObject({ status: 404 })
     await expect(s(post(`/grids/fx-docs/documents/${doc57.id}/edits/x/maybe`, {}))).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('фейковый сервер: аннулирование, курсы, остатки, нотификации (срез 2e)', () => {
+  const WHEN = '2026-10-07T16:40:00'
+  const fxRows = makeFxDocs()
+  const rubRows = makeRubDocs()
+  const { seedId, accKtSeedId } = editSeedIdsOf(fxRows)
+  const fxSeed = annulSeedsOf(fxRows, [seedId, accKtSeedId])
+  const rubSeed = annulSeedsOf(rubRows, [], 0)
+  const taken = [seedId, accKtSeedId, fxSeed.pending, fxSeed.done]
+  const small = fxRows.find((r) => canAnnulBase(r) && r.amount <= 1_000_000 && !taken.includes(r.id))!
+  const big = fxRows.find((r) => canAnnulBase(r) && r.amount > 1_000_000 && !taken.includes(r.id))!
+  const rubSmall = rubRows.find((r) => canAnnulBase(r) && r.id !== rubSeed.pending)!
+  const done = fxRows.find((r) => r.status === 'DONE' && r.lock === null)!
+  const locked = fxRows.find((r) => r.lock !== null && ['IN_PROGRESS', 'TO_EXPORT', 'ERROR', 'DEFERRED'].includes(r.status))!
+  type AnnulDto = { status: string; who: string; when: string; reason: string; by: string | null; at: string | null; rejectReason: string | null; canConfirm: boolean }
+  type D = { status: string; canAnnul: boolean; annul: AnnulDto | null }
+  let clockMs = 1_000_000
+  const fresh = (over: Parameters<typeof createFakeServer>[1] = {}) => createFakeServer(createFakeGrids(), { now: () => WHEN, clock: () => clockMs, ...over })
+  const detail = async (s: ReturnType<typeof fresh>, id: string, grid = 'fx-docs') => (await s(get(`/grids/${grid}/documents/${id}`))) as D
+  const annulUrl = (id: string, sub = '', grid = 'fx-docs') => `/grids/${grid}/documents/${id}/annul${sub}`
+  const err = async (p: Promise<unknown>) => (await p.catch((e: unknown) => e)) as ApiError
+
+  it('сид: у документов-кандидатов данные есть (иначе тесты ниже пусты)', () => {
+    for (const x of [fxSeed.pending, fxSeed.done, rubSeed.pending, small.id, big.id, rubSmall.id]) expect(x).toBeTruthy()
+  })
+  it('canAnnul: true у IN_PROGRESS/TO_EXPORT/ERROR/DEFERRED без lock; false у DONE и у заблокированного', async () => {
+    const s = fresh()
+    expect((await detail(s, small.id)).canAnnul).toBe(true)
+    expect((await detail(s, small.id)).annul).toBeNull()
+    expect((await detail(s, done.id)).canAnnul).toBe(false)
+    expect((await detail(s, locked.id)).canAnnul).toBe(false)
+    const statuses = new Set(fxRows.filter(canAnnulBase).map((r) => r.status))
+    expect([...statuses].sort()).toEqual(['DEFERRED', 'ERROR', 'IN_PROGRESS', 'TO_EXPORT'])
+    for (const r of fxRows) expect((await detail(s, r.id)).canAnnul).toBe(canAnnulBase(r) && r.id !== fxSeed.pending)
+  })
+  it('annul: 202 без тела; сумма ≤ 1 000 000 — done, REJECTED, canAnnul false; > 1 000 000 — pending от «Вы», canConfirm false', async () => {
+    const s = fresh()
+    expect(await s(post(annulUrl(small.id), { reason: ' Дубликат ' }))).toBeNull()
+    const d = await detail(s, small.id)
+    expect(d).toMatchObject({ status: 'REJECTED', canAnnul: false, annul: { status: 'done', who: 'Вы', when: WHEN, reason: 'Дубликат', by: null, at: null, rejectReason: null, canConfirm: false } })
+    expect(await s(post(annulUrl(big.id), { reason: 'Дубликат' }))).toBeNull()
+    expect(await detail(s, big.id)).toMatchObject({ status: big.status, canAnnul: false, annul: { status: 'pending', who: 'Вы', when: WHEN, reason: 'Дубликат', canConfirm: false } })
+    // рубль — по сумме документа (у всех рублёвых стенда она ≤ 1 000 000 — сразу); через утверждение — регулятором
+    await s(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'Ошибка' }))
+    expect(await detail(s, rubSmall.id, 'rub-docs')).toMatchObject({ status: 'REJECTED', annul: { status: 'done' } })
+    const rubPending = fresh({ annulMode: () => 'pending' })
+    await rubPending(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'Ошибка' }))
+    expect(await detail(rubPending, rubSmall.id, 'rub-docs')).toMatchObject({ annul: { status: 'pending', who: 'Вы' } })
+  })
+  it('?annul: instant у большой суммы — done; pending у малой — pending; fail — 202, деталь не изменилась', async () => {
+    const instant = fresh({ annulMode: () => 'instant' })
+    expect(await instant(post(annulUrl(big.id), { reason: 'X' }))).toBeNull()
+    expect(await detail(instant, big.id)).toMatchObject({ status: 'REJECTED', annul: { status: 'done' } })
+    const pending = fresh({ annulMode: () => 'pending' })
+    await pending(post(annulUrl(small.id), { reason: 'X' }))
+    expect(await detail(pending, small.id)).toMatchObject({ annul: { status: 'pending', who: 'Вы' } })
+    const failing = fresh({ annulMode: () => 'fail' })
+    const before = await detail(failing, small.id)
+    expect(await failing(post(annulUrl(small.id), { reason: 'X' }))).toBeNull()
+    expect(await detail(failing, small.id)).toEqual(before)
+  })
+  it('annul: пустая и длинная причина — 400 по пути reason; DONE — 409; заблокированный — 403; нет документа и грида — 404', async () => {
+    const s = fresh()
+    for (const reason of ['   ', 'я'.repeat(141), 5]) {
+      const e = await err(s(post(annulUrl(small.id), { reason })))
+      expect(e.status).toBe(400)
+      expect(e.problem?.type).toBe('urn:katran:annul-validation')
+      expect(e.problem?.errors?.[0]).toMatchObject({ path: 'reason' })
+    }
+    expect((await err(s(post(annulUrl(small.id), 'x')))).status).toBe(400)
+    // граница: 140 знаков принимаются
+    expect(await s(post(annulUrl(small.id), { reason: 'я'.repeat(140) }))).toBeNull()
+    expect(await err(s(post(annulUrl(done.id), { reason: 'X' })))).toMatchObject({ status: 409, problem: { type: 'urn:katran:annul-conflict' } })
+    expect((await err(s(post(annulUrl(locked.id), { reason: 'X' })))).status).toBe(403)
+    // повторно аннулировать нельзя: уже done
+    expect((await err(s(post(annulUrl(small.id), { reason: 'X' })))).status).toBe(409)
+    expect((await err(s(post(annulUrl('nope'), { reason: 'X' })))).status).toBe(404)
+    expect((await err(s(post(annulUrl('1', '', 'nope'), { reason: 'X' })))).status).toBe(404)
+    expect((await err(s(get(annulUrl(small.id))))).status).toBe(404)
+  })
+  it('сид: чужой pending (Кузнецов Д. А.), canConfirm true; confirm с его when — 202, done, by «Вы», at = now', async () => {
+    const s = fresh()
+    const d0 = await detail(s, fxSeed.pending!)
+    expect(d0).toMatchObject({ canAnnul: false, annul: { status: 'pending', who: 'Кузнецов Д. А.', canConfirm: true, by: null, at: null } })
+    expect(fxRows.find((r) => r.id === fxSeed.pending)!.amount).toBeGreaterThan(1_000_000)
+    expect(await s(post(annulUrl(fxSeed.pending!, '/confirm'), { when: d0.annul!.when }))).toBeNull()
+    expect(await detail(s, fxSeed.pending!)).toMatchObject({ status: 'REJECTED', canAnnul: false, annul: { status: 'done', who: 'Кузнецов Д. А.', by: 'Вы', at: WHEN, canConfirm: false } })
+    // обработанный запрос — 409
+    expect((await err(s(post(annulUrl(fxSeed.pending!, '/confirm'), { when: d0.annul!.when })))).status).toBe(409)
+  })
+  it('reject с причиной: 202, rejected, rejectReason, статус прежний, canAnnul true; чужой when — 409; confirm своего — 403; причина — 400', async () => {
+    const s = fresh()
+    const d0 = await detail(s, fxSeed.pending!)
+    const when = d0.annul!.when
+    expect((await err(s(post(annulUrl(fxSeed.pending!, '/reject'), { when: '2020-01-01T00:00:00', reason: 'нет' })))).status).toBe(409)
+    for (const reason of ['  ', 'я'.repeat(141)]) {
+      expect(await err(s(post(annulUrl(fxSeed.pending!, '/reject'), { when, reason })))).toMatchObject({ status: 400, problem: { errors: [{ path: 'reason' }] } })
+    }
+    expect((await err(s(post(annulUrl(fxSeed.pending!, '/confirm'), {})))).problem?.errors?.[0]).toMatchObject({ path: 'when' })
+    expect(await s(post(annulUrl(fxSeed.pending!, '/reject'), { when, reason: ' Не согласовано ' }))).toBeNull()
+    expect(await detail(s, fxSeed.pending!)).toMatchObject({ status: d0.status, canAnnul: true, annul: { status: 'rejected', by: 'Вы', at: WHEN, rejectReason: 'Не согласовано', canConfirm: false } })
+    // после отклонения можно аннулировать снова
+    expect(await s(post(annulUrl(fxSeed.pending!), { reason: 'Повторно' }))).toBeNull()
+    // свой запрос: confirm и reject — 403
+    await s(post(annulUrl(big.id), { reason: 'X' }))
+    const mine = (await detail(s, big.id)).annul!.when
+    expect((await err(s(post(annulUrl(big.id, '/confirm'), { when: mine })))).status).toBe(403)
+    expect((await err(s(post(annulUrl(big.id, '/reject'), { when: mine, reason: 'нет' })))).status).toBe(403)
+    // запроса нет — 409
+    expect((await err(s(post(annulUrl(small.id, '/confirm'), { when: mine })))).status).toBe(409)
+  })
+  it('правка после аннулирования: pending и done — цели нет, POST edits 400 по пути target; rejected — правится, ответ правки несёт annul (срез 2e)', async () => {
+    const s = fresh()
+    const editUrl = (id: string) => `/grids/fx-docs/documents/${id}/edits`
+    const refOf = async (id: string) => ((await s(get(`/grids/fx-docs/documents/${id}`))) as { refOut?: string }).refOut ?? ''
+    // до аннулирования 20 исх правится
+    const before = await refOf(small.id)
+    expect(await s(post(editUrl(small.id), { target: 'refOut', was: before, now: 'NEWREF1' }))).toMatchObject({ refOut: 'NEWREF1' })
+    await s(post(annulUrl(small.id), { reason: 'X' }))
+    await s(post(annulUrl(big.id), { reason: 'X' }))
+    for (const id of [small.id, big.id]) {
+      const e = await err(s(post(editUrl(id), { target: 'refOut', was: await refOf(id), now: 'NEWREF2' })))
+      expect(e).toMatchObject({ status: 400, problem: { type: 'urn:katran:edit-validation', errors: [{ path: 'target' }] } })
+    }
+    // отклонённый запрос — документ снова правится; деталь ответа правки — с итогом аннулирования (как GET)
+    const d0 = await detail(s, fxSeed.pending!)
+    await s(post(annulUrl(fxSeed.pending!, '/reject'), { when: d0.annul!.when, reason: 'Нет' }))
+    const edited = (await s(post(editUrl(fxSeed.pending!), { target: 'refOut', was: await refOf(fxSeed.pending!), now: 'NEWREF3' }))) as D
+    expect(edited).toMatchObject({ refOut: 'NEWREF3', canAnnul: true, annul: { status: 'rejected' } })
+    expect(await s(get(`/grids/fx-docs/documents/${fxSeed.pending!}`))).toEqual(edited)
+  })
+  it('сид: уже аннулированный (done) — REJECTED, canAnnul false; рублёвый чужой pending — canConfirm true', async () => {
+    const s = fresh()
+    expect(await detail(s, fxSeed.done!)).toMatchObject({ status: 'REJECTED', canAnnul: false, annul: { status: 'done', canConfirm: false, by: 'Смирнова Е. В.' } })
+    const r = await detail(s, rubSeed.pending!, 'rub-docs')
+    expect(r).toMatchObject({ canAnnul: false, annul: { status: 'pending', who: 'Кузнецов Д. А.', canConfirm: true } })
+    expect(await s(post(annulUrl(rubSeed.pending!, '/confirm', 'rub-docs'), { when: r.annul!.when }))).toBeNull()
+    expect(await detail(s, rubSeed.pending!, 'rub-docs')).toMatchObject({ status: 'REJECTED', annul: { status: 'done', by: 'Вы' } })
+  })
+  it('реестр отражает итог: после annul (done) и confirm — REJECTED, фасет обновился; pending и ?annul=fail — статус прежний', async () => {
+    const s = fresh()
+    const rowOf = async (srv: ReturnType<typeof fresh>, id: string, grid = 'fx-docs') => {
+      const page = (await srv(post(`/grids/${grid}/search`, search({ page: { number: 0, size: 500 } })))) as { content: { id: string; status: string }[] }
+      return page.content.find((r) => r.id === id)!.status
+    }
+    const facet = async (srv: ReturnType<typeof fresh>, status: string) => {
+      const f = (await srv(post('/grids/fx-docs/facets', { filter: { conditions: [] }, field: 'status' }))) as { value: string; count: number }[]
+      return f.find((x) => x.value === status)?.count ?? 0
+    }
+    const rejected0 = await facet(s, 'REJECTED')
+    await s(post(annulUrl(small.id), { reason: 'X' }))
+    expect(await rowOf(s, small.id)).toBe('REJECTED')
+    expect(await facet(s, 'REJECTED')).toBe(rejected0 + 1)
+    // фильтр по статусу видит новый статус
+    const byStatus = (await s(post('/grids/fx-docs/search', search({ filter: { conditions: [{ field: 'status', op: 'EQ', value: 'REJECTED' }] }, page: { number: 0, size: 500 } })))) as { content: { id: string }[] }
+    expect(byStatus.content.some((r) => r.id === small.id)).toBe(true)
+    // сид pending: статус прежний, после confirm — REJECTED
+    expect(await rowOf(s, fxSeed.pending!)).toBe(fxRows.find((r) => r.id === fxSeed.pending)!.status)
+    await s(post(annulUrl(fxSeed.pending!, '/confirm'), { when: (await detail(s, fxSeed.pending!)).annul!.when }))
+    expect(await rowOf(s, fxSeed.pending!)).toBe('REJECTED')
+    // сид done виден как REJECTED, pending от «Вы» и fail — прежний
+    expect(await rowOf(s, fxSeed.done!)).toBe('REJECTED')
+    await s(post(annulUrl(big.id), { reason: 'X' }))
+    expect(await rowOf(s, big.id)).toBe(big.status)
+    const failing = fresh({ annulMode: () => 'fail' })
+    await failing(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'X' }))
+    expect(await rowOf(failing, rubSmall.id, 'rub-docs')).toBe(rubRows.find((r) => r.id === rubSmall.id)!.status)
+    // рубль, done — REJECTED в реестре рубля
+    await s(post(annulUrl(rubSmall.id, '', 'rub-docs'), { reason: 'X' }))
+    expect(await rowOf(s, rubSmall.id, 'rub-docs')).toBe('REJECTED')
+    expect((await detail(fresh(), small.id)).annul).toBeNull()
+  })
+  it('порог 1 000 000 считается от настоящей суммы документа: у обеих деталей amount — конечное число; рубль с суммой выше порога — pending', async () => {
+    const s = fresh()
+    expect(Number.isFinite(Number((await s(get(`/grids/rub-docs/documents/${rubSmall.id}`)) as { amount: number }).amount))).toBe(true)
+    expect(typeof ((await s(get(`/grids/rub-docs/documents/${rubSmall.id}`))) as { amount: unknown }).amount).toBe('number')
+    // хранилище напрямую: деталь с суммой выше порога — через утверждение, ниже — сразу
+    const store = createAnnulStore({ pendingId: null })
+    const mk = (amount: number) => ({ status: 'IN_PROGRESS', lock: null, created: '2026-09-23T10:00:00', amount })
+    store.command('r1', mk(2_000_000), 'annul', { reason: 'X' }, WHEN, null)
+    store.command('r2', mk(999_999.99), 'annul', { reason: 'X' }, WHEN, null)
+    expect(store.overlay('r1', mk(2_000_000)).annul).toMatchObject({ status: 'pending' })
+    expect(store.overlay('r2', mk(999_999.99)).annul).toMatchObject({ status: 'done' })
+  })
+
+  it('rates валюты: детерминирован; deal — у документа с полем 36, у прочих нет; рубль — 404', async () => {
+    const s = fresh()
+    const rates = async (id: string) => (await s(get(`/grids/fx-docs/documents/${id}/rates`))) as { cb: { rate: string; date: string; rub: string }; deal: { rate: string; from: string; to: string; amount: string } | null }
+    const withDeal = fxRows.filter((_, i) => i % 4 === 0)
+    const without = fxRows.filter((_, i) => i % 4 !== 0)
+    const a = await rates(withDeal[0]!.id)
+    expect(await rates(withDeal[0]!.id)).toEqual(a)
+    expect(a.cb.rate).toMatch(/^\d+,\d{4}$/)
+    expect(a.cb.rub).toMatch(/^[\d\u00a0]+,\d{2}$/)
+    expect(a.cb.date).toBe(withDeal[0]!.vdDt)
+    expect(a.deal).toMatchObject({ rate: '1,0886', from: withDeal[0]!.currency })
+    expect(a.deal?.to).not.toBe(a.deal?.from)
+    for (const r of withDeal.slice(0, 8)) expect((await rates(r.id)).deal).not.toBeNull()
+    for (const r of without.slice(0, 8)) expect((await rates(r.id)).deal).toBeNull()
+    await expect(s(get(`/grids/rub-docs/documents/${rubRows[0]!.id}/rates`))).rejects.toMatchObject({ status: 404 })
+    await expect(s(get('/grids/fx-docs/documents/nope/rates'))).rejects.toMatchObject({ status: 404 })
+  })
+  it('balances: счета уникальны и в порядке проводок; у счёта сида error; asOf — now; рубль тоже', async () => {
+    const s = fresh()
+    const bal = async (id: string, grid = 'fx-docs') => (await s(get(`/grids/${grid}/documents/${id}/balances`))) as { asOf: string; items: { acc: string; ccy: string; balance?: string; available?: string | null; error?: string }[] }
+    const withFee = fxRows.find((_, i) => i % 3 === 0)!
+    const d = (await detail(s, withFee.id)) as unknown as { txs: { acc: string }[] }
+    const b = await bal(withFee.id)
+    expect(b.asOf).toBe(WHEN)
+    const accs = b.items.map((x) => x.acc)
+    expect(new Set(accs).size).toBe(accs.length)
+    expect(accs).toEqual([...new Set(d.txs.map((t) => t.acc))])
+    expect(b.items.find((x) => x.acc === ABS_ERROR_ACCOUNT)).toEqual({ acc: ABS_ERROR_ACCOUNT, ccy: withFee.currency, error: 'Счёт не найден в АБС' })
+    expect(b.items.filter((x) => x.error === undefined).every((x) => typeof x.balance === 'string')).toBe(true)
+    expect(await bal(withFee.id)).toEqual(b)
+    // available бывает null: по всем документам валюты встречаются оба случая
+    const all = await Promise.all(fxRows.slice(0, 30).map((r) => bal(r.id)))
+    const ok = all.flatMap((x) => x.items).filter((x) => x.error === undefined)
+    expect(ok.some((x) => x.available === null)).toBe(true)
+    expect(ok.some((x) => typeof x.available === 'string')).toBe(true)
+    expect((await bal(rubRows[0]!.id, 'rub-docs')).items[0]).toMatchObject({ ccy: 'RUB' })
+    await expect(s(get('/grids/fx-docs/documents/nope/balances'))).rejects.toMatchObject({ status: 404 })
+  })
+
+  const finishedFx = fxRows.filter((r) => r.status === 'DONE' || r.status === 'EXPORTED')
+  const notifDoc = finishedFx[0]!
+  const rubNotifDoc = rubRows.find((r, i) => (r.status === 'DONE' || r.status === 'EXPORTED') && i % 2 === 0)!
+  type Tab = { notifications: { id: string; sentAt: string; attempts: number; status: string; responseCode: string }[] }
+  const tab = async (s: ReturnType<typeof fresh>, id: string, grid = 'fx-docs') => (await s(get(`/grids/${grid}/documents/${id}/tabs/notif`))) as Tab
+  const msg = async (s: ReturnType<typeof fresh>, id: string, nid: string, grid = 'fx-docs') => (await s(get(`/grids/${grid}/documents/${id}/notifications/${nid}/message`))) as { contentType: string; body: string }
+  const resendUrl = (id: string, nid?: string, grid = 'fx-docs') => `/grids/${grid}/documents/${id}/notifications/${nid === undefined ? '' : `${nid}/`}resend`
+
+  it('нотификации: у каждой строки id (n1…n3 стабильны); message — json у валюты, xml у рубля, text у одной строки сида; неизвестный nid — 404', async () => {
+    const s = fresh()
+    const t = await tab(s, notifDoc.id)
+    expect(t.notifications.map((n) => n.id)).toEqual(['n1', 'n2', 'n3'])
+    expect(plainNotifOf(fxRows)).toEqual({ docId: notifDoc.id, nid: 'n3' })
+    const json = await msg(s, notifDoc.id, 'n1')
+    expect(json.contentType).toBe('application/json')
+    expect(JSON.parse(json.body)).toMatchObject({ docId: notifDoc.id, nid: 'n1', event: 'accepted' })
+    expect((await msg(s, notifDoc.id, 'n3')).contentType).toBe('text/plain')
+    const other = finishedFx[1]!
+    expect((await msg(s, other.id, 'n3')).contentType).toBe('application/json')
+    const rt = await tab(s, rubNotifDoc.id, 'rub-docs')
+    expect(rt.notifications.map((n) => n.id)).toEqual(['n1', 'n2'])
+    const xml = await msg(s, rubNotifDoc.id, 'n2', 'rub-docs')
+    expect(xml.contentType).toBe('application/xml')
+    expect(xml.body).toMatch(/^<\?xml[\s\S]*<Notification id="n2"/)
+    await expect(msg(s, notifDoc.id, 'n9')).rejects.toMatchObject({ status: 404 })
+    await expect(msg(s, 'nope', 'n1')).rejects.toMatchObject({ status: 404 })
+    await expect(s(post(`/grids/fx-docs/documents/${notifDoc.id}/notifications/n1/message`, {}))).rejects.toMatchObject({ status: 404 })
+  })
+  it('resend всех: 200, по попытке OK к каждой не в OK (n1, n3); id новые и уникальные; GET вкладки видит их', async () => {
+    const s = fresh()
+    const res = (await s(post(resendUrl(notifDoc.id), {}))) as Tab
+    expect(res.notifications.map((n) => n.id)).toEqual(['n1', 'n2', 'n3', 'n4', 'n5'])
+    expect(res.notifications.slice(0, 3)).toEqual((await tab(fresh(), notifDoc.id)).notifications)
+    expect(res.notifications.slice(3)).toEqual([
+      { id: 'n4', sentAt: `${WHEN}.000`, attempts: 1, status: 'OK', responseCode: 'accepted' },
+      { id: 'n5', sentAt: `${WHEN}.000`, attempts: 1, status: 'OK', responseCode: 'confirmCrd' },
+    ])
+    expect(await tab(s, notifDoc.id)).toEqual(res)
+    expect((await msg(s, notifDoc.id, 'n4')).contentType).toBe('application/json')
+  })
+  it('resend всех, когда все в OK — одна попытка к последней; повтор после окна не дублирует OK-нотификации', async () => {
+    const s = fresh()
+    await s(post(resendUrl(notifDoc.id), {}))
+    clockMs += RESEND_WINDOW_MS
+    const again = (await s(post(resendUrl(notifDoc.id), {}))) as Tab
+    expect(again.notifications).toHaveLength(6)
+    expect(again.notifications[5]).toMatchObject({ id: 'n6', responseCode: 'confirmCrd', status: 'OK' })
+    // рубль: n1 и n2 уже OK — к последней
+    const rs = fresh()
+    const rubTab = await tab(rs, rubNotifDoc.id, 'rub-docs')
+    const res = (await rs(post(resendUrl(rubNotifDoc.id, undefined, 'rub-docs'), {}))) as Tab
+    const notOk = rubTab.notifications.filter((n) => n.status !== 'OK')
+    expect(res.notifications.length - rubTab.notifications.length).toBe(Math.max(1, notOk.length))
+  })
+  it('resend одной: одна новая попытка; неизвестный nid и документ — 404', async () => {
+    const s = fresh()
+    const res = (await s(post(resendUrl(notifDoc.id, 'n2'), {}))) as Tab
+    expect(res.notifications).toHaveLength(4)
+    expect(res.notifications[3]).toEqual({ id: 'n4', sentAt: `${WHEN}.000`, attempts: 1, status: 'OK', responseCode: 'confirmAck' })
+    expect(await tab(s, notifDoc.id)).toEqual(res)
+    clockMs += RESEND_WINDOW_MS
+    // строка с id дописанной попытки — переотправка её нотификации
+    const again = (await s(post(resendUrl(notifDoc.id, 'n4'), {}))) as Tab
+    expect(again.notifications[4]).toMatchObject({ id: 'n5', responseCode: 'confirmAck' })
+    expect((await err(s(post(resendUrl(notifDoc.id, 'n9'), {})))).status).toBe(404)
+    expect((await err(s(post(resendUrl('nope'), {})))).status).toBe(404)
+    expect((await err(s(get(resendUrl(notifDoc.id))))).status).toBe(404)
+  })
+  it('повтор переотправки документа в пределах окна — 409 resend-conflict; после окна — 200; другой документ не затронут', async () => {
+    const s = fresh()
+    await s(post(resendUrl(notifDoc.id), {}))
+    clockMs += RESEND_WINDOW_MS - 1
+    expect(await err(s(post(resendUrl(notifDoc.id, 'n2'), {})))).toMatchObject({ status: 409, problem: { type: 'urn:katran:resend-conflict' } })
+    expect((await err(s(post(resendUrl(notifDoc.id), {})))).status).toBe(409)
+    // отказ не дописывает попыток
+    expect((await tab(s, notifDoc.id)).notifications).toHaveLength(5)
+    await expect(s(post(resendUrl(finishedFx[1]!.id), {}))).resolves.toBeDefined()
+    clockMs += 1
+    await expect(s(post(resendUrl(notifDoc.id), {}))).resolves.toBeDefined()
+  })
+  it('?fail=annul|rates|balances|resend|notifmsg — 500 на своём запросе, остальные живы', async () => {
+    const run = (failing: string, req: HttpRequest) => fresh({ failing: () => failing })(req)
+    const fx = '/grids/fx-docs/documents'
+    const reqs: Record<string, HttpRequest> = {
+      annul: post(`${fx}/${small.id}/annul`, { reason: 'X' }),
+      rates: get(`${fx}/${small.id}/rates`),
+      balances: get(`${fx}/${small.id}/balances`),
+      resend: post(`${fx}/${notifDoc.id}/notifications/resend`, {}),
+      notifmsg: get(`${fx}/${notifDoc.id}/notifications/n1/message`),
+    }
+    for (const [name, req] of Object.entries(reqs)) {
+      await expect(run(name, req)).rejects.toMatchObject({ status: 500, problem: { detail: `Регулятор ?fail=${name}` } })
+      for (const [other, otherReq] of Object.entries(reqs)) if (other !== name) await expect(run(name, otherReq)).resolves.toBeDefined()
+    }
+    await expect(run('annul', post(`${fx}/${fxSeed.pending}/annul/confirm`, { when: 'x' }))).rejects.toMatchObject({ status: 500 })
+    await expect(run('resend', post(`${fx}/${notifDoc.id}/notifications/n1/resend`, {}))).rejects.toMatchObject({ status: 500 })
   })
 })

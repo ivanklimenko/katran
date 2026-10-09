@@ -1,0 +1,35 @@
+/* поле «Причина» в теле Prompt: подпись, поле, счётчик справа (решение правки 2d, аннулирование 2e) */
+.reason {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-sp-1);
+}
+
+.label {
+  font: 600 var(--k-fs-2) / var(--k-lh-2) var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.field {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--k-sp-1) var(--k-sp-2);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-m);
+  background: var(--k-paper);
+  font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
+  color: var(--k-ink);
+  resize: vertical;
+}
+
+.field:focus-visible {
+  border-color: var(--k-val);
+  outline: 2px solid var(--k-val);
+  outline-offset: 1px;
+}
+
+.count {
+  align-self: flex-end;
+  font-size: var(--k-fs-2);
+  color: var(--k-muted);
+}

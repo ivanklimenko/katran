@@ -1,4 +1,4 @@
-import { allSettled, createEffect, createStore, fork } from 'effector'
+import { allSettled, createEffect, createStore, fork, type Store } from 'effector'
 import { ApiError, type AccountItem, type AccountsQuery, type DecisionQuery, type EditQuery, type RejectQuery, type EditValue } from '../../../shared/api'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { CONFLICT_TEXT, DECISION_TEXT, REJECT_MAX, createDocEdit, editKey, editScope } from './createDocEdit'
@@ -19,7 +19,7 @@ function deferred<P, R>() {
 }
 
 /** Порты — отложенные заглушки: ответы отпускаются вручную; журналы событий — сторами (allSettled ждёт висящие эффекты — шаги копятся в fire). */
-function setup() {
+function setup(blockedDocs?: Store<Record<string, true>>) {
   const { calls: saves, fx: saveEditFx } = deferred<EditQuery, Doc>()
   const { calls: loads, fx: accountsFx } = deferred<AccountsQuery, AccountItem[]>()
   const { calls: confirms, fx: confirmEditFx } = deferred<DecisionQuery, Doc>()
@@ -32,6 +32,7 @@ function setup() {
     same,
     confirmTargets: ['valueDate'],
     lifecycle,
+    blockedDocs,
   })
   const $edited = createStore<{ id: string; detail: Doc }[]>([]).on(edit.docEdited, (l, x) => [...l, x])
   const $conflicts = createStore<{ id: string }[]>([]).on(edit.conflict, (l, x) => [...l, x])
@@ -483,5 +484,65 @@ describe('createDocEdit: вторая рука (план 2d §3.3)', () => {
     expect(scope.getState(edit.$decision).u1?.kind).toBe('reject')
     expect(scope.getState(edit.$decided).count).toBe(0)
     expect(t.edited()).toEqual([])
+  })
+})
+
+describe('createDocEdit: взаимная блокировка с аннулированием (срез 2e)', () => {
+  it('$busyDocs — прежний объект, пока набор документов тот же: ввод в редакторе и причины решения не меняет ссылку (ревью Task 7)', async () => {
+    const t = setup()
+    const { edit, scope } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    const editing = scope.getState(edit.$busyDocs)
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref3' } })
+    expect(scope.getState(edit.$busyDocs)).toBe(editing)
+    await allSettled(edit.model.cancel, { scope })
+    await ask(t, 'reject', 'u2')
+    const deciding = scope.getState(edit.$busyDocs)
+    expect(deciding).toEqual({ u2: true })
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u2', text: 'Н' } })
+    await allSettled(edit.reasonChanged, { scope, params: { docId: 'u2', text: 'Не' } })
+    expect(scope.getState(edit.$decision).u2?.reason).toBe('Не')
+    expect(scope.getState(edit.$busyDocs)).toBe(deciding)
+  })
+
+  it('$busyDocs: открыт редактор, открыто решение, сохранение в полёте — документ занят; после — нет', async () => {
+    const t = setup()
+    const { edit, scope, saves } = t
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    expect(scope.getState(edit.$busyDocs)).toEqual({})
+    expect(scope.getState(edit.$blockedDocs)).toEqual({})
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    expect(scope.getState(edit.$busyDocs)).toEqual({ u1: true })
+    await allSettled(edit.model.cancel, { scope })
+    expect(scope.getState(edit.$busyDocs)).toEqual({})
+    await ask(t, 'confirm', 'u2')
+    expect(scope.getState(edit.$busyDocs)).toEqual({ u2: true })
+    await allSettled(edit.decisionResult, { scope, params: { docId: 'u2', ok: false } })
+    expect(scope.getState(edit.$busyDocs)).toEqual({})
+    // сохранение в полёте после ухода из редактора — документ занят до ответа
+    await allSettled(edit.model.open, { scope, params: { key: 'u1:refOut', initial: 'ref1' } })
+    await allSettled(edit.model.change, { scope, params: { key: 'u1:refOut', draft: 'ref2' } })
+    t.fire(allSettled(edit.model.save, { scope }))
+    t.fire(allSettled(edit.model.requestLeave, { scope, params: { scope: 'u1:', next: { kind: 'close', slot: 'a' } } }))
+    expect(scope.getState(edit.model.$editing)).toBeNull()
+    expect(scope.getState(edit.$busyDocs)).toEqual({ u1: true })
+    saves[0]!.ok({ id: 'u1', rev: 2 })
+    await t.settle()
+    expect(scope.getState(edit.$busyDocs)).toEqual({})
+  })
+
+  it('blockedDocs: решение по документу из набора не начинается; другой документ — начинается', async () => {
+    const $blocked = createStore<Record<string, true>>({ u1: true })
+    const t = setup($blocked)
+    const { edit, scope } = t
+    expect(scope.getState(edit.$blockedDocs)).toEqual({ u1: true })
+    await allSettled(t.lifecycle.pageOpened, { scope })
+    await ask(t, 'confirm')
+    await ask(t, 'reject')
+    expect(scope.getState(edit.$decision)).toEqual({})
+    await ask(t, 'confirm', 'u2')
+    expect(Object.keys(scope.getState(edit.$decision))).toEqual(['u2'])
   })
 })

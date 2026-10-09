@@ -1,0 +1,91 @@
+/* Подложка Dialog (эталон .pr-scrim, prompt.css): накрывает ближайший позиционированный предок — в деталке слой
+   Drawer.overlay, только свой документ, а не страницу */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+
+  /* строка — не выше слоя: иначе неявная строка auto растёт по окну и max-height: 100% окна не ограничивает (тело не прокручивается) */
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+  padding: var(--k-sp-4);
+  background: var(--k-scrim);
+  animation: k-dialog-in var(--k-t-fast) ease-out;
+}
+
+@keyframes k-dialog-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Окно (эталон .pr): рамка, отступы 16 / 16 / 12, радиус 8, подъём 6 → 0 при появлении; не выше слоя — тело прокручивается */
+.box {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(var(--k-prompt-w), 100%);
+  max-height: 100%;
+  min-height: 0;
+  padding: var(--k-sp-4) var(--k-sp-4) var(--k-sp-3);
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-l);
+  background: var(--k-paper);
+  box-shadow: var(--k-shadow);
+  color: var(--k-ink);
+  animation: k-dialog-up var(--k-t-fast) ease-out;
+}
+
+/* size="l" — окно сообщения */
+.box[data-size="l"] {
+  width: min(var(--k-dialog-l), 100%);
+}
+
+/* фокус на окне — только от клика по его тексту (tabIndex -1, с клавиатуры недостижимо): без обводки */
+.box:focus {
+  outline: none;
+}
+
+@keyframes k-dialog-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--k-prompt-shift));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .box {
+    animation: none;
+  }
+}
+
+.title {
+  flex: none;
+  margin: 0;
+  font: 600 var(--k-fs-prompt) / 1.35 var(--k-sans);
+  color: var(--k-ink);
+}
+
+/* tone="danger" — акцент заголовка */
+.box[data-tone="danger"] > .title {
+  color: var(--k-bad);
+}
+
+/* тело под заголовком; длинное (код сообщения) прокручивается внутри окна */
+.content {
+  min-height: 0;
+  margin-top: var(--k-sp-3);
+  overflow: auto;
+  font: var(--k-fs-1) / 1.45 var(--k-sans);
+  color: var(--k-ink2);
+}
+
+.acts {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: var(--k-sp-2);
+  margin-top: var(--k-sp-4);
+}

@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import { Disclosure, EditMark, Tag, formatAmount, formatDate, formatDateTimeFull, type HeroCell } from '@katran/ui'
-import type { DetailDomain, DetailSummary, EditContext } from '../../../shared/lib/detail'
+import type { DetailDomain, DetailLookups, DetailSummary, EditContext } from '../../../shared/lib/detail'
 import { STATUS_LABEL, STATUS_TONE } from '../../doc-status/@x/fx-doc'
-import { TxBlock } from '../../posting/@x/fx-doc'
+import { LookupLink, TxBlock } from '../../posting/@x/fx-doc'
 import { groupAccount } from '../model/account'
 import type { FxDocDetail } from '../model/detail'
 import type { FxDoc } from '../model/fxDoc'
 import { FX_ACTIONS, FX_DETAIL_TITLE, FX_FIELDS, FX_OPTION_LABELS, FX_PROFILES, FX_TABS, fxSchemaOf, swiftPresent } from '../model/swift'
 import { AccountRow, RefOutRow, RouteEdited, ValueDateCell, editCol, fxFormEdit, routeEditTip } from './edit'
+import { RatesView } from './RatesView'
 import s from './detail.module.css'
 
 /** Значение моноширинным; warn — изменённое правкой (план 2c). */
@@ -74,8 +75,11 @@ export function FxRoute({ d, edit = null }: { d: FxDocDetail; edit?: EditContext
 const fieldTip = (tag: string) => `${tag} · ${FX_FIELDS[tag]?.label ?? ''}`
 const line = (d: FxDocDetail, tag: string) => d.fields[tag]?.lines[0] ?? ''
 
-/** Ячейки сводки (эталон heroHtml, index.html:1037); с правкой (edit) — дата валютирования правится. «Курс» — 2d. */
-export function fxHero(d: FxDocDetail, id: string, edit: EditContext | null = null): HeroCell {
+/**
+ * Ячейки сводки (эталон heroHtml, index.html:1037); с правкой (edit) — дата валютирования правится; со справочными
+ * запросами (lookups.rates) — кнопка-ссылка «Курс» рядом с суммой 32A (спека 2e §4 п. 6), без них ссылки нет (демо кита).
+ */
+export function fxHero(d: FxDocDetail, id: string, edit: EditContext | null = null, lookups: DetailLookups | null = null): HeroCell {
   switch (id) {
     case '20':
       return { label: '20 · № / от', tip: fieldTip('20'), value: <><span className={s.mono}>{line(d, '20') || '—'}</span> <span className={s.heroSub}>№ {d.docNumber} от {formatDate(d.numDate)}</span></> }
@@ -93,20 +97,35 @@ export function fxHero(d: FxDocDetail, id: string, edit: EditContext | null = nu
         value: edit ? <ValueDateCell d={d} edit={edit} same={check} /> : <>{formatDate(vin)}{check}</>,
       }
     }
-    case '32A':
-      return { label: '32A · сумма', tip: fieldTip('32A'), align: 'right', value: <span className={s.amt}>{formatAmount(d.amount)}<small className={s.ccy}>{d.currency}</small></span> }
+    case '32A': {
+      const rates = lookups?.rates
+      return {
+        label: '32A · сумма',
+        tip: fieldTip('32A'),
+        align: 'right',
+        value: (
+          <>
+            <span className={s.amt}>{formatAmount(d.amount)}<small className={s.ccy}>{d.currency}</small></span>
+            {rates && <LookupLink label="Курс" framed view={rates}><RatesView view={rates} ccy={d.currency} /></LookupLink>}
+          </>
+        ),
+      }
+    }
     default:
       return { label: id, value: '—' }
   }
 }
 
-/** Блоки-слоты профиля: msgs, route, tx; edit — правка документа (null — только просмотр, как в 2b). */
-export function fxBlock(d: FxDocDetail, id: string, edit: EditContext | null = null): ReactNode {
+/** Блоки-слоты профиля: msgs, route, tx; edit — правка документа (null — только просмотр, как в 2b); lookups.balances — «Проверить баланс». */
+export function fxBlock(d: FxDocDetail, id: string, edit: EditContext | null = null, lookups: DetailLookups | null = null): ReactNode {
   if (id === 'msgs') return <FxMessages d={d} edit={edit} />
   if (id === 'route') return <FxRoute d={d} edit={edit} />
-  if (id === 'tx') return <TxBlock txs={d.txs} txId={d.txId} txAt={d.txAt} />
+  if (id === 'tx') return <TxBlock txs={d.txs} txId={d.txId} txAt={d.txAt} balances={lookups?.balances} />
   return null
 }
+
+/** Подпись статуса документа («Обработан») — плашки и подсказки аннулирования, итог «пока в статусе «…»» (спека 2e §3.3). */
+export const statusLabelOf = (d: FxDoc): string => STATUS_LABEL[d.status]
 
 /** Шапка и лейн из строки реестра — до загрузки детали и при ошибке (спека 2a §4.3). */
 export function fxRowSummary(row: FxDoc): DetailSummary {

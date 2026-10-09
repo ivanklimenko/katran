@@ -1,7 +1,8 @@
-import { attach, createEvent, createStore, merge, sample, type Event, type EventCallable, type Store } from 'effector'
+import { attach, combine, createEvent, createStore, merge, sample, type Event, type EventCallable, type Store } from 'effector'
 import { createEditModel, type EditModel, type SaveQuery } from '@katran/effector'
 import type { ApiError, AccountSide, AccountsQuery, DecisionQuery, EditPorts, EditQuery, EditValue, RejectQuery } from '../../../shared/api'
 import type { AccountsSlot, DecisionKind, DecisionState, EditConfirmView, LeaveIntent } from '../../../shared/lib/detail'
+import { stableKeySet } from '../../../shared/lib/key-set'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
 
 export type DocEditConfig<D extends { id: string }> = {
@@ -15,6 +16,8 @@ export type DocEditConfig<D extends { id: string }> = {
   /** Цели с Prompt «commit» перед запросом (дата валютирования). */
   confirmTargets: string[]
   lifecycle: PageLifecycle
+  /** Документы с операцией аннулирования (срез 2e): решения второй руки по ним не начинаются; нет — поведение 2d. */
+  blockedDocs?: Store<Record<string, true>> | undefined
 }
 
 export type DocEdit<D> = {
@@ -53,6 +56,10 @@ export type DocEdit<D> = {
   decisionResult: EventCallable<{ docId: string; ok: boolean }>
   /** count растёт на успехе и на 409 решения; text — 'Правка утверждена' | 'Правка отклонена' | 'Правку уже обработали — данные обновлены'. */
   $decided: Store<{ count: number; text: string }>
+  /** Документы с операцией правки: открыт редактор (editScope), открыто решение ($decision), сохраняется правка ($savingDoc). */
+  $busyDocs: Store<Record<string, true>>
+  /** Переданный blockedDocs или пустой: open, revert и решения этих документов не действуют (useEditContexts). */
+  $blockedDocs: Store<Record<string, true>>
 }
 
 /** Ключ правки: `${id}:${target}`; id без ':' (UUID контракта), цель может содержать ':' ('field:57'). */
@@ -113,6 +120,7 @@ const mine = (cur: Visit, { params }: { params: { visit: number } }) => cur.open
  */
 export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): DocEdit<D> {
   const { ports, lifecycle } = cfg
+  const $blockedDocs = cfg.blockedDocs ?? createStore<Record<string, true>>({})
   // визит экрана: растёт на pageOpened — ответы справочников и решений прошлого визита не принимаются
   const $visit = createStore(0).on(lifecycle.pageOpened, (v) => v + 1)
   const current = { opened: lifecycle.$opened, visit: $visit }
@@ -227,12 +235,13 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
 
   const kindOf = (kind: DecisionKind) => (q: DecisionAsk) => ({ ...q, kind })
   // решение начинается только на открытом экране, без своего открытого редактора документа, без сохранения правки этого
-  // документа в полёте и без уже открытого решения этого документа (оно не подменяется)
+  // документа в полёте, без уже открытого решения этого документа (оно не подменяется) и без его операции аннулирования (blockedDocs)
   const asked = sample({
     clock: merge([confirmRequested.map(kindOf('confirm')), rejectRequested.map(kindOf('reject'))]),
-    source: { opened: lifecycle.$opened, decision: $decision, editing: inner.$editing, savingDoc: $savingDoc },
-    filter: ({ opened, decision, editing, savingDoc }, q) =>
-      opened && savingDoc !== q.docId && decision[q.docId] === undefined && (editing === null || !editing.key.startsWith(editScope(q.docId))),
+    source: { opened: lifecycle.$opened, decision: $decision, editing: inner.$editing, savingDoc: $savingDoc, blocked: $blockedDocs },
+    filter: ({ opened, decision, editing, savingDoc, blocked }, q) =>
+      opened && savingDoc !== q.docId && decision[q.docId] === undefined && blocked[q.docId] !== true &&
+      (editing === null || !editing.key.startsWith(editScope(q.docId))),
     fn: (_, q) => q,
   })
   // запрос: решение не в полёте; у отклонения — причина не пуста после trim
@@ -303,10 +312,20 @@ export function createDocEdit<D extends { id: string }>(cfg: DocEditConfig<D>): 
     fn: (_, { result }) => ({ id: result.id, detail: result }),
   })
   const docEdited = merge([savedDoc, decidedDoc])
+
+  // занятые правкой документы — обратная блокировка для аннулирования (одна операция над документом за раз)
+  // прежний объект, пока набор документов тот же: черновик и причина решения не перерисовывают подписчиков набора
+  const $busyDocs = stableKeySet(combine(inner.$editing, $decision, $savingDoc, (editing, decision, savingDoc) => {
+    const out: Record<string, true> = {}
+    if (editing !== null) out[idOf(editing.key)] = true
+    for (const id of Object.keys(decision)) out[id] = true
+    if (savingDoc !== null) out[savingDoc] = true
+    return out
+  }))
   const conflict = merge([savedConflict, decisionConflict])
 
   return {
     model, $accounts, loadAccounts, docEdited, conflict, $savedCount, $unsaved,
-    $savingDoc, $decision, confirmRequested, rejectRequested, reasonChanged, decisionResult, $decided,
+    $savingDoc, $decision, confirmRequested, rejectRequested, reasonChanged, decisionResult, $decided, $busyDocs, $blockedDocs,
   }
 }

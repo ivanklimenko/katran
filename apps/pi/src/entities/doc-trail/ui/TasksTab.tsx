@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
-import { Button, MiniTable, StatusDot, Tag, Timestamp, formatTimestamp, type MiniColumn, type StatusTone } from '@katran/ui'
+import { Button, ButtonLink, MiniTable, StatusDot, Tag, Timestamp, formatTimestamp, type MiniColumn, type StatusTone } from '@katran/ui'
+import { HOST_LINK_MISSING, hostLink } from '../../../shared/lib/host-links'
 import type { DocTask } from '../model/types'
 import { STUB, type TrailTabProps } from './lib'
 import { LinkButton } from './parts'
@@ -32,6 +33,7 @@ function TaskBody({ t }: { t: DocTask }) {
  * тип, текст, «История»; раскрытие — полный текст и история. По умолчанию свёрнуты (mkui: tasks — пустое множество).
  */
 export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
+  const toManual = hostLink('manualDeviations', ctx.docId)
   const open = data.filter((t) => t.state === 'open').length
   const columns: MiniColumn<DocTask>[] = [
     {
@@ -57,7 +59,9 @@ export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
       toolbar={(
         <>
           <span className={s.count}>{`${data.length} задач${open ? `, открытых ${open}` : ''}`}</span>
-          <Button size="s" onClick={() => ctx.announce(STUB)}>Перейти в блок «Ручные отклонения»</Button>
+          {toManual !== null
+            ? <ButtonLink size="s" href={toManual} target="_blank" rel="noopener">Перейти в блок «Ручные отклонения»</ButtonLink>
+            : <Button size="s" aria-disabled="true" data-k-tip={HOST_LINK_MISSING}>Перейти в блок «Ручные отклонения»</Button>}
         </>
       )}
       renderExpanded={(t) => <TaskBody t={t} />}

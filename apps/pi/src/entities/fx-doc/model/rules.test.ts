@@ -72,7 +72,8 @@ describe('правила SWIFT X (validate() эталона, index.html:1480–1
 })
 
 describe('fxEditableTargets — правимое по профилю (спека 2c §1.1)', () => {
-  const d = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+  // без аннулирования: у примера контракта ожидающий запрос, при нём целей нет (тест ниже)
+  const d = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
   const of = (patch: Partial<FxDocDetail>) => new Set(fxEditableTargets({ ...d, ...patch }))
   const fields = (...tags: string[]) => tags.map((t) => `field:${t}`)
   const tail = ['refOut', 'accDt', 'accKt']
@@ -99,5 +100,15 @@ describe('fxEditableTargets — правимое по профилю (спека
 
   it('заблокированный документ — только просмотр: целей нет, бек отклоняет любую правку (Д66)', () => {
     expect(of({ lock: { who: 'Иванова М. П.', since: '2026-09-23T09:00:00' } })).toEqual(new Set())
+  })
+
+  it('ожидающее или исполненное аннулирование — только просмотр: целей нет; отклонённое — цели как без аннулирования (срез 2e)', () => {
+    const annul = (status: 'pending' | 'done' | 'rejected') => ({
+      status, who: 'Кузнецов Д. А.', when: '2026-10-07T09:15:00', reason: 'Дубликат', by: null, at: null, rejectReason: null, canConfirm: false,
+    })
+    expect(of({ annul: annul('pending') })).toEqual(new Set())
+    expect(of({ annul: annul('done') })).toEqual(new Set())
+    expect(of({ annul: annul('rejected') })).toEqual(of({ annul: null }))
+    expect(of({ annul: null }).size).toBeGreaterThan(0)
   })
 })

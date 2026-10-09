@@ -1,4 +1,5 @@
 import type { FxDoc } from '../../entities/fx-doc'
+import { canAnnulBase } from './annul'
 import { FX_TRAIL_TABS, fxDocTrail, fxTxId } from './fx-docs.trail'
 import { by35, swiftAmount, tabsOffOf } from './trail.data'
 
@@ -78,6 +79,9 @@ export function makeFxDocDetail(row: FxDoc, i: number, rows: readonly FxDoc[]): 
     txId: fxTxId(i),
     txAt: row.created,
     txs,
+    // аннулирование (срез 2e): без состояния — по статусу и блокировке; итог команд и сид кладёт поверх хранилище annul.ts
+    canAnnul: canAnnulBase(row),
+    annul: null,
     tabsOff: tabsOffOf(FX_TRAIL_TABS, fxDocTrail(row, i, rows)),
   }
 }

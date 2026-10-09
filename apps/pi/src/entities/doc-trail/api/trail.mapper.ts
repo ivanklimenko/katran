@@ -76,7 +76,7 @@ export const parseTasks = (raw: unknown, path: string): DocTask[] =>
   }))
 
 export const parseNotifications = (raw: unknown, path: string): DocNotification[] =>
-  list(obj(raw, path), 'notifications', path, (n, p): DocNotification => ({ at: str(n, 'sentAt', p), attempts: num(n, 'attempts', p), status: str(n, 'status', p), code: str(n, 'responseCode', p) }))
+  list(obj(raw, path), 'notifications', path, (n, p): DocNotification => ({ id: str(n, 'id', p), at: str(n, 'sentAt', p), attempts: num(n, 'attempts', p), status: str(n, 'status', p), code: str(n, 'responseCode', p) }))
 
 export const parseStream = (raw: unknown, path: string): StreamEvent[] =>
   list(obj(raw, path), 'events', path, (e, p): StreamEvent => ({

@@ -1,5 +1,5 @@
 import { act, screen, waitFor } from '@testing-library/react'
-import { createEffect } from 'effector'
+import { createEffect, createStore, type Store } from 'effector'
 import { ApiError, type AccountItem, type AccountsQuery, type DecisionQuery, type EditQuery, type RejectQuery, type EditValue } from '../../../shared/api'
 import type { EditConfirmView, EditContext } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
@@ -18,7 +18,11 @@ const port = <P extends { id: string }>(impl?: ((q: P) => Promise<Doc>) | undefi
   createEffect<P, Doc, ApiError>(impl ?? (async (q) => ({ id: q.id, rev: 2 })))
 
 // UI-тесты apps/pi идут на глобальном scope (как DocDetail.test.tsx): модель — новая в каждом тесте
-function setup(save?: (q: EditQuery) => Promise<Doc>, decide: { confirm?: (q: DecisionQuery) => Promise<Doc>; reject?: (q: RejectQuery) => Promise<Doc> } = {}) {
+function setup(
+  save?: (q: EditQuery) => Promise<Doc>,
+  decide: { confirm?: (q: DecisionQuery) => Promise<Doc>; reject?: (q: RejectQuery) => Promise<Doc> } = {},
+  blockedDocs?: Store<Record<string, true>>,
+) {
   const saveEditFx = port<EditQuery>(save)
   const accountsFx = createEffect<AccountsQuery, AccountItem[], ApiError>(async () => [])
   const lifecycle = createPageLifecycle()
@@ -28,6 +32,7 @@ function setup(save?: (q: EditQuery) => Promise<Doc>, decide: { confirm?: (q: De
     normalize: (_t, v) => (typeof v === 'string' ? v.trim() : v),
     confirmTargets: ['valueDate'],
     lifecycle,
+    blockedDocs,
   })
   const ctx: Record<string, EditContext> = {}
   /** Проба: контексты двух документов, как их получат drawer A и B. */
@@ -194,5 +199,20 @@ describe('useEditContexts (план 2c §3.2)', () => {
     act(() => { ctx.d2!.onDecision(true) })
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Правку уже обработали — данные обновлены'))
     expect(ctx.d2?.decision).toBeNull()
+  })
+
+  it('blockedDocs (аннулирование документа): open, revert и решение документа не действуют, canDecide — false; другой документ не затронут', async () => {
+    const saves: EditQuery[] = []
+    const { ctx } = setup(async (q) => { saves.push(q); return { id: q.id, rev: 2 } }, {}, createStore<Record<string, true>>({ d1: true }))
+    expect(ctx.d1?.canDecide('field:57', true)).toBe(false)
+    act(() => { ctx.d1!.open('refOut', 'REF1') })
+    expect(ctx.d1?.editing).toBeNull()
+    act(() => { ctx.d1!.revert('refOut', 'REF2', 'REF1') })
+    act(() => { ctx.d1!.confirmEdit('field:57', 'w1') })
+    expect(ctx.d1?.decision).toBeNull()
+    expect(saves).toHaveLength(0)
+    expect(ctx.d2?.canDecide('field:57', true)).toBe(true)
+    act(() => { ctx.d2!.open('refOut', 'REF1') })
+    expect(ctx.d2?.editing).toBe('refOut')
   })
 })

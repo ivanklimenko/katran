@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Disclosure, LinkValue, Tag, formatAmount, formatDate, formatDateTimeFull, type HeroCell, type SectionContent } from '@katran/ui'
-import type { DetailDomain, DetailSummary } from '../../../shared/lib/detail'
+import type { DetailDomain, DetailLookups, DetailSummary, EditContext } from '../../../shared/lib/detail'
 import { STATUS_LABEL, STATUS_TONE } from '../../doc-status/@x/rub-doc'
 import { TxBlock } from '../../posting/@x/rub-doc'
 import type { RubDocDetail, RubEd107 } from '../model/detail'
@@ -179,14 +179,20 @@ export function rubHero(d: RubDocDetail, id: string): HeroCell {
   }
 }
 
-/** Блоки-слоты профиля: scen, tx, party, purpose. «Проверить баланс» у транзакций — не переносится (detail-drift Д15). */
-export function rubBlock(d: RubDocDetail, id: string): ReactNode {
+/**
+ * Блоки-слоты профиля: scen, tx, party, purpose. Правки у рубля нет — третий параметр не используется; lookups.balances —
+ * «Проверить баланс» в блоке транзакций (спека 2e §4 п. 7, сверка Д79).
+ */
+export function rubBlock(d: RubDocDetail, id: string, _edit?: EditContext | null, lookups: DetailLookups | null = null): ReactNode {
   if (id === 'scen') return <Scenario d={d} />
-  if (id === 'tx') return <TxBlock txs={d.txs} txId={d.txId} txAt={d.txAt} />
+  if (id === 'tx') return <TxBlock txs={d.txs} txId={d.txId} txAt={d.txAt} balances={lookups?.balances} />
   if (id === 'party') return <Party d={d} />
   if (id === 'purpose') return <Purpose d={d} />
   return null
 }
+
+/** Подпись статуса документа («Обработан») — плашки и подсказки аннулирования, итог «пока в статусе «…»» (спека 2e §3.3). */
+export const statusLabelOf = (d: RubDoc): string => STATUS_LABEL[d.status]
 
 export function rubRowSummary(row: RubDoc): DetailSummary {
   return {

@@ -1,5 +1,5 @@
 export { ED_BY_TYPE, ED_CODES, RUB_TYPES, TYPE_NAME, type RubDoc, type RubType } from './model/rubDoc'
-export { rubDocPorts } from './api/ports'
+export { rubAnnulPorts, rubDocPorts } from './api/ports'
 export { rubDocLayout } from './ui/layout'
 export type { RubAgent, RubDocDetail, RubEd107, RubParty } from './model/detail'
 export {
@@ -8,4 +8,4 @@ export {
 } from './model/profiles'
 export { parseRubDocDetail } from './api/detail.mapper'
 export { RUB_DETAIL_EXAMPLE } from './api/detail.example'
-export { rubBlock, rubDocDetailDomain, rubDocSummary, rubHero, rubRowSummary, rubSection } from './ui/detail'
+export { rubBlock, rubDocDetailDomain, rubDocSummary, rubHero, rubRowSummary, rubSection, statusLabelOf } from './ui/detail'

@@ -7,6 +7,7 @@ export type HttpRequest = { method: HttpMethod; url: string; query?: Record<stri
 /**
  * Единственный транспорт приложения. Обработчик подключает слой app: requestFx.use(handler).
  * Правило обработчика: 2xx → разобранный JSON; иначе — отказ с toApiError(status, body).
+ * 2xx без тела (202/204) — обработчик отдаёт null.
  */
 /** Запрос файла: адрес контракта (GET). Обработчик подключает слой app: requestFileFx.use(handler). */
 export type FileRequest = { url: string }

@@ -1,5 +1,5 @@
 import { ApiError } from './problem'
-import { bool, strArr } from './guards'
+import { bool, reqBool, strArr } from './guards'
 
 describe('strArr', () => {
   it('массив строк — как есть', () => { expect(strArr(['a', 'b'], 'x')).toEqual(['a', 'b']) })
@@ -16,5 +16,14 @@ describe('bool', () => {
     expect(bool({}, 'a', 'x')).toBe(false)
     expect(bool({}, 'a', 'x', true)).toBe(true)
     expect(() => bool({ a: 'yes' }, 'a', 'x')).toThrow('x.a: ожидалось true или false')
+  })
+})
+
+describe('reqBool', () => {
+  it('boolean — как есть; нет ключа или не boolean — contractError с путём', () => {
+    expect(reqBool({ a: false }, 'a', 'x')).toBe(false)
+    expect(reqBool({ a: true }, 'a', 'x')).toBe(true)
+    expect(() => reqBool({}, 'a', 'x')).toThrow('x.a: ожидалось true или false')
+    expect(() => reqBool({ a: 1 }, 'a', 'x')).toThrow('x.a: ожидалось true или false')
   })
 })

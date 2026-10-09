@@ -1,3 +1,4 @@
+import type { AnnulState } from '../../../shared/lib/detail'
 import type { Tx } from '../../posting/@x/rub-doc'
 import type { AGENT_KEYS, BUDGET_ROWS, COLLECT_KEYS, ED107_KEYS, PURPOSE_EXTRA_ROWS, RUB_PARTY } from './profiles'
 import type { RubDoc } from './rubDoc'
@@ -30,4 +31,8 @@ export type RubDocDetail = RubDoc & {
   txs: Tx[]
   /** Вкладки без данных (ключи RUB_TABS). */
   tabsOff: string[]
+  /** Можно ли аннулировать сейчас (спека 2e §3.1 п. 1); нет ключа в ответе — false. */
+  canAnnul: boolean
+  /** Аннулирование документа: null — не было (спека 2e §3.1 п. 2). */
+  annul: AnnulState | null
 }

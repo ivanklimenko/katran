@@ -43,6 +43,8 @@ export const FX_DETAIL_EXAMPLE = {
     { dir: 'CREDIT', st: 'PENDING', acc: '47422840500000000311', reg: '00030_FxConversion', time: null, amount: 1500.5, currency: 'USD' },
   ],
   tabsOff: ['mpu'],
+  canAnnul: false,
+  annul: { status: 'pending', who: 'Кузнецов Д. А.', when: '2026-10-07T09:15:00', reason: 'Дубликат платежа', by: null, at: null, rejectReason: null, canConfirm: true },
   // правка поля 57 (план 2c §3.1): две записи, как у сида фейка; now последней — текущее значение fields['57']
   edits: {
     'field:57': {

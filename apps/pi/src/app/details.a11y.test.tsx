@@ -1,14 +1,15 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
-import { createEffect, type Effect } from 'effector'
-import { FX_TYPES, fxCommitView, fxDocDetailDomain, fxDocLayout, fxDocPorts, parseFxDocDetail } from '../entities/fx-doc'
+import { createEffect, sample, type Effect } from 'effector'
+import { FX_TYPES, fxAnnulPorts, fxCommitView, fxDocDetailDomain, fxDocLayout, fxDocPorts, parseFxDocDetail, statusLabelOf, type FxDocDetail } from '../entities/fx-doc'
+import { createDocAnnul, useAnnulOf, type DocAnnul } from '../features/doc-annul'
 import { useEditContexts } from '../features/doc-edit'
 import { RUB_TYPES, parseRubDocDetail, rubDocDetailDomain, rubDocLayout, rubDocPorts } from '../entities/rub-doc'
 import { FX_LOCAL_TABS, detail as fxDetail, docEdit, fxDetailDomain, lifecycle as fxLifecycle } from '../pages/fx-docs'
 import { RUB_LOCAL_TABS, rubDetailDomain } from '../pages/rub-docs'
 import { requestFx, type ApiError, type TabQuery } from '../shared/api'
-import type { ActionsView, DetailDomain } from '../shared/lib/detail'
+import type { ActionsView, AnnulStatus, DetailDomain } from '../shared/lib/detail'
 import { createPageLifecycle } from '../shared/lib/lifecycle'
 import { renderK } from '../shared/lib/test'
 import { createDetail, DocDetail } from '../widgets/doc-detail'
@@ -211,4 +212,72 @@ describe('охрана ухода с черновиком правки на де
     act(() => { fxLifecycle.pageClosed() })
     unmount()
   }, 30_000)
+})
+
+/** Деталка валюты с аннулированием: модель на портах сущности и фейке; свежая деталь после команды — в кэш (связь страницы, Task 12). */
+function annulStand() {
+  const lifecycle = createPageLifecycle()
+  const detail = createDetail({ detailFx: fxDocPorts.detailFx, tabFx: fxDocPorts.tabFx, localTabs: FX_LOCAL_TABS, lifecycle })
+  const annul = createDocAnnul<FxDocDetail>({ ports: fxAnnulPorts, lifecycle, statusLabelOf })
+  sample({ clock: annul.docAnnulled, fn: ({ id, detail: d }) => ({ id, detail: d }), target: detail.replaceDetail })
+  function Stand({ model }: { model: DocAnnul<FxDocDetail> }) {
+    const annulOf = useAnnulOf(model)
+    return <DocDetail detail={detail} domain={fxDetailDomain} annulOf={annulOf} />
+  }
+  const utils = renderK(<Stand model={annul} />)
+  act(() => { lifecycle.pageOpened() })
+  const open = async (id: string) => {
+    act(() => { detail.open({ id, secondary: false }) })
+    await waitFor(() => expect(detail.$slots.getState().a).toMatchObject({ id, state: 'ready' }))
+    return screen.getByRole('dialog', { name: /^Платёжная инструкция/ })
+  }
+  return { ...utils, open, close: () => act(() => { lifecycle.pageClosed() }) }
+}
+
+/** Документ фейка по состоянию аннулирования: сид pending/done или доступный к аннулированию (canAnnul). */
+async function annulDoc(want: AnnulStatus | 'can'): Promise<string> {
+  for (const r of makeFxDocs()) {
+    const d = await fxDocPorts.detailFx(fxDocLayout.rowKey(r))
+    if (want === 'can' ? d.canAnnul : d.annul?.status === want) return d.id
+  }
+  throw new Error(`В фейке нет документа: ${want}`)
+}
+
+describe('a11y аннулирования в деталке (спека 2e §4 п. 1–4, Task 8)', () => {
+  it('валюта: плашки pending, rejected, done и Prompt аннулирования и отклонения — axe без нарушений', async () => {
+    const [pending, done, can] = [await annulDoc('pending'), await annulDoc('done'), await annulDoc('can')]
+    const { container, open, close, unmount } = annulStand()
+
+    // pending с правом решения: плашка warn с «Утвердить»/«Отклонить»; Prompt отклонения с причиной
+    let drawer = await open(pending)
+    expect(within(drawer).getByText(/^Аннулирование ожидает утверждения · Кузнецов Д\. А\./)).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Отклонить' }))
+    const reject = await within(drawer).findByRole('alertdialog', { name: 'Отклонить аннулирование?' })
+    await userEvent.type(within(reject).getByRole('textbox', { name: 'Причина' }), 'Платёж корректен')
+    expect(await axe(container)).toHaveNoViolations()
+    // решение принято фейком — свежая деталь: плашка rejected с «Закрыть», фокус — заголовок drawer
+    await userEvent.click(within(reject).getByRole('button', { name: 'Отклонить' }))
+    await waitFor(() => expect(within(drawer).queryByRole('alertdialog')).toBeNull())
+    expect(await within(drawer).findByText(/^Запрос на аннулирование отклонён · Вы, .+ · Платёж корректен$/)).toBeInTheDocument()
+    expect(drawer.querySelector('h2[tabindex]')).toHaveFocus()
+    expect(await axe(container)).toHaveNoViolations()
+
+    // done: плашка bad, кнопка лейна недоступна с подсказкой
+    drawer = await open(done)
+    expect(within(drawer).getByText(/^Документ аннулирован · .+ · Причина: .+$/)).toBeInTheDocument()
+    expect(within(drawer).getByRole('button', { name: 'Аннулировать' })).toHaveAttribute('data-k-tip', 'Документ аннулирован')
+    expect(await axe(container)).toHaveNoViolations()
+
+    // доступный документ: Prompt «Аннулировать документ?» с причиной
+    drawer = await open(can)
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Аннулировать' }))
+    const ask = await within(drawer).findByRole('alertdialog', { name: 'Аннулировать документ?' })
+    expect(within(ask).getByText('0/140')).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+    await userEvent.click(within(ask).getByRole('button', { name: 'Отмена' }))
+
+    close()
+    unmount()
+  }, 60_000)
 })

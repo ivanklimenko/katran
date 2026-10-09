@@ -1,58 +1,4 @@
-/* Подложка Prompt (эталон .pr-scrim, prompt.css): накрывает слой Drawer.overlay — только свой документ, а не страницу */
-.scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  padding: var(--k-sp-4);
-  background: var(--k-scrim);
-  animation: k-prompt-in var(--k-t-fast) ease-out;
-}
-
-@keyframes k-prompt-in {
-  from {
-    opacity: 0;
-  }
-}
-
-/* Коробка (эталон .pr): 340 с рамкой, отступы 16 / 16 / 12, радиус 8, подъём 6 → 0 при появлении */
-.box {
-  box-sizing: border-box;
-  width: min(var(--k-prompt-w), 100%);
-  padding: var(--k-sp-4) var(--k-sp-4) var(--k-sp-3);
-  border: 1px solid var(--k-line);
-  border-radius: var(--k-r-l);
-  background: var(--k-paper);
-  box-shadow: var(--k-shadow);
-  color: var(--k-ink);
-  animation: k-prompt-up var(--k-t-fast) ease-out;
-}
-
-/* фокус на коробке — только от клика по её тексту (tabIndex -1, с клавиатуры недостижима): без обводки */
-.box:focus {
-  outline: none;
-}
-
-@keyframes k-prompt-up {
-  from {
-    opacity: 0;
-    transform: translateY(var(--k-prompt-shift));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scrim,
-  .box {
-    animation: none;
-  }
-}
-
-.title {
-  margin: 0;
-  font: 600 var(--k-fs-prompt) / 1.35 var(--k-sans);
-  color: var(--k-ink);
-}
+/* Подложка, окно, заголовок и ряд кнопок — у Dialog (Dialog.module.css); здесь — блоки тела Prompt и его кнопки */
 
 .note {
   margin: var(--k-sp-2) 0 0;
@@ -87,13 +33,6 @@
   margin-top: var(--k-sp-2);
   font: var(--k-fs-2) / 1.3 var(--k-sans);
   color: var(--k-bad);
-}
-
-.acts {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--k-sp-2);
-  margin-top: var(--k-sp-4);
 }
 
 /* Кнопки кита высотой 30 с отступом 14 (эталон .pr button); двойной класс — выше размера кнопки независимо от порядка в бандле */

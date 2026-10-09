@@ -34,4 +34,6 @@ export const RUB_DETAIL_EXAMPLE = {
     { dir: 'CREDIT', st: 'EXECUTED', acc: '40802810820980451081', reg: '00010_ClientCurrent', time: '2026-09-24T08:08:20.118Z', amount: 76394.81, currency: 'RUB' },
   ],
   tabsOff: ['stream', 'mpu'],
+  canAnnul: true,
+  annul: null,
 }

@@ -5,6 +5,7 @@
   --k-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --k-z-sticky: 10;
   --k-z-drawer: 100;
+  --k-z-modal: 150;
   --k-z-menu: 200;
   --k-z-tooltip: 300;
   --k-t-fast: 120ms;
@@ -176,6 +177,7 @@
   --k-mark-dot: calc(6px * var(--k-density));
   --k-fs-mark: calc(8px * var(--k-density));
   --k-edit-dot: calc(8px * var(--k-density));
+  --k-dialog-l: calc(640px * var(--k-density));
 }
 [data-theme="dark"] {
   --k-ground: #0E121A;

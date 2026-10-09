@@ -114,6 +114,9 @@ export const sizes: Record<string, number> = {
   'fe-line': 21, 'fe-pt': 7, 'fe-px': 9, 'fe-pb': 8, 'fe-box-py': 5, 'fe-box-px': 7, 'fe-gap': 10, 'opt-btn': 18, 'opt-min': 22,
   'h-inline': 22, 'fs-edit': 12, 'sug-row': 24, 'sug-w': 320, 'sug-tag': 34, 'sug-kind': 120,
   'pen': 17, 'mark-dot': 6, 'fs-mark': 8, 'edit-dot': 8,
+  // окно Dialog размера l (спека 2e §2.1, «Исходное сообщение»): 640 — окно сообщения центрируется по экрану в слое окон
+  // страницы (--k-z-modal, NotifOverlay), а не в drawer
+  'dialog-l': 640,
 }
 
 export const fonts = {
@@ -121,7 +124,7 @@ export const fonts = {
   mono: '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace',
 }
 
-export const z = { sticky: 10, drawer: 100, menu: 200, tooltip: 300 }
+export const z = { sticky: 10, drawer: 100, modal: 150, menu: 200, tooltip: 300 }
 
 export const durations = { fast: 120, base: 200, 'sk-show': 200, 'sk-min': 400, drawer: 180, 'open-delay': 220 }
 

@@ -195,6 +195,7 @@ export const sizes = {
   'mark-dot': 6,
   'fs-mark': 8,
   'edit-dot': 8,
+  'dialog-l': 640,
 } as const
 
 export const fonts = {
@@ -205,6 +206,7 @@ export const fonts = {
 export const z = {
   'sticky': 10,
   'drawer': 100,
+  'modal': 150,
   'menu': 200,
   'tooltip': 300,
 } as const

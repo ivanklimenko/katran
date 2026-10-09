@@ -71,9 +71,9 @@ export const TRAIL_EXAMPLES: Record<TrailTabId, unknown> = {
   },
   notif: {
     notifications: [
-      { sentAt: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', responseCode: 'accepted' },
-      { sentAt: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', responseCode: 'confirmAck' },
-      { sentAt: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', responseCode: 'confirmCrd' },
+      { id: 'n1', sentAt: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', responseCode: 'accepted' },
+      { id: 'n2', sentAt: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', responseCode: 'confirmAck' },
+      { id: 'n3', sentAt: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', responseCode: 'confirmCrd' },
     ],
   },
   source: { swiftMessage: SWIFT_IN, outgoingSwiftMessage: SWIFT_OUT },

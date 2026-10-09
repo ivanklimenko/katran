@@ -1,10 +1,11 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
+import { Banner, Prompt } from '@katran/ui'
 import { createEffect, createEvent, createStore } from 'effector'
 import { useUnit } from 'effector-react'
 import { ApiError, type TabQuery } from '../../../shared/api'
-import { remoteTab, type ActionsView, type DetailDomain, type DetailSummary, type EditContext, type LocalTabView } from '../../../shared/lib/detail'
+import { remoteTab, type ActionsView, type AnnulInfo, type AnnulView, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext, type LocalTabView, type NotifView } from '../../../shared/lib/detail'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
 import { renderK } from '../../../shared/lib/test'
 import { createDetail } from '../lib/createDetail'
@@ -61,7 +62,11 @@ const domain: DetailDomain<Doc, Doc> = {
 function setup(
   handler: (id: string) => Promise<Doc> = async (id) => rows.find((r) => r.id === id)!,
   tabHandler: (q: TabQuery) => Promise<unknown> = async (q) => ({ rows: [`${q.tab} ${q.id}`] }),
-  opts: { domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext; actionsOf?: ((docId: string) => ActionsView) | undefined } = {},
+  opts: {
+    domain?: DetailDomain<Doc, Doc>; editOf?: (docId: string) => EditContext; actionsOf?: ((docId: string) => ActionsView) | undefined
+    lookupsOf?: ((docId: string) => DetailLookups) | undefined; annulOf?: ((docId: string) => AnnulView) | undefined
+    notifOf?: ((docId: string) => NotifView) | undefined
+  } = {},
 ) {
   const detailFx = createEffect<string, Doc, ApiError>(handler)
   const tabFx = createEffect<TabQuery, unknown, ApiError>(tabHandler)
@@ -70,12 +75,13 @@ function setup(
   const utils = renderK(
     <>
       <button type="button">Кнопка открытия</button>
-      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
+      <DocDetail detail={detail} domain={opts.domain ?? domain} editOf={opts.editOf} actionsOf={opts.actionsOf} lookupsOf={opts.lookupsOf} annulOf={opts.annulOf} notifOf={opts.notifOf} rowOf={(id) => rows.find((r) => r.id === id) ?? null} returnFocus={() => screen.queryByText('Кнопка открытия')} />
     </>,
   )
   act(() => { lifecycle.pageOpened() })
   const open = (id: string, secondary = false, quiet?: boolean) => act(() => { detail.open(quiet ? { id, secondary, quiet } : { id, secondary }) })
-  return { ...utils, open }
+  const close = (slot: 'a' | 'b' = 'a') => act(() => { detail.close(slot) })
+  return { ...utils, open, close, detail }
 }
 const names = () => screen.queryAllByRole('dialog').map((d) => d.getAttribute('aria-label'))
 const tabSkeleton = () => document.querySelector('[data-part="tab-skeleton"]')
@@ -219,16 +225,32 @@ describe('DocDetail: вкладки 2b (спека 2b §3.3, §4)', () => {
     open('d1')
     await screen.findByText('Блок b1')
     expect(asked).toEqual([])
-    await userEvent.click(screen.getByRole('tab', { name: 'Статусы' }))
-    expect(asked).toEqual(['d1:statuses'])
-    await waitFor(() => expect(tabSkeleton()).not.toBeNull())
-    expect(tabSkeleton()).toHaveAttribute('data-rows', '3')
-    // скелетон показан на 200 мс, ответ — на 250: ворота держат скелетон до 600 мс
-    await act(async () => { await new Promise<void>((r) => setTimeout(r, 150)) })
-    expect(tabSkeleton()).not.toBeNull()
-    expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
-    expect(await screen.findByRole('list', { name: 'Статусы' })).toHaveTextContent('statuses d1')
-    expect(tabSkeleton()).toBeNull()
+    // фейковые часы (и Date ворот скелетона) — с выбора вкладки: на реальных под нагрузкой ожидание скелетона опаздывало,
+    // и «ещё скелетон» проверялся уже после 600 мс (флейк pnpm check); waitFor/findBy под фейковыми часами не нужны
+    vi.useFakeTimers()
+    try {
+      const at = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms) }) }
+      fireEvent.click(screen.getByRole('tab', { name: 'Статусы' }))
+      await at(0)
+      expect(asked).toEqual(['d1:statuses'])
+      // порог показа — 200 мс
+      await at(199)
+      expect(tabSkeleton()).toBeNull()
+      await at(1)
+      expect(tabSkeleton()).toHaveAttribute('data-rows', '3')
+      // ответ — на 250 мс: ворота держат скелетон до 200 + 400 = 600 мс, данные до этого не показываются
+      await at(50)
+      expect(tabSkeleton()).not.toBeNull()
+      expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
+      await at(349)
+      expect(tabSkeleton()).not.toBeNull()
+      expect(screen.queryByRole('list', { name: 'Статусы' })).toBeNull()
+      await at(1)
+      expect(screen.getByRole('list', { name: 'Статусы' })).toHaveTextContent('statuses d1')
+      expect(tabSkeleton()).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('возврат на загруженную вкладку — без запроса и без скелетона', async () => {
@@ -384,8 +406,8 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
     const first = setup(undefined, undefined, { domain: { ...domain, ...withEdit }, editOf: () => ctx })
     first.open('d1')
     expect(await screen.findByText('Блок b1')).toBeInTheDocument()
-    expect(withEdit.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', ctx)
-    expect(withEdit.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', ctx)
+    expect(withEdit.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', ctx, null)
+    expect(withEdit.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', ctx, null)
     expect(withEdit.formEdit).toHaveBeenLastCalledWith(rows[0], ctx)
     await userEvent.click(screen.getByRole('button', { name: 'Редактировать поле 20' }))
     expect(onEdit).toHaveBeenCalledWith('20')
@@ -395,11 +417,95 @@ describe('DocDetail: правка (план 2c, §3.4)', () => {
     const second = setup(undefined, undefined, { domain: { ...domain, ...plain } })
     second.open('d1')
     expect(await screen.findByText('Блок b1')).toBeInTheDocument()
-    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null)
-    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null)
+    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null, null)
+    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null, null)
     expect(plain.formEdit).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Редактировать поле 20' })).toBeNull()
     expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+})
+
+describe('DocDetail: справочные запросы (спека 2e §3.5)', () => {
+  it('lookupsOf: renderHero/renderBlock получают lookups своего документа четвёртым аргументом; без lookupsOf — null', async () => {
+    const make = () => ({
+      renderHero: vi.fn((d: Doc) => ({ label: 'Номер', value: d.num })),
+      renderBlock: vi.fn((_d: Doc, id: string) => <div>Блок {id}</div>),
+    })
+    const lookupsByDoc: Record<string, DetailLookups> = { d1: { rates: undefined }, d2: { balances: undefined } }
+    const asked: string[] = []
+    const withLookups = make()
+    const first = setup(undefined, undefined, {
+      domain: { ...domain, ...withLookups },
+      lookupsOf: (id) => { asked.push(id); return lookupsByDoc[id]! },
+    })
+    first.open('d1')
+    first.open('d2', true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    expect(withLookups.renderHero).toHaveBeenCalledWith(rows[0], 'num', null, lookupsByDoc.d1)
+    expect(withLookups.renderBlock).toHaveBeenCalledWith(rows[0], 'b1', null, lookupsByDoc.d1)
+    expect(withLookups.renderHero).toHaveBeenCalledWith(rows[1], 'num', null, lookupsByDoc.d2)
+    expect(withLookups.renderBlock).toHaveBeenCalledWith(rows[1], 'b1', null, lookupsByDoc.d2)
+    expect(new Set(asked)).toEqual(new Set(['d1', 'd2']))
+    first.unmount()
+
+    const plain = make()
+    const second = setup(undefined, undefined, { domain: { ...domain, ...plain } })
+    second.open('d1')
+    expect(await screen.findByText('Блок b1')).toBeInTheDocument()
+    expect(plain.renderHero).toHaveBeenLastCalledWith(rows[0], 'num', null, null)
+    expect(plain.renderBlock).toHaveBeenLastCalledWith(rows[0], 'b1', null, null)
+  })
+})
+
+describe('DocDetail: нотификации (спека 2e §3.5)', () => {
+  // вкладка «Связанные» как «Нотификации»: показывает и вызывает поля TabContext переотправки и окна сообщения
+  const notifTab = remoteTab<Rows>({
+    render: (_data, ctx) => (
+      <div data-part="notif" data-busy={String(ctx.resendBusy)}>
+        {ctx.resend && <button type="button" onClick={() => ctx.resend?.()}>Переотправить все</button>}
+        {ctx.resend && <button type="button" onClick={() => ctx.resend?.('n2', 2)}>Переотправить, отправка 2</button>}
+        {ctx.openMessage && <button type="button" onClick={() => ctx.openMessage?.('n2', 2)}>Исходное сообщение, отправка 2</button>}
+      </div>
+    ),
+  })
+  const notifDomain: DetailDomain<Doc, Doc> = { ...domain, tabViews: { ...domain.tabViews, linked: notifTab } }
+
+  it('notifOf: TabContext получает resend, resendBusy, openMessage своего документа', async () => {
+    const calls: unknown[][] = []
+    const notifOf = (id: string): NotifView => ({
+      resend: (...a) => calls.push([id, 'resend', ...a]),
+      resendBusy: id === 'd2',
+      openMessage: (...a) => calls.push([id, 'open', ...a]),
+    })
+    const { open, detail } = setup(undefined, undefined, { domain: notifDomain, notifOf })
+    open('d1')
+    open('d2', true)
+    act(() => { detail.setTab({ slot: 'a', tab: 'linked' }) })
+    act(() => { detail.setTab({ slot: 'b', tab: 'linked' }) })
+    // часть вкладки — в drawer своего документа (порядок drawer в DOM — забота DrawerStack)
+    const partOf = (name: string) => screen.getByRole('dialog', { name }).querySelector<HTMLElement>('[data-part="notif"]')
+    await waitFor(() => expect(document.querySelectorAll('[data-part="notif"]')).toHaveLength(2))
+    const a = partOf('Платёжная инструкция № 417')
+    const b = partOf('Платёжная инструкция № 418')
+    expect(a).toHaveAttribute('data-busy', 'false')
+    expect(b).toHaveAttribute('data-busy', 'true')
+    await userEvent.click(within(a!).getByRole('button', { name: 'Переотправить все' }))
+    await userEvent.click(within(b!).getByRole('button', { name: 'Переотправить, отправка 2' }))
+    await userEvent.click(within(a!).getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
+    expect(calls).toEqual([['d1', 'resend'], ['d2', 'resend', 'n2', 2], ['d1', 'open', 'n2', 2]])
+  })
+
+  it('без notifOf — полей в TabContext нет (вкладка как в 2b)', async () => {
+    const { open, detail } = setup(undefined, undefined, { domain: notifDomain })
+    open('d1')
+    act(() => { detail.setTab({ slot: 'a', tab: 'linked' }) })
+    const part = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-part="notif"]')
+      expect(el).not.toBeNull()
+      return el as HTMLElement
+    })
+    expect(part).toHaveAttribute('data-busy', 'undefined')
+    expect(within(part).queryAllByRole('button')).toHaveLength(0)
   })
 })
 
@@ -452,15 +558,15 @@ describe('DocDetail: действия лейна (план 2d §3.5)', () => {
     expect(new Set(asked)).toEqual(new Set(['d1', 'd2']))
   })
 
-  it('«Создать служебный документ» и «Аннулировать» — объявление 2a и при actionsOf (срез 2e)', async () => {
+  it('«Создать служебный документ» и «Аннулировать» без annulOf — заглушка «Действие пока недоступно» и при actionsOf (срез 2e)', async () => {
     const view = actionsStub()
     const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: () => view })
     open('d1')
     await screen.findByText('Блок b1')
     await userEvent.click(screen.getByRole('button', { name: 'Создать служебный документ' }))
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Создать служебный документ · Платёжная инструкция № 417'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Действие пока недоступно'))
     await userEvent.click(screen.getByRole('button', { name: 'Аннулировать' }))
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Аннулировать · Платёжная инструкция № 417'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Действие пока недоступно'))
     expect(view.run).not.toHaveBeenCalled()
   })
 
@@ -754,5 +860,171 @@ describe('DocDetail: F5 — «Обновить» (план 2d §4 п. 4)', () =>
   it('без actionsOf — браузеру (поведение 2a)', async () => {
     await ready({ actions: false })
     expect(f5(screen.getByRole('button', { name: 'Обновить' }))).toBe(true)
+  })
+})
+
+/** Вид аннулирования документа — заглушка: виджет не знает модели аннулирования (спека 2e §3.5). */
+const laneOf = (over: Partial<ReturnType<AnnulView['lane']>> = {}) => ({ disabled: false, hint: null, busy: false, run: vi.fn(), ...over })
+const annulStub = (over: Partial<AnnulView> = {}): AnnulView => ({ lane: () => laneOf(), banner: () => null, prompt: () => null, ...over })
+// у d1 — отклонённый запрос (плашка rejected), у d2 — без запроса
+const rejectedAnnul = {
+  status: 'rejected' as const, who: 'Кузнецов Д. А.', when: '2026-09-23T10:00:00', reason: 'Дубликат', by: 'Петров С. В.', at: '2026-09-24T11:30:00',
+  rejectReason: 'Платёж корректен', canConfirm: false,
+}
+const infoOf = (d: Doc): AnnulInfo => ({
+  canAnnul: d.id === 'd1', annul: d.id === 'd1' ? rejectedAnnul : null, lockedBy: null, statusLabel: 'Обработан', subject: `№ ${d.num}`,
+})
+const annulDomain: DetailDomain<Doc, Doc> = { ...laneDomain, annulInfo: infoOf }
+/** Плашка-заглушка: отклонённый запрос документа, «Закрыть плашку» — onDismiss; dismissed — прячет. */
+const bannerStub: AnnulView['banner'] = (info, dismissed, onDismiss) => (info?.annul == null || dismissed ? null : (
+  <Banner tone="neutral" onClose={onDismiss} closeLabel="Закрыть плашку">Запрос на аннулирование отклонён · {info.subject}</Banner>
+))
+
+describe('DocDetail: аннулирование (спека 2e §3.5, §4 п. 1–4)', () => {
+  it('annulOf: кнопка «Аннулировать» берёт состояние из lane по AnnulInfo домена; недоступна — aria-disabled (не disabled), подсказка lane, клик игнорируется', async () => {
+    const run = vi.fn()
+    const lane = vi.fn((info: AnnulInfo | null) => laneOf({ disabled: true, hint: info === null ? null : 'Документ аннулирован', run }))
+    const { open } = setup(undefined, undefined, { domain: annulDomain, actionsOf: () => actionsStub(), annulOf: () => annulStub({ lane }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    expect(lane).toHaveBeenLastCalledWith(infoOf(rows[0]!))
+    const ban = screen.getByRole('button', { name: 'Аннулировать' })
+    expect(ban).toHaveAttribute('aria-disabled', 'true')
+    expect(ban).not.toHaveAttribute('disabled')
+    expect(ban).toHaveAttribute('data-k-tip', 'Документ аннулирован')
+    ban.focus()
+    expect(ban).toHaveFocus()
+    await userEvent.click(ban)
+    expect(run).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent('')
+  })
+
+  it('до загрузки детали lane получает null — кнопка недоступна', async () => {
+    const asked: (AnnulInfo | null)[] = []
+    const { open } = setup(() => new Promise<Doc>(() => {}), undefined, {
+      domain: annulDomain, actionsOf: () => actionsStub(), annulOf: () => annulStub({ lane: (info) => { asked.push(info); return laneOf({ disabled: info === null }) } }),
+    })
+    open('d1')
+    expect(asked).toContain(null)
+    expect(asked.every((x) => x === null)).toBe(true)
+    expect(screen.getByRole('button', { name: 'Аннулировать' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('доступная «Аннулировать» — run lane, без объявления и без run действий; подсказка — подпись', async () => {
+    const run = vi.fn()
+    const view = actionsStub()
+    const { open } = setup(undefined, undefined, { domain: annulDomain, actionsOf: () => view, annulOf: () => annulStub({ lane: () => laneOf({ run }) }) })
+    open('d2')
+    await screen.findByText('Блок b1')
+    const ban = screen.getByRole('button', { name: 'Аннулировать' })
+    expect(ban).not.toHaveAttribute('aria-disabled')
+    expect(ban).not.toHaveAttribute('aria-busy')
+    expect(ban).toHaveAttribute('data-k-tip', 'Аннулировать')
+    await userEvent.click(ban)
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(view.run).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent('')
+  })
+
+  it('busy lane — aria-busy и aria-disabled', async () => {
+    const { open } = setup(undefined, undefined, { domain: annulDomain, annulOf: () => annulStub({ lane: () => laneOf({ disabled: true, busy: true, hint: 'Завершите текущую операцию с документом' }) }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    const ban = screen.getByRole('button', { name: 'Аннулировать' })
+    expect(ban).toHaveAttribute('aria-busy', 'true')
+    expect(ban).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('плашка — между лейном и вкладками своего документа', async () => {
+    const { open } = setup(undefined, undefined, {
+      domain: annulDomain, annulOf: (id) => annulStub({ banner: id === 'd1' ? bannerStub : () => null }),
+    })
+    open('d1')
+    open('d2', true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    const b = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
+    expect(within(b).queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    const banner = within(a).getByText('Запрос на аннулирование отклонён · № 417')
+    const lane = a.querySelector('[data-part="lane"]')!
+    const tabs = a.querySelector('[data-part="tabs"]')!
+    expect(lane.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tabs.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+  })
+
+  it('закрытая плашка скрыта до закрытия деталки; повторное открытие того же документа — снова видна', async () => {
+    const { open, close } = setup(undefined, undefined, { domain: annulDomain, annulOf: () => annulStub({ banner: bannerStub }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    await userEvent.click(screen.getByRole('button', { name: 'Закрыть плашку' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    // смена вкладки и обратно — состояние drawer, плашка по-прежнему закрыта
+    await userEvent.click(screen.getByRole('tab', { name: 'Доп. поля' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Общие данные' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    close()
+    await waitFor(() => expect(names()).toEqual([]))
+    open('d1')
+    expect(await screen.findByText('Запрос на аннулирование отклонён · № 417')).toBeInTheDocument()
+  })
+
+  it('«Закрыть» плашки: кнопка пропала вместе с плашкой — фокус на заголовке своего drawer, не в body (найдено e2e Task 13)', async () => {
+    const { open } = setup(undefined, undefined, { domain: annulDomain, annulOf: () => annulStub({ banner: bannerStub }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    await userEvent.click(screen.getByRole('button', { name: 'Закрыть плашку' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    expect(document.activeElement).not.toBe(document.body)
+    expect(a.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement?.tagName).toBe('H2')
+  })
+
+  it('тот же drawer: закрыта плашка rejected, пришёл новый rejected с другим annul.when — снова видна', async () => {
+    let when = '2026-09-23T10:00:00'
+    const domainWhen: DetailDomain<Doc, Doc> = { ...laneDomain, annulInfo: (d) => ({ ...infoOf(d), annul: d.id === 'd1' ? { ...rejectedAnnul, when } : null }) }
+    const { open, detail } = setup(undefined, undefined, { domain: domainWhen, annulOf: () => annulStub({ banner: bannerStub }) })
+    open('d1')
+    await screen.findByText('Блок b1')
+    await userEvent.click(screen.getByRole('button', { name: 'Закрыть плашку' }))
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    // та же деталь заново (тот же when) — плашка закрыта
+    act(() => { detail.replaceDetail({ id: 'd1', detail: rows[0]! }) })
+    expect(screen.queryByText(/Запрос на аннулирование отклонён/)).toBeNull()
+    // новый запрос отклонён — другой when: плашка снова видна в том же drawer
+    when = '2026-09-25T12:00:00'
+    act(() => { detail.replaceDetail({ id: 'd1', detail: { ...rows[0]! } }) })
+    expect(screen.getByText('Запрос на аннулирование отклонён · № 417')).toBeInTheDocument()
+  })
+
+  it('Prompt аннулирования — в overlay drawer своего документа; F5 при нём — браузеру', async () => {
+    const view = actionsStub()
+    const { open } = setup(undefined, undefined, {
+      domain: annulDomain,
+      actionsOf: () => view,
+      annulOf: (id) => annulStub({ prompt: (info) => (id === 'd2' && info !== null ? <Prompt open title="Аннулировать документ?" note={info.subject} onResult={vi.fn()} /> : null) }),
+    })
+    open('d1', false, true)
+    open('d2', true, true)
+    await waitFor(() => expect(screen.getAllByText('Блок b1')).toHaveLength(2))
+    const a = screen.getByRole('dialog', { name: 'Платёжная инструкция № 417' })
+    const b = screen.getByRole('dialog', { name: 'Платёжная инструкция № 418' })
+    expect(within(a).queryByRole('alertdialog')).toBeNull()
+    const prompt = within(b).getByRole('alertdialog', { name: 'Аннулировать документ?' })
+    expect(prompt).toHaveAccessibleDescription('№ 418')
+    expect(fireEvent.keyDown(within(prompt).getByRole('button', { name: 'Отмена' }), { key: 'F5' })).toBe(true)
+    expect(view.run).not.toHaveBeenCalled()
+  })
+
+  it('Prompt правки 2c важнее Prompt аннулирования того же документа — один Prompt', async () => {
+    const ctx = editStub('d1', { confirm: { title: 'Отменить правку?', okLabel: 'Отменить правку', cancelLabel: 'Продолжить правку', tone: 'danger' } })
+    const { open } = setup(undefined, undefined, {
+      domain: annulDomain, editOf: () => ctx,
+      annulOf: () => annulStub({ prompt: () => <Prompt open title="Аннулировать документ?" onResult={vi.fn()} /> }),
+    })
+    open('d1')
+    await screen.findByText('Блок b1')
+    expect(screen.getAllByRole('alertdialog')).toHaveLength(1)
+    expect(screen.getByRole('alertdialog', { name: 'Отменить правку?' })).toBeInTheDocument()
   })
 })

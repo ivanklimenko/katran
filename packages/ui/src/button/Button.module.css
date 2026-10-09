@@ -8,6 +8,7 @@
   font: 500 var(--k-fs-1) / 1 var(--k-sans);
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none; /* <a> в ButtonLink */
   transition: background var(--k-t-fast), border-color var(--k-t-fast), color var(--k-t-fast);
 }
 

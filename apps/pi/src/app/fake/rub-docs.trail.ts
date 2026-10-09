@@ -160,8 +160,8 @@ export function rubDocTrail(row: RubDoc, i: number, rows: readonly RubDoc[]): Re
     tasks: { tasks: tasks(row, i, b, who) },
     notif: {
       notifications: pair ? [
-        { sentAt: stamp(b, 520), attempts: 1, status: 'OK', responseCode: 'accepted' },
-        { sentAt: stamp(b, 8950), attempts: i % 4 === 0 ? 3 : 1, status: i % 4 === 0 ? 'TIMEOUT' : 'OK', responseCode: 'confirmCrd' },
+        { id: 'n1', sentAt: stamp(b, 520), attempts: 1, status: 'OK', responseCode: 'accepted' },
+        { id: 'n2', sentAt: stamp(b, 8950), attempts: i % 4 === 0 ? 3 : 1, status: i % 4 === 0 ? 'TIMEOUT' : 'OK', responseCode: 'confirmCrd' },
       ] : [],
     },
     ed244: { ED244: ed244(row, i) },

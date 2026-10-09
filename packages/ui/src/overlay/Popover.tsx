@@ -59,28 +59,40 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', id,
     }
   }, [open, anchor, returnFocus, role, manualFocus])
 
-  // Escape и клик вне. Prompt поверх ([data-k-prompt], модальный слой деталки) — не «вне»: его Esc и кнопки решают сами,
-  // иначе поповер закрыл бы правку под Prompt раньше ответа
+  // Escape и клик вне. Окно поверх ([data-k-dialog] — подложка любого Dialog, в том числе Prompt; модальный слой деталки) —
+  // не «вне»: его Esc и кнопки решают сами, иначе поповер закрыл бы правку под Prompt раньше ответа (или себя вместо окна).
+  // Но фокус, ушедший в такое окно, — окно открылось поверх (с клавиатуры: Tab из поповера дальше по странице и Enter):
+  // панель (не список комбобокса — тот живёт под Prompt правки) закрывается, иначе она слоем --k-z-menu осталась бы над
+  // подложкой окна и перехватывала бы клики. Фокус окна закрытие не отнимает (возврат — только из body).
   useEffect(() => {
     if (!open) return
-    const inPrompt = (t: EventTarget | null) => t instanceof Element && t.closest('[data-k-prompt]') !== null
+    const inDialog = (t: EventTarget | null) => t instanceof Element && t.closest('[data-k-dialog]') !== null
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || inPrompt(e.target)) return
+      if (e.key !== 'Escape' || inDialog(e.target)) return
       e.stopPropagation()
       onCloseRef.current()
     }
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node
-      if (box.current?.contains(t) || anchor.current?.contains(t) || inPrompt(e.target)) return
+      if (box.current?.contains(t) || anchor.current?.contains(t) || inDialog(e.target)) return
+      onCloseRef.current()
+    }
+    const onFocus = (e: FocusEvent) => {
+      if (role === 'presentation' || !(e.target instanceof Element) || box.current?.contains(e.target)) return
+      // окно, в котором живёт сам якорь (поповер внутри окна), — не «поверх»
+      const win = e.target.closest('[data-k-dialog]')
+      if (win === null || (anchor.current !== null && win.contains(anchor.current))) return
       onCloseRef.current()
     }
     document.addEventListener('keydown', onKey, true)
     document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('focusin', onFocus, true)
     return () => {
       document.removeEventListener('keydown', onKey, true)
       document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('focusin', onFocus, true)
     }
-  }, [open, anchor])
+  }, [open, anchor, role])
 
   if (!open || !portalRoot) return null
   return createPortal(

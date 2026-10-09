@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { formatDuration } from '@katran/ui'
+import type { TabContext } from '../../../shared/lib/detail'
+import { HOST_LINK_MISSING, configureHostLinks } from '../../../shared/lib/host-links'
+import { renderK } from '../../../shared/lib/test'
 import type { Compliance, DocNotification, DocTask, StatusEvent, StreamEvent } from '../model/types'
 import { ComplianceTab } from './ComplianceTab'
 import { STUB, codeLanguage, keysLabel, toggleKey } from './lib'
@@ -47,9 +51,9 @@ const TASKS: DocTask[] = [
   },
 ]
 const NOTIF: DocNotification[] = [
-  { at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
-  { at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
-  { at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
+  { id: 'n1', at: '2026-09-22T07:31:46.000', attempts: 3, status: 'TIMEOUT', code: 'accepted' },
+  { id: 'n2', at: '2026-09-22T07:33:25.000', attempts: 1, status: 'OK', code: 'confirmAck' },
+  { id: 'n3', at: '2026-09-22T07:35:02.000', attempts: 3, status: 'TIMEOUT', code: 'confirmCrd' },
 ]
 const STREAM: StreamEvent[] = [
   { at: '2026-09-22T07:33:24.795', system: 'MSB', destination: 'Шина сообщений', event: 'fx_evt_credit_end', status: 'SENT', tries: 1 },
@@ -152,11 +156,30 @@ describe('ComplianceTab (эталон complianceHtml)', () => {
 })
 
 describe('TasksTab (эталон tasksHtml)', () => {
-  it('счётчик «N задач, открытых M»; кнопка раздела — заглушка 2d', async () => {
-    const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+  it('счётчик «N задач, открытых M»', () => {
+    renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
     expect(screen.getByText('2 задач, открытых 1')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Перейти в блок «Ручные отклонения»' }))
-    expect(spies.announce).toHaveBeenCalledWith(STUB)
+  })
+  describe('переход в «Ручные отклонения»', () => {
+    afterEach(() => { configureHostLinks({}) })
+    it('хост настроил ссылку — ссылка-кнопка в новой вкладке с адресом на документ', () => {
+      configureHostLinks({ manualDeviations: (id) => `/md?doc=${id}` })
+      renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+      const a = screen.getByRole('link', { name: 'Перейти в блок «Ручные отклонения»' })
+      expect(a).toHaveAttribute('href', `/md?doc=${TEST_DOC_ID}`)
+      expect(a).toHaveAttribute('target', '_blank')
+      expect(a).toHaveAttribute('rel', 'noopener')
+      expect(screen.queryByRole('button', { name: 'Перейти в блок «Ручные отклонения»' })).toBeNull()
+    })
+    it('ссылки нет — кнопка aria-disabled с подсказкой, клик ничего не объявляет', async () => {
+      const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
+      const b = screen.getByRole('button', { name: 'Перейти в блок «Ручные отклонения»' })
+      expect(b).toHaveAttribute('aria-disabled', 'true')
+      expect(b).toHaveAttribute('data-k-tip', HOST_LINK_MISSING)
+      expect(screen.queryByRole('link', { name: 'Перейти в блок «Ручные отклонения»' })).toBeNull()
+      await userEvent.click(b)
+      expect(spies.announce).not.toHaveBeenCalled()
+    })
   })
   it('по умолчанию свёрнуты; точка — состояние; клик по шеврону раскрывает историю и «Закрыта · кто»', async () => {
     const { spies } = renderTab((ctx) => <TasksTab data={TASKS} ctx={ctx} />)
@@ -217,12 +240,76 @@ describe('NotificationsTab (эталон notifHtml)', () => {
     expect(within(table).getByText('confirmAck')).toBeInTheDocument()
     expect(within(table).getByRole('columnheader', { name: 'Код ответа' })).toBeInTheDocument()
   })
-  it('«Переотправить» и «Исходное сообщение» — заглушки 2d', async () => {
+  it('без ctx.resend/ctx.openMessage — в панели прежняя «Переотправить», в строке ссылки «Переотправить» нет; обе — объявление STUB', async () => {
     const { spies } = renderTab((ctx) => <NotificationsTab data={NOTIF} ctx={ctx} />)
+    expect(screen.queryByRole('button', { name: 'Переотправить все' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Переотправить, отправка/ })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Переотправить' }))
     await userEvent.click(screen.getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
     expect(spies.announce).toHaveBeenCalledTimes(2)
     expect(spies.announce).toHaveBeenLastCalledWith(STUB)
+  })
+  describe('переотправка и исходное сообщение (спека 2e §4 п. 10–11)', () => {
+    const wired = (over: Partial<TabContext> = {}) => {
+      const resend = vi.fn<(nid?: string, n?: number) => void>()
+      const openMessage = vi.fn<(nid: string, n: number) => void>()
+      const r = renderTab((ctx) => <NotificationsTab data={NOTIF} ctx={{ ...ctx, resend, resendBusy: false, openMessage, ...over }} />)
+      return { ...r, resend, openMessage }
+    }
+    it('«Переотправить все» в панели → resend() без nid', async () => {
+      const t = wired()
+      await userEvent.click(screen.getByRole('button', { name: 'Переотправить все' }))
+      expect(t.resend).toHaveBeenCalledTimes(1)
+      expect(t.resend.mock.calls[0]).toEqual([])
+      expect(t.spies.announce).not.toHaveBeenCalled()
+    })
+    it('«Переотправить» строки 2 (имя «Переотправить, отправка 2») → resend(nid строки, 2)', async () => {
+      const t = wired()
+      expect(screen.getAllByRole('button', { name: /^Переотправить, отправка \d$/ })).toHaveLength(NOTIF.length)
+      const link = screen.getByRole('button', { name: 'Переотправить, отправка 2' })
+      expect(link).toHaveTextContent(/^Переотправить$/)
+      await userEvent.click(link)
+      expect(t.resend).toHaveBeenCalledWith('n2', 2)
+    })
+    it('«Исходное сообщение» строки 2 → openMessage(nid строки, 2), без объявления', async () => {
+      const t = wired()
+      await userEvent.click(screen.getByRole('button', { name: 'Исходное сообщение, отправка 2' }))
+      expect(t.openMessage).toHaveBeenCalledWith('n2', 2)
+      expect(t.spies.announce).not.toHaveBeenCalled()
+    })
+    it('resendBusy — все кнопки переотправки aria-disabled="true", клик не вызывает resend; «Исходное сообщение» доступно', async () => {
+      const t = wired({ resendBusy: true })
+      const buttons = screen.getAllByRole('button', { name: /^Переотправить/ })
+      expect(buttons).toHaveLength(NOTIF.length + 1)
+      for (const b of buttons) {
+        expect(b).toHaveAttribute('aria-disabled', 'true')
+        await userEvent.click(b)
+      }
+      expect(t.resend).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: 'Исходное сообщение, отправка 1' })).not.toHaveAttribute('aria-disabled')
+    })
+    it('нажатая кнопка в полёте — aria-busy, остальные — без', async () => {
+      const resend = vi.fn<(nid?: string, n?: number) => void>()
+      // как страница: resend переводит документ в полёт (resendBusy), вкладка перерисовывается
+      function Live() {
+        const [busy, setBusy] = useState(false)
+        const ctx: TabContext = {
+          docId: TEST_DOC_ID, openDocument: vi.fn(), announce: vi.fn(), expanded: null, setExpanded: vi.fn(),
+          resend: (nid, n) => { resend(nid, n); setBusy(true) }, resendBusy: busy, openMessage: vi.fn(),
+        }
+        return <NotificationsTab data={NOTIF} ctx={ctx} />
+      }
+      renderK(<Live />)
+      await userEvent.click(screen.getByRole('button', { name: 'Переотправить, отправка 3' }))
+      expect(resend).toHaveBeenCalledWith('n3', 3)
+      expect(screen.getByRole('button', { name: 'Переотправить, отправка 3' })).toHaveAttribute('aria-busy', 'true')
+      expect(screen.getByRole('button', { name: 'Переотправить все' })).not.toHaveAttribute('aria-busy')
+      expect(screen.getByRole('button', { name: 'Переотправить, отправка 1' })).not.toHaveAttribute('aria-busy')
+    })
+    it('без нарушений axe (в полёте)', async () => {
+      const { container } = wired({ resendBusy: true })
+      expect(await axe(container)).toHaveNoViolations()
+    })
   })
   it('пусто — счётчик и «Переотправить» остаются, «Нотификаций нет»', () => {
     renderTab((ctx) => <NotificationsTab data={[]} ctx={ctx} />)

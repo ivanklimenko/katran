@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { useRef, type ReactElement, type ReactNode } from 'react'
 import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
+import { DialogFrame } from './Dialog'
 import s from './Prompt.module.css'
 
 export type PromptTone = 'neutral' | 'danger'
@@ -34,99 +35,51 @@ export type PromptProps = {
   fallbackFocus?: (() => HTMLElement | null | undefined) | undefined
 }
 
-/** Фокусируемые элементы коробки (ловушка Tab): поля, кнопки и элементы с неотрицательным tabindex, кроме недоступных. */
-const FOCUSABLE = 'input, textarea, select, button, [tabindex]:not([tabindex="-1"])'
 const FIELD = 'input, textarea, select'
-const focusables = (box: HTMLElement): HTMLElement[] =>
-  Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !(el as HTMLButtonElement).disabled && el.getAttribute('type') !== 'hidden')
 
 /**
- * Подтверждение действия внутри своего документа (спека 2c §2.1, эталон prompt.js): без портала — рисуется там, куда
- * положен (слой Drawer.overlay), подложка накрывает только этот drawer. Коробка — alertdialog с aria-modal;
- * Tab ходит по кругу по всем фокусируемым коробки (без тела — между двумя кнопками), Esc — отказ без всплытия
- * (деталка не закрывается). Тело `children`, `okDisabled`, `busy`, `error` — спека 2d §2.1; `busy` гасит Esc и подложку.
- * Закрытие (open → false или размонтирование) возвращает фокус туда, где он был при открытии, если тот элемент ещё в DOM;
- * иначе — на `fallbackFocus()` (спека 2d, Ruling R19).
+ * Подтверждение действия внутри своего документа (спека 2c §2.1, эталон prompt.js) — тонкий слой над `Dialog` (спека 2e §2.1):
+ * alertdialog размера m, подложка с data-k-prompt, кнопки — footer. Общее (подложка, ловушка Tab по всем фокусируемым,
+ * Esc без всплытия — деталка не закрывается, возврат фокуса и `fallbackFocus`, `busy`) — у `Dialog`; здесь — тексты
+ * по умолчанию, пояснение (описание окна), тело, строка ошибки, кнопки и выбор начального фокуса.
+ * Тело `children`, `okDisabled`, `busy`, `error` — спека 2d §2.1; `fallbackFocus` — спека 2d, Ruling R19.
  */
 export function Prompt({
   open, title = 'Подтвердите действие', note, okLabel = 'Подтвердить', cancelLabel = 'Отмена', tone = 'neutral', onResult,
   children, okDisabled = false, busy = false, error, fallbackFocus,
 }: PromptProps): ReactElement | null {
-  const titleId = useStableId()
   const noteId = useStableId()
-  const box = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
   const ok = useRef<HTMLButtonElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
-  const fallback = useRef(fallbackFocus)
-  useLayoutEffect(() => { fallback.current = fallbackFocus })
-
-  useEffect(() => {
-    if (!open) return undefined
-    const before = document.activeElement
-    // с телом — первое поле тела; иначе как в 2c (danger — «Отмена», neutral — основная); недоступная — первая доступная
-    const field = body.current?.querySelector<HTMLElement>(FIELD)
-    const preferred = (tone === 'danger' ? cancel : ok).current
-    const target = field ?? (preferred && !preferred.disabled ? preferred : (box.current && focusables(box.current)[0]))
-    target?.focus()
-    return () => {
-      // body — фокуса не было (открывшая кнопка пропала, едва окно открылось): тоже запасной
-      if (before instanceof HTMLElement && before !== document.body && before.isConnected) before.focus()
-      else fallback.current?.()?.focus()
-    }
-  }, [open, tone])
-
-  // кнопка, ставшая недоступной (busy), теряет клавиатуру: фокус — на коробку, чтобы Esc и Tab оставались в окне
-  useEffect(() => {
-    if (!open || !box.current) return
-    const active = document.activeElement
-    const lost = active === null || active === document.body
-      || (box.current.contains(active) && (active as HTMLButtonElement).disabled === true)
-    if (lost) box.current.focus()
-  }, [open, busy, okDisabled])
 
   if (!open) return null
   const hasNote = note !== undefined && note !== null && note !== ''
-
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      e.stopPropagation()
-      if (!busy) onResult(false)
-    } else if (e.key === 'Tab' && box.current) {
-      // по кругу по всем фокусируемым; с коробки (вне списка) Tab — на первый, Shift+Tab — на последний
-      e.preventDefault()
-      const all = focusables(box.current)
-      if (all.length === 0) return
-      const i = all.indexOf(document.activeElement as HTMLElement)
-      const next = e.shiftKey ? (i <= 0 ? all.length - 1 : i - 1) : (i < 0 || i === all.length - 1 ? 0 : i + 1)
-      all[next]?.focus()
-    }
-  }
-  // только левой кнопкой и по самой подложке: mousedown внутри коробки сюда приходит с другим target
-  const onScrimDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (!busy && e.button === 0 && e.target === e.currentTarget) onResult(false)
+  // с телом — первое поле тела; иначе как в 2c (danger — «Отмена», neutral — основная);
+  // недоступная — undefined: Dialog поставит фокус на первую доступную
+  const initialFocus = () => {
+    const field = body.current?.querySelector<HTMLElement>(FIELD)
+    const preferred = (tone === 'danger' ? cancel : ok).current
+    return field ?? (preferred && !preferred.disabled ? preferred : undefined)
   }
 
   return (
-    // клавиши — на подложке (role="presentation", как обёртки поповеров кита): фокус всегда на кнопках коробки, keydown всплывает сюда
-    <div role="presentation" className={s.scrim} data-k-prompt="" onMouseDown={onScrimDown} onKeyDown={onKeyDown}>
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={hasNote ? noteId : undefined}
-        aria-busy={busy || undefined}
-        ref={box}
-        // клик по тексту коробки фокусирует её, а не body: Esc и ловушка Tab продолжают работать
-        tabIndex={-1}
-        className={s.box}
-      >
-        <h4 id={titleId} className={s.title}>{title}</h4>
-        {hasNote && <div id={noteId} className={s.note}>{note}</div>}
-        {children !== undefined && children !== null && <div ref={body} className={s.body}>{children}</div>}
-        {error && <div role="alert" className={s.error}>{error}</div>}
-        <div className={s.acts}>
+    <DialogFrame
+      open
+      role="alertdialog"
+      size="m"
+      title={title}
+      onClose={() => onResult(false)}
+      busy={busy}
+      initialFocus={initialFocus}
+      fallbackFocus={fallbackFocus}
+      describedBy={hasNote ? noteId : undefined}
+      scrimMark="prompt"
+      bare
+      refocusKey={tone}
+      watchKey={okDisabled}
+      footer={(
+        <>
           <Button ref={cancel} className={s.btn} disabled={busy} onClick={() => onResult(false)}>{cancelLabel}</Button>
           <Button
             ref={ok}
@@ -137,9 +90,13 @@ export function Prompt({
           >
             {okLabel}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    >
+      {hasNote && <div id={noteId} className={s.note}>{note}</div>}
+      {children !== undefined && children !== null && <div ref={body} className={s.body}>{children}</div>}
+      {error && <div role="alert" className={s.error}>{error}</div>}
+    </DialogFrame>
   )
 }
 

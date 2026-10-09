@@ -7,7 +7,8 @@ import { docActions, fxActionPorts } from './actions.model'
 import { docEdit } from './edit.model'
 import { detail, lifecycle, registry } from './registry.model'
 
-const doc = parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ')
+// пример детали — с ожидающим аннулированием (только просмотр, fxViewOnly); для правки — документ без аннулирования
+const doc = { ...parseFxDocDetail(FX_DETAIL_EXAMPLE, 'ответ'), annul: null }
 const row = (id: string, docNumber: number) => ({ id, docNumber }) as unknown as FxDoc
 
 /** Экран со счётчиками запросов детали и реестра; строки реестра — rows. */
