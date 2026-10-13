@@ -1,6 +1,6 @@
 #!/bin/sh
 # Собирает пакеты кита и упаковывает их так, как их получит команда из реестра (pnpm pack
-# применяет publishConfig и заменяет workspace:* на версии). Тарболы — в examples/federation/.kit.
+# заменяет workspace:* на версии; выпуск для команды — pnpm release:pack в корне). Тарболы — в examples/federation/.kit.
 set -e
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 OUT="$ROOT/examples/federation/.kit"

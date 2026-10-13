@@ -26,7 +26,7 @@
 
 ### 2.2. Сборка и поставка
 
-- `@katran/ui`, `@katran/tokens`, `@katran/effector` публикуются **собранными**: `dist` (ESM, один файл) + `d.ts`, `publishConfig` переключает `main`/`types`/`exports` на `dist`. В монорепо пакеты по-прежнему указывают на `src` (разработка без пересборки). `@katran/effector` перестаёт быть `private`.
+- `@katran/ui`, `@katran/tokens`, `@katran/effector` публикуются **собранными**: `dist` (ESM, один файл) + `d.ts`, `main`/`types`/`exports` манифеста указывают на `dist`. В монорепо пакеты подключаются исходниками через условие экспорта `katran-source` (разработка без пересборки; до 13.10.2026 — `publishConfig`, который применяет только pnpm, отчего публикация через npm ломала пакет). `@katran/effector` перестаёт быть `private`.
 - Таргет сборки — `chrome88` (`build.target` и `build.cssTarget`); без него Vite 8 собирает под `baseline-widely-available` (Chromium 107+).
 - `@katran/ui` собирается с **classic JSX runtime**: элементы создаёт `createElement` того React, что пришёл из общего доступа хоста; `dist` не импортирует `react/jsx-runtime` (у React 17 нет поля `exports`, и webpack 5 в ESM-пакете не разрешает `react/jsx-runtime` без `.js`).
 - Корневое поле `browserslist: ["chrome >= 88"]` — единственный источник планки. Проверка `pnpm check:target` (входит в `pnpm check`): `es-check` по `dist` трёх пакетов (синтаксис и API новее планки) и `scripts/check-css-target.mjs` по CSS (`doiuse` + регулярки для того, чего нет в базе caniuse). Осознанное исключение — `accent-color` (Chromium 93): в 88 чекбокс системного цвета, разметка та же.

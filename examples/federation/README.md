@@ -5,7 +5,7 @@
 Данные и форматы — упрощённая копия демо на момент макета; эталон — `apps/demo`.
 
 Папка **вне pnpm workspace**: `host/`, `remote/` и сама папка ставятся `npm`, кит попадает в remote
-тарболами `pnpm pack` — так, как его получит команда из реестра (с `publishConfig`, без `workspace:*`).
+тарболами `pnpm pack` — так, как его получит команда из реестра (без `workspace:*`).
 
 ```
 host/     хост: React 17.0.2, react-dom, effector — shared singleton; babel только для своего кода (ES5);

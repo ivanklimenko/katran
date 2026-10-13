@@ -12,7 +12,7 @@ Katran — самостоятельная дизайн-система (React + e
 
 - **Целевая среда (ответы команды 2026-09-24).** Приложение — remote в канальном метаприложении: хост на webpack 5 Module Federation, **React 17.0.2 и react-dom — shared singleton хоста**, то есть кит в рантайме исполняется на React 17. Effector хост шарит, версия хоста — 23.4, команда использует ту же 23.4. Webpack хоста `node_modules` не транспилирует; «ES5» — таргет только собственного кода команды (effector 23 в ES2015+ в проде работает), планка браузера — **Chromium 88**. Vite у команды — только локальный запуск, прод-сборка remote — webpack 5. Кит пока собран и проверен на React 19; перевод на диапазон React 17–19 и таргет `chrome88` — план «совместимость» (§9).
 - **Разработка и демо — на React 17.0.2** (как прод; было — React 19 на стеке разработки, до плана 4). CI дополнительно гоняет пакеты кита (`tokens`/`ui`/`effector`) на React 19 (`scripts/use-react.mjs`, задача `react19`); демо в эту задачу не входит. effector 23. Admiral не используется и не оборачивается: кит самостоятелен (спека 1.2).
-- **pnpm-монорепо**: `packages/tokens`, `packages/ui`, `packages/effector`, `apps/demo`, `apps/pi`. Границы слоёв проверяет eslint, не договорённость (спека 3.2, см. §3); `apps/pi` дополнительно проверяет границы FSD тем же механизмом (`eslint.config.js`, `fsdZones`).
+- **pnpm-монорепо**: `packages/tokens`, `packages/ui`, `packages/effector`, `apps/demo`, `apps/pi`. Манифесты пакетов пригодны для любого клиента: `main`/`types`/`exports` указывают на `dist`; в монорепо пакеты подключаются исходниками через условие экспорта `katran-source` (`customConditions` в `tsconfig.base.json`, `resolve.conditions` в конфигах Vite, `conditionNames` резолвера eslint) — сборка для разработки не нужна. `publishConfig` не используется (срез «Публикация», 13.10.2026). Границы слоёв проверяет eslint, не договорённость (спека 3.2, см. §3); `apps/pi` дополнительно проверяет границы FSD тем же механизмом (`eslint.config.js`, `fsdZones`).
 - **CSS Modules без рантайма**, имена `k-Component__part` (функция `generateScopedName`, строковый шаблон в Vite 8 давал `k-Provider-module__root`). CSS-in-JS отвергнут: ушёл вместе с Admiral, рантайм-стили на гриде лишние.
 - **Токены из одного источника** `tokens.src.ts` → `tokens.css`/`tokens.ts`, CI проверяет `gen:check`. Плотность — умноженные размеры `calc(Npx * var(--k-density))`, а не `zoom`/`rem` на `<html>`: приложение встраивается в метаприложение через федерацию и не имеет права трогать корень документа (спека 3.4, 4.3).
 - **Своё демо на Vite**, не Storybook: витрина для показа Заказчику без чужой оболочки (спека 10).
@@ -131,7 +131,10 @@ apps/pi/e2e           geometry.spec.ts (высота записи/шапки/с�
 eslint.config.js      правила границы слоёв (§3) и запрет API React 18+ в `packages/ui`, `packages/effector` (план 4); `fsdZones` —
                       границы FSD `apps/pi` (`app → pages → widgets → features → entities → shared`, план 6; `features` и зона `doc-detail` ↛ `features` — 2c)
 scripts               use-react.mjs (переключение devDeps на React 17/19, CI-задача `react19`) · check-css-target.mjs (CSS-часть
-                      `check:target` — doiuse + регулярки сверх caniuse; план 4)
+                      `check:target` — doiuse + регулярки сверх caniuse; план 4) ·
+                      release-pack.mjs (`pnpm release:pack`: сборка → тарболы в `release/` → проверка манифестов и состава) ·
+                      check-install.mjs (`pnpm check:install`: тарболы ставятся npm в чистый проект — импорт, Vite, типы; нужна сеть) ·
+                      guard-publish.mjs (`prepublishOnly` пакетов: публикация из папки — только pnpm)
 examples/federation   макет встраивания кита в метаприложение через Module Federation — вне pnpm workspace, ставится npm; host/ + remote/
                       на webpack 5, e2e/check.mjs (21/21), порты 5210–5213 (план 4, README там же)
 docs/consuming.md     контракт для remote-команды: установка, shared-конфиг MF, `KatranProvider`, CORS для шрифтов (план 4)
@@ -323,7 +326,7 @@ docs/superpowers      specs/ (основная спека · спека-допо
 
 Из плана 1 и раньше:
 
-- **Потребители `@katran/ui` внутри монорепо типизируются по исходникам** — нужен `css-modules.d.ts` в `include` (см. §8). Вне монорепо (тарбол или реестр) — по `dist/*.d.ts`: `publishConfig` переключает `types` на `dist` (план 4).
+- **Потребители `@katran/ui` внутри монорепо типизируются по исходникам** — нужен `css-modules.d.ts` в `include` (см. §8). Вне монорепо (тарбол или реестр) — по `dist/*.d.ts`: на них указывают `types`/`exports` манифеста.
 - **Общий `generateScopedName`** — продублирован в трёх местах: `packages/ui/vite.config.ts`, `apps/demo/vite.config.ts`, `apps/pi/vite.config.ts`.
 - `ThemeSwitch`/`DensitySwitch`, `useFlash`, вложенные поповеры, `Tabs`/`Menu` при всех disabled, тултип на `FieldTag` с клавиатуры.
 
@@ -336,7 +339,9 @@ docs/superpowers      specs/ (основная спека · спека-допо
 - **`rAF` и таймеры в jsdom** — тесты минимума показа скелетона и ворот загрузки идут на фейковых таймерах (`vi.useFakeTimers`); в браузерных проверках скрытой вкладки ждать `setTimeout`, не `requestAnimationFrame`.
 - **`generateScopedName` строкой** в Vite 8 даёт `k-Provider-module__root` — только функцией (скопирована в `ui` и `demo`; общий модуль — техдолг).
 - **`@types/jest-axe`** подменяет глобальный `expect` типами jest → шимы в `packages/ui/src/test/`.
-- **Потребители `@katran/ui` внутри монорепо типизируются по исходникам** (`types: src/index.ts`) — `tsc` каждого потребителя тянет граф `ui/src` и нуждается в `../ui/src/css-modules.d.ts` в `include` (так у demo и effector). Вне монорепо пакет ставится с `publishConfig` и типизируется по `dist/index.d.ts` — там этой грабли нет; переход монорепо на собранные типы — техдолг.
+- **Потребители `@katran/ui` внутри монорепо типизируются по исходникам** (условие экспорта `katran-source` → `src/index.ts`) — `tsc` каждого потребителя тянет граф `ui/src` и нуждается в `../ui/src/css-modules.d.ts` в `include` (так у demo и effector). Вне монорепо пакет типизируется по `dist/index.d.ts` — там этой грабли нет; переход монорепо на собранные типы — техдолг.
+- **`npm publish` из папки пакета не годится — публикуется тарбол** (первая интеграция в хост, 13.10.2026). Прежние манифесты держали вход для монорепо в корне (`main` → `src/index.ts`), а вход для потребителя — в `publishConfig`; подмену из `publishConfig` и замену `workspace:*` на версию делает только pnpm. После `npm publish` в реестр ушёл манифест как есть: вход `src/index.ts`, которого нет в архиве, — сборка потребителя падала с `Failed to resolve entry for package "@katran/tokens"`, `@katran/ui` отдавал исходники TypeScript вместо `dist`, `workspace:*` правили руками. К стилям ошибка отношения не имела. Исправлено манифестами (§2); `workspace:*` npm по-прежнему не заменяет, поэтому выпуск — `pnpm release:pack` и публикация готового `.tgz` любым клиентом, а `prepublishOnly` останавливает публикацию из папки не через pnpm. Версия `0.1.0` в реестре хоста занята сломанной сборкой — выпуск идёт с `0.1.1`.
+- **`vitest.config.ts` рядом с `vite.config.ts` отменяет его целиком** — условие `katran-source` и прочие настройки доходят до тестов только через `mergeConfig(viteConfig, …)` (так у `ui`, `effector`, `pi`).
 - **`container.firstElementChild` под `renderK`** — это корень провайдера, не компонент.
 - **Haiku-исполнитель теряет `\u`-escape** (пишет литерал) — на таких брифах Sonnet.
 - **`effector`: `.reset(ev)` откатывает к initial**, не к пустому — `.on(ev, () => [])`; публичные события — `EventCallable<T>`; редьюсеры `.on` объявлять раньше `sample`, читающего тот же стор; побочные эффекты в scope — через `createEffect` как target, не `.watch`; в тестах с перекрывающимися запросами `allSettled` ждёт все эффекты scope — промисы собирать заранее, запросы отпускать вручную.
@@ -358,6 +363,8 @@ docs/superpowers      specs/ (основная спека · спека-допо
 ## 9. Следующий шаг
 
 **Срез 2e «Операции деталки» слит в `main`** (`114c1a0`, 2026-10-09; §6): `pnpm check` зелёный (1602 теста), e2e `apps/pi` 107/107, сверка 2e — C 1, D 9, открытых нет. Журнал исполнения с решениями (`Ruling:`, в спеке 2e §9 — R1…R17) — `katran/.superpowers/sdd/2026-10-07-katran-detail-ops/progress.md` (git-ignored, копия журнала worktree). Срез 2d слит в `main` (`e348c93`), 2c — (`4d74ed2`). Открытые вопросы владельцу работу не блокируют: два по плану 7 (§6: правило кавычек во фразах `TagInput`, клик по рамке `TagInput`); спека 2c §8 и 2d §8 — как прежде (решения по умолчанию — в их §9); спека 2e §8 — п. 1 операции ручных отклонений в деталке, п. 2 имена `configureHostLinks`/`manualDeviations` (согласовать с хостом вместе с `configureDocLinks`), п. 4 асимметрия подложки окон (по умолчанию — как есть); решение «заблокированный документ — только просмотр» (спека 2c §9 п. 15) и «при ожидающем или исполненном аннулировании — только просмотр» (спека 2e §1.3) владелец может ослабить.
+
+0. **Срез «Публикация пакетов» (13.10.2026, ветка `feat/publish`)** — ответ на первую интеграцию в хост (§8): манифесты на `dist`, условие `katran-source`, `pnpm release:pack`, `pnpm check:install` (задача CI), версия пакетов `0.1.1`. Следом — **отдельный срез о стилизации**: команда хоста просит styled-components 5.3.11 как стандарт команды (весь код хоста на нём); это пересматривает решение §2 «CSS Modules без рантайма», граница перехода (весь кит или только `apps/pi`) — за владельцем.
 
 1. **Дальше — advanced-фильтры** (основная спека §7.2) и серверные справочники `LOOKUP` (`GET /dictionaries/{id}`) — на контролах плана 7 тем же путём, что подсказки (`docs/reference/suggest-proposal.md` §7); порядок — по решению владельца.
 

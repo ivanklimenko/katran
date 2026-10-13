@@ -11,3 +11,5 @@ apps/demo/test-results/
 apps/demo/playwright-report/
 apps/pi/test-results/
 apps/pi/playwright-report/
+# тарболы выпуска: pnpm release:pack
+release/
