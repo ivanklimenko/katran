@@ -39,7 +39,7 @@ export default tseslint.config(
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
   // Резолвер вне files: ['**/*.{ts,tsx}'] — должен применяться и к самому eslint.config.js (.js-файл)
-  { settings: { 'import-x/resolver': { typescript: true, node: true } } },
+  { settings: { 'import-x/resolver': { typescript: { conditionNames: ['katran-source', 'types', 'import', 'default'] }, node: true } } },
   // Дефолтные экспорты tseslint/importX совпадают с их именованными — здесь это ожидаемо, не ошибка
   { files: ['eslint.config.js'], rules: { 'import-x/no-named-as-default': 'off', 'import-x/no-named-as-default-member': 'off' } },
   {

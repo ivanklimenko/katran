@@ -11,7 +11,9 @@
     "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" \"apps/pi/src/**/*.css\" --allow-empty-input",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "check": "pnpm gen:check && pnpm lint && pnpm test && pnpm build && pnpm check:target",
+    "check": "pnpm gen:check && pnpm lint && pnpm test && pnpm build && pnpm check:target && pnpm release:pack --no-build",
+    "release:pack": "node scripts/release-pack.mjs",
+    "check:install": "node scripts/check-install.mjs",
     "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css packages/tokens/src/tokens.css packages/tokens/src/fonts.css apps/pi/dist/assets/*.css"
   },
   "browserslist": ["chrome >= 88"],

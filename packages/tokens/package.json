@@ -1,32 +1,31 @@
 {
   "name": "@katran/tokens",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "katran-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
     "./tokens.css": "./src/tokens.css",
-    "./fonts.css": "./src/fonts.css"
+    "./fonts.css": "./src/fonts.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src/tokens.css",
     "src/fonts.css"
   ],
-  "publishConfig": {
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-      "./tokens.css": "./src/tokens.css",
-      "./fonts.css": "./src/fonts.css"
-    }
-  },
   "scripts": {
     "gen": "tsx scripts/gen.ts",
     "test": "vitest run",
-    "build": "vite build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.build.json"
+    "build": "vite build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.build.json",
+    "prepublishOnly": "node ../../scripts/guard-publish.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
