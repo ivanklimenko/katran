@@ -34,7 +34,7 @@ const fsdZones = LAYERS.flatMap((layer, i) => {
 })
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**', 'apps/pi/perf/base/**', 'apps/pi/perf/head/**'] },
   ...tseslint.configs.recommended,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,

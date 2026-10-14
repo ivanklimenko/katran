@@ -1,12 +1,13 @@
 // Замер скорости реестра apps/pi: база (perf/base) против текущей сборки (perf/head). Перенесён из опыта spike/styled
 // (apps/pi/spike/measure.mjs и table.mjs): сценарии, порядок и счётчики те же, четыре режима опыта стали двумя сборками.
 // Запуск: pnpm --filter pi perf:base <ref>, затем pnpm --filter pi perf [круги, по умолчанию 8].
-// Код выхода 1 — обязательный сценарий head хуже базы больше чем на +15 % (полное время; для базы короче 100 мс — время скриптов).
+// Код выхода 1 — обязательный сценарий head хуже базы больше чем на +15 % и больше чем на 2 мс
+// (полное время; для базы короче 100 мс — время скриптов). Сервер сборок слушает только 127.0.0.1 и не выдаёт файлы вне сборки.
 import { chromium } from '@playwright/test'
 import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { extname, join } from 'node:path'
+import { extname, join, resolve as resolvePath, sep } from 'node:path'
 
 const BUILDS = ['base', 'head']
 const SIZES = [50, 200]
@@ -15,6 +16,7 @@ const ROUNDS = Number(process.argv[2] ?? 8)
 const PORT = 5290
 const LIMIT = 0.15
 const SHORT_MS = 100
+const ABS_MS = 2 // абсолютный допуск: при базе около 0 мс любой положительный head не считается ухудшением
 // обязательные сценарии; прокрутка — справочно (кадр упирается в частоту обновления экрана)
 const REQUIRED = ['first', 'page', 'select', 'theme']
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml' }
@@ -32,12 +34,13 @@ const servers = await Promise.all(BUILDS.map((build, i) => new Promise((resolve)
   const srv = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://x').pathname
     try {
-      const file = join(root, path === '/' ? 'index.html' : path)
+      const file = resolvePath(join(root, path === '/' ? 'index.html' : decodeURIComponent(path)))
+      if (file !== resolvePath(root) && !file.startsWith(resolvePath(root) + sep)) { res.writeHead(403).end(); return }
       res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' }).end(await readFile(file))
     } catch { res.writeHead(404).end() }
-  }).listen(PORT + i, () => resolve(srv))
+  }).listen(PORT + i, '127.0.0.1', () => resolve(srv))
 })))
-const urlOf = (build, size) => `http://localhost:${PORT + BUILDS.indexOf(build)}/?slow=0&noauto&docs=500&size=${size}#/fx-docs`
+const urlOf = (build, size) => `http://127.0.0.1:${PORT + BUILDS.indexOf(build)}/?slow=0&noauto&docs=500&size=${size}#/fx-docs`
 
 const browser = await chromium.launch()
 const metricsOf = async (cdp) => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]))
@@ -139,7 +142,7 @@ for (const sc of scenarios) for (const throttle of THROTTLES) for (const size of
   if (sc === 'scroll') { lines.push([sc, size, `x${throttle}`, 'кадр (длинных)', `${b.wall} (${b.long})`, `${h.wall} (${h.long})`, pct(b.wall, h.wall), 'справочно']); continue }
   // короткое действие: полное время тонет в ожидании кадров — сравнивается время скриптов
   const field = b.wall < SHORT_MS ? 'ScriptDuration' : 'wall'
-  const worse = h[field] > b[field] * (1 + LIMIT)
+  const worse = h[field] > b[field] * (1 + LIMIT) && h[field] - b[field] > ABS_MS
   if (REQUIRED.includes(sc) && worse) failed = true
   lines.push([sc, size, `x${throttle}`, field === 'wall' ? 'полное' : 'скрипты', b[field], h[field], pct(b[field], h[field]), worse ? `ХУЖЕ +${LIMIT * 100} %` : 'ок'])
 }
@@ -149,5 +152,5 @@ const row = (cells) => cells.map((c, i) => (i < 4 ? String(c).padEnd(widths[i]) 
 console.log(row(cols))
 console.log(widths.map((w) => '-'.repeat(w)).join('  '))
 for (const l of lines) console.log(row(l))
-console.log(failed ? `\nПОРОГ НАРУШЕН: обязательный сценарий хуже базы больше чем на +${LIMIT * 100} %` : `\nпорог соблюдён: обязательные сценарии в пределах +${LIMIT * 100} %`)
+console.log(failed ? `\nПОРОГ НАРУШЕН: обязательный сценарий хуже базы больше чем на +${LIMIT * 100} % и ${ABS_MS} мс` : `\nпорог соблюдён: обязательные сценарии в пределах +${LIMIT * 100} %`)
 process.exit(failed ? 1 : 0)
