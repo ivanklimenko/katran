@@ -1,3 +1,5 @@
 export * from './tokens'
+export { k } from './vars'
+export { declarations } from './declarations'
 export { densities as densityOptions } from './tokens.src'
 export { contrastRatio } from './contrast'

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "pnpm --filter demo dev",
     "gen": "pnpm -r --if-present gen",
-    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts",
+    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/vars.ts packages/tokens/src/declarations.ts",
     "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" \"apps/pi/src/**/*.css\" --allow-empty-input",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
