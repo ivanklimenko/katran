@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { createGlobalStyle } from 'styled-components'
+import { createGlobalStyle } from '../styled'
 import { fontFaces } from '@katran/tokens/fonts'
 
 // Правила собираются один раз при загрузке модуля: в шаблоне styled нет функций (правило 1 спеки).

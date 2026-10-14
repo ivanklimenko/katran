@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { axe } from 'jest-axe'
-import styled, { ThemeProvider, useTheme } from 'styled-components'
+import { styled, ThemeProvider, useTheme } from '../styled'
 import { k } from '@katran/tokens'
 import { KatranProvider } from './KatranProvider'
 import { useKatran } from './useKatran'

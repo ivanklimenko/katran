@@ -1,7 +1,7 @@
 // Корень — первым импортом: группа его стилей должна идти в листе раньше групп компонентов кита
 import { Root } from './Root'
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ThemeProvider, type DefaultTheme } from 'styled-components'
+import { ThemeProvider, type DefaultTheme } from '../styled'
 import { densityOptions, k, type Density } from '@katran/tokens'
 import { KatranContext, type Theme } from './useKatran'
 import { LiveRegion, type LiveRegionHandle } from './LiveRegion'
