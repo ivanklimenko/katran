@@ -1,10 +1,17 @@
 import { useState } from 'react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Button, MiniTable, StatusBadge, Tag, Timestamp, type MiniColumn } from '@katran/ui'
 import { toneOf } from '../model/tone'
 import type { DocNotification } from '../model/types'
 import { STUB, type TrailTabProps } from './lib'
-import { LinkButton } from './parts'
-import s from './trail.module.css'
+import { Count, LinkButton } from './parts'
+
+/* «Исходное сообщение» и «Переотправить» в строку */
+const LnkPair = styled.span`
+  display: inline-flex;
+  gap: ${k.sp3};
+`
 
 /** Нажатая кнопка переотправки: '*' — «Переотправить все», иначе id нотификации строки. */
 type Pressed = string | null
@@ -34,7 +41,7 @@ export function NotificationsTab({ data, ctx }: TrailTabProps<DocNotification[]>
     {
       id: 'source', header: '', align: 'end',
       render: (n, i) => (
-        <span className={s.lnkPair}>
+        <LnkPair>
           {resend && (
             <LinkButton
               label={`Переотправить, отправка ${i + 1}`}
@@ -51,7 +58,7 @@ export function NotificationsTab({ data, ctx }: TrailTabProps<DocNotification[]>
           >
             Исходное сообщение
           </LinkButton>
-        </span>
+        </LnkPair>
       ),
     },
   ]
@@ -66,7 +73,7 @@ export function NotificationsTab({ data, ctx }: TrailTabProps<DocNotification[]>
       numbered
       toolbar={(
         <>
-          <span className={s.count}>{`${data.length} отправок${failed ? `, с ошибкой ${failed}` : ''}`}</span>
+          <Count>{`${data.length} отправок${failed ? `, с ошибкой ${failed}` : ''}`}</Count>
           {resend ? (
             <Button
               size="s"

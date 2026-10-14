@@ -1,13 +1,23 @@
 import { useRef, type ReactElement } from 'react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Button, CodeView, Dialog, Skeleton, type CodeLanguage } from '@katran/ui'
 import type { NotifMessage } from '../../../shared/api'
+import { Sr } from '../../../shared/ui'
 import type { NotifMessageState } from '../model/createDocNotif'
 import { useDrawerFallback } from './focus'
-import s from './notif.module.css'
 
 /** Язык подсветки по типу содержимого (спека 2e §3.3): JSON и XML — с подсветкой, иначе — простой текст. */
 export const languageOf = (contentType: NotifMessage['contentType']): CodeLanguage =>
   contentType === 'application/json' ? 'json' : contentType === 'application/xml' ? 'xml' : 'text'
+
+/* ошибка загрузки — текст и «Повторить» в строку (как отказ поповеров деталки) */
+const ErrorRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  color: ${k.bad};
+`
 
 export type MessageDialogProps = {
   message: NotifMessageState
@@ -49,13 +59,13 @@ export function MessageDialog({ message, onClose, onRetry, onCopy }: MessageDial
       {ready !== null ? (
         <CodeView code={ready.body} language={languageOf(ready.contentType)} label="Тело сообщения" />
       ) : message.state === 'error' ? (
-        <div className={s.error}>
+        <ErrorRow>
           <span role="alert">{message.error}</span>
           <Button size="s" onClick={retry}>Повторить</Button>
-        </div>
+        </ErrorRow>
       ) : (
         <div aria-busy="true">
-          <span className={s.sr}>Загрузка</span>
+          <Sr>Загрузка</Sr>
           <Skeleton.Line lines={3} width="80%" />
         </div>
       )}

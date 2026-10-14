@@ -1,9 +1,17 @@
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { CodeView, CopyValue, Disclosure, KeyValueList, StatusBadge, Tag, Timestamp, type KeyValueItem } from '@katran/ui'
 import { toneOf } from '../model/tone'
 import type { MpuMessage } from '../model/types'
 import { accordionOf, charsLabel, type TrailTabProps } from './lib'
-import { HeadNote, TrailEmpty } from './parts'
-import s from './trail.module.css'
+import { HeadNote, Stack, TrailEmpty } from './parts'
+
+/* карточка сообщения (эталон .ldb + .ah swiftText) */
+const Card = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+`
 
 const itemsOf = (m: MpuMessage): KeyValueItem[] => [
   { key: 'id', label: 'ID', value: <CopyValue value={m.id} tone="mono" /> },
@@ -25,9 +33,9 @@ export function MpuTab({ data, ctx }: TrailTabProps<MpuMessage[]>) {
   if (!first) return <TrailEmpty text="Сообщений MPU нет" />
   const accordion = accordionOf(ctx, [first.id])
   return (
-    <div className={s.stack}>
+    <Stack>
       {data.map((m) => (
-        <section key={m.id} className={s.card} aria-label={`Сообщение MPU ${m.type} ${m.id}`}>
+        <Card key={m.id} aria-label={`Сообщение MPU ${m.type} ${m.id}`}>
           <KeyValueList columns={2} labelWidth={130} items={itemsOf(m)} />
           <Disclosure
             title="swiftText"
@@ -39,8 +47,8 @@ export function MpuTab({ data, ctx }: TrailTabProps<MpuMessage[]>) {
           >
             <CodeView code={m.swift} language="swift" label={`swiftText сообщения ${m.id}`} />
           </Disclosure>
-        </section>
+        </Card>
       ))}
-    </div>
+    </Stack>
   )
 }

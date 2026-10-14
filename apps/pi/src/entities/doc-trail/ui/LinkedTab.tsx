@@ -1,10 +1,42 @@
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { CopyValue, KeyValueList, MiniTable, StatusBadge, Tag, Timestamp, formatAmount, formatDate, type KeyValueItem, type MiniColumn } from '@katran/ui'
 import type { TabContext } from '../../../shared/lib/detail'
 import { toneOf } from '../model/tone'
 import type { LinkedDoc, LinkedParty, LinkedPosting } from '../model/types'
 import type { TrailTabProps } from './lib'
-import { LinkButton, Nil } from './parts'
-import s from './trail.module.css'
+import { Cut, LinkButton, Nil } from './parts'
+import { Sr } from '../../../shared/ui'
+
+/* Связанные (эталон .ld/.ldb/.kvs/.two-t, index.html:325–333) */
+const DateText = styled.span`
+  font: ${k.fs2} / ${k.lh2} ${k.mono};
+  color: ${k.ink2};
+`
+
+const Lbl = styled.span`
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+const IdLine = styled.span`
+  display: inline-flex;
+  align-items: baseline;
+  gap: ${k.sp2};
+  min-width: 0;
+`
+
+const LinkedBodyBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+`
+
+const TwoT = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: ${k.sp2};
+`
 
 type PairRow = { key: string; label: string; mono: boolean; a: string | null; b: string | null }
 
@@ -24,13 +56,13 @@ const PARTY: { key: keyof LinkedParty; label: string; mono: boolean }[] = [
 ]
 
 const pairCell = (v: string | null, mono: boolean) => (v
-  ? <span className={[s.cut, mono ? s.monoVal : s.val].join(' ')} data-k-tip={v} data-k-tip-if="truncated">{v}</span>
+  ? <Cut data-tone={mono ? 'mono' : 'val'} data-k-tip={v} data-k-tip-if="truncated">{v}</Cut>
   : <Nil />)
 
 /** Мини-таблица 64 / 1fr / 1fr (эталон .two-t .tt): Дт/Кт или отправитель/получатель. */
 function PairTable({ label, heads, rows }: { label: string; heads: [string, string]; rows: PairRow[] }) {
   const columns: MiniColumn<PairRow>[] = [
-    { id: 'label', header: '', width: 64, render: (r) => <span className={s.lbl}>{r.label}</span> },
+    { id: 'label', header: '', width: 64, render: (r) => <Lbl>{r.label}</Lbl> },
     { id: 'a', header: heads[0], render: (r) => pairCell(r.a, r.mono) },
     { id: 'b', header: heads[1], render: (r) => pairCell(r.b, r.mono) },
   ]
@@ -42,10 +74,10 @@ function LinkedBody({ doc, ctx }: { doc: LinkedDoc; ctx: TabContext }) {
     {
       key: 'id', label: 'ID', wide: true,
       value: (
-        <span className={s.idLine}>
+        <IdLine>
           <LinkButton mono label={`Открыть ${doc.type} ${doc.docId} в соседней панели`} onClick={() => ctx.openDocument(doc.docId)}>{doc.docId}</LinkButton>
-          <CopyValue value={doc.docId} tone="muted" display={<><span aria-hidden="true">⧉</span><span className={s.sr}>Скопировать ID</span></>} />
-        </span>
+          <CopyValue value={doc.docId} tone="muted" display={<><span aria-hidden="true">⧉</span><Sr>Скопировать ID</Sr></>} />
+        </IdLine>
       ),
     },
     { key: 'processed', label: 'Обработка', value: doc.processed ? <Timestamp iso={doc.processed} /> : null },
@@ -53,13 +85,13 @@ function LinkedBody({ doc, ctx }: { doc: LinkedDoc; ctx: TabContext }) {
     { key: 'kind', label: 'Вид', value: doc.kind ? <Tag>{doc.kind}</Tag> : null },
     {
       key: 'purpose', label: 'Назначение',
-      value: doc.purpose ? <span className={s.cut} data-k-tip={doc.purpose} data-k-tip-if="truncated">{doc.purpose}</span> : null,
+      value: doc.purpose ? <Cut data-k-tip={doc.purpose} data-k-tip-if="truncated">{doc.purpose}</Cut> : null,
     },
   ]
   return (
-    <div className={s.linkedBody}>
+    <LinkedBodyBox>
       <KeyValueList columns={2} labelWidth={80} items={items} />
-      <div className={s.twoT}>
+      <TwoT>
         <PairTable
           label={`Проводки ${doc.docId}`}
           heads={['Дт', 'Кт']}
@@ -73,8 +105,8 @@ function LinkedBody({ doc, ctx }: { doc: LinkedDoc; ctx: TabContext }) {
           heads={['Отправитель', 'Получатель']}
           rows={PARTY.map((p) => ({ key: p.key, label: p.label, mono: p.mono, a: doc.from[p.key], b: doc.to[p.key] }))}
         />
-      </div>
-    </div>
+      </TwoT>
+    </LinkedBodyBox>
   )
 }
 
@@ -86,12 +118,12 @@ export function LinkedTab({ data, ctx }: TrailTabProps<LinkedDoc[]>) {
   const first = data[0]
   const columns: MiniColumn<LinkedDoc>[] = [
     // дата, тип и связь — по содержимому строки (эталон .ld — flex с зазором): без пустот фиксированных ширин
-    { id: 'date', header: '', width: 'auto', render: (d) => <span className={s.date}>{d.date}</span> },
+    { id: 'date', header: '', width: 'auto', render: (d) => <DateText>{d.date}</DateText> },
     { id: 'type', header: '', width: 'auto', render: (d) => <Tag tone="mt">{d.type}</Tag> },
     { id: 'relation', header: '', width: 'auto', render: (d) => <Tag>{d.relation}</Tag> },
     {
       id: 'purpose', header: '',
-      render: (d) => (d.purpose ? <span className={[s.cut, s.muted].join(' ')} data-k-tip={d.purpose} data-k-tip-if="truncated">{d.purpose}</span> : <Nil />),
+      render: (d) => (d.purpose ? <Cut data-tone="muted" data-k-tip={d.purpose} data-k-tip-if="truncated">{d.purpose}</Cut> : <Nil />),
     },
     { id: 'status', header: '', width: 90, align: 'end', render: (d) => <StatusBadge tone={toneOf(d.status)}>{d.status}</StatusBadge> },
   ]

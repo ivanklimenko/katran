@@ -1,12 +1,13 @@
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useUnit } from 'effector-react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Prompt, useKatran } from '@katran/ui'
 import type { DocNotif } from '../model/createDocNotif'
 import { writeClipboardFx } from '../../../shared/lib/clipboard'
 import { useDrawerFallback } from './focus'
 import { MessageDialog } from './MessageDialog'
-import s from './notif.module.css'
 
 /** Тексты Prompt переотправки (спека 2e §3.3). */
 export const RESEND_PROMPT = {
@@ -32,6 +33,13 @@ function ResendPrompt({ n, busy, onResult }: { n: number | null; busy: boolean; 
   )
 }
 
+/* Слой окон страницы (Prompt переотправки, «Исходное сообщение»): на весь экран поверх деталки, подложка Dialog накрывает его */
+const Layer = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: ${k.zModal};
+`
+
 /**
  * Слой окон страницы поверх деталки: Dialog кита без портала накрывает ближайший позиционированный предок, а NotifOverlay
  * стоит в разметке страницы — под DrawerStack (портал в корень провайдера, слой --k-z-drawer), и окно оказалось бы под
@@ -42,7 +50,7 @@ function ResendPrompt({ n, busy, onResult }: { n: number | null; busy: boolean; 
 function PageLayer({ children }: { children: ReactNode }): ReactElement | null {
   const { portalRoot } = useKatran()
   if (!portalRoot) return null
-  return createPortal(<div className={s.layer} data-k-layer="notif">{children}</div>, portalRoot)
+  return createPortal(<Layer data-k-layer="notif">{children}</Layer>, portalRoot)
 }
 
 /**

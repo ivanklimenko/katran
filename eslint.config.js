@@ -81,6 +81,19 @@ const STYLED_RULES = [
   { selector: 'ImportDeclaration[source.value=/(^|\\/)styled$/] > ImportNamespaceSpecifier', message: STYLED_NAMES_MESSAGE },
 ]
 
+// Приложение-образец apps/pi (спека styled §4.7, Task 9): шаблоны по правилам кита — статические, без функций и строк-интерполяций.
+// styled-components приложение импортирует напрямую (Vite сам нормализует default пакета CJS) — под каноническими именами.
+const APP_STYLED_NAMES_MESSAGE = 'Импорт из styled-components под другим именем или целиком (* as): проверки стилей узнают шаблоны только по именам styled, css, createGlobalStyle, keyframes (R15)'
+const APP_STYLED_RULES = [
+  ...STYLED_RULES.filter((r) => !r.selector.startsWith('ImportDeclaration')),
+  ...['styled', 'css', 'createGlobalStyle', 'keyframes'].map((name) => ({
+    selector: `ImportDeclaration[source.value='styled-components'] > ImportSpecifier[imported.name='${name}'][local.name!='${name}']`,
+    message: APP_STYLED_NAMES_MESSAGE,
+  })),
+  { selector: "ImportDeclaration[source.value='styled-components'] > ImportDefaultSpecifier[local.name!='styled']", message: APP_STYLED_NAMES_MESSAGE },
+  { selector: "ImportDeclaration[source.value='styled-components'] > ImportNamespaceSpecifier", message: APP_STYLED_NAMES_MESSAGE },
+]
+
 const STYLED_COMPONENTS_SUBPATHS = {
   group: ['styled-components/*'],
   allowTypeImports: true,
@@ -161,6 +174,7 @@ export default tseslint.config(
   { files: ['packages/effector/src/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...REACT_18] } },
   { files: ['packages/ui/src/**/*.{ts,tsx}'], ignores: ['packages/ui/src/compat/**'], rules: { 'no-restricted-syntax': ['error', ...REACT_18, ...STYLED_RULES] } },
   { files: ['packages/ui/src/compat/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...STYLED_RULES] } },
+  { files: ['apps/pi/src/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...APP_STYLED_RULES] } },
   // R13: styled-components в ките импортирует только styled.ts (нормализация default для Node).
   // Типы и дополнение модуля (declare module 'styled-components') — можно: в сборку не попадают.
   {

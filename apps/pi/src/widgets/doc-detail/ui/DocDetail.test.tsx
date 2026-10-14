@@ -570,6 +570,23 @@ describe('DocDetail: действия лейна (план 2d §3.5)', () => {
     expect(view.run).not.toHaveBeenCalled()
   })
 
+  it('R19: «Аннулировать» — data-danger и правило наведения цвета bad (0,3,0) у styled(IconButton) лейна, без контейнера действий', async () => {
+    const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: () => actionsStub() })
+    open('d1')
+    await screen.findByText('Блок b1')
+    const ban = screen.getByRole('button', { name: 'Аннулировать' })
+    expect(ban).toHaveAttribute('data-danger')
+    expect(screen.getByRole('button', { name: 'Создать служебный документ' })).not.toHaveAttribute('data-danger')
+    // jsdom не наводит курсор: сверяем лист — правило && с :hover на классе кнопки, а не (0,4,0) через класс контейнера
+    const hover = [...document.styleSheets]
+      .flatMap((sheet) => [...sheet.cssRules])
+      .filter((r): r is CSSStyleRule => r instanceof CSSStyleRule && /:where\(\[data-danger\]\):hover$/.test(r.selectorText))
+      .map((r) => r.selectorText)
+    expect(hover).toHaveLength(1)
+    const [cls] = /^\.([\w-]+)\.\1:where/.exec(hover[0] ?? '')?.slice(1) ?? []
+    expect(cls && ban.classList.contains(cls)).toBe(true)
+  })
+
   it('pending — кнопка действия aria-disabled и aria-busy, но в фокусе (Ruling R19), клик игнорируется; F5 на ней — «Обновить»; остальные доступны', async () => {
     const view = actionsStub({ pending: (id) => id === 'down' })
     const { open } = setup(undefined, undefined, { domain: laneDomain, actionsOf: () => view })

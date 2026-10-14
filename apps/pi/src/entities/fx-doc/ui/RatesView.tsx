@@ -1,8 +1,25 @@
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { formatDate } from '@katran/ui'
 import type { Rates } from '../../../shared/api'
 import type { LookupView } from '../../../shared/lib/detail'
 import { LookupBody } from '../../posting/@x/fx-doc'
-import s from './detail.module.css'
+
+const Rates = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+  white-space: nowrap;
+
+  & p {
+    margin: 0;
+  }
+`
+
+const RateNum = styled.b`
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+`
 
 /**
  * Поповер «Курс» (спека 2e §4 п. 6): курс ЦБ на дату за 1 единицу валюты 32A, рублёвый эквивалент суммы, при конверсии —
@@ -12,13 +29,13 @@ export function RatesView({ view, ccy }: { view: LookupView<Rates>; ccy: string 
   return (
     <LookupBody view={view} lines={2}>
       {(r) => (
-        <div className={s.rates}>
-          <p>Курс ЦБ на {formatDate(r.cb.date)} — <b className={s.rateNum}>{r.cb.rate}</b> RUB за 1 {ccy}</p>
-          <p>Рублёвый эквивалент — <b className={s.rateNum}>{r.cb.rub}</b> RUB</p>
+        <Rates>
+          <p>Курс ЦБ на {formatDate(r.cb.date)} — <RateNum>{r.cb.rate}</RateNum> RUB за 1 {ccy}</p>
+          <p>Рублёвый эквивалент — <RateNum>{r.cb.rub}</RateNum> RUB</p>
           {r.deal && (
-            <p>Курс сделки {r.deal.from}→{r.deal.to} — <b className={s.rateNum}>{r.deal.rate}</b> · списано <b className={s.rateNum}>{r.deal.amount}</b> {r.deal.from}</p>
+            <p>Курс сделки {r.deal.from}→{r.deal.to} — <RateNum>{r.deal.rate}</RateNum> · списано <RateNum>{r.deal.amount}</RateNum> {r.deal.from}</p>
           )}
-        </div>
+        </Rates>
       )}
     </LookupBody>
   )

@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import styled, { css } from 'styled-components'
+import { k } from '@katran/tokens'
 import {
   Button, DateInput, EditHistory, EditMark, FieldEditor, IconButton, PromptChange, SuggestInput, diffFieldValues, formatDate,
   formatDateTimeMinutes, useStableId, type DateValue, type EditHistoryEntry, type FieldValue, type FormEdit, type Option,
@@ -10,7 +12,6 @@ import type { FxDocDetail } from '../model/detail'
 import { currentOf, fieldTarget, isChanged, originalOf, type FxHistEntry } from '../model/edit'
 import { fxEditRule, fxEditableTargets, fxViewOnly, swiftFieldInvalid } from '../model/rules'
 import { FX_FIELDS } from '../model/swift'
-import e from './edit.module.css'
 
 /*
  * Виды правки «Общих данных» валюты (план 2c, Task 9; тексты — эталон index.html, research.md). Рисуются только при EditContext:
@@ -21,6 +22,217 @@ import e from './edit.module.css'
 const Pen = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
 const Check = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
 const Cross = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg>
+
+/* Правка «Общих данных» валюты (план 2c; эталон .txtrow/.txted/.accrow/.acced/.hero .vd/.blk.edited, index.html:138–153, 365–416) */
+
+/* значение строки с правкой: значение, маркер, ↺ и карандаш в строку */
+const Val = styled.span`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp1};
+  min-width: 0;
+
+  & > :first-child {
+    flex: 1;
+  }
+`
+
+/*
+ * Карандаш и ↺ (IconButton кита): прозрачны до наведения на колонку и в фокусе (эталон .msgs>div:hover .pen/.rv).
+ * && — прежний двойной класс (0,2,0): выше размера и варианта кнопки кита. Колонка с правкой помечена data-edit-col (detail.tsx),
+ * ячейка сводки — data-part="hero" (HeroBar кита); правила наведения на них — (0,3,0), как прежние .col:hover .pen.
+ */
+const ghostPen = css`
+  && {
+    flex: none;
+    width: ${k.pen};
+    height: ${k.pen};
+    border-color: transparent;
+    border-radius: ${k.rS};
+    background: none;
+    color: ${k.muted};
+    opacity: 0;
+  }
+
+  &&:focus-visible {
+    opacity: 1;
+  }
+
+  &&:hover:not(:disabled) {
+    border-color: transparent;
+    background: ${k.valSoft};
+    color: ${k.val};
+  }
+`
+
+const PenBtn = styled(IconButton)`
+  ${ghostPen}
+
+  [data-edit-col]:hover & {
+    opacity: 1;
+  }
+`
+
+const VdPenBtn = styled(IconButton)`
+  ${ghostPen}
+
+  && {
+    margin-left: ${k.sp1};
+    vertical-align: middle;
+  }
+
+  [data-part='hero']:hover & {
+    opacity: 1;
+  }
+`
+
+/* правка на месте под строкой: 20 исх и счёт — во всю ширину колонки */
+const Inline = styled.div`
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-top: ${k.kvsGap};
+`
+
+const RefInput = styled.input`
+  box-sizing: border-box;
+  width: 100%;
+  height: ${k.hInline};
+  padding: 0 ${k.sp1};
+  border: 1px solid ${k.val};
+  border-radius: ${k.rS};
+  background: ${k.paper};
+  font: 400 ${k.fsEdit} / 1 ${k.mono};
+  letter-spacing: 0.02em;
+  color: ${k.ink};
+  text-transform: uppercase;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${k.valSoft};
+  }
+
+  &[aria-invalid='true'] {
+    border-color: ${k.bad};
+  }
+`
+
+const Hint = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: ${k.sp2};
+  margin-top: ${k.kvsGap};
+  font: 400 ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
+
+/* строка подсказки поля; data-bad — ошибка */
+const HintText = styled.span`
+  &:where([data-bad]) {
+    color: ${k.bad};
+  }
+`
+
+const Status = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp2};
+`
+
+/* изменённое значение даты валютирования; data-warn — текущее ≠ исходному */
+const VdValue = styled.span`
+  &:where([data-warn]) {
+    color: ${k.warn};
+  }
+`
+
+/* дата валютирования в правке: поле и «Отмена» в строку */
+const VdEdit = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp1};
+  font-weight: 400;
+`
+
+const VdCancel = styled(Button)`
+  && {
+    border-color: transparent;
+    background: none;
+    color: ${k.muted};
+  }
+`
+
+/* строка ошибки правки даты — справа от «Отмена», не переносится */
+const VdErr = styled.span`
+  color: ${k.bad};
+  font: 400 ${k.fs3} / ${k.lh3} ${k.sans};
+  white-space: nowrap;
+`
+
+/* маршрут, пересчитанный после смены Кт: заголовок warn */
+const RouteEditedBox = styled.div`
+  & h3 {
+    color: ${k.warn};
+  }
+`
+
+/* решение второй руки у маркера (20 исх, счета; план 2d): видны всегда, не по наведению — действие ждёт пользователя */
+const decideBtn = css`
+  && {
+    flex: none;
+    width: ${k.pen};
+    height: ${k.pen};
+    border-radius: ${k.rS};
+    background: none;
+  }
+`
+
+const OkBtn = styled(IconButton)`
+  ${decideBtn}
+
+  && {
+    border-color: ${k.ok};
+    color: ${k.ok};
+  }
+
+  &&:hover:not(:disabled) {
+    border-color: ${k.ok};
+    background: ${k.okSoft};
+    color: ${k.ok};
+  }
+`
+
+const NoBtn = styled(IconButton)`
+  ${decideBtn}
+
+  && {
+    border-color: ${k.bad};
+    color: ${k.bad};
+  }
+
+  &&:hover:not(:disabled) {
+    border-color: ${k.bad};
+    background: ${k.badSoft};
+    color: ${k.bad};
+  }
+`
+
+/* тело Prompt решения: цель, «было → стало», автор и время записи */
+const Decision = styled.div`
+  display: grid;
+  gap: ${k.sp1};
+  min-width: 0;
+  overflow-wrap: anywhere;
+`
+
+const DecisionTarget = styled.div`
+  font-weight: 600;
+  color: ${k.ink};
+`
+
+const DecisionWho = styled.div`
+  font: 400 ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
 
 const lastOf = (hist: FxHistEntry[]): FxHistEntry | undefined => hist[hist.length - 1]
 /**
@@ -44,9 +256,6 @@ const rejectedHead = (hist: FxHistEntry[]): string | null => {
 const whoWhen = (h: FxHistEntry) => `${h.who}, ${formatDateTimeMinutes(h.when)}`
 const asField = (v: EditValue | null | undefined): FieldValue => (v && typeof v !== 'string' ? v : { lines: [] })
 const asText = (v: EditValue | null | undefined): string => (typeof v === 'string' ? v : '')
-
-/** Класс колонки блока «Сообщения и счета»: карандаши и ↺ строк правки видны при наведении на колонку (эталон .msgs>div:hover). */
-export const editCol = e.col
 
 /**
  * Закрытие встроенной правки (Enter, Esc, клик вне, сохранение) снимает поле — фокус уходит в body; возвращаем его на карандаш
@@ -132,18 +341,18 @@ function Decide({ d, edit, target, name }: { d: FxDocDetail; edit: EditContext; 
   if (!last) return null
   return (
     <>
-      <IconButton size="s" className={e.ok} label={`Утвердить правку ${name}`} data-k-tip={`Утвердить правку ${name}`}
-        onClick={() => edit.confirmEdit(target, last.when)}><Check /></IconButton>
-      <IconButton size="s" className={e.no} label={`Отклонить правку ${name}`} data-k-tip={`Отклонить правку ${name}`}
-        onClick={() => edit.rejectEdit(target, last.when)}><Cross /></IconButton>
+      <OkBtn size="s" label={`Утвердить правку ${name}`} data-k-tip={`Утвердить правку ${name}`}
+        onClick={() => edit.confirmEdit(target, last.when)}><Check /></OkBtn>
+      <NoBtn size="s" label={`Отклонить правку ${name}`} data-k-tip={`Отклонить правку ${name}`}
+        onClick={() => edit.rejectEdit(target, last.when)}><Cross /></NoBtn>
     </>
   )
 }
 
 function Revert({ d, edit, target }: { d: FxDocDetail; edit: EditContext; target: string }) {
   return (
-    <IconButton size="s" className={e.rv} label="Вернуть исходное" data-k-tip="Вернуть исходное"
-      onClick={() => edit.revert(target, currentOf(d, target), originalOf(d, target))}>↺</IconButton>
+    <PenBtn size="s" label="Вернуть исходное" data-k-tip="Вернуть исходное"
+      onClick={() => edit.revert(target, currentOf(d, target), originalOf(d, target))}>↺</PenBtn>
   )
 }
 
@@ -172,15 +381,15 @@ function RefOutEditor({ edit }: { edit: EditContext }) {
     if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); edit.cancel() }
   }
   return (
-    <div ref={box} className={e.inline} data-k-edit="">
-      <input ref={input} className={e.input} aria-label="20 исх" maxLength={16} placeholder="до 16 символов" autoComplete="off"
+    <Inline ref={box} data-k-edit="">
+      <RefInput ref={input} aria-label="20 исх" maxLength={16} placeholder="до 16 символов" autoComplete="off"
         value={asText(edit.draft)} onChange={(ev) => edit.change(ev.target.value)} onKeyDown={onKeyDown}
         aria-invalid={message ? true : undefined} aria-describedby={hintId} />
-      <div className={e.hint}>
-        <span id={hintId} className={message ? e.bad : undefined} aria-live="polite">{message ?? 'SWIFT X, до 16 символов'}</span>
+      <Hint>
+        <HintText id={hintId} data-bad={message ? '' : undefined} aria-live="polite">{message ?? 'SWIFT X, до 16 символов'}</HintText>
         <span>Enter · Esc</span>
-      </div>
-    </div>
+      </Hint>
+    </Inline>
   )
 }
 
@@ -192,16 +401,16 @@ export function RefOutRow({ d, edit, value }: { d: FxDocDetail; edit: EditContex
   const edited = editedText(d, 'refOut', (was) => was || '—')
   return (
     <>
-      <span className={e.val}>
+      <Val>
         {value(edited !== null)}
         <RowMark d={d} target="refOut" edited={edited} />
         <Decide d={d} edit={edit} target="refOut" name="20 исх" />
         {edited && !locked && <Revert d={d} edit={edit} target="refOut" />}
         {!locked && (
-          <IconButton ref={pen} size="s" className={e.pen} label="Изменить 20 исх" data-k-tip="Изменить 20 исх"
-            onClick={() => edit.open('refOut', currentOf(d, 'refOut'))}><Pen /></IconButton>
+          <PenBtn ref={pen} size="s" label="Изменить 20 исх" data-k-tip="Изменить 20 исх"
+            onClick={() => edit.open('refOut', currentOf(d, 'refOut'))}><Pen /></PenBtn>
         )}
-      </span>
+      </Val>
       {open && <RefOutEditor edit={edit} />}
     </>
   )
@@ -236,17 +445,17 @@ function AccountEditor({ d, edit, side }: { d: FxDocDetail; edit: EditContext; s
   const status = slot === null || slot.state === 'loading'
     ? 'Загрузка счетов…'
     : slot.state === 'error'
-      ? <span className={e.status}>Не удалось загрузить счета <Button size="s" onClick={() => edit.retryAccounts(side)}>Повторить</Button></span>
+      ? <Status>Не удалось загрузить счета <Button size="s" onClick={() => edit.retryAccounts(side)}>Повторить</Button></Status>
       : undefined
   return (
-    <div className={e.inline} data-k-edit="">
+    <Inline data-k-edit="">
       <SuggestInput
         aria-label={`Счёт ${cfg.label}`} placeholder="20 цифр" options={options} value={q} onChange={setQ}
         match={byDigits} sanitize={digits} emptyText={(query) => cfg.empty(d.currency, query)} notInListText={cfg.notInList}
         hint={edit.saveError ?? (slot?.state === 'ready' ? cfg.hint(d.currency, items.length) : undefined)} keysHint="↑↓ Enter · Esc" status={status}
         onCommit={(o) => { if (edit.saving) return; edit.change(String(o.value)); edit.save() }} onCancel={edit.cancel}
       />
-    </div>
+    </Inline>
   )
 }
 
@@ -259,16 +468,16 @@ export function AccountRow({ d, edit, side, value }: { d: FxDocDetail; edit: Edi
   const edited = editedText(d, target, groupAccount)
   return (
     <>
-      <span className={e.val}>
+      <Val>
         {value(edited !== null)}
         <RowMark d={d} target={target} edited={edited} />
         <Decide d={d} edit={edit} target={target} name={`счёта ${label}`} />
         {edited && !locked && <Revert d={d} edit={edit} target={target} />}
         {!locked && (
-          <IconButton ref={pen} size="s" className={e.pen} label={`Изменить счёт ${label}`} data-k-tip={`Изменить счёт ${label}`}
-            onClick={() => edit.open(target, currentOf(d, target))}><Pen /></IconButton>
+          <PenBtn ref={pen} size="s" label={`Изменить счёт ${label}`} data-k-tip={`Изменить счёт ${label}`}
+            onClick={() => edit.open(target, currentOf(d, target))}><Pen /></PenBtn>
         )}
-      </span>
+      </Val>
       {open && <AccountEditor d={d} edit={edit} side={side} />}
     </>
   )
@@ -289,7 +498,7 @@ export function routeEditTip(d: FxDocDetail): string | null {
 }
 
 /** Обёртка блока маршрута с правкой: заголовок warn. */
-export const RouteEdited = ({ children }: { children: ReactNode }) => <div className={e.routeEdited}>{children}</div>
+export const RouteEdited = ({ children }: { children: ReactNode }) => <RouteEditedBox>{children}</RouteEditedBox>
 
 function ValueDateEditor({ d, edit }: { d: FxDocDetail; edit: EditContext }) {
   const box = useRef<HTMLSpanElement>(null)
@@ -314,12 +523,12 @@ function ValueDateEditor({ d, edit }: { d: FxDocDetail; edit: EditContext }) {
   }
   return (
     // role=presentation — обёртка только ловит всплывший Esc полей (как FieldEditor кита)
-    <span ref={box} role="presentation" className={e.vdEdit} data-k-edit="" onKeyDown={onKeyDown}>
+    <VdEdit ref={box} role="presentation" data-k-edit="" onKeyDown={onKeyDown}>
       <DateInput aria-label="Дата валютирования" size="s" min={d.created.slice(0, 10)} value={value} onChange={onChange} />
-      <Button size="s" className={e.vdx} onClick={edit.cancel}>Отмена</Button>
+      <VdCancel size="s" onClick={edit.cancel}>Отмена</VdCancel>
       {/* ошибка проверки, сохранения и 409 «Документ изменили — откройте заново» (спека §4, Review Focus 2) */}
-      <span className={[e.vdErr, e.bad].join(' ')} aria-live="polite">{message ?? ''}</span>
-    </span>
+      <VdErr aria-live="polite">{message ?? ''}</VdErr>
+    </VdEdit>
   )
 }
 
@@ -341,12 +550,12 @@ export function ValueDateCell({ d, edit, same }: { d: FxDocDetail; edit: EditCon
   const mark = valueDateMark(d)
   return (
     <>
-      <span className={mark ? e.warn : undefined}>{formatDate(d.valueDates[0])}</span>
+      <VdValue data-warn={mark ? '' : undefined}>{formatDate(d.valueDates[0])}</VdValue>
       {mark && <EditMark tip={mark.tip} status={mark.status} />}
       {same}
       {!locked && (
-        <IconButton ref={pen} size="s" className={e.vdPen} label="Изменить дату валютирования" data-k-tip="Изменить дату валютирования"
-          onClick={() => edit.open('valueDate', currentOf(d, 'valueDate'))}><Pen /></IconButton>
+        <VdPenBtn ref={pen} size="s" label="Изменить дату валютирования" data-k-tip="Изменить дату валютирования"
+          onClick={() => edit.open('valueDate', currentOf(d, 'valueDate'))}><Pen /></VdPenBtn>
       )}
     </>
   )
@@ -454,11 +663,11 @@ export function fxDecisionNote(d: FxDocDetail, target: string, when: string): Re
   const h = hist.find((x) => x.when === when) ?? lastOf(hist)
   if (!h) return null
   return (
-    <div className={e.decision}>
-      <div className={e.decisionTarget}>{targetLabel(target)}</div>
+    <Decision>
+      <DecisionTarget>{targetLabel(target)}</DecisionTarget>
       {recordChange(target, h)}
-      <div className={e.decisionWho}>{whoWhen(h)}</div>
-    </div>
+      <DecisionWho>{whoWhen(h)}</DecisionWho>
+    </Decision>
   )
 }
 

@@ -1,4 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
+import styled, { css } from 'styled-components'
+import { k } from '@katran/tokens'
 import { Disclosure, LinkValue, Tag, formatAmount, formatDate, formatDateTimeFull, type HeroCell, type SectionContent } from '@katran/ui'
 import type { DetailDomain, DetailLookups, DetailSummary, EditContext } from '../../../shared/lib/detail'
 import { STATUS_LABEL, STATUS_TONE } from '../../doc-status/@x/rub-doc'
@@ -9,7 +11,267 @@ import {
   RUB_PARTY, RUB_PROFILES, RUB_TABS, rubSchemaOf,
 } from '../model/profiles'
 import type { RubDoc } from '../model/rubDoc'
-import s from './detail.module.css'
+import { Sr } from '../../../shared/ui'
+
+/* Блоки «Общих данных» рубля (эталон .msgs/.rp/.rph/.rpr/.rtxt/.rsec/.kvs, index.html:161–165, 343–345, 479–500).
+   data-null — строка или блок без значения: подпись бледная, рамка блока пунктиром. */
+const Msgs = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+`
+
+const Col = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 ${k.sp2};
+  align-content: start;
+  min-width: 0;
+  padding: ${k.sp1} ${k.sp2};
+
+  & + & {
+    border-left: 1px solid ${k.line};
+  }
+`
+
+const ColTitle = styled.div`
+  grid-column: 1 / -1;
+  font: 500 ${k.fs3} / ${k.lh3} ${k.sans};
+  letter-spacing: 0.03em;
+  color: ${k.muted};
+`
+
+const Lbl = styled.span`
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+const Val = styled.span`
+  overflow-wrap: anywhere;
+  color: ${k.val};
+`
+
+/* значение моноширинно; data-cut — в одну строку с многоточием */
+const ValMono = styled.span`
+  font: ${k.fs1} / ${k.lh1} ${k.mono};
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  color: ${k.val};
+
+  &:where([data-cut]) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`
+
+const Ar = styled.span`
+  margin: 0 ${k.sp1};
+  color: ${k.faint};
+`
+
+const Links = styled.span`
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 ${k.sp2};
+`
+
+const NoneText = styled.span`
+  color: ${k.faint};
+`
+
+const HeroSub = styled.span`
+  font-weight: 500;
+`
+
+const Prio = styled.span`
+  margin-left: ${k.sp2};
+`
+
+const NoPrio = styled.span`
+  margin-left: ${k.sp2};
+  font-size: ${k.fs2};
+  font-weight: 400;
+  color: ${k.muted};
+`
+
+const Amt = styled.span`
+  font: 600 ${k.fsSum} / 1 ${k.sans};
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
+const Ccy = styled.small`
+  margin-left: ${k.sp1};
+  font-size: ${k.fs1};
+  font-weight: 600;
+  color: ${k.val};
+`
+
+const PartyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+`
+
+const Fh = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: ${k.sp2};
+`
+
+const FhTitle = styled.h3`
+  margin: 0;
+  font: 600 ${k.fs2} / ${k.lh2} ${k.sans};
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: ${k.ink2};
+`
+
+/* таблица сторон и агентов: строка 23 (эталон .rpr), шапка прописными на sunk */
+const sideTable = css`
+  width: 100%;
+  border: 1px solid ${k.line};
+  border-collapse: collapse;
+  border-radius: ${k.rS};
+  table-layout: fixed;
+
+  & th,
+  & td {
+    height: ${k.partyRow};
+    padding: 0 ${k.sp2};
+    border-bottom: 1px solid ${k.line2};
+    text-align: left;
+    vertical-align: baseline;
+  }
+
+  & thead th {
+    background: ${k.sunk};
+    font: 600 ${k.fs3} / ${k.lh3} ${k.sans};
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: ${k.muted};
+  }
+`
+
+const PartyTable = styled.table`
+  ${sideTable}
+`
+
+const AgentsTable = styled.table`
+  ${sideTable}
+
+  & td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & th:first-child {
+    width: 40%;
+  }
+
+  & th:nth-child(2) {
+    width: ${k.dtBic};
+  }
+`
+
+/* подпись строки; data-mono — путь узла ED107 моноширинно; у пустой строки (data-null) — бледная.
+   Тот же компонент — заголовок строки таблицы сторон (as="th") */
+const KvName = styled.span`
+  font-size: ${k.fs2};
+  font-weight: 400;
+  color: ${k.muted};
+
+  &:where([data-mono]) {
+    font-family: ${k.mono};
+  }
+
+  [data-null] & {
+    color: ${k.faint};
+  }
+`
+
+const Rtxt = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 ${k.sp3};
+  align-items: baseline;
+  padding: ${k.sp1} ${k.sp2};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+
+  &[data-null] {
+    border-style: dashed;
+  }
+`
+
+const RtxtLbl = styled.span`
+  font: 600 ${k.fs3} / ${k.lh3} ${k.sans};
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: ${k.ink2};
+`
+
+/* строки секции: подпись 250 (эталон .rsec .xr) */
+const KvList = styled.div`
+  display: flex;
+  flex-direction: column;
+`
+
+const KvRow = styled.div`
+  display: grid;
+  grid-template-columns: ${k.dtLabelL} minmax(0, 1fr);
+  gap: 0 ${k.sp3};
+  align-items: baseline;
+  min-height: ${k.partyRow};
+  border-bottom: 1px solid ${k.line2};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`
+
+const KvSep = styled.div`
+  height: ${k.sp2};
+  border-bottom: 1px solid ${k.line};
+`
+
+const No = styled.span`
+  margin-right: ${k.sp1};
+  font: 600 ${k.fs1} / 1 ${k.mono};
+  color: ${k.ink};
+  cursor: help;
+`
+
+const Ed = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+`
+
+const Kvs = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 ${k.sp3};
+`
+
+const KvsItem = styled.span`
+  display: flex;
+  align-items: baseline;
+  gap: ${k.sp2};
+  min-width: 0;
+`
+
+const Cnt = styled.span`
+  margin-left: auto;
+  font: 500 ${k.fs3} / 1 ${k.mono};
+  color: ${k.faint};
+`
 
 /** Есть ли хоть одно непустое значение (эталон filled, index.html:1134). */
 function filled(o: unknown): boolean {
@@ -18,75 +280,75 @@ function filled(o: unknown): boolean {
   return typeof o === 'string' ? o !== '' : o != null
 }
 
-const None = () => <span className={s.none}><span aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></span>
+const None = () => <NoneText><span aria-hidden="true">—</span><Sr>не заполнено</Sr></NoneText>
 function RLabel({ k }: { k: string }) {
   const m = RFIELDS[k] ?? { label: k }
-  return <>{m.no && <span className={s.no} data-k-tip={`${m.no} · ${m.label}`}>{m.no}</span>}{m.label}</>
+  return <>{m.no && <No data-k-tip={`${m.no} · ${m.label}`}>{m.no}</No>}{m.label}</>
 }
 function RVal({ k, v, mono }: { k: string; v: string; mono?: boolean | undefined }) {
   if (!v) return <None />
-  return <span className={(mono ?? RFIELDS[k]?.mono) ? s.valMono : s.val}>{v}</span>
+  return (mono ?? RFIELDS[k]?.mono) ? <ValMono>{v}</ValMono> : <Val>{v}</Val>
 }
 
 /** Строки «реквизит — значение» секции; «|» — разделитель групп (эталон rubSectionHtml kv). */
 function Kv({ rows, data }: { rows: readonly string[]; data: Record<string, string> }) {
   return (
-    <div className={s.kv}>
+    <KvList>
       {rows.map((k, i) => (k === '|'
-        ? <div key={`sep${i}`} className={s.kvSep} aria-hidden="true" />
+        ? <KvSep key={`sep${i}`} aria-hidden="true" />
         : (
-          <div key={k} className={[s.kvRow, data[k] ? '' : s.null].filter(Boolean).join(' ')}>
-            <span className={s.kvName}><RLabel k={k} /></span>
+          <KvRow key={k} data-null={data[k] ? undefined : ''}>
+            <KvName><RLabel k={k} /></KvName>
             <RVal k={k} v={data[k] ?? ''} />
-          </div>
+          </KvRow>
         )))}
-    </div>
+    </KvList>
   )
 }
 
 function Agents({ d }: { d: RubDocDetail }) {
   return (
-    <table className={s.agents}>
+    <AgentsTable>
       <thead><tr>{AGENT_COLS.map(([title]) => <th key={title} scope="col">{title}</th>)}</tr></thead>
       <tbody>
         {d.agents.map((a, i) => (
           <tr key={i}>{AGENT_COLS.map(([, key]) => <td key={key}><RVal k={key} v={a[key]} mono={key !== 'name'} /></td>)}</tr>
         ))}
       </tbody>
-    </table>
+    </AgentsTable>
   )
 }
 
 /** ED107: шапка из четырёх реквизитов и подгруппы узлов ЭС; пустое значение — бледная строка (эталон rubSectionHtml ed107). */
 function Ed107({ e }: { e: RubEd107 }) {
   return (
-    <div className={s.ed}>
-      <div className={s.kvs}>
+    <Ed>
+      <Kvs>
         {ED107_HEAD.map(([k, label]) => (
-          <span key={k} className={s.kvsItem}>
-            <span className={s.lbl}>{label}</span>
-            {e[k] ? <span className={s.val}>{k.endsWith('Date') ? formatDate(e[k]) : e[k]}</span> : <None />}
-          </span>
+          <KvsItem key={k}>
+            <Lbl>{label}</Lbl>
+            {e[k] ? <Val>{k.endsWith('Date') ? formatDate(e[k]) : e[k]}</Val> : <None />}
+          </KvsItem>
         ))}
-      </div>
+      </Kvs>
       {ED107_GROUPS.map((g) => {
         const cnt = g.rows.filter((r) => e.v[`${g.node}/${r}`]).length
         return (
-          <Disclosure key={g.id} title={g.title} level="sub" defaultOpen aside={<span className={s.cnt}>{cnt} / {g.rows.length}</span>}>
+          <Disclosure key={g.id} title={g.title} level="sub" defaultOpen aside={<Cnt>{cnt} / {g.rows.length}</Cnt>}>
             {g.rows.map((r) => {
               const path = `${g.node}/${r}`
               const v = e.v[path] ?? ''
               return (
-                <div key={path} className={[s.kvRow, v ? '' : s.null].filter(Boolean).join(' ')}>
-                  <span className={[s.kvName, s.mono].join(' ')}>ed:{path}</span>
+                <KvRow key={path} data-null={v ? undefined : ''}>
+                  <KvName data-mono="">ed:{path}</KvName>
                   <RVal k={path} v={v} mono={r === 'BIC' || /Acc|Account/.test(r)} />
-                </div>
+                </KvRow>
               )
             })}
           </Disclosure>
         )
       })}
-    </div>
+    </Ed>
   )
 }
 
@@ -105,76 +367,76 @@ export function rubSection(d: RubDocDetail, id: string): SectionContent {
 /** Сценарий, системы, идентификаторы — аналог «Маршрута» валюты (эталон rubScenHtml, index.html:1121). */
 function Scenario({ d }: { d: RubDocDetail }) {
   return (
-    <div className={s.msgs}>
-      <div className={s.col}>
-        <div className={s.colTitle}>Сценарий</div>
-        <span className={s.lbl}>Код</span><span className={[s.valMono, s.cut].join(' ')} data-k-tip={d.scenario}>{d.scenario}</span>
-        <span className={s.lbl}>S → R</span><span className={[s.valMono, s.cut].join(' ')}>{d.sysFrom}<span className={s.ar}>→</span>{d.sysTo}</span>
-      </div>
-      <div className={s.col}>
-        <div className={s.colTitle}>Системы</div>
-        <span className={s.lbl}>Initiator</span><span className={[s.valMono, s.cut].join(' ')}>{d.initiator}</span>
-        <span className={s.lbl}>Source</span><span className={[s.valMono, s.cut].join(' ')}>{d.source}</span>
-        <span className={s.lbl}>Destination</span><span className={[s.valMono, s.cut].join(' ')}>{d.destination}</span>
-      </div>
-      <div className={s.col}>
-        <div className={s.colTitle}>Идентификаторы</div>
-        <span className={s.lbl}>Ссылки</span>
-        <span className={s.links}>
+    <Msgs>
+      <Col>
+        <ColTitle>Сценарий</ColTitle>
+        <Lbl>Код</Lbl><ValMono data-cut="" data-k-tip={d.scenario}>{d.scenario}</ValMono>
+        <Lbl>S → R</Lbl><ValMono data-cut="">{d.sysFrom}<Ar>→</Ar>{d.sysTo}</ValMono>
+      </Col>
+      <Col>
+        <ColTitle>Системы</ColTitle>
+        <Lbl>Initiator</Lbl><ValMono data-cut="">{d.initiator}</ValMono>
+        <Lbl>Source</Lbl><ValMono data-cut="">{d.source}</ValMono>
+        <Lbl>Destination</Lbl><ValMono data-cut="">{d.destination}</ValMono>
+      </Col>
+      <Col>
+        <ColTitle>Идентификаторы</ColTitle>
+        <Lbl>Ссылки</Lbl>
+        <Links>
           <LinkValue name="txId" value={d.txId || undefined} />
           <LinkValue name="docRef" value={d.docRef || undefined} />
           <LinkValue name="УИП" value={d.purposeExtra.uip || undefined} />
-        </span>
-      </div>
-    </div>
+        </Links>
+      </Col>
+    </Msgs>
   )
 }
 
 /** Таблица «отправитель | получатель»: строки фиксированы, пустые с обеих сторон — бледные (эталон rubPartyHtml, index.html:1127). */
 function Party({ d }: { d: RubDocDetail }) {
   return (
-    <div className={s.partyWrap}>
-      <div className={s.fh}><h3 className={s.fhTitle}>Отправитель / Получатель</h3><span className={s.lbl}>отправитель слева · получатель справа</span></div>
-      <table className={s.party} aria-label="Отправитель и получатель">
+    <PartyWrap>
+      <Fh><FhTitle>Отправитель / Получатель</FhTitle><Lbl>отправитель слева · получатель справа</Lbl></Fh>
+      <PartyTable aria-label="Отправитель и получатель">
         <colgroup><col style={{ width: 'var(--k-dt-label-s)' } as CSSProperties} /><col /><col /></colgroup>
-        <thead><tr><th scope="col"><span className={s.sr}>Реквизит</span></th><th scope="col">Отправитель</th><th scope="col">Получатель</th></tr></thead>
+        <thead><tr><th scope="col"><Sr>Реквизит</Sr></th><th scope="col">Отправитель</th><th scope="col">Получатель</th></tr></thead>
         <tbody>
           {RUB_PARTY.map((k, i) => {
             const a = d.party.s[k], b = d.party.r[k]
             return (
-              <tr key={k} data-empty={!a && !b ? '' : undefined} data-part={i === 0 ? 'party-row' : undefined} className={!a && !b ? s.null : undefined}>
-                <th scope="row" className={s.kvName}>{RFIELDS[k]?.label ?? k}</th>
+              <tr key={k} data-empty={!a && !b ? '' : undefined} data-null={!a && !b ? '' : undefined} data-part={i === 0 ? 'party-row' : undefined}>
+                <KvName as="th" scope="row">{RFIELDS[k]?.label ?? k}</KvName>
                 <td><RVal k={k} v={a} /></td>
                 <td><RVal k={k} v={b} /></td>
               </tr>
             )
           })}
         </tbody>
-      </table>
-    </div>
+      </PartyTable>
+    </PartyWrap>
   )
 }
 
 function Purpose({ d }: { d: RubDocDetail }) {
   return (
-    <div className={[s.rtxt, d.purpose ? '' : s.null].filter(Boolean).join(' ')}>
-      <span className={s.rtxtLbl}>{RFIELDS.purpose?.label}</span>
-      {d.purpose ? <span className={s.val}>{d.purpose}</span> : <None />}
-    </div>
+    <Rtxt data-null={d.purpose ? undefined : ''}>
+      <RtxtLbl>{RFIELDS.purpose?.label}</RtxtLbl>
+      {d.purpose ? <Val>{d.purpose}</Val> : <None />}
+    </Rtxt>
   )
 }
 
 /** Ячейки сводки (эталон rubHeroHtml, index.html:1114). */
 export function rubHero(d: RubDocDetail, id: string): HeroCell {
   switch (id) {
-    case 'num': return { label: 'Номер документа · от', value: <>№ {d.docNumber} <span className={s.heroSub}>от {formatDate(d.numDate)}</span></> }
+    case 'num': return { label: 'Номер документа · от', value: <>№ {d.docNumber} <HeroSub>от {formatDate(d.numDate)}</HeroSub></> }
     // у платёжного ордера кода операции нет (В-Д3) — прочерк
-    case 'op': return { label: 'Операция', value: <>{d.opCode ? <span className={s.valMono}>{d.opCode}</span> : <None />} <span className={s.heroSub}>{d.opName}</span></> }
+    case 'op': return { label: 'Операция', value: <>{d.opCode ? <ValMono>{d.opCode}</ValMono> : <None />} <HeroSub>{d.opName}</HeroSub></> }
     case 'queue': return {
       label: 'Очерёдность · приоритет',
-      value: <>{d.queue}{d.prio === 1 ? <span className={s.prio}><Tag tone="warn">СРОЧНО</Tag></span> : <span className={s.noPrio}>неприоритетный</span>}</>,
+      value: <>{d.queue}{d.prio === 1 ? <Prio><Tag tone="warn">СРОЧНО</Tag></Prio> : <NoPrio>неприоритетный</NoPrio>}</>,
     }
-    case 'sum': return { label: 'Сумма', align: 'right', value: <span className={s.amt}>{formatAmount(d.amount)}<small className={s.ccy}>RUB</small></span> }
+    case 'sum': return { label: 'Сумма', align: 'right', value: <Amt>{formatAmount(d.amount)}<Ccy>RUB</Ccy></Amt> }
     default: return { label: id, value: '—' }
   }
 }

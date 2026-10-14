@@ -1,11 +1,17 @@
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { KeyValueList, MiniTable, StatusBadge, Timestamp, type KeyValueItem, type MiniColumn } from '@katran/ui'
 import { toneOf } from '../model/tone'
 import type { Compliance } from '../model/types'
 import type { TrailTabProps } from './lib'
-import { TrailEmpty } from './parts'
-import s from './trail.module.css'
+import { Stack, TrailEmpty } from './parts'
 
 /** Подпись 230 px — эталон .cp-kv .xr (index.html:362). */
+/* вложенная таблица истории (эталон .cp-kv .tt, margin 6 10 8) */
+const Nested = styled.div`
+  margin: ${k.sp1} ${k.sp2} ${k.sp2};
+`
+
 const LABEL_W = 230
 
 type HistRow = Compliance['history'][number]
@@ -53,14 +59,14 @@ export function ComplianceTab({ data, ctx }: TrailTabProps<Compliance | null>) {
     { key: 'decision', label: 'Решение комплаенс', value: decision(d.decision) },
   ]
   return (
-    <div className={s.stack}>
+    <Stack>
       <KeyValueList items={record} labelWidth={LABEL_W} />
       <KeyValueList title="Отрицательная нотификация в источник" items={negative} labelWidth={LABEL_W} />
       <KeyValueList title="Контроль в системе мониторинга (ИС4021)" items={monitoring} labelWidth={LABEL_W} />
       <div>
         <KeyValueList title="Контроль подразделения комплаенс (ОПС3308)" items={department} labelWidth={LABEL_W} />
         {data.history.length > 0 && (
-          <div className={s.nested}>
+          <Nested>
             <MiniTable
               label="История попадания в подразделение комплаенс"
               columns={HIST}
@@ -68,9 +74,9 @@ export function ComplianceTab({ data, ctx }: TrailTabProps<Compliance | null>) {
               rowKey={(h, i) => `${i}:${h.at}`}
               empty="Истории нет"
             />
-          </div>
+          </Nested>
         )}
       </div>
-    </div>
+    </Stack>
   )
 }
