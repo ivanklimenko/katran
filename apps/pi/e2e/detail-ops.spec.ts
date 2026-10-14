@@ -469,8 +469,8 @@ test('исходное сообщение: окно с подсветкой JSON
   const code = win.getByRole('region', { name: 'Тело сообщения' })
   await expect(code).toHaveAttribute('data-lang', 'json')
   await expect(code).toContainText('"docId"')
-  // подсветка: токены — отдельные span с классом
-  expect(await code.locator('span[class]').count()).toBeGreaterThan(0)
+  // подсветка: токены — отдельные span с видом в data-tok
+  expect(await code.locator('span[data-tok]').count()).toBeGreaterThan(0)
   expect(await reqs(page, MESSAGE)).toBe(1)
   await page.screenshot({ path: test.info().outputPath('message-json.png') })
   await page.keyboard.press('Escape')
@@ -498,7 +498,7 @@ test('исходное сообщение рубля — XML с подсветк
   const code = page.getByRole('dialog', { name: 'Исходное сообщение · отправка 1' }).getByRole('region', { name: 'Тело сообщения' })
   await expect(code).toHaveAttribute('data-lang', 'xml')
   await expect(code).toContainText('Notification')
-  expect(await code.locator('span[class]').count()).toBeGreaterThan(0)
+  expect(await code.locator('span[data-tok]').count()).toBeGreaterThan(0)
   await page.keyboard.press('Escape')
   await expect(dialogs(page)).toHaveCount(1)
 })

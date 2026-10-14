@@ -17,7 +17,7 @@ test('подзаголовок отсортированной колонки —
   await page.locator('table[role=grid] thead th').filter({ hasText: 'ID' }).getByRole('button').first().click()
   await page.getByRole('menu').getByText('Номер документа', { exact: true }).click()
   const th = page.locator('table[role=grid] thead th[aria-sort]').filter({ hasText: 'ID' })
-  const [head, sub] = await th.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.querySelector('[class*="thSub"]')!).color])
+  const [head, sub] = await th.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.querySelector('[data-part="th-sub"]')!).color])
   expect(sub).toBe(head)
 })
 

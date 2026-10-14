@@ -39,7 +39,8 @@ describe('MiniTable', () => {
     expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Дата/время', 'Маршрут', 'Статус', 'Δ'])
     expect(within(table).getAllByRole('row')).toHaveLength(3)
     expect(screen.getByText('fx-in-checks.start')).toHaveAttribute('role', 'cell')
-    expect(screen.getByText('07:31:45').className).toMatch(/mono/)
+    expect(screen.getByText('07:31:45')).toHaveAttribute('data-mono')
+    expect(screen.getByText('fx-in-checks.start')).not.toHaveAttribute('data-mono')
     expect(screen.getByText('#1')).toHaveAttribute('data-align', 'end')
   })
 

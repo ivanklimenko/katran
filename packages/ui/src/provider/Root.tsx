@@ -2,6 +2,7 @@ import { styled } from '../styled'
 import { declarations, k } from '@katran/tokens'
 import { valueHot } from '../value/value.hot'
 import { gridHot } from '../grid/grid.hot'
+import { dimRule } from '../state/dim'
 
 /**
  * Корень KatranProvider: объявляет все --k-*, типографику корня и стили живой области.
@@ -21,6 +22,7 @@ import { gridHot } from '../grid/grid.hot'
  * и вставляется один раз на документ, сколько бы провайдеров ни было смонтировано. Поэтому styled(CopyValue)
  * потребителя при равной специфичности перебивает горячий путь всегда (у createGlobalStyle в styled-components 5
  * группы второго и следующих экземпляров вставлялись в конец листа — после групп потребителя).
+ * Там же — правило публичного класса приглушения `dimClass` (k-dim, state/dim.ts): у него нет своего компонента.
  */
 export const Root = styled.div`
   ${declarations.base}
@@ -70,5 +72,6 @@ export const Root = styled.div`
   *:where(&) {
     ${valueHot}
     ${gridHot}
+    ${dimRule}
   }
 `

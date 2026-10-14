@@ -11,6 +11,9 @@ const ENTITY: Record<string, string> = { '<': '&lt;', '>': '&gt;', '"': '&quot;'
 // без цифр: номера строк — только CSS-счётчиком, в тексте их быть не должно
 const XML = '<Document xmlns="urn:iso:std"><Hdr><Id>ABC</Id></Hdr><Purp>оплата по договору</Purp></Document>'
 
+/** Строки XML — дети блока XML внутри области (строка — styled-компонент, постоянного класса у неё нет). */
+const xmlLines = (region: HTMLElement): Element[] => Array.from(region.firstElementChild?.children ?? [])
+
 describe('CodeView (спека 2b §2)', () => {
   afterEach(() => {
     delete (window as unknown as Record<string, unknown>)['__kPwned']
@@ -24,12 +27,12 @@ describe('CodeView (спека 2b §2)', () => {
     expect(region).toHaveFocus()
   })
 
-  it('JSON: ключи, строки, числа и литералы — своими классами', () => {
+  it('JSON: ключи, строки, числа и литералы — своим атрибутом data-tok', () => {
     renderK(<CodeView code={JSON.stringify({ id: 'FX1', n: 12, ok: null }, null, 2)} language="json" label="JSON" />)
-    expect(screen.getByText('"id"')).toHaveClass('key')
-    expect(screen.getByText('"FX1"')).toHaveClass('str')
-    expect(screen.getByText('12')).toHaveClass('num')
-    expect(screen.getByText('null')).toHaveClass('lit')
+    expect(screen.getByText('"id"')).toHaveAttribute('data-tok', 'key')
+    expect(screen.getByText('"FX1"')).toHaveAttribute('data-tok', 'str')
+    expect(screen.getByText('12')).toHaveAttribute('data-tok', 'num')
+    expect(screen.getByText('null')).toHaveAttribute('data-tok', 'lit')
     expect(screen.getByRole('region').querySelector('pre')).toHaveTextContent('"id": "FX1"')
   })
 
@@ -42,18 +45,18 @@ describe('CodeView (спека 2b §2)', () => {
 
   it('SWIFT: блоки, теги и UETR', () => {
     renderK(<CodeView code={SWIFT} language="swift" label="SWIFT" />)
-    expect(screen.getByText('{1:')).toHaveClass('blk')
-    expect(screen.getByText(':20:')).toHaveClass('tag')
-    expect(screen.getByText(':32A:')).toHaveClass('tag')
-    expect(screen.getByText('3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b')).toHaveClass('uetr')
+    expect(screen.getByText('{1:')).toHaveAttribute('data-tok', 'blk')
+    expect(screen.getByText(':20:')).toHaveAttribute('data-tok', 'tag')
+    expect(screen.getByText(':32A:')).toHaveAttribute('data-tok', 'tag')
+    expect(screen.getByText('3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b')).toHaveAttribute('data-tok', 'uetr')
     expect(screen.getByRole('region').textContent).toBe(SWIFT)
   })
 
   it('XML: строки с глубиной в --k-d, выравнивание в --k-a; номера строк не входят в текст', () => {
     renderK(<CodeView code={XML} language="xml" label="ED244 · XML" />)
     const region = screen.getByRole('region', { name: 'ED244 · XML' })
-    const lines = region.querySelectorAll('.xl')
-    expect(Array.from(lines).map((l) => l.textContent)).toEqual([
+    const lines = xmlLines(region)
+    expect(lines.map((l) => l.textContent)).toEqual([
       '<Document xmlns="urn:iso:std">', '<Hdr>', '<Id>ABC</Id>', '</Hdr>', '<Purp>оплата по договору</Purp>', '</Document>',
     ])
     expect(lines[2]).toHaveStyle({ '--k-d': '2', '--k-a': '0' })
@@ -63,22 +66,22 @@ describe('CodeView (спека 2b §2)', () => {
   it('XML столбиком: у строк атрибутов --k-a — длина имени + 2', () => {
     const v = 'V'.repeat(45)
     renderK(<CodeView code={`<Tx a="${v}" b="${v}"/>`} language="xml" label="XML" />)
-    const lines = screen.getByRole('region').querySelectorAll('.xl')
+    const lines = xmlLines(screen.getByRole('region'))
     expect(lines).toHaveLength(2)
     expect(lines[1]).toHaveStyle({ '--k-d': '0', '--k-a': '4' })
   })
 
   it('битый XML — сырой текст по строкам, без подсветки', () => {
     renderK(<CodeView code={'<a>\n<b></a>'} language="xml" label="XML" />)
-    const lines = screen.getByRole('region').querySelectorAll('.xl')
-    expect(Array.from(lines).map((l) => l.textContent)).toEqual(['<a>', '<b></a>'])
+    const lines = xmlLines(screen.getByRole('region'))
+    expect(lines.map((l) => l.textContent)).toEqual(['<a>', '<b></a>'])
     expect(screen.getByRole('region').querySelectorAll('span')).toHaveLength(0)
   })
 
   it('битый XML с CRLF — строки без \\r на конце', () => {
     renderK(<CodeView code={'<a>\r\n<b></a>\r\n'} language="xml" label="XML" />)
-    const lines = screen.getByRole('region').querySelectorAll('.xl')
-    expect(Array.from(lines).map((l) => l.textContent)).toEqual(['<a>', '<b></a>', ''])
+    const lines = xmlLines(screen.getByRole('region'))
+    expect(lines.map((l) => l.textContent)).toEqual(['<a>', '<b></a>', ''])
   })
 
   it('исключение разборщика (переполнение стека на вложенности) — откат на сырой текст, рендер не падает', () => {
@@ -90,8 +93,8 @@ describe('CodeView (спека 2b §2)', () => {
     try {
       renderK(<CodeView code={'<a>\n<a/></a>'} language="xml" label="XML" />)
       expect(parse).toHaveBeenCalled()
-      const lines = screen.getByRole('region', { name: 'XML' }).querySelectorAll('.xl')
-      expect(Array.from(lines).map((l) => l.textContent)).toEqual(['<a>', '<a/></a>'])
+      const lines = xmlLines(screen.getByRole('region', { name: 'XML' }))
+      expect(lines.map((l) => l.textContent)).toEqual(['<a>', '<a/></a>'])
       expect(screen.getByRole('region').querySelectorAll('span')).toHaveLength(0)
     } finally {
       parse.mockRestore()
@@ -101,7 +104,7 @@ describe('CodeView (спека 2b §2)', () => {
   it('JSON со строкой в 10 млн знаков — рендерится строкой str', () => {
     const big = 'A'.repeat(10_000_000)
     renderK(<CodeView code={JSON.stringify({ b: big })} language="json" label="JSON" />)
-    expect(screen.getByRole('region').querySelector('.str')!.textContent).toHaveLength(big.length + 2)
+    expect(screen.getByRole('region').querySelector('[data-tok="str"]')!.textContent).toHaveLength(big.length + 2)
   })
 
   it('text — как есть', () => {

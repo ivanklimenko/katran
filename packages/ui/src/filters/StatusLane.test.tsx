@@ -25,8 +25,11 @@ describe('StatusLane', () => {
     expect(all).toHaveTextContent('21')
     expect(screen.getByRole('button', { name: /Ошибка/ })).toHaveAttribute('aria-pressed', 'false')
     expect(group.querySelectorAll('button')).toHaveLength(4)
-    // фильтр — не Button кита: свои кнопки, без класса компонента Button
-    expect(all.className).not.toMatch(/\bbutton\b/)
+    // фильтр — не Button кита: свои кнопки без атрибутов кнопки кита (вариант, размер)
+    for (const b of group.querySelectorAll('button')) {
+      expect(b).not.toHaveAttribute('data-variant')
+      expect(b).not.toHaveAttribute('data-size')
+    }
     expect(await axe(container)).toHaveNoViolations()
   })
   it('глиф в точке кнопки, «Все» — без точки', () => {

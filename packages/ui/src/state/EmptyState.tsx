@@ -1,16 +1,18 @@
 import { Button } from '../button'
-import s from './State.module.css'
+import { Empty, EmptyText, EmptyTitle } from './parts'
+
 export type EmptyStateProps = {
   title: string
   text?: string | undefined
   action?: { label: string; onClick: () => void } | undefined
+  className?: string | undefined
 }
-export function EmptyState({ title, text, action }: EmptyStateProps) {
+export function EmptyState({ title, text, action, className }: EmptyStateProps) {
   return (
-    <div className={s.empty}>
-      <div className={s.emptyTitle}>{title}</div>
-      {text && <div className={s.emptyText}>{text}</div>}
+    <Empty className={className}>
+      <EmptyTitle>{title}</EmptyTitle>
+      {text && <EmptyText>{text}</EmptyText>}
       {action && <Button onClick={action.onClick}>{action.label}</Button>}
-    </div>
+    </Empty>
   )
 }

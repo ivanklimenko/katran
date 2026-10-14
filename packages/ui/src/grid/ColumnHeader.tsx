@@ -1,7 +1,7 @@
 import { useRef, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { Menu, type MenuItem } from '../overlay'
 import { addSortLevel, findSortKey, flipSortLevel, removeSortLevel, soleSort } from './sortRows'
-import s from './Grid.module.css'
+import { Arrow, Rz, Th, ThBtn, ThSub } from './parts'
 import type { ColumnDef, Sort } from './types'
 
 export type ColumnHeaderProps<Row> = {
@@ -16,13 +16,14 @@ export type ColumnHeaderProps<Row> = {
   /** Сброс ширины этой колонки — Home на ползунке. */
   onResetWidth?: (() => void) | undefined
   cellProps?: HTMLAttributes<HTMLTableCellElement> | undefined
+  className?: string | undefined
 }
 
 const MIN_DEFAULT = 36
 const STEP = 8
 const STEP_SHIFT = 32
 
-export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onResetWidths, onResetWidth, cellProps }: ColumnHeaderProps<Row>) {
+export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onResetWidths, onResetWidth, cellProps, className }: ColumnHeaderProps<Row>) {
   const keys = column.sort ?? []
   const level = sort.find((l) => keys.some((k) => k.id === l.key))
   const active = level ? keys.find((k) => k.id === level.key) : undefined
@@ -111,28 +112,29 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
   const sub = active && keys.length > 1 ? active.label : column.subtitle
 
   return (
-    <th
+    <Th
       role="columnheader"
       scope="col"
       aria-sort={ariaSort}
-      className={[s.th, active ? s.sorted : ''].filter(Boolean).join(' ')}
+      data-sorted={active ? '' : undefined}
+      className={className}
       style={{ width: `calc(${width}px * var(--k-density))` } as CSSProperties}
       {...cellProps}
     >
       {keys.length > 0 ? (
-        <button ref={btn} type="button" tabIndex={-1} className={s.thBtn} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
-          {title}<span className={s.arrow} aria-hidden="true">{arrow}{sort.length > 1 && n > 0 && <sup>{n}</sup>}</span>
-          <span className={s.thSub}>{sub}</span>
-        </button>
+        <ThBtn ref={btn} type="button" tabIndex={-1} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
+          {title}<Arrow aria-hidden="true">{arrow}{sort.length > 1 && n > 0 && <sup>{n}</sup>}</Arrow>
+          <ThSub data-part="th-sub">{sub}</ThSub>
+        </ThBtn>
       ) : (
         <>
           {title}
-          <span className={s.thSub}>{column.subtitle}</span>
+          <ThSub data-part="th-sub">{column.subtitle}</ThSub>
         </>
       )}
       {keys.length > 1 && <Menu open={menuOpen} anchor={btn} onClose={() => setMenuOpen(false)} items={items} title={`Сортировать «${name}» по`} />}
       {(column.resizable ?? true) && onResize && (
-        <button
+        <Rz
           type="button"
           tabIndex={-1}
           role="slider"
@@ -144,7 +146,6 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
           aria-valuemin={min}
           aria-valuemax={9999}
           aria-keyshortcuts={shortcuts}
-          className={s.rz}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -154,6 +155,6 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
           onDoubleClick={(e) => { e.stopPropagation(); onResetWidths?.() }}
         />
       )}
-    </th>
+    </Th>
   )
 }

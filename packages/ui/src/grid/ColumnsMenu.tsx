@@ -1,8 +1,7 @@
 import { Fragment, useState, type RefObject } from 'react'
 import { IconButton } from '../button'
 import { Checkbox, Input } from '../input'
-import { Popover } from '../overlay'
-import s from './Grid.module.css'
+import { ColsItem, ColsList, ColsMenu, ColsName, ColsSplit } from './parts'
 import type { ColumnDef, ColumnsState } from './types'
 
 export type ColumnsMenuProps<Row> = {
@@ -16,6 +15,7 @@ export type ColumnsMenuProps<Row> = {
   /** id хостов в режиме «раздельно» (спека 5a §4). */
   split?: string[] | undefined
   onSplit?: ((p: { id: string; on: boolean }) => void) | undefined
+  className?: string | undefined
 }
 
 const Up = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 10l4-4 4 4" /></svg>
@@ -24,7 +24,7 @@ const Down = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" st
 const nameOf = <Row,>(c: ColumnDef<Row>) => c.menuTitle ?? c.title ?? c.id
 
 /** Состав и порядок колонок: галочки + перенос кнопками — работает с клавиатуры из коробки (спека 6.3). */
-export function ColumnsMenu<Row>({ open, anchor, onClose, columns, order, hidden, onChange, split = [], onSplit }: ColumnsMenuProps<Row>) {
+export function ColumnsMenu<Row>({ open, anchor, onClose, columns, order, hidden, onChange, split = [], onSplit, className }: ColumnsMenuProps<Row>) {
   const [q, setQ] = useState('')
   const byId = new Map(columns.map((c) => [c.id, c]))
   const full = [...order.filter((id) => byId.has(id)), ...columns.map((c) => c.id).filter((id) => !order.includes(id))]
@@ -40,9 +40,9 @@ export function ColumnsMenu<Row>({ open, anchor, onClose, columns, order, hidden
   }
 
   return (
-    <Popover open={open} anchor={anchor} onClose={onClose} label="Состав колонок" className={s.colsMenu}>
+    <ColsMenu open={open} anchor={anchor} onClose={onClose} label="Состав колонок" className={className}>
       <Input size="s" aria-label="Поиск колонки" placeholder="Поиск" value={q} onChange={(e) => setQ(e.target.value)} />
-      <ul className={s.colsList}>
+      <ColsList>
         {shown.map((id) => {
           const c = byId.get(id)!
           const name = nameOf(c)
@@ -50,21 +50,21 @@ export function ColumnsMenu<Row>({ open, anchor, onClose, columns, order, hidden
           const i = full.indexOf(id)
           return (
             <Fragment key={id}>
-              <li className={s.colsItem}>
+              <ColsItem>
                 <Checkbox aria-label={name} checked={!isHidden} disabled={!isHidden && visibleCount === 1} onChange={() => toggle(id)} />
-                <span className={s.colsName}>{name}</span>
+                <ColsName>{name}</ColsName>
                 <IconButton size="s" label={`${name} — выше`} disabled={i === 0} onClick={() => move(id, -1)}><Up /></IconButton>
                 <IconButton size="s" label={`${name} — ниже`} disabled={i === full.length - 1} onClick={() => move(id, 1)}><Down /></IconButton>
-              </li>
+              </ColsItem>
               {c.split && onSplit && (
-                <li className={s.colsSplit}>
+                <ColsSplit>
                   <Checkbox label={c.split.label} checked={split.includes(id)} onChange={(e) => onSplit({ id, on: e.target.checked })} />
-                </li>
+                </ColsSplit>
               )}
             </Fragment>
           )
         })}
-      </ul>
-    </Popover>
+      </ColsList>
+    </ColsMenu>
   )
 }

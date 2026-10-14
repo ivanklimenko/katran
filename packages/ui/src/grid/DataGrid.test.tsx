@@ -279,7 +279,7 @@ describe('DataGrid', () => {
     const { container } = renderK(
       <DataGrid {...base({ toolbar: <BulkBar selection={{ mode: 'ids', ids: [] }} total={87} onClear={() => {}} /> })} />,
     )
-    const wrapper = container.querySelector('[class*="toolbar"]')
+    const wrapper = container.querySelector('[data-part="toolbar"]')
     expect(wrapper).not.toBeNull()
     expect(wrapper).toBeEmptyDOMElement()
     expect(screen.queryByRole('region', { name: 'Массовые действия' })).toBeNull()
