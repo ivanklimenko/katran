@@ -1,19 +1,21 @@
 import type { ReactElement } from 'react'
-import { createGlobalStyle } from '../styled'
-import { fontFaces } from '@katran/tokens/fonts'
+import { createGlobalStyle, css } from '../styled'
+import { fontFaces, type FontFaceSpec } from '@katran/tokens/fonts'
 
 // Правила собираются один раз при загрузке модуля: в шаблоне styled нет функций (правило 1 спеки).
 // Адрес — абсолютный (new URL(…).href от адреса модуля: в dev Vite — /@fs/…, у webpack — от publicPath remote), в кавычках.
-const faces = fontFaces
-  .map((f) => `@font-face {
-  font-family: '${f.family}';
-  font-style: normal;
-  font-display: swap;
-  font-weight: ${f.weight};
-  src: url('${f.url}') format('woff2');
-  unicode-range: ${f.unicodeRange};
-}`)
-  .join('\n')
+// @font-face — текстом шаблона css, а не строкой: так его видят stylelint и check-css-target (планка Chromium 88).
+const face = (f: FontFaceSpec) => css`
+  @font-face {
+    font-family: '${f.family}';
+    font-style: normal;
+    font-display: swap;
+    font-weight: ${f.weight};
+    src: url('${f.url}') format('woff2');
+    unicode-range: ${f.unicodeRange};
+  }
+`
+const faces = fontFaces.map(face)
 
 const FontFaces = createGlobalStyle`${faces}`
 

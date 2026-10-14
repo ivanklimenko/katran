@@ -7,7 +7,6 @@
 // поэтому не входит в pnpm check; запускается в CI отдельной задачей и вручную перед выпуском.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -87,7 +86,7 @@ try {
  * подмножества Sans 600, document.fonts.check — true, отказов сети нет.
  */
 async function checkFonts() {
-  const { chromium } = createRequire(join(ROOT, 'apps/pi/package.json'))('@playwright/test')
+  const { chromium } = await import('@playwright/test')
   const vite = await import(pathToFileURL(join(dir, 'node_modules/vite/dist/node/index.js')).href)
   const browser = await chromium.launch()
   const probe = async (name, url) => {

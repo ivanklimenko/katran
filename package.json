@@ -7,17 +7,19 @@
   "scripts": {
     "dev": "pnpm --filter demo dev",
     "gen": "pnpm -r --if-present gen",
-    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.ts packages/tokens/src/vars.ts packages/tokens/src/declarations.ts packages/tokens/src/fonts.ts packages/tokens/fonts",
-    "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" \"apps/pi/src/**/*.css\" --allow-empty-input",
+    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.ts packages/tokens/src/vars.ts packages/tokens/src/declarations.ts packages/tokens/src/fonts.ts packages/tokens/fonts && ! git status --porcelain -- packages/tokens/fonts | grep .",
+    "lint": "eslint . && stylelint \"packages/ui/src/**/*.{css,ts,tsx}\" \"apps/demo/src/**/*.css\" \"apps/pi/src/**/*.css\" \"apps/*/src/**/*.{ts,tsx}\" \"examples/federation/remote/src/**/*.{ts,tsx}\" --allow-empty-input",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
-    "check": "pnpm gen:check && pnpm lint && pnpm test && pnpm build && pnpm check:target && pnpm release:pack --no-build",
+    "check": "pnpm gen:check && pnpm lint && pnpm check:rules && pnpm test && pnpm build && pnpm check:target && pnpm release:pack --no-build",
     "release:pack": "node scripts/release-pack.mjs",
     "check:install": "node scripts/check-install.mjs",
-    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/tokens/dist/fonts.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css apps/pi/dist/assets/*.css"
+    "check:rules": "node scripts/check-style-rules.mjs",
+    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/tokens/dist/fonts.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css apps/pi/dist/assets/*.css && node scripts/check-css-target.mjs"
   },
   "browserslist": ["chrome >= 88"],
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "doiuse": "^6.0.6",
     "es-check": "^9.8.1",
     "eslint": "^10.11.0",
@@ -27,6 +29,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
     "postcss": "^8.5.28",
+    "postcss-styled-syntax": "^0.7.3",
     "stylelint": "^17.15.0",
     "stylelint-config-standard": "^40.0.0",
     "tsx": "^4.23.15",

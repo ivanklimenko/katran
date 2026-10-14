@@ -33,6 +33,50 @@ const fsdZones = LAYERS.flatMap((layer, i) => {
   return zones
 })
 
+// API React 18+ (спека совместимости 2.1)
+const REACT_18 = [
+  {
+    selector: "ImportDeclaration[source.value='react'] > ImportSpecifier[imported.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+    message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+  },
+  {
+    selector: "MemberExpression[object.name='React'][property.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
+    message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
+  },
+  {
+    selector: "ImportDeclaration[source.value='react-dom'] > ImportSpecifier[imported.name=/^(useFormStatus|createRoot|hydrateRoot)$/]",
+    message: 'API react-dom 18+ — кит работает на React 17: корень монтирует хост, useFormStatus нет',
+  },
+  {
+    selector: "ImportDeclaration[source.value='react-dom/client']",
+    message: 'react-dom/client — модуль React 18+; кит работает на React 17, корень монтирует хост',
+  },
+]
+
+// Спека styled, правило 1: в шаблонах styled кита нет функций (ни от пропсов, ни от theme) —
+// состояния атрибутами, переменные значения инлайновой CSS-переменной. Формы: styled.x`${fn}`, css`${fn}`,
+// createGlobalStyle`${fn}` и styled.x(fn) / styled(X)(fn).
+const STYLED_FN_MESSAGE = 'Функция в шаблоне styled: в ките состояния — атрибутами (data-*, aria-*), переменные значения — инлайновой CSS-переменной (спека styled, правило 1)'
+const STYLED_FN = [
+  { selector: 'TaggedTemplateExpression > TemplateLiteral > :matches(ArrowFunctionExpression, FunctionExpression)', message: STYLED_FN_MESSAGE },
+  { selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='styled'] > :matches(ArrowFunctionExpression, FunctionExpression)", message: STYLED_FN_MESSAGE },
+  { selector: "CallExpression[callee.type='CallExpression'][callee.callee.name='styled'] > :matches(ArrowFunctionExpression, FunctionExpression)", message: STYLED_FN_MESSAGE },
+]
+
+const STYLED_COMPONENTS_ONLY_IN_STYLED_TS = {
+  name: 'styled-components',
+  allowTypeImports: true,
+  message: 'styled-components в ките импортирует только packages/ui/src/styled.ts (R13): styled, css, createGlobalStyle и прочее — из ../styled',
+}
+
+// Горячий путь — ровно эти модули (Global Constraints плана; ord в DataGrid.tsx — фрагмент gridHot, не весь файл)
+const HOT_PATH = [
+  'packages/ui/src/value/**/*.{ts,tsx}',
+  'packages/ui/src/grid/GridRecord.tsx',
+  'packages/ui/src/grid/GridSkeleton.tsx',
+  'packages/ui/src/grid/grid.hot.ts',
+]
+
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.css', 'packages/tokens/src/tokens.ts', 'examples/**', 'apps/pi/perf/base/**', 'apps/pi/perf/head/**'] },
   ...tseslint.configs.recommended,
@@ -88,29 +132,31 @@ export default tseslint.config(
     },
   },
   // Кит работает на React 17 (хост метаприложения): API React 18+ в пакетах запрещены (спека совместимости 2.1).
-  // Замены — в packages/ui/src/compat/.
+  // Замены — в packages/ui/src/compat/. Блоки no-restricted-syntax ниже не пересекаются по файлам:
+  // правило в плоском конфиге не складывается, а заменяется последним блоком.
+  { files: ['packages/effector/src/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...REACT_18] } },
+  { files: ['packages/ui/src/**/*.{ts,tsx}'], ignores: ['packages/ui/src/compat/**'], rules: { 'no-restricted-syntax': ['error', ...REACT_18, ...STYLED_FN] } },
+  { files: ['packages/ui/src/compat/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...STYLED_FN] } },
+  // R13: styled-components в ките импортирует только styled.ts (нормализация default для Node).
+  // Типы и дополнение модуля (declare module 'styled-components') — можно: в сборку не попадают.
   {
-    files: ['packages/ui/src/**/*.{ts,tsx}', 'packages/effector/src/**/*.{ts,tsx}'],
-    ignores: ['packages/ui/src/compat/**'],
+    files: ['packages/ui/src/**/*.{ts,tsx}'],
+    ignores: ['packages/ui/src/styled.ts'],
+    rules: { '@typescript-eslint/no-restricted-imports': ['error', { paths: [STYLED_COMPONENTS_ONLY_IN_STYLED_TS] }] },
+  },
+  // Горячий путь (спека styled, правило 2): без styled.* — только фрагменты css и createGlobalStyle
+  // (классы k-…, их монтирует HotStyles). Этот блок заменяет предыдущий для своих файлов, поэтому R13 — и здесь.
+  {
+    files: HOT_PATH,
     rules: {
-      'no-restricted-syntax': ['error',
-        {
-          selector: "ImportDeclaration[source.value='react'] > ImportSpecifier[imported.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
-          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
-        },
-        {
-          selector: "MemberExpression[object.name='React'][property.name=/^(useId|useSyncExternalStore|useTransition|useDeferredValue|useInsertionEffect|startTransition|use|useOptimistic|useActionState)$/]",
-          message: 'API React 18+ — кит работает на React 17; замены в packages/ui/src/compat/',
-        },
-        {
-          selector: "ImportDeclaration[source.value='react-dom'] > ImportSpecifier[imported.name=/^(useFormStatus|createRoot|hydrateRoot)$/]",
-          message: 'API react-dom 18+ — кит работает на React 17: корень монтирует хост, useFormStatus нет',
-        },
-        {
-          selector: "ImportDeclaration[source.value='react-dom/client']",
-          message: 'react-dom/client — модуль React 18+; кит работает на React 17, корень монтирует хост',
-        },
-      ],
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        paths: [{ ...STYLED_COMPONENTS_ONLY_IN_STYLED_TS, message: `Горячий путь без styled: только css и createGlobalStyle из ../styled. ${STYLED_COMPONENTS_ONLY_IN_STYLED_TS.message}` }],
+        patterns: [{
+          regex: '(^|/)styled$',
+          importNames: ['default', 'styled'],
+          message: 'Горячий путь без styled: в модулях горячего пути нет styled.*, только фрагменты css и createGlobalStyle (спека styled, правило 2)',
+        }],
+      }],
     },
   },
 )

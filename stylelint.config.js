@@ -18,4 +18,22 @@ export default {
     'custom-property-pattern': '^k-[a-z0-9-]+$',
     'selector-pseudo-class-no-unknown': [true, { ignorePseudoClasses: ['global'] }],
   },
+  overrides: [
+    {
+      // Шаблоны styled-components (спека styled §6): те же правила, разбор — postcss-styled-syntax.
+      // Проверяется исходный текст шаблона: интерполяции ${…} остаются как есть, вендорные префиксы,
+      // которые stylis добавляет при выполнении, сюда не попадают.
+      files: ['**/*.ts', '**/*.tsx'],
+      customSyntax: 'postcss-styled-syntax',
+      rules: {
+        'selector-class-pattern': ['^([a-z][a-zA-Z0-9]*|k-[a-z0-9-]+)$', {
+          message: 'Класс в шаблоне — camelCase или класс горячего пути k-<kebab-case>',
+        }],
+        // Интерполяцию ${…} в дескрипторе @font-face (font-weight: ${f.weight}) правило считает неизвестным
+        // значением; у деклараций stylelint интерполяции пропускает сам. Планку браузера для @font-face
+        // проверяет check-css-target.
+        'at-rule-descriptor-value-no-unknown': null,
+      },
+    },
+  ],
 }

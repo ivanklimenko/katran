@@ -1,0 +1,47 @@
+// Образец для scripts/check-style-rules.mjs — не код кита: копируется в packages/ui/src на время проверки.
+// «ждём: …» — нарушения, которые проверка обязана найти на этой строке; «чисто» — строка без единого замечания.
+import { styled, css, createGlobalStyle } from './styled' // чисто
+import { keyframes } from 'styled-components' // ждём: eslint:r13
+import type { DefaultTheme } from 'styled-components' // чисто
+import { k } from '@katran/tokens'
+
+declare module 'styled-components' { // чисто
+  export interface DefaultTheme { sample?: string }
+}
+export type Sample = DefaultTheme
+
+// Нарушения правил стилей в шаблоне
+export const Bad = styled.div`
+  width: 10px; /* ждём: stylelint:unit-disallowed-list */
+  color: #fff; /* ждём: stylelint:color-no-hex */
+  background: red; /* ждём: stylelint:color-named */
+  :has(a) { color: ${k.ink}; } /* ждём: target:css-has */
+`
+
+// Функция в шаблоне — от пропсов и в фрагменте css
+export const Fn = styled.div<{ c: string }>`
+  color: ${(p) => p.c}; /* ждём: eslint:template-fn */
+`
+export const fnFragment = css`
+  color: ${function pick() { return k.ink }}; /* ждём: eslint:template-fn */
+`
+export const fade = keyframes`from { opacity: 0; } to { opacity: 1; }`
+
+// Правильный код: токены, px там, где он разрешён, вложенность, классы горячего пути
+export const Good = styled.div`
+  color: ${k.ink}; /* чисто */
+  letter-spacing: 1px; /* чисто */
+  border: 1px solid ${k.ink}; /* чисто */
+  &[data-state='open'] .x & { padding: ${k.sp1}; } /* чисто */
+  & .k-field-main { padding: ${k.sp1}; } /* чисто */
+`
+
+// @font-face в шаблоне: дескриптор новее Chromium 88 обязан найтись
+export const Faces = createGlobalStyle`
+  @font-face {
+    font-family: 'Sample Sans';
+    font-display: swap; /* чисто */
+    size-adjust: 90%; /* ждём: target:size-adjust */
+    src: url('${k.ink}') format('woff2');
+  }
+`
