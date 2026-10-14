@@ -13,3 +13,7 @@ apps/pi/test-results/
 apps/pi/playwright-report/
 # тарболы выпуска: pnpm release:pack
 release/
+# замер скорости apps/pi (срез styled): сборки базы и head, результаты прогона
+apps/pi/perf/base/
+apps/pi/perf/head/
+apps/pi/perf/result.json

@@ -6,6 +6,7 @@ import {
 import { gridColumns, type RecordLayout } from '@katran/ui'
 import type { GridPorts } from '../../../shared/api'
 import type { PageLifecycle } from '../../../shared/lib/lifecycle'
+import { standParam } from '../../../shared/lib/stand'
 
 export type RegistryConfig<Row> = {
   /** gridId и ключ настроек грида. */
@@ -39,7 +40,8 @@ export function createRegistry<Row>(cfg: RegistryConfig<Row>): Registry<Row> {
     id: cfg.id,
     // gridColumns разворачивает части составных колонок (ColumnDef.split, план 5a, R5) — у частей свои id и ширины
     columns: gridColumns(cfg.layout.columns),
-    pageSize: cfg.pageSize ?? 20,
+    // регулятор стенда ?size=N — начальный размер страницы (замеры); сохранённый пользователем размер важнее
+    pageSize: cfg.pageSize ?? (Number(standParam('size')) || 20),
     $filter: filters.$conditions,
     fetchFx: ports.searchFx,
     facets: { field: 'status', fetchFx: ports.facetsFx },

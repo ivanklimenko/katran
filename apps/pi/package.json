@@ -8,7 +8,10 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview --port 5185",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "visual": "playwright test -c playwright.visual.config.ts",
+    "perf:base": "bash perf/build-base.sh",
+    "perf": "vite build --outDir perf/head --emptyOutDir --logLevel warn && node perf/measure.mjs"
   },
   "dependencies": {
     "@katran/effector": "workspace:*",

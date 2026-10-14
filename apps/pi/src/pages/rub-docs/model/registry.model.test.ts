@@ -21,6 +21,24 @@ describe('страница rub-docs: реестр → деталка (спека
     await allSettled(lifecycle.pageClosed, { scope })
     expect(scope.getState(detail.$marks)).toEqual({})
   })
+  it('регулятор стенда ?noauto: первая запись не открывается', async () => {
+    const doc = parseRubDocDetail(RUB_DETAIL_EXAMPLE, 'ответ')
+    const row = { id: 'first' } as unknown as RubDoc
+    const scope = fork({
+      handlers: [
+        [rubDocPorts.detailFx, async (id: string) => ({ ...doc, id })],
+        [rubDocPorts.searchFx, async () => ({ rows: [row], total: 1 })],
+        [rubDocPorts.facetsFx, async () => []],
+        [rubDocPorts.filterMetaFx, async () => ({ fields: [] })],
+      ],
+    })
+    history.replaceState(null, '', '/?slow=0&noauto')
+    try {
+      await allSettled(lifecycle.pageOpened, { scope })
+      expect(scope.getState(registry.grid.$rows)).toEqual([row])
+      expect(scope.getState(detail.$slots)).toEqual({ a: null, b: null })
+    } finally { history.replaceState(null, '', '/') }
+  })
   it('В-Д4: первая запись первого ответа реестра открывается в A; закрытая не всплывает до ухода с экрана', async () => {
     const doc = parseRubDocDetail(RUB_DETAIL_EXAMPLE, 'ответ')
     const row = { id: 'first' } as unknown as RubDoc
