@@ -108,6 +108,21 @@ await step('стили хоста → кит', async () => {
   ok('шрифты IBM Plex загружены (нет ошибок загрузки)', kitStyle.fontsError.length === 0 && kitStyle.fontsLoaded.some((f) => f.includes('IBM Plex Sans')), { loaded: kitStyle.fontsLoaded.length, errors: kitStyle.fontsError })
 })
 
+// --- шрифты KatranFonts: адреса new URL(…, import.meta.url) из @katran/tokens после сборки remote ---
+// Начертание грузится явно текстом с кириллицей и латиницей: оба подмножества Sans 600 загружены с адреса remote
+// (publicPath 'auto'; в prod — другой origin, нужен CORS), document.fonts.check — true (как в pnpm check:install).
+await step('шрифты KatranFonts', async () => {
+  const fonts = await page.evaluate(async () => {
+    const faces = await document.fonts.load('600 12px "IBM Plex Sans"', 'Проверка Check')
+    return {
+      faces: faces.map((f) => `${f.family} ${f.weight} ${f.status}`),
+      check: document.fonts.check('600 12px "IBM Plex Sans"', 'Проверка Check'),
+      woff2: performance.getEntriesByType('resource').map((e) => e.name).filter((n) => n.endsWith('.woff2')),
+    }
+  })
+  ok('KatranFonts: Sans 600 (кириллица и латиница) загружен, document.fonts.check — true', fonts.check && fonts.faces.length === 2 && fonts.faces.every((f) => f.endsWith('loaded')), fonts)
+})
+
 // --- стили кита не протекают в хост ---
 await step('стили кита → хост', async () => {
   const hostLeak = await page.evaluate(() => {

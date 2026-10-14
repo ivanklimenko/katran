@@ -32,6 +32,21 @@ const targets = (value, out = []) => {
   return out
 }
 
+// Шрифты @katran/tokens: 14 файлов woff2 в fonts/, а dist/fonts.js ссылается на каждый из них записью
+// new URL('../fonts/…', import.meta.url) — без встроенных data:-адресов (их сборщик потребителя не разрешает,
+// они лишь раздувают JS; спека styled §4.5).
+const FONT_COUNT = 14
+function fonts(pkgDir, fail) {
+  const dir = join(pkgDir, 'fonts')
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.woff2')) : []
+  if (files.length !== FONT_COUNT) fail(`в fonts/ файлов woff2: ${files.length}, ожидалось ${FONT_COUNT}`)
+  const js = existsSync(join(pkgDir, 'dist/fonts.js')) ? readFileSync(join(pkgDir, 'dist/fonts.js'), 'utf8') : ''
+  const urls = [...js.matchAll(/new URL\(\s*["']\.\.\/fonts\/([^"']+)["']\s*,\s*import\.meta\.url\s*\)/g)].map((m) => m[1])
+  if (urls.length !== FONT_COUNT) fail(`в dist/fonts.js адресов new URL('../fonts/…', import.meta.url): ${urls.length}, ожидалось ${FONT_COUNT}`)
+  for (const url of urls) if (!files.includes(url)) fail(`dist/fonts.js ссылается на fonts/${url}, файла в архиве нет`)
+  if (js.includes('data:')) fail('dist/fonts.js содержит встроенные data:-адреса — сборка встроила шрифты')
+}
+
 const errors = []
 const tarballs = readdirSync(OUT).filter((f) => f.endsWith('.tgz')).sort()
 if (tarballs.length !== PACKAGES.length) errors.push(`ожидалось тарболов: ${PACKAGES.length}, получено: ${tarballs.length}`)
@@ -51,6 +66,7 @@ for (const file of tarballs) {
       if (/\.tsx?$/.test(path) && !path.endsWith('.d.ts')) fail(`вход ${path} — исходник TypeScript, потребитель должен получать сборку`)
     }
     if (manifest.name === '@katran/ui' && existsSync(join(pkgDir, 'src'))) fail('в архив попали исходники src')
+    if (manifest.name === '@katran/tokens') fonts(pkgDir, fail)
   } finally {
     rmSync(tmp, { recursive: true, force: true })
   }

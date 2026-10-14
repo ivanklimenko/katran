@@ -40,7 +40,7 @@ export default defineConfig({
     cssTarget: 'chrome88',
     lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'ui' },
     cssFileName: 'ui',
-    rollupOptions: { external: ['react', 'react-dom', 'styled-components', '@katran/tokens', '@floating-ui/dom'] },
+    rollupOptions: { external: ['react', 'react-dom', 'styled-components', '@katran/tokens', '@katran/tokens/fonts', '@floating-ui/dom'] },
     sourcemap: true,
   },
 })

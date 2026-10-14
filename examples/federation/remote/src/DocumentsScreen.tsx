@@ -8,9 +8,9 @@ import * as effector from 'effector'
 import type { EventCallable, Store } from 'effector'
 import { useUnit } from 'effector-react'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
-import { AccountValue, BulkBar, Button, CopyValue, Counter, DataGrid, FilterPanel, KatranProvider, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDateTimeShort, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
-// Стили кита: шрифты (IBM Plex через @fontsource) и собранный CSS компонентов с токенами.
-import '@katran/tokens/fonts.css'
+import { AccountValue, BulkBar, Button, CopyValue, Counter, DataGrid, FilterPanel, KatranFonts, KatranProvider, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDateTimeShort, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
+// Стили кита: собранный CSS компонентов. Шрифты — компонент KatranFonts (IBM Plex, файлы woff2 из
+// @katran/tokens: webpack кладёт их в сборку remote, publicPath 'auto' — грузятся с адреса remote, нужен CORS).
 import '@katran/ui/styles.css'
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from './data/docs'
 import { createFakeBackend } from './data/fakeBackend'
@@ -125,8 +125,11 @@ export type HostUnits = { $visits: Store<number>; visit: EventCallable<void> }
  * Тема задаётся явно: 'system' перекрасил бы экран в тёмную тему внутри светлого хоста. */
 export default function DocumentsScreen(props: HostUnits) {
   return (
-    <KatranProvider defaultTheme="light" defaultDensity={1} storageKey="katran-remote">
-      <Screen {...props} />
-    </KatranProvider>
+    <>
+      <KatranFonts />
+      <KatranProvider defaultTheme="light" defaultDensity={1} storageKey="katran-remote">
+        <Screen {...props} />
+      </KatranProvider>
+    </>
   )
 }

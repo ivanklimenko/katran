@@ -1,5 +1,4 @@
 import { render } from 'react-dom'
-import '@katran/tokens/fonts.css'
 import './transport'
 import { App } from './App'
 

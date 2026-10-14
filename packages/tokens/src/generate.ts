@@ -99,3 +99,56 @@ export const declarations: {
 }
 `
 }
+
+// ── Шрифты ─────────────────────────────────────────────────────────────────────────────────────────
+// Начертания кита — те же файлы @fontsource, что импортировал прежний fonts.css: IBM Plex Sans 400–700
+// и IBM Plex Mono 400–600, подмножества кириллица и латиница, только woff2 (Chromium 88 его читает).
+// pnpm gen копирует файлы в packages/tokens/fonts и пишет src/fonts.ts с адресами new URL(…, import.meta.url):
+// сборщик потребителя (Vite, webpack 5) сам кладёт файлы рядом со своей сборкой.
+export const fontSources = [
+  { family: 'IBM Plex Sans', pkg: 'ibm-plex-sans', weights: [400, 500, 600, 700] },
+  { family: 'IBM Plex Mono', pkg: 'ibm-plex-mono', weights: [400, 500, 600] },
+] as const
+const fontSubsets = ['cyrillic', 'latin'] as const
+
+export type FontFile = { family: string; pkg: string; weight: number; stem: string }
+
+/** Файлы начертаний в порядке прежнего fonts.css: семейство → подмножество → вес. */
+export function fontFiles(): FontFile[] {
+  return fontSources.flatMap(({ family, pkg, weights }) =>
+    fontSubsets.flatMap((subset) => weights.map((weight) => ({ family, pkg, weight, stem: `${pkg}-${subset}-${weight}-normal` }))))
+}
+
+/**
+ * unicode-range начертания из CSS @fontsource: блок @font-face, чей src ведёт на файл `<stem>.woff2`.
+ * Диапазоны есть только в общих файлах веса (`400.css`); в файлах подмножества (`cyrillic-400.css`) их нет.
+ */
+export function unicodeRangeOf(css: string, stem: string): string {
+  const block = css.split('@font-face').find((b) => b.includes(`/${stem}.woff2`))
+  const range = block?.match(/unicode-range:\s*([^;]+);/)?.[1]?.trim()
+  if (!range) throw new Error(`в CSS @fontsource нет unicode-range для ${stem}.woff2`)
+  return range
+}
+
+/** fonts.ts: описания начертаний для KatranFonts (@katran/ui). */
+export function renderFonts(faces: readonly (FontFile & { unicodeRange: string })[]): string {
+  const families = fontSources.map((s) => `'${s.family}'`).join(' | ')
+  const weights = [...new Set(fontSources.flatMap((s) => s.weights))].sort().join(' | ')
+  return `// Сгенерировано pnpm gen из @fontsource — не править руками.
+/** Начертание шрифта кита: семейство, вес, unicode-range подмножества и адрес файла woff2. */
+export type FontFaceSpec = {
+  readonly family: ${families}
+  readonly weight: ${weights}
+  readonly unicodeRange: string
+  readonly url: string
+}
+
+/**
+ * Начертания IBM Plex. Файлы woff2 лежат в пакете (папка fonts рядом с dist и src); адреса
+ * new URL(…, import.meta.url) разрешает сборщик потребителя — он копирует файлы в свою сборку.
+ */
+export const fontFaces: readonly FontFaceSpec[] = [
+${faces.map((f) => `  { family: '${f.family}', weight: ${f.weight}, unicodeRange: '${f.unicodeRange}', url: new URL('../fonts/${f.stem}.woff2', import.meta.url).href },`).join('\n')}
+]
+`
+}

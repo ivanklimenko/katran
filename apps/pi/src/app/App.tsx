@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import { KatranProvider } from '@katran/ui'
+import { KatranFonts, KatranProvider } from '@katran/ui'
 import { FxDocsPage } from '../pages/fx-docs'
 import { RubDocsPage } from '../pages/rub-docs'
 import { Shell } from './Shell'
@@ -17,8 +17,11 @@ export function App() {
   useEffect(() => startRouting(setRoute), [])
   const Page = pages[route]
   return (
-    <KatranProvider storageKey="katran-pi">
-      <Shell route={route}><Page /></Shell>
-    </KatranProvider>
+    <>
+      <KatranFonts />
+      <KatranProvider storageKey="katran-pi">
+        <Shell route={route}><Page /></Shell>
+      </KatranProvider>
+    </>
   )
 }
