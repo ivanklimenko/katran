@@ -78,6 +78,16 @@ test('тултип: кнопка открытия заблокированной
   await expect(page).toHaveScreenshot('tooltip-locked.png')
 })
 
+// Меню состава колонок переопределяет отступ и ширину поповера кита (styled(Popover) грида поверх правила кита равной
+// специфичностью) — снимок держит это переопределение (решение R22 среза styled; эталон снят на cc6008f, до среза).
+test('меню состава колонок открыто', async ({ page }) => {
+  await start(page, 'fx-docs')
+  await page.getByRole('button', { name: 'Состав колонок' }).click()
+  await expect(page.getByRole('dialog', { name: 'Состав колонок' })).toBeVisible()
+  await page.mouse.move(0, 0)
+  await expect(page).toHaveScreenshot('columns-menu-open.png')
+})
+
 test.describe('панель фильтров', () => {
   async function openFilters(page: Page) {
     await start(page, 'fx-docs')
