@@ -315,6 +315,7 @@
   gap: var(--k-sp-1);
 }
 
-.openLocked {
+/* двойной класс (0,2,0): лист styled-components (Button кита) стоит после этого файла и при равной специфичности перебил бы правило; до перевода модуля (срез styled, Task 6) */
+.openLocked.openLocked {
   color: var(--k-warn);
 }

@@ -1,16 +1,16 @@
 import { useRef, useState } from 'react'
-import { Button, IconButton } from '../button'
+import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
 import { Popover } from '../overlay'
 import { exitOnEdgeTab } from '../overlay/edgeTab'
-import is from '../input/Input.module.css'
 import { Calendar } from './Calendar'
 import { CalIcon } from './DateInput'
 import { dayOf, timeOf, todayLocal, withTime, type DateFormat, type DateValue, type IsoDay } from './dateStr'
-import { MaskedDateField } from './MaskedDateField'
 import { DEFAULT_PRESETS, QUICK_PRESETS, presetMatches, type DatePreset } from './presets'
 import { TimeField } from './TimeField'
-import s from './Date.module.css'
+import { styled } from '../styled'
+import { CalBtn, DateBox, DateField, DateText, Quick, TimeRow } from './parts'
+import { k } from '@katran/tokens'
 
 export type DateRangeValue = { from: DateValue; to: DateValue }
 export type DateRangeProps = {
@@ -32,13 +32,74 @@ export type DateRangeProps = {
   size?: 's' | 'm' | undefined
   /** Имя группы — название поля; поля получают «…, с» и «…, по». */
   label: string
+  className?: string | undefined
 }
+
+/* поля «с» и «по» делят рамку поровну и сжимаются в узкой колонке */
+const RangeInput = styled(DateText)`
+  width: 100%;
+  min-width: 0;
+`
+
+const Dash = styled.span`
+  flex: none;
+  color: ${k.muted};
+`
+
+const RangePop = styled.div`
+  display: flex;
+  gap: ${k.sp2};
+`
+
+const Presets = styled.ul`
+  display: grid;
+  align-content: start;
+  gap: ${k.sp1};
+  width: ${k.presetW};
+  margin: 0;
+  padding: ${k.sp1} ${k.sp2} ${k.sp1} 0;
+  border-right: 1px solid ${k.line};
+  list-style: none;
+`
+
+const Preset = styled.button`
+  width: 100%;
+  height: ${k.hCtlS};
+  padding: 0 ${k.sp2};
+  border: 0;
+  border-radius: ${k.rS};
+  background: none;
+  font: 400 ${k.fs1} / 1 ${k.sans};
+  color: ${k.ink};
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: ${k.hover};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+
+  &[aria-pressed='true'] {
+    background: ${k.valSoft};
+    color: ${k.val};
+  }
+
+  &:disabled {
+    background: none;
+    color: ${k.muted};
+    cursor: default;
+  }
+`
 
 const EMPTY: DateRangeValue = { from: '', to: '' }
 const withDay = (v: DateValue, tm: string): DateValue => (v ? (tm ? `${dayOf(v)}T${tm}` : dayOf(v)) : v)
 
 /** Период «с — по» (спека §3.6): поля по маске, календарь двумя кликами, пресеты, горячие кнопки под полем. */
-export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM.YYYY', quick = QUICK_PRESETS, presets = DEFAULT_PRESETS, min, max, today, disabled, toDisabled, size = 'm', label }: DateRangeProps) {
+export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM.YYYY', quick = QUICK_PRESETS, presets = DEFAULT_PRESETS, min, max, today, disabled, toDisabled, size = 'm', label, className }: DateRangeProps) {
   // без «по» скрытая граница не должна жить в значении: иначе она всплывёт условием GTE/LTE/EQ, которого не видно
   const onChange = (v: DateRangeValue) => emit(toDisabled ? { from: v.from, to: '' } : v)
   const fmt = withTime(format, time)
@@ -111,43 +172,43 @@ export function DateRange({ value, onChange: emit, time = false, format = 'DD.MM
   const toMin = fromDay && (min === undefined || fromDay > min) ? fromDay : min
 
   return (
-    <span className={s.dateBox} data-time={time || undefined}>
-      <span ref={anchor} role="group" aria-label={label} className={[is.field, size === 's' ? is.sizeS : is.sizeM, invFrom || invTo ? is.invalid : '', s.dateField].filter(Boolean).join(' ')}>
-        <MaskedDateField ref={fromInput} aria-label={`${label}, с`} value={value.from} onChange={setFrom} format={fmt} min={min} max={max} disabled={disabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvFrom} />
-        <span className={s.dash} aria-hidden="true">–</span>
-        <MaskedDateField aria-label={`${label}, по`} value={value.to} onChange={(v) => onChange({ ...value, to: v })} format={fmt} min={toMin} max={max} notBefore={value.from} disabled={disabled || toDisabled} className={[is.input, s.rangeInput].join(' ')} onInvalidChange={setInvTo} />
-        <IconButton ref={calBtn} size="s" label="Выбрать период" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
-      </span>
+    <DateBox className={className} data-time={time || undefined}>
+      <DateField ref={anchor} role="group" aria-label={label} data-size={size} data-invalid={invFrom || invTo || undefined}>
+        <RangeInput ref={fromInput} aria-label={`${label}, с`} value={value.from} onChange={setFrom} format={fmt} min={min} max={max} disabled={disabled} onInvalidChange={setInvFrom} />
+        <Dash aria-hidden="true">–</Dash>
+        <RangeInput aria-label={`${label}, по`} value={value.to} onChange={(v) => onChange({ ...value, to: v })} format={fmt} min={toMin} max={max} notBefore={value.from} disabled={disabled || toDisabled} onInvalidChange={setInvTo} />
+        <CalBtn ref={calBtn} size="s" label="Выбрать период" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} onClick={toggle}><CalIcon /></CalBtn>
+      </DateField>
       {quick.length > 0 && (
-        <span role="group" aria-label={`${label}: быстрый период`} className={s.quick}>
+        <Quick role="group" aria-label={`${label}: быстрый период`}>
           {quick.map((p) => {
             const on = matches(p)
             return <Button key={p.id} size="s" pressed={on} disabled={disabled || outside(p)} onClick={() => onChange(on ? EMPTY : p.range(t))}>{p.label}</Button>
           })}
-        </span>
+        </Quick>
       )}
       <Popover id={panelId} open={open} anchor={anchor} returnFocus={fromInput} onClose={close} label={`${label}: выбор периода`} manualFocus>
         {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на кнопку периода (jsx-a11y) */}
-        <div role="presentation" className={s.rangePop} onKeyDown={(e) => exitOnEdgeTab(e, calBtn, close)}>
+        <RangePop role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, calBtn, close)}>
           {presets.length > 0 && (
-            <ul className={s.presets} aria-label="Пресеты периода">
+            <Presets aria-label="Пресеты периода">
               {presets.map((p) => (
-                <li key={p.id}><button type="button" className={s.preset} aria-pressed={matches(p)} disabled={outside(p)} onClick={() => applyPreset(p)}>{p.label}</button></li>
+                <li key={p.id}><Preset type="button" aria-pressed={matches(p)} disabled={outside(p)} onClick={() => applyPreset(p)}>{p.label}</Preset></li>
               ))}
-            </ul>
+            </Presets>
           )}
           <div>
             <Calendar month={month} onMonthChange={setMonth} range={shown} onPick={pick} onHoverDay={(d) => { if (pending !== null) setHover(d) }} min={min} max={max} today={t} autoFocus />
             {time && (
-              <div className={s.timeRow}>
+              <TimeRow>
                 <TimeField label="Время с" disabled={!value.from} value={value.from ? timeOf(value.from) : ''} onChange={(tm) => setFrom(withDay(value.from, tm))} onEnter={close} />
                 <TimeField label="Время по" disabled={!value.to} notBefore={sameDay ? timeOf(value.from) : undefined} value={value.to ? timeOf(value.to) : ''} onChange={(tm) => onChange({ ...value, to: withDay(value.to, tm) })} onEnter={close} />
                 <Button size="s" variant="primary" onClick={close}>Готово</Button>
-              </div>
+              </TimeRow>
             )}
           </div>
-        </div>
+        </RangePop>
       </Popover>
-    </span>
+    </DateBox>
   )
 }

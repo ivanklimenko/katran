@@ -1,9 +1,11 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { Disclosure } from './Disclosure'
 import { FieldRow } from './FieldRow'
+import { Hint, Sr, TagMark } from './parts'
 import { isEmptyValue, type FieldPresenter } from './present'
 import type { FieldDef, FieldRef, FieldValue, FormEdit, FormPart, FormSchema, HeroCell, SectionContent } from './types'
-import s from './Form.module.css'
+import { styled } from '../styled'
+import { k } from '@katran/tokens'
 
 export type ConfigFormProps = {
   schema: FormSchema
@@ -28,7 +30,124 @@ export type ConfigFormProps = {
    * у поля сетки после обеих ячеек его строки, у текстового — сразу после поля, на всю ширину сетки. Не задано — вид 2a/2b.
    */
   edit?: FormEdit | undefined
+  className?: string | undefined
 }
+
+/* «Общие данные» деталки (спека 2a §3.1, эталон index.html:131–260) */
+const Form = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+`
+
+/* сводка (эталон .hero) */
+const Hero = styled.div`
+  display: grid;
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+  background: ${k.sunk};
+`
+
+const HeroCellBox = styled.div`
+  min-width: 0;
+  padding: ${k.sp1} ${k.sp3};
+
+  & + & {
+    border-left: 1px solid ${k.line};
+  }
+
+  &[data-align='right'] {
+    text-align: right;
+  }
+`
+
+const HeroLabel = styled.span`
+  display: block;
+  font: ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
+
+const HeroValue = styled.span`
+  font: 600 ${k.fsHero} / ${k.lh1} ${k.sans};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
+/* заголовок группы полей (эталон .fh) */
+const Fh = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: ${k.sp2};
+`
+
+const FhTitle = styled.h3`
+  margin: 0;
+  font: 600 ${k.fs2} / ${k.lh2} ${k.sans};
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: ${k.ink2};
+`
+
+const Link = styled.button`
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.val};
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: 1px;
+  }
+`
+
+/* сетка пар 50–54 | 55–59 (эталон .fg) */
+const Fg = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: ${k.sp1} ${k.sp2};
+`
+
+const Gap = styled.div`
+  visibility: hidden;
+`
+
+/* короткие поля одной строкой (эталон .xrow) */
+const Extra = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${k.sp1} ${k.sp4};
+  padding: ${k.sp1} ${k.sp2};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+  white-space: nowrap;
+`
+
+const ExtraItem = styled.span`
+  display: inline-flex;
+  align-items: baseline;
+  gap: ${k.sp1};
+`
+
+const ExtraVal = styled.span`
+  color: ${k.val};
+`
+
+const None = styled.span`
+  color: ${k.faint};
+`
+
+/* слот редактора — на всю ширину сетки полей (эталон .fe, grid-column: 1 / -1) */
+const Editor = styled.div`
+  grid-column: 1 / -1;
+  min-width: 0;
+`
 
 const tagOf = (r: FieldRef): string => (typeof r === 'string' ? r : r.tag)
 const baseOf = (tag: string) => tag.replace(/^B\./, '')
@@ -48,7 +167,7 @@ function mateGroups(parts: FormPart[]): string[][] {
  * Рендер «Общих данных» по схеме (спека 2a §3.1): сводка → блоки → поля (сетка пар, текст, extra) → последовательность B → секции.
  * Схема и реестр полей — данные приложения; ConfigForm не знает SWIFT.
  */
-export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit }: ConfigFormProps) {
+export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit, className }: ConfigFormProps) {
   const [open, setOpen] = useState<string[]>([])
   const [sections, setSections] = useState<Record<string, boolean>>({})
   const parts: FormPart[] = [schema, ...(schema.seqB ? [schema.seqB] : [])]
@@ -103,17 +222,17 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     )
   }
   const editor = (tags: string[]) => (edit && edit.editing !== null && tags.includes(edit.editing)
-    ? <div key={`editor:${edit.editing}`} className={s.editor} data-part="editor">{edit.renderEditor(edit.editing)}</div>
+    ? <Editor key={`editor:${edit.editing}`} data-part="editor">{edit.renderEditor(edit.editing)}</Editor>
     : null)
   const grid = (part: FormPart) => (
-    <div className={s.fg}>
+    <Fg>
       {(part.grid ?? []).map((row, i) => {
         const hide = row.map((r) => r === null || (typeof r !== 'string' && r.hideIfEmpty === true && !expandable(r.tag)))
         if (hide.every(Boolean)) return null
         return (
           <Fragment key={i}>
             {row.map((r, k) => (r === null || hide[k]
-              ? <div key={`gap${k}`} className={s.gap} data-part="gap" aria-hidden="true" />
+              ? <Gap key={`gap${k}`} data-part="gap" aria-hidden="true" />
               : cell(r, false)))}
             {editor(row.filter((r, k): r is FieldRef => r !== null && !hide[k]).map(tagOf))}
           </Fragment>
@@ -125,74 +244,74 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
           {editor([tagOf(r)])}
         </Fragment>
       ))}
-    </div>
+    </Fg>
   )
   const extra = (refs: FieldRef[] | undefined) => (refs && refs.length > 0 ? (
-    <div className={s.extra}>
+    <Extra>
       {refs.map((r) => {
         const tag = tagOf(r)
         const v = value(tag)
         const def = fields[baseOf(tag)]
         return (
-          <span key={tag} className={s.extraItem}>
-            <span className={s.tag} data-k-tip={def ? `${baseOf(tag)} · ${def.label}` : undefined}>{baseOf(tag)}</span>
+          <ExtraItem key={tag}>
+            <TagMark data-k-tip={def ? `${baseOf(tag)} · ${def.label}` : undefined}>{baseOf(tag)}</TagMark>
             {v === null || isEmptyValue(v)
-              ? <span className={s.none}><span aria-hidden="true">—</span><span className={s.sr}>не заполнено</span></span>
-              : <span className={s.extraVal}>{v.lines.join(' ')}</span>}
-          </span>
+              ? <None><span aria-hidden="true">—</span><Sr>не заполнено</Sr></None>
+              : <ExtraVal>{v.lines.join(' ')}</ExtraVal>}
+          </ExtraItem>
         )
       })}
-    </div>
+    </Extra>
   ) : null)
 
   return (
-    <div className={s.form}>
+    <Form className={className}>
       {schema.hero && schema.hero.length > 0 && renderHero && (
-        <div className={s.hero} data-part="hero" style={{ gridTemplateColumns: schema.hero.map((_, i, a) => (i === a.length - 1 ? '1fr' : 'auto')).join(' ') }}>
+        <Hero data-part="hero" style={{ gridTemplateColumns: schema.hero.map((_, i, a) => (i === a.length - 1 ? '1fr' : 'auto')).join(' ') }}>
           {schema.hero.map((id) => {
             const c = renderHero(id)
             return (
-              <div key={id} className={s.heroCell} data-align={c.align}>
-                <span className={s.heroLabel} data-k-tip={c.tip}>{c.label}</span>
-                <span className={s.heroValue}>{c.value}</span>
-              </div>
+              <HeroCellBox key={id} data-align={c.align}>
+                <HeroLabel data-k-tip={c.tip}>{c.label}</HeroLabel>
+                <HeroValue>{c.value}</HeroValue>
+              </HeroCellBox>
             )
           })}
-        </div>
+        </Hero>
       )}
       {(schema.blocks ?? []).map((id) => <Fragment key={id}>{renderBlock?.(id)}</Fragment>)}
       {hasFields && (
         <>
-          <div className={s.fh}>
-            {schema.fieldsTitle && <h3 className={s.fhTitle}>{schema.fieldsTitle}</h3>}
-            {schema.fieldsHint && <span className={s.hint}>{schema.fieldsHint}</span>}
+          <Fh>
+            {schema.fieldsTitle && <FhTitle>{schema.fieldsTitle}</FhTitle>}
+            {schema.fieldsHint && <Hint>{schema.fieldsHint}</Hint>}
             {hasGrid && (
-              <button type="button" className={s.link} onClick={toggleFields}>
+              <Link type="button" onClick={toggleFields}>
                 {allOpen ? 'Свернуть поля' : 'Развернуть поля'}
-              </button>
+              </Link>
             )}
-          </div>
+          </Fh>
           {grid(schema)}
           {extra(schema.extra)}
         </>
       )}
       {schema.seqB && (
         <>
-          <div className={s.fh}><h3 className={s.fhTitle}>{schema.seqB.title}</h3></div>
+          <Fh><FhTitle>{schema.seqB.title}</FhTitle></Fh>
           {grid(schema.seqB)}
           {extra(schema.seqB.extra)}
         </>
       )}
       {secs.length > 0 && (
         <>
-          <div className={s.fh}>
-            <h3 className={s.fhTitle}>{schema.sectionsTitle ?? 'Дополнительные блоки'}</h3>
+          <Fh>
+            <FhTitle>{schema.sectionsTitle ?? 'Дополнительные блоки'}</FhTitle>
             {secs.some(({ content }) => content !== null) && (
-              <button type="button" className={s.link} onClick={toggleSections}>
+              <Link type="button" onClick={toggleSections}>
                 {anyShut ? 'Развернуть все' : 'Свернуть все'}
-              </button>
+              </Link>
             )}
-          </div>
+          </Fh>
           {secs.map(({ sec, content }) => (
             <Disclosure key={sec.id} title={sec.title} empty={content === null} count={content?.count}
               open={isOpen(sec.id)} onOpenChange={(o) => setSection(sec.id, o)}>
@@ -201,6 +320,6 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
           ))}
         </>
       )}
-    </div>
+    </Form>
   )
 }

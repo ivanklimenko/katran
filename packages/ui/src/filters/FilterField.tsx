@@ -64,7 +64,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
       const ask = field.suggest === true ? onSuggest : undefined
       const mine = suggest && suggest.field === field.id ? suggest : null
       return (
-        <div className={s.fieldBox}>
+        <div className={s.fieldBox} data-part="field-box">
           <label htmlFor={id} className={s.fieldLabel}>{field.label}</label>
           <TagInput
             id={id} aria-label={field.label} size="s" mode={control} value={r.value} text={r.text}
@@ -82,7 +82,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
     }
     case 'dateRange':
       return (
-        <div className={field.type === 'DATETIME' ? `${s.fieldBox} ${s.fieldWide}` : s.fieldBox}>
+        <div className={field.type === 'DATETIME' ? `${s.fieldBox} ${s.fieldWide}` : s.fieldBox} data-part="field-box">
           {caption}
           <DateRange label={field.label} size="s" time={field.type === 'DATETIME'} format={dateFormat} toDisabled={rangeToDisabled(field)}
             value={raw.kind === 'range' ? raw.value : { from: '', to: '' }} onChange={(v) => set({ kind: 'range', value: v })} />
@@ -90,7 +90,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
       )
     case 'enum':
       return (
-        <div className={s.fieldBox}>
+        <div className={s.fieldBox} data-part="field-box">
           {caption}
           <MultiSelect id={id} aria-label={field.label} size="s" max={fieldMax(field)} options={(field.values ?? []).map((v) => ({ value: v.value, label: v.label }))}
             value={raw.kind === 'enum' ? raw.value : []} onChange={(v) => set({ kind: 'enum', value: v })} />
@@ -98,7 +98,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
       )
     case 'boolean':
       return (
-        <div className={s.fieldBox}>
+        <div className={s.fieldBox} data-part="field-box">
           {caption}
           <SearchSelect id={id} aria-label={field.label} size="s" searchable={false} options={BOOL}
             value={raw.kind === 'text' && raw.value !== '' ? raw.value === 'true' : null}
@@ -107,7 +107,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
       )
     case 'number':
       return (
-        <div className={s.fieldBox}>
+        <div className={s.fieldBox} data-part="field-box">
           <label htmlFor={id} className={s.fieldLabel}>{field.label}</label>
           <Input id={id} size="s" inputMode="decimal" value={raw.kind === 'text' ? raw.value : ''} onChange={(e) => set({ kind: 'text', value: e.target.value })} />
         </div>

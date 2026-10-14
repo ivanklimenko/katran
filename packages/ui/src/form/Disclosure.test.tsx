@@ -49,12 +49,12 @@ describe('Disclosure', () => {
     expect(screen.getByRole('heading', { level: 4, name: 'Информация о банке-плательщике' })).toBeInTheDocument()
   })
 
-  it('mono — класс моноширинного заголовка; без него заголовок прежний', () => {
+  it('mono — атрибут data-mono на корне блока; без него заголовок прежний', () => {
     renderK(<><Disclosure title="commonSection" mono aside={<span>12 ключей</span>}><p>{'{}'}</p></Disclosure><Disclosure title="Транзакции"><p>x</p></Disclosure></>)
     const monoBtn = screen.getByRole('button', { name: 'commonSection' })
-    expect(monoBtn.closest('.blk')).toHaveClass('mono')
+    expect(monoBtn.closest('[data-part="disclosure"]')).toHaveAttribute('data-mono')
     expect(screen.getByText('12 ключей')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Транзакции' }).closest('.blk')).not.toHaveClass('mono')
+    expect(screen.getByRole('button', { name: 'Транзакции' }).closest('[data-part="disclosure"]')).not.toHaveAttribute('data-mono')
   })
 
   it('emptyText — текст пустого блока вместо «нет данных»; aside у пустого не показывается; mono действует и на пустой', () => {
@@ -63,7 +63,7 @@ describe('Disclosure', () => {
     expect(screen.queryByText('нет данных')).toBeNull()
     expect(screen.queryByText('0 симв.')).toBeNull()
     expect(screen.queryByRole('button')).toBeNull()
-    expect(screen.getByRole('heading', { name: 'ED244' }).closest('.blk')).toHaveClass('mono')
+    expect(screen.getByRole('heading', { name: 'ED244' }).closest('[data-part="disclosure"]')).toHaveAttribute('data-mono')
   })
 
   it('без emptyText пустой блок — по-прежнему «нет данных»', () => {

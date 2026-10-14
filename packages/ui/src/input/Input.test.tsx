@@ -27,7 +27,8 @@ describe('Checkbox', () => {
     const { container } = renderK(<Checkbox className="own" aria-label="Одна запись" />)
     const c = container.querySelector('input')!
     expect(c).toHaveClass('own')
-    expect(c).toHaveClass('checkbox')
+    // стили кита остаются на поле вместе с классом потребителя
+    expect(getComputedStyle(c).cursor).toBe('pointer')
   })
   it('переключается', async () => {
     const onChange = vi.fn()

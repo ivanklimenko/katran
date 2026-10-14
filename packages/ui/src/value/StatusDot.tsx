@@ -9,13 +9,15 @@ export type StatusDotProps = {
   letter?: string | undefined
   /** Подпись для скринридера и тултип (статус не только цветом). */
   label?: string | undefined
+  /** Класс потребителя на корне (styled(X)). */
+  className?: string | undefined
 }
 
 /**
  * Тон — атрибутом `data-st`, не общим `data-tone` (его носят Tag и Counter): грид обесцвечивает в
  * заблокированной/неактивной записи только точки `[data-st]`, теги остаются читаемыми (финал 5b, I1).
  */
-export function StatusDot({ tone, size = 'm', letter, label }: StatusDotProps) {
+export function StatusDot({ tone, size = 'm', letter, label, className }: StatusDotProps) {
   const a11y = label ? { role: 'img', 'aria-label': label, 'data-k-tip': label } : { 'aria-hidden': true as const }
-  return <span className="k-dot" data-size={size} data-st={tone} {...a11y}>{letter}</span>
+  return <span className={className ? `k-dot ${className}` : 'k-dot'} data-size={size} data-st={tone} {...a11y}>{letter}</span>
 }

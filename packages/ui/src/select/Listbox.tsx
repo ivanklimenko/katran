@@ -1,10 +1,82 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { styled } from '../styled'
 import { Tag } from '../value'
 import type { Option } from './options'
-import s from './Select.module.css'
+import { k } from '@katran/tokens'
 
 export const Cross = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></svg>
 export const Chevron = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 6l4 4 4-4" /></svg>
+
+const List = styled.ul`
+  max-height: ${k.menuMaxH};
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+`
+
+/** Пункт списка; SuggestInput перестраивает его в своём поповере (& ${Opt}). */
+export const Opt = styled.li`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  min-height: ${k.hCtlM};
+  padding: 0 ${k.sp2};
+  border-radius: ${k.rS};
+  font: 400 ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.ink};
+  cursor: pointer;
+
+  &[data-active] {
+    background: ${k.hover};
+  }
+
+  &[aria-selected='true'] {
+    color: ${k.val};
+    font-weight: 500;
+  }
+
+  &[aria-disabled='true'] {
+    color: ${k.faint};
+    cursor: default;
+  }
+`
+
+export const OptLabel = styled.span`
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+export const Hint = styled.span`
+  flex: none;
+  font: 400 ${k.fs3} / 1 ${k.mono};
+  color: ${k.muted};
+`
+
+export const Empty = styled.li`
+  padding: ${k.sp2};
+  color: ${k.muted};
+  cursor: default;
+`
+
+/* чекбокс мультиселекта — рисованный: пункт не содержит интерактива, состояние несёт aria-selected */
+const Box = styled.span`
+  flex: none;
+  width: ${k.iconS};
+  height: ${k.iconS};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+  background: ${k.paper};
+
+  &[data-on] {
+    border-color: ${k.val};
+    background: ${k.val};
+    box-shadow: inset 0 0 0 2px ${k.paper};
+  }
+`
 
 export const optionId = (listId: string, i: number) => `${listId}-o${i}`
 
@@ -63,13 +135,13 @@ export function Listbox({ id, label, options, active, isSelected, isDisabled, mu
     if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' })
   }, [id, active])
   return (
-    <ul ref={ul} id={id} role="listbox" aria-label={label} aria-multiselectable={multi || undefined} className={s.list}>
-      {options.length === 0 && <li role="option" aria-disabled="true" aria-selected={false} className={s.empty}>{emptyText}</li>}
+    <List ref={ul} id={id} role="listbox" aria-label={label} aria-multiselectable={multi || undefined}>
+      {options.length === 0 && <Empty role="option" aria-disabled="true" aria-selected={false}>{emptyText}</Empty>}
       {options.map((o, i) => {
         const sel = isSelected(o)
         const off = isDisabled?.(o) === true
         return (
-          <li
+          <Opt
             key={`${typeof o.value}:${String(o.value)}`}
             id={optionId(id, i)}
             role="option"
@@ -77,17 +149,16 @@ export function Listbox({ id, label, options, active, isSelected, isDisabled, mu
             aria-disabled={off || undefined}
             tabIndex={-1}
             data-active={i === active || undefined}
-            className={s.opt}
             onMouseDown={(e) => e.preventDefault()}
             onMouseMove={() => { if (i !== active) { byMouse.current = true; onActive(i) } }}
           >
-            {multi && <span className={s.box} data-on={sel || undefined} aria-hidden="true" />}
-            <span className={s.optLabel}>{highlight !== undefined ? mark(o.label, highlight) : o.label}</span>
+            {multi && <Box data-on={sel || undefined} aria-hidden="true" />}
+            <OptLabel>{highlight !== undefined ? mark(o.label, highlight) : o.label}</OptLabel>
             {o.tag !== undefined && <Tag tone="mt">{o.tag}</Tag>}
-            {o.hint && <span className={s.hint}>{o.hint}</span>}
-          </li>
+            {o.hint && <Hint>{o.hint}</Hint>}
+          </Opt>
         )
       })}
-    </ul>
+    </List>
   )
 }

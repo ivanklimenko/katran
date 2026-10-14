@@ -67,8 +67,9 @@
   color: var(--k-faint);
 }
 
-/* текущая страница — фон val, текст paper (контраст paper/val уже в contrast.rules.ts) */
-.pages .pageBtn[aria-current='page'] {
+/* текущая страница — фон val, текст paper (контраст paper/val уже в contrast.rules.ts); двойной класс (0,4,0) — выше наведения
+   ghost-кнопки кита (0,3,0): лист styled-components (Button кита) стоит после этого файла и при равной специфичности перебил бы правило; до перевода модуля (срез styled, Task 6) */
+.pages .pageBtn.pageBtn[aria-current='page'] {
   background: var(--k-val);
   border-color: var(--k-val);
   color: var(--k-paper);

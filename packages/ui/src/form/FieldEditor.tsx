@@ -1,8 +1,9 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
+import { styled } from '../styled'
 import type { FieldValue } from './types'
-import s from './Edit.module.css'
+import { k } from '@katran/tokens'
 
 export type FieldEditorProps = {
   /** Заголовок «Поле {tag без B.} · {name} — правка». */
@@ -34,7 +35,172 @@ export type FieldEditorProps = {
   saveError?: string | null | undefined
   onCancel: () => void
   onSave: () => void
+  className?: string | undefined
 }
+
+/* редактор поля FieldEditor (эталон .fe/.box/.opts/.btn, index.html:202–211, 427–443):
+   рамка val, радиус 5, отступы 7 / 9 / 8, фон sunk; блоки, чья высота сверяется с эталоном, — border-box */
+const Fe = styled.section`
+  box-sizing: border-box;
+  border: 1px solid ${k.val};
+  border-radius: calc(${k.rS} * 1.25);
+  padding: ${k.fePt} ${k.fePx} ${k.fePb};
+  background: ${k.sunk};
+`
+
+/* заголовок 600 11, отступ снизу 5 */
+const FeTitle = styled.h4`
+  margin: 0 0 calc(${k.sp1} * 1.25);
+  font: 600 ${k.fs2} ${k.sans};
+  color: ${k.ink2};
+`
+
+/* «Как есть» | «Редактирование»: две равные колонки, зазор 10 */
+const FeTwo = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: ${k.feGap};
+`
+
+/* коробка колонки: 5 / 7, радиус 4; «Как есть» — без фона */
+const FeBox = styled.div`
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+  padding: ${k.feBoxPy} ${k.feBoxPx};
+  background: ${k.paper};
+
+  &[data-ro] {
+    background: none;
+  }
+`
+
+/* подпись колонки и счётчик: 500 10.5, отступ снизу 3 */
+const FeCap = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: calc(${k.sp1} * 0.75);
+  font: 500 ${k.fs3} ${k.sans};
+  color: ${k.muted};
+
+  & [data-bad] {
+    font-weight: 600;
+    color: ${k.bad};
+  }
+`
+
+/* опции: зазор 2, отступ снизу 4; кнопка и чип 18 × 22+, моно 600 10.5, радиус 3 */
+const FeOpts = styled.div`
+  display: flex;
+  gap: calc(${k.sp1} / 2);
+  margin-bottom: ${k.sp1};
+`
+
+/** Буква опции: чип «Как есть» (span) и кнопка «Редактирование» (as="button"). */
+const FeOpt = styled.span`
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  min-width: ${k.optMin};
+  height: ${k.optBtn};
+  padding: 0 ${k.sp1};
+  border: 1px solid ${k.line};
+  border-radius: calc(${k.rS} * 0.75);
+  background: ${k.paper};
+  font: 600 ${k.fs3} / 1 ${k.mono};
+  color: ${k.muted};
+
+  button& {
+    cursor: pointer;
+  }
+
+  button&:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: 0;
+  }
+
+  &[aria-pressed='true'],
+  &[data-on] {
+    border-color: transparent;
+    background: ${k.optSoft};
+    color: ${k.opt};
+  }
+`
+
+const FeLbl = styled.div`
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+/* поле строки: 21, моно 12, отступ 2, рамка только снизу; фокус — val и hover; ошибка — bad */
+const FeInput = styled.input`
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: ${k.feLine};
+  padding: calc(${k.sp1} / 2);
+  border: 0;
+  border-bottom: 1px solid ${k.line2};
+  border-radius: 0;
+  background: ${k.paper};
+  font: ${k.fsEdit} ${k.mono};
+  letter-spacing: -0.01em;
+  color: ${k.ink};
+
+  &:focus {
+    outline: none;
+    border-bottom-color: ${k.val};
+    background: ${k.hover};
+  }
+
+  &[aria-invalid='true'] {
+    border-bottom-color: ${k.bad};
+    background: ${k.badSoft};
+  }
+`
+
+/* «Как есть»: строки 21 (блок из 4 — 84), моно 12, muted */
+const FePre = styled.pre`
+  margin: 0;
+  overflow: hidden;
+  font: ${k.fsEdit} / ${k.feLine} ${k.mono};
+  white-space: pre;
+  color: ${k.muted};
+`
+
+/* строка ошибки: 11 / 1.3, min-height 14, отступ сверху 4 */
+const FeErr = styled.div`
+  min-height: ${k.lh2};
+  margin-top: ${k.sp1};
+  font: ${k.fs2} / 1.3 ${k.sans};
+  color: ${k.bad};
+`
+
+/* подвал: правило слева, кнопки справа; отступ сверху 7, зазор 8 */
+const FeRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: ${k.sp2};
+  margin-top: ${k.fePt};
+`
+
+const FeRule = styled.span`
+  margin-right: auto;
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+/* только для скринридера (как Sr «Общих данных»): исходная опция «Как есть» */
+const FeSr = styled.span`
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+`
 
 const optName = (o: string) => (o ? `Опция ${o}` : 'Без буквы')
 const optLabel = (o: string) => o || '—'
@@ -48,7 +214,7 @@ const padTo = (lines: string[], n: number) => (lines.length >= n ? lines : lines
  * сохранение — гасится); корень помечен data-k-edit, чтобы DrawerStack не закрывал деталку тем же Esc. Enter ничего не сохраняет.
  */
 export function FieldEditor({
-  tag, name, original, value, onChange, lines: n, width: w, opts, account, error, invalid, rule, busy, saveError, onCancel, onSave,
+  tag, name, original, value, onChange, lines: n, width: w, opts, account, error, invalid, rule, busy, saveError, onCancel, onSave, className,
 }: FieldEditorProps) {
   const errId = useStableId()
   const first = useRef<HTMLInputElement>(null)
@@ -88,68 +254,66 @@ export function FieldEditor({
   }
 
   return (
-    <section ref={root} className={s.fe} data-k-edit="" aria-label={title}>
+    <Fe ref={root} className={className} data-k-edit="" aria-label={title}>
       {/* Esc — на обёртке (role="presentation", как подложка Prompt): всплывает с полей и кнопок редактора */}
       <div role="presentation" onKeyDown={onKeyDown}>
-        <h4 className={s.feTitle}>{title}</h4>
-        <div className={s.feTwo}>
-          <div className={s.feBox} data-ro="">
-            <div className={s.feCap}><span>Как есть</span><span>{total(original.lines)}/{max}</span></div>
+        <FeTitle>{title}</FeTitle>
+        <FeTwo>
+          <FeBox data-ro="">
+            <FeCap><span>Как есть</span><span>{total(original.lines)}/{max}</span></FeCap>
             {opts && (
-              <div className={s.feOpts}>
+              <FeOpts>
                 {/* исходная выделена цветом — для скринридера она названа текстом, чипы скрыты */}
-                <span className={s.feSr}>{optName(original.opt ?? '')}</span>
+                <FeSr>{optName(original.opt ?? '')}</FeSr>
                 {opts.map((o) => (
-                  <span key={o} className={s.feOpt} aria-hidden="true" data-on={o === (original.opt ?? '') ? '' : undefined}>{optLabel(o)}</span>
+                  <FeOpt key={o} aria-hidden="true" data-on={o === (original.opt ?? '') ? '' : undefined}>{optLabel(o)}</FeOpt>
                 ))}
-              </div>
+              </FeOpts>
             )}
             {account && (
               <>
-                <div className={s.feLbl}>Счёт / IBAN</div>
-                <pre className={s.fePre}>{original.acc || '—'}</pre>
-                <div className={s.feLbl}>Наименование / адрес</div>
+                <FeLbl>Счёт / IBAN</FeLbl>
+                <FePre>{original.acc || '—'}</FePre>
+                <FeLbl>Наименование / адрес</FeLbl>
               </>
             )}
-            <pre className={s.fePre}>{was.map((l) => l || ' ').join('\n')}</pre>
-          </div>
-          <div className={s.feBox}>
-            <div className={s.feCap}><span>Редактирование</span><span data-bad={live > max ? '' : undefined}>{live}/{max}</span></div>
+            <FePre>{was.map((l) => l || ' ').join('\n')}</FePre>
+          </FeBox>
+          <FeBox>
+            <FeCap><span>Редактирование</span><span data-bad={live > max ? '' : undefined}>{live}/{max}</span></FeCap>
             {opts && (
-              <div className={s.feOpts}>
+              <FeOpts>
                 {opts.map((o) => (
-                  <button
+                  <FeOpt
+                    as="button"
                     key={o}
                     type="button"
-                    className={s.feOpt}
                     aria-label={optName(o)}
                     aria-pressed={o === (value.opt ?? '')}
                     onClick={() => onChange({ ...value, opt: o })}
                   >
                     {optLabel(o)}
-                  </button>
+                  </FeOpt>
                 ))}
-              </div>
+              </FeOpts>
             )}
             {account && (
               <>
-                <div className={s.feLbl}>Счёт / IBAN</div>
-                <input
+                <FeLbl>Счёт / IBAN</FeLbl>
+                <FeInput
                   ref={first}
-                  className={s.feInput}
                   aria-label="Счёт"
                   value={value.acc ?? ''}
                   onChange={(e) => onChange({ ...value, acc: e.target.value })}
                   {...bad('acc')}
                 />
-                <div className={s.feLbl}>Наименование / адрес</div>
+                <FeLbl>Наименование / адрес</FeLbl>
               </>
             )}
             {draft.map((l, k) => (
-              <input
+              <FeInput
                 key={k}
                 ref={k === 0 && !account ? first : undefined}
-                className={s.feInput}
                 aria-label={`Строка ${k + 1}`}
                 placeholder={`Строка ${k + 1} до ${w} символов`}
                 value={l}
@@ -157,15 +321,15 @@ export function FieldEditor({
                 {...bad({ line: k })}
               />
             ))}
-            <div id={errId} className={s.feErr} aria-live="polite">{message}</div>
-          </div>
-        </div>
-        <div className={s.feRow}>
-          <span className={s.feRule}>{rule}</span>
+            <FeErr id={errId} aria-live="polite">{message}</FeErr>
+          </FeBox>
+        </FeTwo>
+        <FeRow>
+          <FeRule>{rule}</FeRule>
           <Button size="s" disabled={busy} onClick={onCancel}>Отмена</Button>
           <Button size="s" variant="primary" disabled={error !== null || busy} onClick={onSave}>Сохранить</Button>
-        </div>
+        </FeRow>
       </div>
-    </section>
+    </Fe>
   )
 }

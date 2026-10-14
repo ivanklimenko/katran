@@ -1,9 +1,117 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useStableId } from '../compat/useStableId'
 import { Popover } from '../overlay'
-import { Listbox, optionId } from './Listbox'
+import { styled } from '../styled'
+import { Empty, Hint, Listbox, Opt, OptLabel, optionId } from './Listbox'
 import { filterOptions, type Option } from './options'
-import s from './Select.module.css'
+import { k } from '@katran/tokens'
+
+/* SuggestInput — одно значение только из списка (эталон .acced / .sug, index.html:376–391) */
+const SugBox = styled.div`
+  display: grid;
+  min-width: 0;
+`
+
+const SugInput = styled.input`
+  box-sizing: border-box;
+  width: 100%;
+  height: ${k.hInline};
+  padding: 0 ${k.feBoxPx};
+  border: 1px solid ${k.val};
+  border-radius: ${k.rS};
+  background: ${k.paper};
+  font: 400 ${k.fsEdit} / 1 ${k.mono};
+  letter-spacing: 0.02em;
+  color: ${k.ink};
+
+  &::placeholder {
+    color: ${k.faint};
+  }
+
+  &:focus {
+    outline: 0;
+    box-shadow: 0 0 0 2px ${k.valSoft};
+  }
+
+  &[aria-invalid='true'] {
+    border-color: ${k.bad};
+  }
+`
+
+const SugNote = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: ${k.sp2};
+  font: 400 ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
+
+/** Строка под полем: подсказка или ошибка «нет в списке» (data-bad). */
+const NoteText = styled.span`
+  &:where([data-bad]) {
+    color: ${k.bad};
+  }
+`
+
+/* список: без внутреннего отступа поповера, строки встык через разделитель */
+const Sug = styled(Popover)`
+  min-width: ${k.sugW};
+  padding: 0;
+  border-radius: ${k.rS};
+
+  & ${Opt} {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) ${k.sugTag} ${k.sugKind};
+    gap: 0 ${k.sp2};
+    justify-items: start;
+    min-height: ${k.sugRow};
+    border-radius: 0;
+    font: 400 ${k.fs2} / ${k.lh2} ${k.sans};
+  }
+
+  & ${Opt} + ${Opt} {
+    border-top: 1px solid ${k.line2};
+  }
+
+  & ${OptLabel} {
+    justify-self: stretch;
+    font: 400 ${k.fsEdit} / 1 ${k.mono};
+    color: ${k.ink};
+  }
+
+  & ${OptLabel} b {
+    font-weight: 600;
+    color: ${k.val};
+  }
+
+  & ${Hint} {
+    grid-column: 3;
+    justify-self: stretch;
+    overflow: hidden;
+    font: inherit;
+    color: ${k.muted};
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & ${Empty} {
+    color: ${k.bad};
+  }
+`
+
+const SugMore = styled.div`
+  padding: ${k.sp1} ${k.sp2};
+  border-top: 1px solid ${k.line2};
+  background: ${k.sunk};
+  font: 400 ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
+
+const SugStatus = styled.div`
+  padding: ${k.sp2};
+  font: 400 ${k.fs2} / ${k.lh2} ${k.sans};
+  color: ${k.ink2};
+`
 
 /** Строк в выдаче по умолчанию (SUGGEST_MAX эталона). */
 const SUGGEST_MAX = 5
@@ -37,6 +145,7 @@ export type SuggestInputProps = {
   placeholder?: string | undefined
   /** По умолчанию true: фокус в поле при монтировании. */
   autoFocus?: boolean | undefined
+  className?: string | undefined
 }
 
 const same = (text: string) => text
@@ -55,7 +164,7 @@ const moreDefault = (n: number) => `ещё ${n} — уточните номер`
  */
 export function SuggestInput({
   options, value, onChange, onCommit, onCancel, emptyText, notInListText, match, sanitize = same, max = SUGGEST_MAX,
-  moreText = moreDefault, hint, keysHint, status, placeholder, autoFocus = true, ...aria
+  moreText = moreDefault, hint, keysHint, status, placeholder, autoFocus = true, className, ...aria
 }: SuggestInputProps) {
   const name = aria['aria-label']
   const listId = useStableId()
@@ -154,8 +263,8 @@ export function SuggestInput({
     listed ? null : statusId,
   ].filter(Boolean).join(' ')
   return (
-    <div ref={anchor} className={s.sugBox}>
-      <input
+    <SugBox ref={anchor} className={className}>
+      <SugInput
         ref={input}
         role="combobox"
         aria-label={name}
@@ -167,18 +276,17 @@ export function SuggestInput({
         aria-describedby={described || undefined}
         autoComplete="off"
         spellCheck={false}
-        className={s.sugInput}
         placeholder={placeholder}
         value={value}
         onChange={(e) => { onChange(sanitize(e.target.value)); setActive(-1); setInvalid(false) }}
         onKeyDown={onKey}
       />
       {/* строка под полем есть всегда: живая область ошибки должна существовать до её появления */}
-      <div className={s.sugNote}>
-        <span id={noteId} className={invalid ? s.sugBad : undefined} aria-live="polite">{invalid ? notInListText : hint}</span>
+      <SugNote>
+        <NoteText id={noteId} data-bad={invalid || undefined} aria-live="polite">{invalid ? notInListText : hint}</NoteText>
         {keysHint !== undefined && <span id={keysId}>{keysHint}</span>}
-      </div>
-      <Popover open anchor={anchor} onClose={onCancel} role="presentation" className={s.sug}>
+      </SugNote>
+      <Sug open anchor={anchor} onClose={onCancel} role="presentation">
         <div style={{ minWidth: width }}>
           {listed
             ? (
@@ -194,12 +302,12 @@ export function SuggestInput({
                   emptyText={emptyText(query)}
                   highlight={query}
                 />
-                {rest > 0 && <div id={moreId} className={s.sugMore}>{moreText(rest)}</div>}
+                {rest > 0 && <SugMore id={moreId}>{moreText(rest)}</SugMore>}
               </>
             )
-            : <div ref={statusBox} id={statusId} className={s.sugStatus}>{status}</div>}
+            : <SugStatus ref={statusBox} id={statusId}>{status}</SugStatus>}
         </div>
-      </Popover>
-    </div>
+      </Sug>
+    </SugBox>
   )
 }

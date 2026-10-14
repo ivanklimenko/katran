@@ -1,15 +1,13 @@
 import { useRef, useState } from 'react'
-import { Button, IconButton } from '../button'
+import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
 import { Popover } from '../overlay'
 import { exitOnEdgeTab } from '../overlay/edgeTab'
-import is from '../input/Input.module.css'
 import { Calendar } from './Calendar'
 import { dayOf, timeOf, todayLocal, withTime, type DateFormat, type DateValue, type IsoDay } from './dateStr'
-import { MaskedDateField } from './MaskedDateField'
 import type { DatePreset } from './presets'
 import { TimeField } from './TimeField'
-import s from './Date.module.css'
+import { CalBtn, DateBox, DateField, DateText, Quick, TimeRow } from './parts'
 
 export type DateInputProps = {
   value: DateValue
@@ -28,12 +26,13 @@ export type DateInputProps = {
   id?: string | undefined
   'aria-label'?: string | undefined
   placeholder?: string | undefined
+  className?: string | undefined
 }
 
 export const CalIcon = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5" /><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3" /></svg>
 
 /** Одна дата или дата со временем: маска по шаблону, календарь в поповере, горячие кнопки (спека §3.5). */
-export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY', quick, min, max, today, disabled, size = 'm', id, placeholder, ...aria }: DateInputProps) {
+export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY', quick, min, max, today, disabled, size = 'm', id, placeholder, className, ...aria }: DateInputProps) {
   const fmt = withTime(format, time)
   const t = today ?? todayLocal()
   const anchor = useRef<HTMLSpanElement>(null)
@@ -56,16 +55,16 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
   }
 
   return (
-    <span className={s.dateBox}>
-      <span ref={anchor} className={[is.field, size === 's' ? is.sizeS : is.sizeM, invalid ? is.invalid : '', s.dateField].filter(Boolean).join(' ')}>
-        <MaskedDateField
+    <DateBox className={className}>
+      <DateField ref={anchor} data-size={size} data-invalid={invalid || undefined}>
+        <DateText
           ref={input} id={id} aria-label={aria['aria-label']} value={value} onChange={onChange} format={fmt}
-          min={min} max={max} placeholder={placeholder} disabled={disabled} className={is.input} onInvalidChange={setInvalid}
+          min={min} max={max} placeholder={placeholder} disabled={disabled} onInvalidChange={setInvalid}
         />
-        <IconButton ref={calBtn} size="s" label="Выбрать дату" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} className={s.calBtn} onClick={toggle}><CalIcon /></IconButton>
-      </span>
+        <CalBtn ref={calBtn} size="s" label="Выбрать дату" aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? panelId : undefined} disabled={disabled} onClick={toggle}><CalIcon /></CalBtn>
+      </DateField>
       {quick && quick.length > 0 && (
-        <span role="group" aria-label="Быстрый выбор" className={s.quick}>
+        <Quick role="group" aria-label="Быстрый выбор">
           {quick.map((p) => {
             const d = p.range(t).from
             // отмечена по дню: при времени значение — минута того же дня; повторное нажатие снимает
@@ -73,20 +72,20 @@ export function DateInput({ value, onChange, time = false, format = 'DD.MM.YYYY'
             const out = (min !== undefined && d < min) || (max !== undefined && d > max)
             return <Button key={p.id} size="s" pressed={on} disabled={disabled || out} onClick={() => onChange(on ? '' : d)}>{p.label}</Button>
           })}
-        </span>
+        </Quick>
       )}
       <Popover id={panelId} open={open} anchor={anchor} returnFocus={input} onClose={() => setOpen(false)} label="Выбор даты" manualFocus>
         {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на кнопку календаря (jsx-a11y) */}
         <div role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, calBtn, () => setOpen(false))}>
           <Calendar month={month} onMonthChange={setMonth} value={value ? dayOf(value) : ''} onPick={pickDay} min={min} max={max} today={t} autoFocus />
           {time && (
-            <div className={s.timeRow}>
+            <TimeRow>
               <TimeField label="Время" disabled={!value} value={value ? timeOf(value) : ''} onChange={setTime} onEnter={() => setOpen(false)} />
               <Button size="s" variant="primary" onClick={() => setOpen(false)}>Готово</Button>
-            </div>
+            </TimeRow>
           )}
         </div>
       </Popover>
-    </span>
+    </DateBox>
   )
 }

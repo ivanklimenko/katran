@@ -74,7 +74,7 @@ test('подвал: неактивная кнопка номера без вид
     const cs = getComputedStyle(el)
     return { borderWidth: cs.borderTopWidth, borderColor: cs.borderTopColor, background: cs.backgroundColor }
   })
-  // рамка не видна: либо нулевая ширина, либо прозрачный цвет (Button.module.css `.button` держит
+  // рамка не видна: либо нулевая ширина, либо прозрачный цвет (кнопка кита, ButtonBase, держит
   // border: 1px solid transparent как базу — .pageBtn/.navBtn лишь подтверждают transparent поверх ghost)
   expect(style.borderWidth === '0px' || style.borderColor === 'rgba(0, 0, 0, 0)').toBe(true)
   expect(style.background).toBe('rgba(0, 0, 0, 0)')

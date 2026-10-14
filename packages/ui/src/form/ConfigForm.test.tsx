@@ -228,7 +228,6 @@ describe('ConfigForm — правка (спека 2c §2.1)', () => {
     const o = order(container)
     expect(o.slice(o.indexOf('53'), o.indexOf('59') + 1)).toEqual(['53', '57', 'editor', '54', '59'])
     expect(screen.getByTestId('editor-57').parentElement).toHaveAttribute('data-part', 'editor')
-    expect(screen.getByTestId('editor-57').parentElement).toHaveClass('editor')
     expect(screen.getAllByTestId(/^editor-/)).toHaveLength(1)
   })
 

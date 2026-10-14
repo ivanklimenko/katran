@@ -20,7 +20,8 @@
   border-bottom: 1px solid var(--k-line);
 }
 
-.toggle {
+/* двойной класс (0,2,0): лист styled-components (Button кита) стоит после этого файла и при равной специфичности перебил бы правило; до перевода модуля (срез styled, Task 6) */
+.toggle.toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--k-sp-2);
@@ -88,7 +89,8 @@
   color: var(--k-val);
 }
 
-.chipX {
+/* двойной класс (0,2,0): лист styled-components (Button кита) стоит после этого файла и при равной специфичности перебил бы правило; до перевода модуля (срез styled, Task 6) */
+.chipX.chipX {
   flex: none;
   color: var(--k-muted);
 }

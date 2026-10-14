@@ -2,11 +2,12 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import { IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
 import type { Scalar } from '../filters/types'
-import is from '../input/Input.module.css'
-import { Popover } from '../overlay'
+import { FieldBox, FieldInput } from '../input/parts'
+import { styled } from '../styled'
 import { Chevron, Cross, Listbox, optionId } from './Listbox'
 import { filterOptions, sameScalar, type Option } from './options'
-import s from './Select.module.css'
+import { Chev, Ph, Pop } from './parts'
+import { k } from '@katran/tokens'
 
 export type SearchSelectProps = {
   options: Option[]
@@ -22,10 +23,40 @@ export type SearchSelectProps = {
   size?: 's' | 'm' | undefined
   id?: string | undefined
   'aria-label'?: string | undefined
+  className?: string | undefined
 }
 
+const SelField = styled(FieldBox)`
+  padding-right: ${k.sp1};
+`
+
+const SelBtn = styled.button`
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 0;
+  }
+`
+
+const Clear = styled(IconButton)`
+  flex: none;
+  color: ${k.muted};
+`
+
 /** Одно значение из справочника (спека §4.2): с поиском — input role=combobox, без — кнопка role=combobox. */
-export function SearchSelect({ options, value, onChange, placeholder = 'Не выбрано', clearable = true, searchable, disabled, size = 'm', id, ...aria }: SearchSelectProps) {
+export function SearchSelect({ options, value, onChange, placeholder = 'Не выбрано', clearable = true, searchable, disabled, size = 'm', id, className, ...aria }: SearchSelectProps) {
   const withSearch = searchable ?? options.length > 7
   const name = aria['aria-label'] ?? 'Выбор'
   const listId = useStableId()
@@ -109,15 +140,14 @@ export function SearchSelect({ options, value, onChange, placeholder = 'Не в�
   return (
     <>
       {/* role=presentation: рамка лишь ловит всплывший mousedown, сама не интерактивна (jsx-a11y) */}
-      <span ref={anchor} role="presentation" onMouseDown={onFrameDown} className={[is.field, size === 's' ? is.sizeS : is.sizeM, s.selField].join(' ')}>
+      <SelField ref={anchor} role="presentation" onMouseDown={onFrameDown} data-size={size} className={className}>
         {withSearch
           ? (
-            <input
+            <FieldInput
               {...combo}
               ref={inputRef}
               aria-autocomplete="list"
               autoComplete="off"
-              className={is.input}
               placeholder={open && display !== '' ? display : placeholder}
               value={open ? query : display}
               onFocus={(e) => e.target.select()}
@@ -126,16 +156,16 @@ export function SearchSelect({ options, value, onChange, placeholder = 'Не в�
             />
           )
           : (
-            <button {...combo} ref={buttonRef} type="button" aria-haspopup="listbox" className={s.selBtn} onClick={() => (open ? close() : openList())}>
-              {value !== null ? display : <span className={s.ph}>{placeholder}</span>}
-            </button>
+            <SelBtn {...combo} ref={buttonRef} type="button" aria-haspopup="listbox" onClick={() => (open ? close() : openList())}>
+              {value !== null ? display : <Ph>{placeholder}</Ph>}
+            </SelBtn>
           )}
-        {clearable && value !== null && !disabled && <IconButton size="s" tabIndex={-1} label="Очистить" className={s.clear} onClick={clear}><Cross /></IconButton>}
-        <span className={s.chev} aria-hidden="true"><Chevron /></span>
-      </span>
-      <Popover open={open} anchor={anchor} onClose={close} role="presentation" className={s.pop}>
+        {clearable && value !== null && !disabled && <Clear size="s" tabIndex={-1} label="Очистить" onClick={clear}><Cross /></Clear>}
+        <Chev aria-hidden="true"><Chevron /></Chev>
+      </SelField>
+      <Pop open={open} anchor={anchor} onClose={close} role="presentation">
         <Listbox id={listId} label={name} options={shown} active={active} isSelected={isSelected} onPick={pick} onActive={setActive} />
-      </Popover>
+      </Pop>
     </>
   )
 }

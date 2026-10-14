@@ -129,7 +129,7 @@ test('высота контролов в строке одинакова; пол
   const num = await page.getByRole('textbox', { name: 'Сумма' }).evaluate((el) => el.parentElement!.getBoundingClientRect().height)
   for (const x of [tag, range, multi]) expect(Math.abs(x - num)).toBeLessThanOrEqual(0.5)
   const col = await page.getByRole('group', { name: 'Дата документа', exact: true }).evaluate((el) => {
-    const box = el.closest('[class*="fieldBox"]')!.getBoundingClientRect()
+    const box = el.closest('[data-part="field-box"]')!.getBoundingClientRect()
     return Math.abs(el.getBoundingClientRect().width - box.width)
   })
   expect(col).toBeLessThanOrEqual(1)

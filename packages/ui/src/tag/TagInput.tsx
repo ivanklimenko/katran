@@ -1,12 +1,13 @@
 import { memo, useCallback, useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
-import is from '../input/Input.module.css'
+import { FieldBox, FieldInput } from '../input/parts'
 import { Popover } from '../overlay'
 import { useKatran } from '../provider/useKatran'
 import { Cross, Listbox, optionId } from '../select/Listbox'
+import { styled } from '../styled'
 import { hasSeparator, mergeTags, splitTags, TAG_LIMIT, tagKey, takeTags, type TagMode } from './parseTags'
-import s from './Tag.module.css'
+import { k } from '@katran/tokens'
 
 export type TagInputProps = {
   /** Значения-чипы (в том числе невалидные: они подсвечены, в условие их не берёт владелец поля). */
@@ -32,7 +33,122 @@ export type TagInputProps = {
   id?: string | undefined
   'aria-label'?: string | undefined
   placeholder?: string | undefined
+  className?: string | undefined
 }
+
+const TagBox = styled.span`
+  display: inline-grid;
+  gap: ${k.sp1};
+  min-width: 0;
+`
+
+/* Поле растёт по высоте при переносе чипов, дальше прокручивается. Поле, как Input, — content-box (height без рамки),
+   чип — border-box: строка чипа ровно h-ctl-s − sp-1 = 20 вместе с рамкой. Вертикальный отступ по размеру ставит
+   одну строку по центру поля высотой h-ctl того же size: m — (28 − 20) / 2 = sp-1, s — (24 − 20) / 2 = sp-1 / 2.
+   Предел содержимого — три строки чипов с двумя зазорами sp-1: 3 × 20 + 2 × 4 = 68 = tag-max-h − 4 × sp-1 (84 − 16). */
+const TagField = styled(FieldBox)`
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: auto;
+  min-height: calc(${k.hCtlS} - ${k.sp1});
+  max-height: calc(${k.tagMaxH} - 4 * ${k.sp1});
+  padding-top: ${k.sp1};
+  padding-bottom: ${k.sp1};
+  overflow-y: auto;
+  cursor: text;
+
+  &[data-size='s'] {
+    padding-top: calc(${k.sp1} / 2);
+    padding-bottom: calc(${k.sp1} / 2);
+  }
+`
+
+/* список чипов — гибкий блок внутри поля, строка ввода рядом; не display: contents — в Chromium 88
+   он убирает <ul> из дерева доступности, и роль списка теряется */
+const Tags = styled.ul`
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: ${k.sp1};
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+`
+
+const TagText = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+/* ✕ — по высоте чипа (IconButton s выше строки чипа) */
+const TagX = styled(IconButton)`
+  box-sizing: border-box;
+  flex: none;
+  height: 100%;
+  color: ${k.muted};
+`
+
+const ChipItem = styled.li`
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  height: calc(${k.hCtlS} - ${k.sp1});
+  padding-left: ${k.sp1};
+  border: 1px solid transparent;
+  border-radius: ${k.rS};
+  background: ${k.valSoft};
+  color: ${k.ink};
+  font-size: ${k.fs2};
+  cursor: default;
+
+  &[data-invalid] {
+    border-color: ${k.bad};
+    background: ${k.badSoft};
+  }
+
+  /* выделенный клавиатурой — после невалидного: выделение видно и на красном чипе */
+  &[data-selected] {
+    border-color: ${k.val};
+    box-shadow: 0 0 0 1px ${k.val};
+  }
+
+  /* muted на bad-soft не держит контраст подписей на подложках (3.92 < 4.0) — ✕ невалидного чипа тоном ink */
+  &[data-invalid] ${TagX} {
+    color: ${k.ink};
+  }
+`
+
+/* border-box: UA-отступ <input> (1px сверху и снизу) не добавляется к высоте строки — иначе поле на 2px выше соседних */
+const TagLine = styled(FieldInput)`
+  box-sizing: border-box;
+  flex: 1 1 ${k.sp8};
+  min-width: ${k.sp8};
+  height: calc(${k.hCtlS} - ${k.sp1});
+`
+
+const Note = styled.span`
+  font-size: ${k.fs2};
+  color: ${k.ink2};
+`
+
+const Pop = styled(Popover)`
+  min-width: ${k.filterField};
+`
+
+/* текст только для скринридера: пометка невалидного чипа */
+const Sr = styled.span`
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+`
 
 /** Сколько чипов входит в описание строки ввода; дальше — «ещё N» (при 500 значениях описание не должно быть простынёй). */
 const DESCRIBED = 10
@@ -42,15 +158,15 @@ type ChipProps = { id: string; value: string; index: number; bad: boolean; selec
 /** Чип под memo: при наборе текста 500 чипов не перерисовываются — пропы плоские, onRemove стабилен. */
 const Chip = memo(function Chip({ id, value, index, bad, selected, disabled, onRemove }: ChipProps) {
   return (
-    <li className={s.tag} data-selected={selected || undefined} data-invalid={bad || undefined}>
-      <span id={id} className={s.tagText}>{value}{bad && <span className={s.sr}>, неверное значение</span>}</span>
-      {!disabled && <IconButton size="s" tabIndex={-1} label={`Убрать: ${value}`} className={s.tagX} onClick={() => onRemove(index)}><Cross /></IconButton>}
-    </li>
+    <ChipItem data-selected={selected || undefined} data-invalid={bad || undefined}>
+      <TagText id={id}>{value}{bad && <Sr>, неверное значение</Sr>}</TagText>
+      {!disabled && <TagX size="s" tabIndex={-1} label={`Убрать: ${value}`} onClick={() => onRemove(index)}><Cross /></TagX>}
+    </ChipItem>
   )
 })
 
 /** Несколько значений или фраз свободным вводом (спека §5): чипы, разбор вставки, подсказки с бека. */
-export function TagInput({ value, onChange, text, onTextChange, mode, validate, max, suggestions, loading, onQuery, onSuggestClose, disabled, size = 'm', id, placeholder, ...aria }: TagInputProps) {
+export function TagInput({ value, onChange, text, onTextChange, mode, validate, max, suggestions, loading, onQuery, onSuggestClose, disabled, size = 'm', id, placeholder, className, ...aria }: TagInputProps) {
   const limit = max ?? TAG_LIMIT[mode]
   const name = aria['aria-label'] ?? 'Значения'
   const listId = useStableId()
@@ -226,18 +342,18 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
   }
 
   return (
-    <span className={s.tagBox}>
+    <TagBox className={className}>
       {/* role=presentation: рамка лишь ловит всплывший mousedown, сама не интерактивна (jsx-a11y) */}
-      <span ref={anchor} role="presentation" data-size={size} onMouseDown={onFrameDown} className={[is.field, size === 's' ? is.sizeS : is.sizeM, s.tagField].join(' ')}>
+      <TagField ref={anchor} role="presentation" data-size={size} onMouseDown={onFrameDown}>
         {value.length > 0 && (
-          <ul className={s.tags} aria-label={name}>
+          <Tags aria-label={name}>
             {value.map((v, i) => (
               <Chip key={keys[i]} id={`${chipsId}-c${i}`} value={v} index={i} bad={validate !== undefined && !validate(v)}
                 selected={selected === i} disabled={disabled === true} onRemove={onRemove} />
             ))}
-          </ul>
+          </Tags>
         )}
-        <input
+        <TagLine
           ref={input}
           id={id}
           aria-label={name}
@@ -249,7 +365,6 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
           aria-describedby={describedBy}
           autoComplete="off"
           disabled={disabled}
-          className={[is.input, s.tagInput].join(' ')}
           placeholder={value.length === 0 ? placeholder : undefined}
           value={text}
           onChange={(e) => onInput(e.target.value, composing.current || (e.nativeEvent as Partial<InputEvent>).isComposing === true)}
@@ -259,12 +374,12 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
           onPaste={onPaste}
           onBlur={() => { setSel(null); closeSuggest() }}
         />
-      </span>
+      </TagField>
       {/* «ещё N» — только для описания строки ввода: hidden не читается в обзоре, но берётся по aria-describedby */}
       {value.length > DESCRIBED && <span id={`${chipsId}-more`} hidden>{`ещё ${value.length - DESCRIBED}`}</span>}
-      {shownNote && <span id={noteId} className={s.note}>{shownNote}</span>}
+      {shownNote && <Note id={noteId}>{shownNote}</Note>}
       {withSuggest && (
-        <Popover open={listOpen} anchor={anchor} onClose={closeSuggest} role="presentation" className={s.pop}>
+        <Pop open={listOpen} anchor={anchor} onClose={closeSuggest} role="presentation">
           <Listbox
             id={listId}
             label={`Подсказки: ${name}`}
@@ -276,8 +391,8 @@ export function TagInput({ value, onChange, text, onTextChange, mode, validate, 
             emptyText="Ищу…"
             highlight={text}
           />
-        </Popover>
+        </Pop>
       )}
-    </span>
+    </TagBox>
   )
 }

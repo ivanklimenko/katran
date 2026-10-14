@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { IconButton } from '../button'
 import { addDays, addMonths, monthGrid, startOfMonth, todayLocal, weekday, type IsoDay } from './dateStr'
 import { MONTHS, MONTHS_GEN, WEEKDAYS_FULL, WEEKDAYS_SHORT } from './ruNames'
-import s from './Date.module.css'
+import { styled } from '../styled'
+import { k } from '@katran/tokens'
 
 export type CalendarProps = {
   /** Любой день показываемого месяца. */
@@ -22,7 +23,99 @@ export type CalendarProps = {
   autoFocus?: boolean | undefined
   /** Наведение на день — DateRange подсвечивает будущий диапазон; null — курсор ушёл с сетки. */
   onHoverDay?: ((day: IsoDay | null) => void) | undefined
+  className?: string | undefined
 }
+
+const Cal = styled.div`
+  display: grid;
+  gap: ${k.sp2};
+  padding: ${k.sp1};
+`
+
+const CalHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${k.sp2};
+`
+
+const CalTitle = styled.span`
+  font: 600 ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.ink};
+`
+
+const Grid = styled.table`
+  border-collapse: separate;
+  border-spacing: 0;
+`
+
+const Wd = styled.th`
+  width: ${k.calCell};
+  height: ${k.calCell};
+  padding: 0;
+  font: 500 ${k.fs3} / 1 ${k.sans};
+  color: ${k.muted};
+  text-align: center;
+`
+
+const Cell = styled.td`
+  padding: 0;
+`
+
+const Day = styled.button`
+  display: grid;
+  place-items: center;
+  width: ${k.calCell};
+  height: ${k.calCell};
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: ${k.rS};
+  background: none;
+  font: 400 ${k.fs1} / 1 ${k.sans};
+  color: ${k.ink};
+  cursor: pointer;
+
+  /* порядок — по каскаду: наведение ниже отметок диапазона, чтобы выбранный день не терял заливку под курсором */
+  &:hover {
+    background: ${k.hover};
+  }
+
+  /* недоступный день: гасим наведение и текст, но раньше отметок диапазона — заливка краёв остаётся */
+  &[aria-disabled='true'] {
+    background: none;
+    color: ${k.muted};
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+
+  /* дни соседних месяцев — muted (faint не для читаемого текста, contrast.rules) */
+  &[data-out] {
+    color: ${k.muted};
+  }
+
+  &[data-today] {
+    border-color: ${k.val};
+  }
+
+  &[data-in] {
+    border-radius: 0;
+    background: ${k.valSoft};
+  }
+
+  &[data-edge] {
+    background: ${k.val};
+    color: ${k.paper};
+  }
+
+  /* кольцо на залитом краю — цветом бумаги: val на val невидим */
+  &[data-edge]:focus-visible {
+    outline-color: ${k.paper};
+  }
+`
 
 const Prev = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
 const Next = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
@@ -31,7 +124,7 @@ const monthOf = (d: IsoDay) => d.slice(0, 7)
 const dayLabel = (d: IsoDay) => `${Number(d.slice(8, 10))} ${MONTHS_GEN[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}, ${WEEKDAYS_FULL[weekday(d) - 1]}`
 
 /** Сетка месяца по паттерну APG Date Picker: один таб-стоп, стрелки, Home/End, PgUp/PgDn (Shift — год), Enter/Space. */
-export function Calendar({ month, onMonthChange, value, range, onPick, min, max, today, label, autoFocus, onHoverDay }: CalendarProps) {
+export function Calendar({ month, onMonthChange, value, range, onPick, min, max, today, label, autoFocus, onHoverDay, className }: CalendarProps) {
   const t = today ?? todayLocal()
   const first = startOfMonth(month)
   const days = monthGrid(first)
@@ -80,15 +173,15 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
   const from = range?.from ?? ''
   const to = range?.to ?? ''
   return (
-    <div className={s.cal}>
-      <div className={s.calHead}>
+    <Cal className={className}>
+      <CalHead>
         <IconButton size="s" label="Предыдущий месяц" onClick={() => onMonthChange(addMonths(first, -1))}><Prev /></IconButton>
-        <span className={s.calTitle} aria-live="polite">{title}</span>
+        <CalTitle aria-live="polite">{title}</CalTitle>
         <IconButton size="s" label="Следующий месяц" onClick={() => onMonthChange(addMonths(first, 1))}><Next /></IconButton>
-      </div>
-      <table ref={grid} role="grid" aria-label={label ?? title} className={s.grid} onMouseLeave={() => onHoverDay?.(null)}>
+      </CalHead>
+      <Grid ref={grid} role="grid" aria-label={label ?? title} onMouseLeave={() => onHoverDay?.(null)}>
         <thead>
-          <tr>{WEEKDAYS_SHORT.map((w, i) => <th key={w} scope="col" abbr={WEEKDAYS_FULL[i]} className={s.wd}>{w}</th>)}</tr>
+          <tr>{WEEKDAYS_SHORT.map((w, i) => <Wd key={w} scope="col" abbr={WEEKDAYS_FULL[i]}>{w}</Wd>)}</tr>
         </thead>
         <tbody>
           {[0, 1, 2, 3, 4, 5].map((r) => (
@@ -97,8 +190,8 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
                 const edge = d === value || d === from || d === to
                 const inside = from !== '' && to !== '' && d > from && d < to
                 return (
-                  <td key={d} role="gridcell" aria-selected={edge} className={s.cell}>
-                    <button
+                  <Cell key={d} role="gridcell" aria-selected={edge}>
+                    <Day
                       type="button"
                       data-day={d}
                       tabIndex={d === active ? 0 : -1}
@@ -109,20 +202,19 @@ export function Calendar({ month, onMonthChange, value, range, onPick, min, max,
                       data-today={d === t || undefined}
                       data-edge={edge || undefined}
                       data-in={inside || undefined}
-                      className={s.day}
                       onClick={() => { if (off(d)) return; setFocused(d); onPick(d) }}
                       onKeyDown={onKey}
                       onMouseEnter={() => onHoverDay?.(d)}
                     >
                       {Number(d.slice(8, 10))}
-                    </button>
-                  </td>
+                    </Day>
+                  </Cell>
                 )
               })}
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+      </Grid>
+    </Cal>
   )
 }

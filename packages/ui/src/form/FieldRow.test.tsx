@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { axe } from 'jest-axe'
 import { useState } from 'react'
 import { renderK } from '../test/renderK'
+import { isSrOnly } from '../test/srOnly'
 import { FieldRow } from './FieldRow'
 import type { FieldDef, FieldEdit, FieldValue } from './types'
 
@@ -27,7 +28,7 @@ describe('FieldRow (спека 2a §3.1)', () => {
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.getByText('55')).toHaveAttribute('data-k-tip', '55 · Третье возмещающее учреждение')
     // название поля доступно не только тултипом: скрытым текстом рядом с тегом
-    expect(screen.getByText('Третье возмещающее учреждение')).toHaveClass('sr')
+    expect(isSrOnly(screen.getByText('Третье возмещающее учреждение'))).toBe(true)
   })
 
   it('null — тоже пустая строка', () => {
@@ -126,7 +127,7 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     expect(cell).toHaveAttribute('data-k-tip', tip)
     const row = screen.getByRole('button', { name: /SBERBANK MOSCOW/ })
     expect(row).toHaveAccessibleName(new RegExp(tip))
-    expect(screen.getByText(tip)).toHaveClass('sr')
+    expect(isSrOnly(screen.getByText(tip))).toBe(true)
     expect(screen.queryByText(/Было:/)).not.toBeVisible()
     await userEvent.click(row)
     const full = screen.getByText(/Было:/)
@@ -169,7 +170,6 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     renderK(<Row value={{ lines: [] }} edit={{ ...changed, changed: false }} />)
     const cell = cellOf('57')
     expect(cell).toHaveAttribute('data-empty')
-    expect(cell).toHaveClass('null')
     expect(cell).not.toHaveAttribute('data-edited')
     await userEvent.click(screen.getByRole('button', { name: /не заполнено/ }))
     expect(screen.getByTestId('audit')).toBeVisible()
@@ -226,7 +226,7 @@ describe('FieldRow — правка (спека 2c §2.1)', () => {
     const cell = cellOf('70')
     expect(cell).toHaveAttribute('data-edited')
     expect(cell).toHaveAttribute('data-k-tip', tip)
-    expect(screen.getByText(tip)).toHaveClass('sr')
+    expect(isSrOnly(screen.getByText(tip))).toBe(true)
     expect(screen.getByRole('button', { name: 'Редактировать поле 70' }).parentElement).toBe(cell)
     // раскрытия у 70 нет (show = lines = 4) — панель видна сразу
     expect(screen.getByText(/Было:/).textContent).toBe('Было:\n/INV/ 2026-0417 DD 15.09.2026\nСтало:\n/INV/ 2026-0418')

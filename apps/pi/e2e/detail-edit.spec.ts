@@ -294,7 +294,17 @@ test('дата валютирования: Prompt «Утвердить нову�
   await expect(mark).toHaveAttribute('data-status', 'confirmed')
   await expect(mark.getByText('✓')).toBeVisible()
   const value = dw.locator('[data-part="hero"]').getByText('26.09.2026', { exact: true })
-  await expect(value).toHaveClass(/__warn/)
+  // изменённое значение — цветом --k-warn (по вычисленному цвету, не по имени класса)
+  const warn = await page.evaluate(() => {
+    const root = document.querySelector('[data-k-root]')!
+    const probe = document.createElement('div')
+    probe.style.color = getComputedStyle(root).getPropertyValue('--k-warn')
+    root.appendChild(probe)
+    const c = getComputedStyle(probe).color
+    probe.remove()
+    return c
+  })
+  await expect(value).toHaveCSS('color', warn)
   expect(await reqs(page, EDIT)).toBe(1)
 })
 
