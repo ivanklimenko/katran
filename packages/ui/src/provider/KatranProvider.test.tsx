@@ -1,9 +1,17 @@
 import { act, render, screen } from '@testing-library/react'
 import { axe } from 'jest-axe'
-import styled, { ThemeProvider, useTheme, type DefaultTheme } from 'styled-components'
+import styled, { ThemeProvider, useTheme } from 'styled-components'
 import { k } from '@katran/tokens'
 import { KatranProvider } from './KatranProvider'
 import { useKatran } from './useKatran'
+
+// Тема хоста так, как её типизирует хост: своё дополнение DefaultTheme. Ключ katran кита необязательный,
+// поэтому тема хоста без katran проходит проверку типов (литерал { host: 'h' } ниже — без приведения)
+declare module 'styled-components' {
+  interface DefaultTheme {
+    host?: string
+  }
+}
 
 // Компонент «как у кита»: определён после корня провайдера (импорт выше) — его группа стилей позже
 const Piece = styled.span`
@@ -138,7 +146,11 @@ describe('KatranProvider', () => {
     const { container } = render(<KatranProvider><Probe /></KatranProvider>)
     // сброс в листе styled встал бы после правил компонентов на CSS Modules и перебил бы их (причина — в Provider.module.css)
     expect(container.firstElementChild).toHaveClass('root')
-    expect(sheet()).not.toContain('box-sizing')
+    // только собственные правила корня: лист общий для файла, в нём бывают правила других компонентов
+    const c = rootClass(container.firstElementChild as Element)
+    const own = rules().filter((r) => new RegExp(`^\\.${c}(?![\\w-])`).test(r.selector))
+    expect(own.length).toBeGreaterThan(0)
+    for (const r of own) expect(r.body).not.toContain('box-sizing')
   })
 
   it('живая область скрыта визуально и помечена data-part="live"', () => {
@@ -159,9 +171,7 @@ describe('KatranProvider', () => {
   })
 
   it('тема хоста сохраняется, токены кита — под ключом katran', () => {
-    // Тема хоста без katran: DefaultTheme дополнен katran обязательным ключом — приведение типа
-    const host = { host: 'h' } as unknown as DefaultTheme
-    render(<ThemeProvider theme={host}><KatranProvider><ThemeProbe /></KatranProvider></ThemeProvider>)
+    render(<ThemeProvider theme={{ host: 'h' }}><KatranProvider><ThemeProbe /></KatranProvider></ThemeProvider>)
     expect(JSON.parse(screen.getByTestId('theme').textContent ?? '')).toEqual({ host: 'h', katran: k })
     expect(screen.getByTestId('same')).toHaveTextContent('true')
   })
