@@ -142,15 +142,34 @@ describe('KatranProvider', () => {
     expect(light?.selector.split(',')).toContain(`.${c} [data-theme='light']`)
   })
 
-  it('изоляция от хоста — классом Provider.module.css, а не в листе styled-components (до перевода всех модулей)', () => {
+  it('изоляция от хоста — в шаблоне корня: content-box под корнем, border-box контролов, типографика контролов', () => {
     const { container } = render(<KatranProvider><Probe /></KatranProvider>)
-    // сброс в листе styled встал бы после правил компонентов на CSS Modules и перебил бы их (причина — в Provider.module.css)
-    expect(container.firstElementChild).toHaveClass('root')
-    // только собственные правила корня: лист общий для файла, в нём бывают правила других компонентов
+    const root = container.firstElementChild as Element
+    const c = rootClass(root)
+    // классов CSS Modules на корне нет: все классы корня — styled-components (sc-… и класс стилей)
+    expect([...root.classList].every((x) => x.startsWith('sc-') || sheet().includes(`.${x}`))).toBe(true)
+    const all = rules().filter((r) => !r.media)
+    const at = (selector: string) => all.find((r) => r.selector === selector)
+    // специфичность (0,1,0) перебивает `*` хоста; псевдоэлементы — отдельными селекторами
+    expect(at(`.${c},.${c} *,.${c} *::before,.${c} *::after`)?.body).toBe('box-sizing:content-box;')
+    const controls = `:where(button,select,input[type='checkbox'],input[type='radio'],input[type='button'],input[type='submit'],input[type='reset'])`
+    expect(at(`.${c} ${controls}`)?.body).toBe('box-sizing:border-box;')
+    // stylis добавляет к letter-spacing вендорные префиксы — проверяются сами объявления
+    const typo = at(`.${c} :where(button,input,select,textarea)`)?.body
+    expect(typo).toMatch(/^text-transform:none;/)
+    expect(typo).toMatch(/(^|;)letter-spacing:normal;$/)
+  })
+
+  it('сброс изоляции стоит в листе раньше правил компонентов: при равной специфичности (0,1,0) компоненты его перебивают', () => {
+    const { container } = render(<KatranProvider><Piece>часть</Piece></KatranProvider>)
     const c = rootClass(container.firstElementChild as Element)
-    const own = rules().filter((r) => new RegExp(`^\\.${c}(?![\\w-])`).test(r.selector))
-    expect(own.length).toBeGreaterThan(0)
-    for (const r of own) expect(r.body).not.toContain('box-sizing')
+    const piece = rootClass(screen.getByText('часть'))
+    const all = rules()
+    const reset = all.find((r) => r.selector.startsWith(`.${c},.${c} *`))
+    const own = all.find((r) => r.selector === `.${piece}`)
+    // border-box у Piece — после content-box корня: в браузере у части будет border-box
+    expect(reset && own && reset.at < own.at).toBe(true)
+    expect(own?.body).toBe('box-sizing:border-box;')
   })
 
   it('живая область скрыта визуально и помечена data-part="live"', () => {

@@ -15,7 +15,7 @@
     "release:pack": "node scripts/release-pack.mjs",
     "check:install": "node scripts/check-install.mjs",
     "check:rules": "node scripts/check-style-rules.mjs",
-    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/tokens/dist/fonts.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css apps/pi/dist/assets/*.css && node scripts/check-css-target.mjs"
+    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/tokens/dist/fonts.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs"
   },
   "browserslist": ["chrome >= 88"],
   "devDependencies": {

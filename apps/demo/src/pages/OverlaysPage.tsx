@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Button, CodeView, Dialog, EditHistory, Input, Menu, Popover, Prompt, type DialogProps, type EditHistoryEntry } from '@katran/ui'
-import s from './Page.module.css'
+import { H1, H2, Note, Row } from './parts'
 
 const HISTORY: EditHistoryEntry[] = [
   { who: 'Кузнецов Д. А.', when: '22.09.2026 09:15', status: 'rejected', by: 'Смирнова Е. В.', at: '22.09.2026 09:40', reason: 'BIC не по справочнику', diff: [{ label: '', was: 'VKRBRU8KXXX', now: 'VKRBRU8K2KD' }] },
@@ -110,9 +110,9 @@ export function OverlaysPage() {
   const keys = [{ id: 'status', label: 'Статус' }, { id: 'reason', label: 'Причина статуса' }, { id: 'created', label: 'Дата документа' }]
   return (
     <>
-      <h1 className={s.h1}>Меню и поповеры</h1>
-      <p className={s.note}>Меню сортировки составной колонки: выбранный ключ отмечен, стрелки ходят по пунктам, Escape закрывает и возвращает фокус.</p>
-      <div className={s.row}>
+      <H1>Меню и поповеры</H1>
+      <Note>Меню сортировки составной колонки: выбранный ключ отмечен, стрелки ходят по пунктам, Escape закрывает и возвращает фокус.</Note>
+      <Row>
         <Button ref={m} onClick={() => setMenu(true)}>Сортировать «Статус» по…</Button>
         <Menu open={menu} anchor={m} onClose={() => setMenu(false)} title="Сортировать «Статус» по"
           items={keys.map((k) => ({ id: k.id, label: k.label, checked: sort === k.id, onSelect: () => setSort(k.id), hint: sort === k.id ? '↑' : undefined }))} />
@@ -123,15 +123,15 @@ export function OverlaysPage() {
             <Button variant="primary" onClick={() => setPop(false)}>Применить</Button>
           </div>
         </Popover>
-      </div>
-      <h2 className={s.h2}>Prompt с телом</h2>
-      <p className={s.note}>Тело — поле причины: «Отклонить» недоступна, пока причина пуста; во время запроса обе кнопки недоступны, Esc не закрывает; ошибка — строкой над кнопками.</p>
-      <div className={s.row}>
+      </Row>
+      <H2>Prompt с телом</H2>
+      <Note>Тело — поле причины: «Отклонить» недоступна, пока причина пуста; во время запроса обе кнопки недоступны, Esc не закрывает; ошибка — строкой над кнопками.</Note>
+      <Row>
         <RejectPromptDemo />
-      </div>
-      <h2 className={s.h2}>Dialog</h2>
-      <p className={s.note}>Модальное окно поверх своего слоя: подложка, ловушка Tab, Esc и подложка закрывают (Esc не всплывает до деталки), фокус возвращается на открывшую кнопку. По примеру на свойство.</p>
-      <div className={s.row} style={{ alignItems: 'stretch' }}>
+      </Row>
+      <H2>Dialog</H2>
+      <Note>Модальное окно поверх своего слоя: подложка, ловушка Tab, Esc и подложка закрывают (Esc не всплывает до деталки), фокус возвращается на открывшую кнопку. По примеру на свойство.</Note>
+      <Row style={{ alignItems: 'stretch' }}>
         <DialogExample label="title, children, footer" title="Окно">Текст окна. Закрывают «Закрыть», Esc и клик по подложке.</DialogExample>
         <DialogExample label='tone="danger"' tone="danger" title="Запрос отклонён">Заголовок — цветом bad.</DialogExample>
         <DialogExample label='size="l"' size="l" title="Исходное сообщение">
@@ -141,12 +141,12 @@ export function OverlaysPage() {
         <BusyDialogDemo />
         <InitialFocusDemo />
         <FallbackFocusDemo />
-      </div>
-      <h2 className={s.h2}>EditHistory с решением</h2>
-      <p className={s.note}>У последней ожидающей записи — «Утвердить» и «Отклонить»; отклонённая запись — бейдж «отклонено», подсказка и причина.</p>
-      <div className={s.row} style={{ display: 'block' }}>
+      </Row>
+      <H2>EditHistory с решением</H2>
+      <Note>У последней ожидающей записи — «Утвердить» и «Отклонить»; отклонённая запись — бейдж «отклонено», подсказка и причина.</Note>
+      <Row style={{ display: 'block' }}>
         <EditHistory entries={HISTORY} label="поля 57" onConfirm={() => undefined} onReject={() => undefined} />
-      </div>
+      </Row>
     </>
   )
 }

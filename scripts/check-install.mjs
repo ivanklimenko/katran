@@ -47,10 +47,8 @@ write('tsconfig.json', `${JSON.stringify({
   include: ['src'],
 }, null, 2)}\n`)
 write('index.html', '<!doctype html><html lang="ru"><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>\n')
-write('src/css.d.ts', "declare module '*.css'\n")
 write('src/main.tsx', `import React from 'react'
 import ReactDOM from 'react-dom'
-import '@katran/ui/styles.css'
 import { densityOptions, type Density } from '@katran/tokens'
 import { Button, KatranFonts, KatranProvider } from '@katran/ui'
 import { createFiltersModel, createGridModel } from '@katran/effector'

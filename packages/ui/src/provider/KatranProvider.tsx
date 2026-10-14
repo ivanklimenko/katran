@@ -6,7 +6,6 @@ import { densityOptions, k, type Density } from '@katran/tokens'
 import { KatranContext, type Theme } from './useKatran'
 import { LiveRegion, type LiveRegionHandle } from './LiveRegion'
 import { TooltipLayer } from '../tooltip/TooltipLayer'
-import s from './Provider.module.css'
 
 export type KatranProviderProps = {
   children: ReactNode
@@ -80,7 +79,6 @@ export function KatranProvider(p: KatranProviderProps) {
     <KatranContext.Provider value={value}>
       <ThemeProvider theme={withKatran}>
         <Root
-          className={s.root}
           ref={(el: HTMLDivElement | null) => { rootRef.current = el; setPortalRoot(el) }}
           data-theme={theme === 'system' ? undefined : theme}
           data-k-root=""

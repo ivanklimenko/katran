@@ -12,7 +12,6 @@
       "import": "./dist/ui.js",
       "default": "./dist/ui.js"
     },
-    "./styles.css": "./dist/ui.css",
     "./package.json": "./package.json"
   },
   "files": [
