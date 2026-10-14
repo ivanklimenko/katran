@@ -1,14 +1,22 @@
 // Образец для scripts/check-style-rules.mjs — не код кита: копируется в packages/ui/src на время проверки.
 // «ждём: …» — нарушения, которые проверка обязана найти на этой строке; «чисто» — строка без единого замечания.
+/* eslint-disable import-x/no-duplicates -- импорты разнесены по строкам ради меток */
 import { styled, css, createGlobalStyle } from './styled' // чисто
 import { keyframes } from 'styled-components' // ждём: eslint:r13
 import type { DefaultTheme } from 'styled-components' // чисто
+import macro from 'styled-components/macro' // ждём: eslint:r13
+import type { ThemedStyledFunction } from 'styled-components/macro' // чисто
+import { css as kitCss } from './styled' // ждём: eslint:styled-names
+import * as kit from './styled' // ждём: eslint:styled-names
+import kitStyled from './styled' // ждём: eslint:styled-names
 import { k } from '@katran/tokens'
 
 declare module 'styled-components' { // чисто
   export interface DefaultTheme { sample?: string }
 }
 export type Sample = DefaultTheme
+export type SampleFn = ThemedStyledFunction<'div', object>
+export { macro, kitCss, kit, kitStyled }
 
 // Нарушения правил стилей в шаблоне
 export const Bad = styled.div`
@@ -25,7 +33,21 @@ export const Fn = styled.div<{ c: string }>`
 export const fnFragment = css`
   color: ${function pick() { return k.ink }}; /* ждём: eslint:template-fn */
 `
-export const fade = keyframes`from { opacity: 0; } to { opacity: 1; }`
+
+// Текст CSS прямо в keyframes проверки не разбирают: тело — фрагментом css, в keyframes — только интерполяция
+export const fadeRaw = keyframes`from { opacity: 0; } to { opacity: 1; }` // ждём: eslint:keyframes-text
+export const fadeFrames = css`
+  from { opacity: 0; width: 10px; } /* ждём: stylelint:unit-disallowed-list */
+  to { opacity: 1; translate: ${k.sp1}; } /* ждём: target:translate */
+`
+export const fade = keyframes`${fadeFrames}` // чисто
+
+// Строка или шаблонная строка как интерполяция: общий CSS — только фрагментом css
+export const Literal = styled.div`
+  ${'color: red;'} /* ждём: eslint:template-literal */
+  ${`padding: ${k.sp1};`} /* ждём: eslint:template-literal */
+  & > b { ${fadeFrames} } /* чисто */
+`
 
 // Правильный код: токены, px там, где он разрешён, вложенность, классы горячего пути
 export const Good = styled.div`

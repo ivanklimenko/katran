@@ -57,11 +57,35 @@ const REACT_18 = [
 // состояния атрибутами, переменные значения инлайновой CSS-переменной. Формы: styled.x`${fn}`, css`${fn}`,
 // createGlobalStyle`${fn}` и styled.x(fn) / styled(X)(fn).
 const STYLED_FN_MESSAGE = 'Функция в шаблоне styled: в ките состояния — атрибутами (data-*, aria-*), переменные значения — инлайновой CSS-переменной (спека styled, правило 1)'
-const STYLED_FN = [
+// R15: шаблоны должны оставаться видимыми для stylelint и check-css-target (postcss-styled-syntax).
+// Разбор узнаёт только канонические имена styled, css, createGlobalStyle и не разбирает keyframes;
+// CSS из строки, вставленной интерполяцией, не видит никто.
+const STYLED_NAMES_MESSAGE = 'Импорт из модуля styled кита под другим именем или целиком (* as): проверки стилей узнают шаблоны только по именам styled, css, createGlobalStyle, keyframes (R15)'
+const STYLED_RULES = [
   { selector: 'TaggedTemplateExpression > TemplateLiteral > :matches(ArrowFunctionExpression, FunctionExpression)', message: STYLED_FN_MESSAGE },
   { selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='styled'] > :matches(ArrowFunctionExpression, FunctionExpression)", message: STYLED_FN_MESSAGE },
   { selector: "CallExpression[callee.type='CallExpression'][callee.callee.name='styled'] > :matches(ArrowFunctionExpression, FunctionExpression)", message: STYLED_FN_MESSAGE },
+  {
+    selector: 'TaggedTemplateExpression > TemplateLiteral > :matches(Literal, TemplateLiteral)',
+    message: 'Строка как интерполяция в шаблоне styled: проверки стилей её не видят; общий CSS — фрагментом css`…` (R15)',
+  },
+  {
+    selector: "TaggedTemplateExpression[tag.name='keyframes'] > TemplateLiteral > TemplateElement[value.raw=/\\S/]",
+    message: 'Текст CSS прямо в keyframes: postcss-styled-syntax его не разбирает. Тело — фрагментом css, в keyframes — только интерполяция: keyframes`${frames}` (R15)',
+  },
+  ...['styled', 'css', 'createGlobalStyle', 'keyframes'].map((name) => ({
+    selector: `ImportDeclaration[source.value=/(^|\\/)styled$/] > ImportSpecifier[imported.name='${name}'][local.name!='${name}']`,
+    message: STYLED_NAMES_MESSAGE,
+  })),
+  { selector: "ImportDeclaration[source.value=/(^|\\/)styled$/] > ImportDefaultSpecifier[local.name!='styled']", message: STYLED_NAMES_MESSAGE },
+  { selector: 'ImportDeclaration[source.value=/(^|\\/)styled$/] > ImportNamespaceSpecifier', message: STYLED_NAMES_MESSAGE },
 ]
+
+const STYLED_COMPONENTS_SUBPATHS = {
+  group: ['styled-components/*'],
+  allowTypeImports: true,
+  message: 'Подпути styled-components в ките не импортируются (R13): styled, css, createGlobalStyle и прочее — из ../styled',
+}
 
 const STYLED_COMPONENTS_ONLY_IN_STYLED_TS = {
   name: 'styled-components',
@@ -135,14 +159,14 @@ export default tseslint.config(
   // Замены — в packages/ui/src/compat/. Блоки no-restricted-syntax ниже не пересекаются по файлам:
   // правило в плоском конфиге не складывается, а заменяется последним блоком.
   { files: ['packages/effector/src/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...REACT_18] } },
-  { files: ['packages/ui/src/**/*.{ts,tsx}'], ignores: ['packages/ui/src/compat/**'], rules: { 'no-restricted-syntax': ['error', ...REACT_18, ...STYLED_FN] } },
-  { files: ['packages/ui/src/compat/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...STYLED_FN] } },
+  { files: ['packages/ui/src/**/*.{ts,tsx}'], ignores: ['packages/ui/src/compat/**'], rules: { 'no-restricted-syntax': ['error', ...REACT_18, ...STYLED_RULES] } },
+  { files: ['packages/ui/src/compat/**/*.{ts,tsx}'], rules: { 'no-restricted-syntax': ['error', ...STYLED_RULES] } },
   // R13: styled-components в ките импортирует только styled.ts (нормализация default для Node).
   // Типы и дополнение модуля (declare module 'styled-components') — можно: в сборку не попадают.
   {
     files: ['packages/ui/src/**/*.{ts,tsx}'],
     ignores: ['packages/ui/src/styled.ts'],
-    rules: { '@typescript-eslint/no-restricted-imports': ['error', { paths: [STYLED_COMPONENTS_ONLY_IN_STYLED_TS] }] },
+    rules: { '@typescript-eslint/no-restricted-imports': ['error', { paths: [STYLED_COMPONENTS_ONLY_IN_STYLED_TS], patterns: [STYLED_COMPONENTS_SUBPATHS] }] },
   },
   // Горячий путь (спека styled, правило 2): без styled.* — только фрагменты css и createGlobalStyle
   // (классы k-…, их монтирует HotStyles). Этот блок заменяет предыдущий для своих файлов, поэтому R13 — и здесь.
@@ -151,7 +175,7 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-restricted-imports': ['error', {
         paths: [{ ...STYLED_COMPONENTS_ONLY_IN_STYLED_TS, message: `Горячий путь без styled: только css и createGlobalStyle из ../styled. ${STYLED_COMPONENTS_ONLY_IN_STYLED_TS.message}` }],
-        patterns: [{
+        patterns: [STYLED_COMPONENTS_SUBPATHS, {
           regex: '(^|/)styled$',
           importNames: ['default', 'styled'],
           message: 'Горячий путь без styled: в модулях горячего пути нет styled.*, только фрагменты css и createGlobalStyle (спека styled, правило 2)',

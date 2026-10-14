@@ -13,7 +13,9 @@
 // Вложенность в шаблоне — не ошибка: stylis раскрывает её до плоских правил ещё в JS.
 // Ограничение разбора: шаблоны styled.x, styled(X), css и createGlobalStyle; keyframes`…` не разбирается,
 // а CSS, собранный строкой и вставленный одной интерполяцией, не виден — поэтому @font-face в KatranFonts
-// написан текстом шаблона css.
+// написан текстом шаблона css, тело keyframes — фрагментом css (eslint, R15). Исключение — объявления токенов
+// (declarations из @katran/tokens, их вставляет Root): текст сгенерирован pnpm gen, и без аргументов скрипт
+// проверяет его отдельно, по сгенерированному packages/tokens/src/declarations.ts.
 import { readdirSync, readFileSync } from 'node:fs'
 import { extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,6 +24,7 @@ import doiuse from 'doiuse'
 import * as styledSyntax from 'postcss-styled-syntax'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
+const DECLARATIONS = 'packages/tokens/src/declarations.ts'
 const TEMPLATE_DIRS = ['packages/ui/src', 'apps/demo/src', 'apps/pi/src', 'examples/federation/remote/src']
 const browsers = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).browserslist
 const MISSED_BY_DOIUSE = [
@@ -42,6 +45,8 @@ const ALLOWED = new Map([
 ])
 // В шаблонах styled: вложенность раскрывает stylis до попадания в браузер
 const TEMPLATE_IGNORED_FEATURES = new Set(['css-nesting'])
+
+const lineAt = (text, index, firstLine) => firstLine + (text.slice(0, index).match(/\n/g) ?? []).length
 
 /** Все .ts/.tsx в каталогах шаблонов (без node_modules и dist). */
 function templateFiles() {
@@ -77,26 +82,36 @@ function replaceInterpolations(text) {
   return out
 }
 
+/** Группы объявлений токенов (base, sizes, light, dark) — как правила :root с исходными номерами строк. */
+function declarationParts(file, source) {
+  return [...source.matchAll(/^ {2}(\w+): `([^`]*)`/gm)].map((m) => {
+    const firstLine = lineAt(source, m.index, 1)
+    const text = `${'\n'.repeat(firstLine - 1)}:root { ${m[2]} }`
+    return { root: postcss.parse(text, { from: file }), text, firstLine: 1, template: false }
+  })
+}
+
 /** Части файла для проверки: { root, text, firstLine } — root для doiuse, text для регулярок. */
 function partsOf(file, source) {
+  if (resolve(file) === join(ROOT, DECLARATIONS)) return declarationParts(file, source)
   if (!/\.tsx?$/.test(extname(file))) return [{ root: postcss.parse(source, { from: file }), text: source, firstLine: 1, template: false }]
   if (!source.includes('`')) return []
   const doc = styledSyntax.parse(source, { from: file })
   return doc.nodes.map((root) => ({ root, text: replaceInterpolations(root.toString()), firstLine: root.source?.start?.line ?? 1, template: true }))
 }
 
-const lineAt = (text, index, firstLine) => firstLine + (text.slice(0, index).match(/\n/g) ?? []).length
-
 const args = process.argv.slice(2)
-const files = args.length ? args : templateFiles()
+const files = args.length ? args : [...templateFiles(), join(ROOT, DECLARATIONS)]
 let failed = 0
 let templates = 0
 let fontFaces = 0
+let tokenGroups = 0
 for (const file of files) {
   const name = relative(ROOT, resolve(file))
   const found = []
   for (const part of partsOf(file, readFileSync(file, 'utf8'))) {
     if (part.template) templates++
+    else if (resolve(file) === join(ROOT, DECLARATIONS)) tokenGroups++
     part.root.walkAtRules('font-face', () => { fontFaces++ })
     await postcss([doiuse({
       browsers,
@@ -118,6 +133,6 @@ for (const file of files) {
   for (const f of found) console.error(`${name}: не поддерживается ${browsers.join(', ')} — ${f}`)
   failed += found.length
 }
-if (!args.length) console.log(`Шаблоны styled: ${templates} в ${files.length} файлах .ts/.tsx, правил @font-face: ${fontFaces}`)
+if (!args.length) console.log(`Шаблоны styled: ${templates} в ${files.length - 1} файлах .ts/.tsx, правил @font-face: ${fontFaces}; групп объявлений токенов: ${tokenGroups}`)
 if (failed) process.exit(1)
 console.log(`CSS: синтаксиса новее ${browsers.join(', ')} нет`)

@@ -8,6 +8,9 @@
 //   eslint:template-fn — функция в шаблоне styled (no-restricted-syntax);
 //   eslint:r13         — импорт styled-components вне styled.ts;
 //   eslint:hot         — styled в модуле горячего пути;
+//   eslint:keyframes-text   — текст CSS прямо в шаблоне keyframes (тело — фрагментом css, R15);
+//   eslint:styled-names     — импорт из модуля styled кита под другим именем или целиком (* as, R15);
+//   eslint:template-literal — строка или шаблонная строка как интерполяция (R15);
 //   stylelint:<правило> — правило stylelint;
 //   target:<признак>    — check-css-target (признак — подстрока сообщения: имя возможности doiuse или свойство).
 import { spawnSync } from 'node:child_process'
@@ -29,6 +32,9 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { clean
 const ESLINT_CHECKS = {
   'template-fn': (m) => m.ruleId === 'no-restricted-syntax' && m.message.startsWith('Функция в шаблоне styled'),
   r13: (m) => m.ruleId === '@typescript-eslint/no-restricted-imports' && m.message.includes('(R13)') && !m.message.includes('Горячий путь'),
+  'keyframes-text': (m) => m.ruleId === 'no-restricted-syntax' && m.message.startsWith('Текст CSS прямо в keyframes'),
+  'styled-names': (m) => m.ruleId === 'no-restricted-syntax' && m.message.startsWith('Импорт из модуля styled кита под другим именем'),
+  'template-literal': (m) => m.ruleId === 'no-restricted-syntax' && m.message.startsWith('Строка как интерполяция в шаблоне styled'),
   hot: (m) => m.ruleId === '@typescript-eslint/no-restricted-imports' && m.message.includes('Горячий путь без styled'),
 }
 
