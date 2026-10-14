@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
+import { k } from '@katran/tokens'
 import { useStableId } from '../compat/useStableId'
-import s from './Dialog.module.css'
+import { css, keyframes, styled } from '../styled'
 
 export type DialogTone = 'neutral' | 'danger'
 
@@ -28,7 +29,104 @@ export type DialogProps = {
    * Вызывается в момент закрытия.
    */
   fallbackFocus?: (() => HTMLElement | null | undefined) | undefined
+  /** Класс корня — подложки окна. */
+  className?: string | undefined
 }
+
+const fadeFrames = css`
+  from {
+    opacity: 0;
+  }
+`
+const fadeIn = keyframes`${fadeFrames}`
+
+const riseFrames = css`
+  from {
+    opacity: 0;
+    transform: translateY(${k.promptShift});
+  }
+`
+const riseIn = keyframes`${riseFrames}`
+
+/* Подложка (эталон .pr-scrim, prompt.css): накрывает ближайший позиционированный предок — в деталке слой overlay Drawer,
+   только свой документ, а не страницу */
+const Scrim = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+
+  /* строка — не выше слоя: иначе неявная строка auto растёт по окну и max-height: 100% окна не ограничивает (тело не прокручивается) */
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+  padding: ${k.sp4};
+  background: ${k.scrim};
+  animation: ${fadeIn} ${k.tFast} ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`
+
+const Title = styled.h4`
+  flex: none;
+  margin: 0;
+  font: 600 ${k.fsPrompt} / 1.35 ${k.sans};
+  color: ${k.ink};
+`
+
+/* Окно (эталон .pr): рамка, отступы 16 / 16 / 12, радиус 8, подъём 6 → 0 при появлении; не выше слоя — тело прокручивается */
+const Box = styled.div`
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(${k.promptW}, 100%);
+  max-height: 100%;
+  min-height: 0;
+  padding: ${k.sp4} ${k.sp4} ${k.sp3};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rL};
+  background: ${k.paper};
+  box-shadow: ${k.shadow};
+  color: ${k.ink};
+  animation: ${riseIn} ${k.tFast} ease-out;
+
+  /* size="l" — окно сообщения */
+  &[data-size='l'] {
+    width: min(${k.dialogL}, 100%);
+  }
+
+  /* фокус на окне — только от клика по его тексту (tabIndex -1, с клавиатуры недостижимо): без обводки */
+  &:focus {
+    outline: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
+  /* tone="danger" — акцент заголовка */
+  &[data-tone='danger'] > ${Title} {
+    color: ${k.bad};
+  }
+`
+
+/* тело под заголовком; длинное (код сообщения) прокручивается внутри окна */
+const Content = styled.div`
+  min-height: 0;
+  margin-top: ${k.sp3};
+  overflow: auto;
+  font: ${k.fs1} / 1.45 ${k.sans};
+  color: ${k.ink2};
+`
+
+const Acts = styled.div`
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: ${k.sp2};
+  margin-top: ${k.sp4};
+`
 
 /**
  * Внутренние расширения для Prompt (не экспортируются из пакета): Prompt рисуется поверх Dialog без изменения поведения 2c–2d.
@@ -64,7 +162,7 @@ export function Dialog(props: DialogProps): ReactElement | null {
 
 export function DialogFrame({
   open, title, onClose, children, footer, tone = 'neutral', busy = false, size = 'm', role = 'dialog', initialFocus, fallbackFocus,
-  describedBy, scrimMark, bare = false, refocusKey, watchKey,
+  className, describedBy, scrimMark, bare = false, refocusKey, watchKey,
 }: DialogFrameProps): ReactElement | null {
   const titleId = useStableId()
   const box = useRef<HTMLDivElement>(null)
@@ -121,15 +219,15 @@ export function DialogFrame({
 
   return (
     // клавиши — на подложке (role="presentation", как обёртки поповеров кита): фокус всегда внутри окна, keydown всплывает сюда
-    <div
+    <Scrim
       role="presentation"
-      className={s.scrim}
+      className={className}
       data-k-dialog=""
       data-k-prompt={scrimMark === 'prompt' ? '' : undefined}
       onMouseDown={onScrimDown}
       onKeyDown={onKeyDown}
     >
-      <div
+      <Box
         role={role}
         aria-modal="true"
         aria-labelledby={titleId}
@@ -138,14 +236,13 @@ export function DialogFrame({
         ref={box}
         // клик по тексту окна фокусирует его, а не body: Esc и ловушка Tab продолжают работать
         tabIndex={-1}
-        className={s.box}
         data-size={size}
         data-tone={tone}
       >
-        <h4 id={titleId} className={s.title}>{title}</h4>
-        {bare ? children : <div className={s.content}>{children}</div>}
-        {footer !== undefined && footer !== null && <div className={s.acts}>{footer}</div>}
-      </div>
-    </div>
+        <Title id={titleId}>{title}</Title>
+        {bare ? children : <Content>{children}</Content>}
+        {footer !== undefined && footer !== null && <Acts>{footer}</Acts>}
+      </Box>
+    </Scrim>
   )
 }

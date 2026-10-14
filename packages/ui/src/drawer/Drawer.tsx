@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { k } from '@katran/tokens'
 import { IconButton } from '../button'
-import s from './Drawer.module.css'
+import { css, keyframes, styled } from '../styled'
 
 export type DrawerProps = {
   /** Доступное имя диалога: «Платёжная инструкция № 812345» (видимый заголовок номера не содержит). */
@@ -33,7 +34,110 @@ export type DrawerProps = {
   /** keydown панели (обёртка во всю площадь внутри корня) — из любого её элемента (шапка, кнопка закрытия, содержимое, overlay); F5 деталки — спека 2d. */
   onKeyDown?: ((e: KeyboardEvent<HTMLElement>) => void) | undefined
   children?: ReactNode
+  /** Класс корня панели. */
+  className?: string | undefined
 }
+
+const slideFrames = css`
+  from {
+    opacity: 0;
+    transform: translateX(${k.drawerShift});
+  }
+`
+const slideIn = keyframes`${slideFrames}`
+
+/* Ширина — полная, с рамкой: под корнем провайдера content-box, эталон сверяется по внешней ширине */
+const Panel = styled.div`
+  box-sizing: border-box;
+  position: relative;
+  flex: none;
+  width: ${k.drawer};
+  height: 100%;
+  overflow: hidden;
+  background: ${k.paper};
+  border-left: 1px solid ${k.line};
+  box-shadow: ${k.shadow};
+  font: ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.ink};
+  pointer-events: auto;
+  animation: ${slideIn} ${k.tDrawer} ease-out both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`
+
+/* Обёртка клавиш (onKeyDown) во всю панель: позиционирована — слой overlay с inset: 0 накрывает ту же площадь, что и корень */
+const Keys = styled.div`
+  position: absolute;
+  inset: 0;
+`
+
+/* Прокрутка — внутри, а не у корня: слой overlay (Prompt) с inset: 0 накрывает видимую часть панели и не уезжает с содержимым (спека 2c §2.1) */
+const Scroll = styled.div`
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden auto;
+`
+
+/* Метка слота (эталон .slotlbl): прилипает к верху прокручиваемой части. B — warn-soft/ink2: paper на warn ниже 4.5 для мелкого текста */
+const Badge = styled.span`
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  float: right;
+  padding: 0 ${k.sp1};
+  border-radius: 0 0 0 ${k.rS};
+  font: 600 ${k.fs3} / ${k.lh3} ${k.sans};
+  letter-spacing: 0.06em;
+
+  &[data-tone='a'] {
+    background: ${k.val};
+    color: ${k.paper};
+  }
+
+  &[data-tone='b'] {
+    background: ${k.warnSoft};
+    color: ${k.ink2};
+  }
+`
+
+/* Шапка 44 = sp-2 + кнопка h-ctl-m 28 + sp-2 (эталон .dh: 10 + 26 + 8) */
+const Head = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  padding: ${k.sp2} ${k.dwPad};
+`
+
+const Title = styled.h2`
+  margin: 0;
+  font: 700 ${k.fsH2} / ${k.lh1} ${k.sans};
+  white-space: nowrap;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: 2px;
+  }
+`
+
+const Meta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  min-width: 0;
+  color: ${k.muted};
+  font-size: ${k.fs2};
+`
+
+const Close = styled(IconButton)`
+  margin-left: auto;
+  flex: none;
+`
 
 const X = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 4l8 8M12 4l-8 8" /></svg>
 
@@ -70,7 +174,7 @@ function restoreFocus(ref: ReturnRef) {
  * Корень не прокручивается: прокрутка — во внутреннем `data-part="scroll"` (метка слота, шапка, содержимое),
  * слой `overlay` — после него, поверх панели (спека 2c §2.1).
  */
-export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, children }: DrawerProps) {
+export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, children, className }: DrawerProps) {
   const head = useRef<HTMLHeadingElement>(null)
   const returnRef = useRef(returnFocus)
   // Актуализация ref — в эффекте, не в теле рендера (правило react-hooks/refs), как в Popover
@@ -85,21 +189,21 @@ export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus 
   // при закрытии — туда, откуда открыли
   useEffect(() => () => restoreFocus(returnRef), [])
   return (
-    <div role="dialog" aria-label={label} data-k-drawer="" data-slot={badge?.tone} className={s.drawer}>
+    <Panel role="dialog" aria-label={label} data-k-drawer="" data-slot={badge?.tone} className={className}>
       {/* клавиши — на обёртке role="presentation" во всю панель (как подложка Prompt): keydown любого элемента панели всплывает сюда */}
-      <div role="presentation" className={s.keys} onKeyDown={onKeyDown}>
-        <div className={s.scroll} data-part="scroll">
-          {badge && <span className={s.badge} data-tone={badge.tone}>{badge.text}</span>}
+      <Keys role="presentation" onKeyDown={onKeyDown}>
+        <Scroll data-part="scroll">
+          {badge && <Badge data-tone={badge.tone}>{badge.text}</Badge>}
           {/* div, а не header: два drawer'а дали бы два ориентира banner (axe landmark-no-duplicate-banner) */}
-          <div className={s.head} data-part="head">
-            <h2 ref={head} tabIndex={-1} className={s.title}>{title}</h2>
-            {meta && <div className={s.meta}>{meta}</div>}
-            <IconButton label="Закрыть" className={s.close} onClick={onClose}><X /></IconButton>
-          </div>
+          <Head data-part="head">
+            <Title ref={head} tabIndex={-1}>{title}</Title>
+            {meta && <Meta>{meta}</Meta>}
+            <Close label="Закрыть" onClick={onClose}><X /></Close>
+          </Head>
           {children}
-        </div>
+        </Scroll>
         {overlay}
-      </div>
-    </div>
+      </Keys>
+    </Panel>
   )
 }

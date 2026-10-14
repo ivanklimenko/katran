@@ -1,8 +1,9 @@
 import { useRef, type ReactElement, type ReactNode } from 'react'
+import { k } from '@katran/tokens'
 import { Button } from '../button'
 import { useStableId } from '../compat/useStableId'
+import { styled } from '../styled'
 import { DialogFrame } from './Dialog'
-import s from './Prompt.module.css'
 
 export type PromptTone = 'neutral' | 'danger'
 
@@ -33,7 +34,71 @@ export type PromptProps = {
    * кнопка, открывшая окно, исчезла (решение правки) — иначе фокус ушёл бы в body, вне drawer. Вызывается в момент закрытия.
    */
   fallbackFocus?: (() => HTMLElement | null | undefined) | undefined
+  /** Класс корня — подложки окна. */
+  className?: string | undefined
 }
+
+/* Подложка, окно, заголовок и ряд кнопок — у Dialog; здесь — блоки тела Prompt и его кнопки */
+
+const Note = styled.div`
+  margin: ${k.sp2} 0 0;
+  font: ${k.fs1} / 1.45 ${k.sans};
+  color: ${k.ink2};
+`
+
+/* «было → стало» (эталон .note .was/.arr/.now): значения моноширинно, стрелка служебная */
+const Was = styled.span`
+  font-family: ${k.mono};
+  color: ${k.muted};
+  text-decoration: line-through;
+  text-decoration-color: ${k.line};
+`
+
+const Arr = styled.span`
+  color: ${k.faint};
+`
+
+const Now = styled.span`
+  font-family: ${k.mono};
+  font-weight: 600;
+  color: ${k.ink};
+`
+
+/* тело (поле причины) под пояснением; строка ошибки — над кнопками, цвет bad */
+const Body = styled.div`
+  margin-top: ${k.sp3};
+`
+
+const ErrorLine = styled.div`
+  margin-top: ${k.sp2};
+  font: ${k.fs2} / 1.3 ${k.sans};
+  color: ${k.bad};
+`
+
+/*
+ * Кнопки кита высотой 30 с отступом 14 (эталон .pr button); двойной класс — выше размера кнопки (0,1,0).
+ * tone="danger" (data-tone на основной): цвет bad (эталон .pr.danger button.pri) — выше варианта primary.
+ */
+const Btn = styled(Button)`
+  && {
+    height: ${k.promptBtn};
+    padding: 0 ${k.promptBtnPx};
+  }
+
+  /* danger до :focus-visible — порядок по возрастанию специфичности (no-descending-specificity); свойства не пересекаются */
+  &&:where([data-tone='danger']) {
+    background: ${k.bad};
+    border-color: ${k.bad};
+  }
+
+  &&:focus-visible {
+    outline-offset: 2px;
+  }
+
+  &&:where([data-tone='danger']):focus-visible {
+    outline-color: ${k.bad};
+  }
+`
 
 const FIELD = 'input, textarea, select'
 
@@ -46,7 +111,7 @@ const FIELD = 'input, textarea, select'
  */
 export function Prompt({
   open, title = 'Подтвердите действие', note, okLabel = 'Подтвердить', cancelLabel = 'Отмена', tone = 'neutral', onResult,
-  children, okDisabled = false, busy = false, error, fallbackFocus,
+  children, okDisabled = false, busy = false, error, fallbackFocus, className,
 }: PromptProps): ReactElement | null {
   const noteId = useStableId()
   const body = useRef<HTMLDivElement>(null)
@@ -73,6 +138,7 @@ export function Prompt({
       busy={busy}
       initialFocus={initialFocus}
       fallbackFocus={fallbackFocus}
+      className={className}
       describedBy={hasNote ? noteId : undefined}
       scrimMark="prompt"
       bare
@@ -80,22 +146,22 @@ export function Prompt({
       watchKey={okDisabled}
       footer={(
         <>
-          <Button ref={cancel} className={s.btn} disabled={busy} onClick={() => onResult(false)}>{cancelLabel}</Button>
-          <Button
+          <Btn ref={cancel} disabled={busy} onClick={() => onResult(false)}>{cancelLabel}</Btn>
+          <Btn
             ref={ok}
             variant="primary"
             disabled={busy || okDisabled}
-            className={[s.btn, tone === 'danger' ? s.danger : ''].filter(Boolean).join(' ')}
+            data-tone={tone === 'danger' ? 'danger' : undefined}
             onClick={() => onResult(true)}
           >
             {okLabel}
-          </Button>
+          </Btn>
         </>
       )}
     >
-      {hasNote && <div id={noteId} className={s.note}>{note}</div>}
-      {children !== undefined && children !== null && <div ref={body} className={s.body}>{children}</div>}
-      {error && <div role="alert" className={s.error}>{error}</div>}
+      {hasNote && <Note id={noteId}>{note}</Note>}
+      {children !== undefined && children !== null && <Body ref={body}>{children}</Body>}
+      {error && <ErrorLine role="alert">{error}</ErrorLine>}
     </DialogFrame>
   )
 }
@@ -105,7 +171,7 @@ export function PromptChange({ was, now }: { was: string; now: string }): ReactE
   return (
     <>
       {/* пробелы — текстом вне span: иначе доступное описание склеит «было→стало» */}
-      <span className={s.was}>{was}</span>{' '}<span className={s.arr}>→</span>{' '}<span className={s.now}>{now}</span>
+      <Was>{was}</Was>{' '}<Arr>→</Arr>{' '}<Now>{now}</Now>
     </>
   )
 }

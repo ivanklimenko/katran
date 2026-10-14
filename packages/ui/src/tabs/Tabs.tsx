@@ -1,8 +1,9 @@
 import { Fragment, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { k } from '@katran/tokens'
 import { Menu } from '../overlay'
+import { css, styled } from '../styled'
 import { Counter } from '../value'
 import { fitTabs } from './fitTabs'
-import s from './Tabs.module.css'
 
 export type TabItem = {
   id: string
@@ -31,7 +32,197 @@ export type TabsProps = {
   overflow?: boolean | undefined
   /** Вид горизонтальной полосы: сегментный контрол (по умолчанию) или линия с подчёркиванием (вкладки деталки). */
   variant?: 'segment' | 'line' | undefined
+  /** Класс корня: полосы переполнения (overflow) или списка вкладок. */
+  className?: string | undefined
 }
+
+/** Вид полосы (data-view у списка, ряда замеров и полосы переполнения): из orientation и variant. */
+type View = 'segment' | 'vertical' | 'line'
+
+/* Вкладка: в списке — кнопка, в ряду замеров — span с теми же правилами (as="span") */
+const Tab = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp2};
+  border: 1px solid transparent;
+  background: none;
+  font: 500 ${k.fs1} / 1 ${k.sans};
+  color: ${k.ink2};
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background ${k.tFast}, color ${k.tFast};
+
+  &:disabled {
+    color: ${k.faint};
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+`
+
+/*
+ * Правила вида — у списка и у скрытого ряда замеров (замер ведётся теми же правилами вкладок). Вид — атрибутом data-view
+ * под :where(): специфичность прежних классов-модификаторов (.horizontal, .vertical, .line — (0,1,0); с вкладкой — (0,2,0)).
+ */
+const views = css`
+  /* горизонтальные — сегментный контрол */
+  &:where([data-view='segment']) {
+    gap: ${k.sp1};
+    padding: ${k.sp1};
+    border-radius: ${k.rM};
+    background: ${k.sunk};
+    width: max-content;
+  }
+
+  /* вертикальные — список с маркером слева */
+  &:where([data-view='vertical']) {
+    flex-direction: column;
+    gap: 0;
+    border-right: 1px solid ${k.line};
+    min-width: ${k.side};
+  }
+
+  &:where([data-view='segment']) ${Tab} {
+    height: ${k.hCtlM};
+    padding: 0 ${k.sp3};
+    border-radius: ${k.rS};
+  }
+
+  &:where([data-view='vertical']) ${Tab} {
+    height: ${k.hCtlL};
+    padding: 0 ${k.sp4};
+    border-left: 3px solid transparent;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  /* линия с подчёркиванием — вкладки деталки (эталон .tabs index.html:127–129, 263–283): 32 = высота полосы с подчёркиванием.
+     Нижнюю линию полосы рисует сам кит тенью inset, а не рамкой контейнера с margin-bottom: -1px: тень лежит под вкладками,
+     подчёркивание выбранной (2px) закрывает её без выхода за полосу — его не обрезает overflow: hidden полосы
+     переполнения, а голый px в отступе запрещён линтом. Потребитель свою нижнюю рамку под полосой не рисует. */
+  &:where([data-view='line']) {
+    gap: 0;
+    box-shadow: inset 0 -1px 0 ${k.line};
+  }
+
+  &:where([data-view='line']) ${Tab} {
+    height: ${k.tabLine};
+    padding: 0 ${k.tabPx};
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font-weight: 400;
+    color: ${k.muted};
+  }
+`
+
+const List = styled.div`
+  display: flex;
+
+  ${views}
+
+  &:where([data-view='line']) ${Tab}:hover:not(:disabled) {
+    color: ${k.ink};
+  }
+
+  &:where([data-view='line']) ${Tab}[aria-selected='true'] {
+    border-bottom-color: ${k.val};
+    font-weight: 500;
+    color: ${k.ink};
+  }
+
+  &:where([data-view='segment']) ${Tab}:hover:not(:disabled) {
+    color: ${k.ink};
+  }
+
+  &:where([data-view='vertical']) ${Tab}:hover:not(:disabled) {
+    background: ${k.hover};
+  }
+
+  &:where([data-view='segment']) ${Tab}[aria-selected='true'] {
+    background: ${k.paper};
+    border-color: ${k.line};
+    color: ${k.ink};
+  }
+
+  &:where([data-view='vertical']) ${Tab}[aria-selected='true'] {
+    border-left-color: ${k.val};
+    background: ${k.valSoft};
+    color: ${k.val};
+  }
+`
+
+/* переполнение: полоса + кнопка «••• N»; вкладки, не поместившиеся до первого замера, не вылезают */
+const Bar = styled.div`
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+
+  /* линия полосы продолжается под кнопкой «••• N» */
+  &:where([data-view='line']) {
+    box-shadow: inset 0 -1px 0 ${k.line};
+  }
+
+  & > ${List} {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+`
+
+const More = styled.button`
+  flex: none;
+  margin-left: auto;
+  padding: 0 ${k.tabPx};
+  border: 0;
+  background: none;
+  font: 600 ${k.fs1} / 1 ${k.sans};
+  letter-spacing: 0.1em;
+  color: ${k.muted};
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: ${k.ink};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+`
+
+/* разделитель групп: доступные | недоступные (эталон .tdiv) */
+const Sep = styled.span`
+  flex: none;
+  width: 0;
+  margin: ${k.sp2} ${k.sp1};
+  border-left: 1px solid ${k.line};
+`
+
+/* скрытый ряд замеров: те же правила вида и вкладок, вне потока, не виден и не кликается */
+const Measure = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+
+  ${views}
+
+  /* выбранная вкладка линией — полужирная (500) и шире обычной (400): замер ведётся по ширине выбранной,
+     чтобы вкладка, ставшая выбранной, не выросла за посчитанное место и не обрезалась краем полосы (прежде .measure.line .tab) */
+  &&:where([data-view='line']) ${Tab} {
+    font-weight: 500;
+  }
+`
 
 export const tabId = (tabs: string, item: string) => `${tabs}-tab-${item}`
 export const panelId = (tabs: string, item: string) => `${tabs}-panel-${item}`
@@ -43,7 +234,7 @@ const SEP = '__sep'
 type Fit = { avail: number; widths: Record<string, number>; more: number; gap: number; sep: number }
 
 /** WAI-ARIA Tabs с ручной активацией: стрелки двигают фокус, Enter/Space выбирает. */
-export function Tabs({ id, items, value, onChange, orientation = 'horizontal', label, overflow = false, variant = 'segment' }: TabsProps) {
+export function Tabs({ id, items, value, onChange, orientation = 'horizontal', label, overflow = false, variant = 'segment', className }: TabsProps) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const bar = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLButtonElement>(null)
@@ -100,16 +291,16 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
     return () => ro.disconnect()
   }, [overflow])
 
-  const mod = orientation === 'vertical' ? s.vertical : variant === 'line' ? s.line : s.horizontal
+  const view: View = orientation === 'vertical' ? 'vertical' : variant === 'line' ? 'line' : 'segment'
   const firstOff = overflow ? shown.findIndex((it) => it.disabled) : -1
   const list = (
-    <div role="tablist" aria-label={label} aria-orientation={orientation} className={[s.list, mod].join(' ')}>
+    <List role="tablist" aria-label={label} aria-orientation={orientation} data-view={view} className={overflow ? undefined : className}>
       {shown.map((it, i) => {
         const sel = it.id === value
         return (
           <Fragment key={it.id}>
-            {i === firstOff && i > 0 && <span className={s.sep} aria-hidden="true" />}
-            <button
+            {i === firstOff && i > 0 && <Sep aria-hidden="true" />}
+            <Tab
               ref={(el) => { refs.current[it.id] = el }}
               type="button"
               role="tab"
@@ -119,38 +310,37 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
               aria-disabled={it.disabled || undefined}
               disabled={it.disabled}
               tabIndex={it.id === stopId ? 0 : -1}
-              className={s.tab}
               data-k-tip={it.disabled ? undefined : it.hint}
               onClick={() => !it.disabled && onChange(it.id)}
               onKeyDown={(e) => onKey(e, it)}
             >
               <span>{it.label}</span>
               {it.count !== undefined && <Counter value={it.count} active={sel} />}
-            </button>
+            </Tab>
           </Fragment>
         )
       })}
-    </div>
+    </List>
   )
   if (!overflow) return list
   return (
-    <div ref={bar} className={[s.bar, mod === s.line ? s.lineBar : ''].filter(Boolean).join(' ')}>
+    <Bar ref={bar} data-view={view} className={className}>
       {list}
       {hidden.length > 0 && (
-        <button ref={moreRef} type="button" className={s.more} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={`Ещё вкладки: ${hidden.length}`} onClick={() => setMenuOpen(true)}>
+        <More ref={moreRef} type="button" aria-haspopup="menu" aria-expanded={menuOpen} aria-label={`Ещё вкладки: ${hidden.length}`} onClick={() => setMenuOpen(true)}>
           ••• {hidden.length}
-        </button>
+        </More>
       )}
-      <div className={[s.measure, mod].join(' ')} aria-hidden="true" data-k-measures="">
+      <Measure data-view={view} aria-hidden="true" data-k-measures="">
         {ordered.map((it) => (
-          <span key={it.id} data-k-measure={it.id} className={s.tab}>
+          <Tab as="span" key={it.id} data-k-measure={it.id}>
             <span>{it.label}</span>
             {it.count !== undefined && <Counter value={it.count} />}
-          </span>
+          </Tab>
         ))}
-        <span data-k-measure={MORE} className={s.more}>••• 99</span>
-        <span data-k-measure={SEP} className={s.sep} />
-      </div>
+        <More as="span" data-k-measure={MORE}>••• 99</More>
+        <Sep data-k-measure={SEP} />
+      </Measure>
       <Menu
         open={menuOpen && hidden.length > 0}
         anchor={moreRef}
@@ -164,6 +354,6 @@ export function Tabs({ id, items, value, onChange, orientation = 'horizontal', l
           onSelect: () => onChange(it.id),
         }))}
       />
-    </div>
+    </Bar>
   )
 }

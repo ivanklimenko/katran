@@ -1,8 +1,9 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { autoUpdate, computePosition, flip, offset, shift, type Placement } from '@floating-ui/dom'
+import { k } from '@katran/tokens'
 import { useKatran } from '../provider/useKatran'
-import s from './Overlay.module.css'
+import { styled } from '../styled'
 
 export type PopoverProps = {
   open: boolean
@@ -22,6 +23,22 @@ export type PopoverProps = {
   /** Куда вернуть фокус при закрытии; по умолчанию anchor (для полей с обёрткой-якорем — само поле). */
   returnFocus?: RefObject<HTMLElement | null> | undefined
 }
+
+/**
+ * Панель поповера. Части других модулей дополняют её через styled(Popover) (меню состава колонок грида, списки полей
+ * выбора): их группа определена позже этой и при равной специфичности (0,1,0) перебивает отступ и ширину.
+ */
+const Box = styled.div`
+  position: fixed;
+  z-index: ${k.zMenu};
+  min-width: ${k.menuMin};
+  padding: ${k.sp1};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rM};
+  background: ${k.paper};
+  color: ${k.ink};
+  box-shadow: ${k.shadow};
+`
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
@@ -96,7 +113,7 @@ export function Popover({ open, anchor, onClose, placement = 'bottom-start', id,
 
   if (!open || !portalRoot) return null
   return createPortal(
-    <div ref={box} id={id} role={role} aria-label={role === 'presentation' ? undefined : label} className={[s.pop, className].filter(Boolean).join(' ')}>{children}</div>,
+    <Box ref={box} id={id} role={role} aria-label={role === 'presentation' ? undefined : label} className={className}>{children}</Box>,
     portalRoot,
   )
 }

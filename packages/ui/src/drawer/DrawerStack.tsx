@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { k } from '@katran/tokens'
 import { useKatran } from '../provider/useKatran'
-import s from './Drawer.module.css'
+import { styled } from '../styled'
 
 export type DrawerStackItem = {
   /** Ключ — id документа: при сдвиге B в A панель не пересоздаётся (фокус и прокрутка остаются). */
@@ -13,7 +14,21 @@ export type DrawerStackProps = {
   items: DrawerStackItem[]
   /** Esc вне полей ввода, меню и поповеров — закрыть верхний. */
   onEscape: () => void
+  /** Класс слоя панелей (корень в портале корня провайдера). */
+  className?: string | undefined
 }
+
+/* Слой деталки: у правого края окна на всю высоту, клики мимо панелей проходят в реестр (спека 2a §3.1, эталон #pair grid.html:720) */
+const Layer = styled.div`
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: ${k.zDrawer};
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+`
 
 /**
  * У этих элементов Esc свой: поле ввода, меню, список, поповер (не сама деталка); вопрос Prompt (alertdialog — Esc = «Отмена»)
@@ -27,7 +42,7 @@ const OWN_ESCAPE = 'input, textarea, select, [contenteditable="true"], [role="me
  * Esc слушается на document в фазе захвата — раньше ячейки грида, которая гасит Esc сама; поповер
  * и меню ловят Esc тоже в захвате и тоже раньше по порядку подписки — их фокус исключён селектором.
  */
-export function DrawerStack({ items, onEscape }: DrawerStackProps) {
+export function DrawerStack({ items, onEscape, className }: DrawerStackProps) {
   const { portalRoot } = useKatran()
   const onEscapeRef = useRef(onEscape)
   useEffect(() => { onEscapeRef.current = onEscape })
@@ -49,7 +64,7 @@ export function DrawerStack({ items, onEscape }: DrawerStackProps) {
   // flex-end: порядок в DOM — b, затем a, поэтому B встаёт слева от A
   const ordered = [...items].sort((x, y) => (x.slot === y.slot ? 0 : x.slot === 'b' ? -1 : 1))
   return createPortal(
-    <div className={s.stack}>{ordered.map((it) => <Fragment key={it.key}>{it.node}</Fragment>)}</div>,
+    <Layer className={className}>{ordered.map((it) => <Fragment key={it.key}>{it.node}</Fragment>)}</Layer>,
     portalRoot,
   )
 }

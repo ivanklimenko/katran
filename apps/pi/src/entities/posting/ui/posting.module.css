@@ -125,8 +125,9 @@
   vertical-align: middle;
 }
 
-/* Поповер справочного запроса */
-.lkPop {
+/* Поповер справочного запроса. Двойной класс — выше панели поповера кита (0,1,0): лист styled-components стоит после CSS
+   приложения и при равной специфичности перебил бы отступ; до перевода модуля (срез styled, Task 9) */
+.lkPop.lkPop {
   padding: var(--k-sp-2);
   font: var(--k-fs-1) / var(--k-lh-1) var(--k-sans);
   text-align: left;

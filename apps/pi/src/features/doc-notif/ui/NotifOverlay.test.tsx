@@ -292,8 +292,10 @@ describe('NotifOverlay на странице: слой поверх настоя
     const onEscape = vi.fn()
     function Page() {
       const v = useNotifOf(model)('d1')
+      // pointer-events: auto — как у панели Drawer кита: слой DrawerStack пропускает клики мимо панелей (pointer-events: none),
+      // и правило слоя (styled-components) jsdom видит — без этого user-event не кликнул бы кнопки детали
       const node = (
-        <section role="dialog" aria-label="Деталь" data-k-drawer="">
+        <section role="dialog" aria-label="Деталь" data-k-drawer="" style={{ pointerEvents: 'auto' }}>
           <h2 tabIndex={-1}>Платёжная инструкция</h2>
           <button type="button" onClick={() => v.resend()}>Переотправить все</button>
           <button type="button" onClick={() => v.openMessage('n2', 2)}>Исходное сообщение, отправка 2</button>

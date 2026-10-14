@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { useRef, type ComponentType, type ReactElement } from 'react'
+import { useRef, type ComponentType, type ReactElement, type RefObject } from 'react'
 import { styled } from '../styled'
 import { renderK } from './renderK'
 import { Button, ButtonLink, IconButton } from '../button'
@@ -15,6 +15,9 @@ import { Pagination } from '../pagination'
 import { MiniTable } from '../table'
 import { Banner, EmptyState, ErrorState, ProgressBar, Skeleton } from '../state'
 import { CodeView } from '../code'
+import { Dialog, Menu, Popover, Prompt } from '../overlay'
+import { Drawer, DrawerStack } from '../drawer'
+import { TabPanel, Tabs } from '../tabs'
 
 /**
  * Спека styled §4.2–4.3: каждый компонент кита с корневым элементом принимает className и ставит его на корень,
@@ -38,6 +41,7 @@ const filters = {
   onApply: noop, onRevert: noop, onReset: noop, onRemove: noop,
 }
 const mini = { label: 'Статусы', columns: [{ id: 'a', header: 'А', render: (r: string) => r }], rowKey: (r: string) => r, empty: 'Пусто' }
+const tabs = [{ id: 'a', label: 'Первая', count: 2 }, { id: 'b', label: 'Вторая', disabled: true }]
 const entry = { who: 'Иванова А.', when: '24.09.2026 10:15', status: 'confirmed', diff: [{ label: '', was: 'A', now: 'B' }] }
 
 const rows: Row[] = [
@@ -95,6 +99,23 @@ const rows: Row[] = [
   ['Skeleton.Block', Skeleton.Block, { height: 20 }],
   ['Banner', Banner, { tone: 'warn', children: 'Текст' }],
   ['CodeView', CodeView, { code: '{}', language: 'json', label: 'JSON' }],
+  // наложения (Task 8): Dialog и Prompt — без портала, корень — подложка
+  ['Dialog', Dialog, { open: true, title: 'Окно', onClose: noop, children: 'Текст' }],
+  ['Prompt', Prompt, { open: true, note: 'Пояснение', onResult: noop }],
+  ['Drawer', Drawer, { label: 'Документ № 1', title: 'Документ', onClose: noop, badge: { text: 'A', tone: 'a' } }],
+  ['Tabs', Tabs, { id: 't', label: 'Разделы', items: tabs, value: 'a', onChange: noop }],
+  ['Tabs вертикальные', Tabs, { id: 't', label: 'Разделы', items: tabs, value: 'a', onChange: noop, orientation: 'vertical' }],
+  ['Tabs линией с переполнением', Tabs, { id: 't', label: 'Разделы', items: tabs, value: 'a', onChange: noop, variant: 'line', overflow: true }],
+  ['TabPanel', TabPanel, { tabsId: 't', tabId: 'a', active: true, children: 'Тело' }],
+]
+
+/** Компонент, чей корень — в портале корня провайдера: пропы от якоря и поиск корня по роли или тексту. */
+type PortalRow = [name: string, X: unknown, props: (anchor: RefObject<HTMLButtonElement>) => Record<string, unknown>, find: () => Element | null]
+const portals: PortalRow[] = [
+  ['ColumnsMenu', ColumnsMenu, (anchor) => ({ open: true, anchor, onClose: noop, columns: layout.columns, order: ['num'], hidden: [], onChange: noop }), () => screen.getByRole('dialog', { name: 'Состав колонок' })],
+  ['Popover', Popover, (anchor) => ({ open: true, anchor, onClose: noop, label: 'Панель', children: 'Тело' }), () => screen.getByRole('dialog', { name: 'Панель' })],
+  ['Menu', Menu, (anchor) => ({ open: true, anchor, onClose: noop, title: 'Сортировка', items: [{ id: 'a', label: 'Номер', hint: '↑' }, { id: 'n', label: 'подсказка', note: true }] }), () => screen.getByRole('menu', { name: 'Сортировка' })],
+  ['DrawerStack', DrawerStack, () => ({ items: [{ key: 'd1', slot: 'a', node: <span>Документ</span> }], onEscape: noop }), () => screen.getByText('Документ').parentElement],
 ]
 
 /** Корень компонента — первый элемент обёртки-хозяина (порталы поповеров рендерятся вне её). */
@@ -123,20 +144,20 @@ describe('className на корне и styled(X) у потребителя (сп
     expect(getComputedStyle(rootOf(<C {...props} />, host)).color).toBe(RECOLORED)
   })
 
-  // корень ColumnsMenu — поповер в портале, вне обёртки-хозяина: ищется по имени
-  it('ColumnsMenu: className — на корне поповера, styled(X) перебивает правила кита', () => {
-    const Recolored = styled(ColumnsMenu as Probe)`
+  // корень — поповер или слой в портале, вне обёртки-хозяина: ищется по роли или тексту
+  it.each(portals)('%s: className — на корне в портале, styled(X) перебивает правила кита', (_, X, props, find) => {
+    const Recolored = styled(X as Probe)`
       /* stylelint-disable-next-line declaration-property-value-disallowed-list */
       color: rgb(1 2 3);
     `
     const C = Recolored as unknown as ComponentType<Record<string, unknown>>
     function Host() {
       const anchor = useRef<HTMLButtonElement>(null)
-      return <><button ref={anchor} type="button">Колонки</button><C open anchor={anchor} onClose={noop} columns={layout.columns} order={['num']} hidden={[]} onChange={noop} className="probe" /></>
+      return <><button ref={anchor} type="button">Якорь</button><C {...props(anchor)} className="probe" /></>
     }
     renderK(<Host />)
-    const root = screen.getByRole('dialog', { name: 'Состав колонок' })
+    const root = find()
     expect(root).toHaveClass('probe')
-    expect(getComputedStyle(root).color).toBe(RECOLORED)
+    expect(getComputedStyle(root as Element).color).toBe(RECOLORED)
   })
 })

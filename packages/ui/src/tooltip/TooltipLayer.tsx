@@ -1,8 +1,23 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { computePosition, flip, offset, shift } from '@floating-ui/dom'
-import { durations } from '@katran/tokens'
+import { durations, k } from '@katran/tokens'
 import { useStableId } from '../compat/useStableId'
-import s from './Tooltip.module.css'
+import { styled } from '../styled'
+
+const Tip = styled.div`
+  position: fixed;
+  z-index: ${k.zTooltip};
+  max-width: ${k.tipMax};
+  padding: ${k.sp1} ${k.sp2};
+  border-radius: ${k.rS};
+  background: ${k.ink};
+  color: ${k.paper};
+  font: 400 ${k.fs2} / ${k.lh2} ${k.sans};
+  box-shadow: ${k.shadow};
+  pointer-events: none;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+`
 
 type Props = { root: RefObject<HTMLElement | null> }
 
@@ -100,5 +115,5 @@ export function TooltipLayer({ root }: Props) {
   }, [state])
 
   if (!state) return null
-  return <div ref={box} id={id} role="tooltip" className={s.tip}>{state.text}</div>
+  return <Tip ref={box} id={id} role="tooltip">{state.text}</Tip>
 }
