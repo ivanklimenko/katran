@@ -1,7 +1,5 @@
 // Корень — первым импортом: группа его стилей должна идти в листе раньше групп компонентов кита
 import { Root } from './Root'
-// Стили горячего пути — после корня: их группа в листе позже правил корня
-import { HotStyles } from './HotStyles'
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ThemeProvider, type DefaultTheme } from '../styled'
 import { densityOptions, k, type Density } from '@katran/tokens'
@@ -40,13 +38,6 @@ function write(key: string | undefined, name: string, v: string | number) {
 
 /** Тема для кода приложений: тема хоста (если есть) плюс токены кита под ключом katran. Кит её не читает. */
 const withKatran = (outer?: DefaultTheme): DefaultTheme => ({ ...outer, katran: k })
-
-/**
- * Один элемент на модуль: те же пропсы при каждом рендере провайдера — React пропускает повторный рендер
- * HotStyles, и смена темы или плотности не пересобирает лист горячего пути (createGlobalStyle иначе
- * снимает и заново вставляет свои правила на каждом рендере).
- */
-const hotStyles = <HotStyles />
 
 /** Плотность по умолчанию: 1.25 на широких мониторах (эталон: 2K при 100 % мелко). */
 function autoDensity(): Density {
@@ -95,7 +86,6 @@ export function KatranProvider(p: KatranProviderProps) {
           data-k-root=""
           style={{ '--k-density': String(density) } as React.CSSProperties}
         >
-          {hotStyles}
           {p.children}
           <LiveRegion ref={live} />
           <TooltipLayer root={rootRef} />
