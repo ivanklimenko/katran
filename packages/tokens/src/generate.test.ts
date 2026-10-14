@@ -134,6 +134,18 @@ const MAIN_NAMES = [
 ]
 const camel = (name: string) => name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 
+// Имена всех токенов, выведенные прямо из tokens.src.ts (без генератора): плотность, шрифты,
+// слои z-*, длительности t-*, размеры, цвета и тень. Новый токен в источнике попадает сюда сам.
+const SOURCE_NAMES = [
+  'density',
+  ...Object.keys(source.fonts),
+  ...Object.keys(source.z).map((n) => `z-${n}`),
+  ...Object.keys(source.durations).map((n) => `t-${n}`),
+  ...Object.keys(source.sizes),
+  ...Object.keys(source.colorsLight),
+  'shadow',
+]
+
 describe('renderVars', () => {
   const ts = renderVars(source)
   const pairs = [...ts.matchAll(/^ {2}(\w+): 'var\(--k-([a-z0-9-]+)\)',$/gm)].map((m) => [m[1] ?? '', m[2] ?? ''] as const)
@@ -146,8 +158,13 @@ describe('renderVars', () => {
     expect(ts).toContain("tFast: 'var(--k-t-fast)'")
   })
 
-  it('у каждого токена tokens.css из main есть ключ, лишних нет', () => {
-    expect(pairs.map(([, name]) => name).sort()).toEqual([...MAIN_NAMES].sort())
+  it('у каждого токена tokens.css из main есть ключ', () => {
+    const names = new Set(pairs.map(([, name]) => name))
+    for (const name of MAIN_NAMES) expect.soft(names.has(name), `--k-${name}`).toBe(true)
+  })
+
+  it('ключи k — ровно токены tokens.src.ts, лишних и пропущенных нет', () => {
+    expect(pairs.map(([, name]) => name).sort()).toEqual([...SOURCE_NAMES].sort())
   })
 
   it('ключ — имя токена в camelCase, ключи не повторяются', () => {
@@ -195,6 +212,6 @@ describe('renderDeclarations', () => {
       for (const line of block(name).split('\n')) expect(line).toMatch(/^--k-[a-z0-9-]+: [^{};]+;$/)
     }
     const all = ['base', 'sizes', 'light'].flatMap((name) => namesOf(block(name)))
-    expect(all.sort()).toEqual([...MAIN_NAMES].sort())
+    expect(all.sort()).toEqual([...SOURCE_NAMES].sort())
   })
 })
