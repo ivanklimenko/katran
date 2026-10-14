@@ -1,4 +1,3 @@
-import '@katran/tokens/tokens.css'
 export * from './provider'
 export { useStableId } from './compat/useStableId'
 export * from './button'

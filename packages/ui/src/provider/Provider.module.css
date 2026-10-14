@@ -1,11 +1,9 @@
-.root {
-  font-family: var(--k-sans);
-  font-size: var(--k-fs-1);
-  line-height: var(--k-lh-1);
-  color: var(--k-ink);
-  background: var(--k-paper);
-  min-height: 100%;
-}
+/* Изоляция от стилей хоста — до перевода всех модулей кита на styled-components остаётся здесь (срез styled, Task 2).
+   Правила компонентов на CSS Modules идут в листе ui.css после этого файла, а лист styled-components вставляется в конец
+   <head> — после всего ui.css. В шаблоне корня (Root.tsx) сброс оказался бы позже правил компонентов на CSS Modules и при
+   равной специфичности (0,1,0) перебил бы их (box-sizing ячеек грида, полей, letter-spacing подписей) — эталонные снимки
+   расходятся. Здесь сброс стоит раньше и правил CSS Modules, и всех групп styled-components. В шаблон корня он переезжает
+   вместе с удалением последнего *.module.css кита. */
 
 /* Модель коробки под корнем провайдера — content-box: типичный сброс хоста
    `*, *::before, *::after { box-sizing: border-box }` сужал колонки грида и поля ввода.
@@ -33,13 +31,4 @@
 .root :where(button, input, select, textarea) {
   text-transform: none;
   letter-spacing: normal;
-}
-
-.live {
-  position: absolute;
-  inline-size: 0;
-  block-size: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }

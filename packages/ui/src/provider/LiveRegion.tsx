@@ -1,5 +1,4 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import s from './Provider.module.css'
 
 export type LiveRegionHandle = { announce: (text: string) => void }
 
@@ -20,5 +19,5 @@ export const LiveRegion = forwardRef<LiveRegionHandle>(function LiveRegion(_, re
     const f = frame
     return () => cancelAnimationFrame(f.current)
   }, [])
-  return <div role="status" aria-live="polite" className={s.live}>{text}</div>
+  return <div role="status" aria-live="polite" data-part="live">{text}</div>
 })

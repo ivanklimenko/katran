@@ -7,14 +7,14 @@
   "scripts": {
     "dev": "pnpm --filter demo dev",
     "gen": "pnpm -r --if-present gen",
-    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts packages/tokens/src/vars.ts packages/tokens/src/declarations.ts",
+    "gen:check": "pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.ts packages/tokens/src/vars.ts packages/tokens/src/declarations.ts",
     "lint": "eslint . && stylelint \"packages/ui/src/**/*.css\" \"apps/demo/src/**/*.css\" \"apps/pi/src/**/*.css\" --allow-empty-input",
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
     "check": "pnpm gen:check && pnpm lint && pnpm test && pnpm build && pnpm check:target && pnpm release:pack --no-build",
     "release:pack": "node scripts/release-pack.mjs",
     "check:install": "node scripts/check-install.mjs",
-    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css packages/tokens/src/tokens.css packages/tokens/src/fonts.css apps/pi/dist/assets/*.css"
+    "check:target": "es-check checkBrowser packages/tokens/dist/index.js packages/ui/dist/ui.js packages/effector/dist/index.js apps/pi/dist/assets/*.js --module --checkFeatures && node scripts/check-css-target.mjs packages/ui/dist/ui.css packages/tokens/src/fonts.css apps/pi/dist/assets/*.css"
   },
   "browserslist": ["chrome >= 88"],
   "devDependencies": {
@@ -38,6 +38,9 @@
   },
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"]
+    "onlyBuiltDependencies": ["esbuild", "unrs-resolver"],
+    "overrides": {
+      "styled-components>react-is": "17.0.2"
+    }
   }
 }

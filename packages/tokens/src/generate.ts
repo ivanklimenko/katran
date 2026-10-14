@@ -2,7 +2,7 @@ import type { ColorSet, TokenSource } from './tokens.src'
 
 type Decl = readonly [name: string, value: string]
 
-// Группы объявлений --k-*: общий источник для tokens.css, declarations.ts и vars.ts
+// Группы объявлений --k-*: общий источник для declarations.ts и vars.ts
 function groups(src: TokenSource) {
   const { colorsLight, colorsDark, shadows, sizes, fonts, z, durations } = src
   const colors = (c: ColorSet, shadow: string): Decl[] => [...Object.entries(c), ['shadow', shadow]]
@@ -21,35 +21,6 @@ function groups(src: TokenSource) {
 
 const lines = (decls: readonly Decl[], indent: string) =>
   decls.map(([k, v]) => `${indent}--k-${k}: ${v};`).join('\n')
-
-export function renderCss(src: TokenSource): string {
-  const g = groups(src)
-  const dark = lines(g.dark, '    ')
-
-  return `/* Сгенерировано из tokens.src.ts — не править руками. pnpm gen */
-:root {
-${lines(g.base, '  ')}
-}
-/* Светлые цвета — и на :root, и по явному атрибуту: при системной тёмной теме
-   поддерево с [data-theme="light"] иначе осталось бы без светлой палитры */
-:root, [data-theme="light"] {
-${lines(g.light, '  ')}
-}
-/* Размеры объявляются и на корне провайдера ([data-k-root]) — иначе var(--k-density)
-   резолвится в :root и плотность провайдера не действует */
-:root, [data-k-root] {
-${lines(g.sizes, '  ')}
-}
-[data-theme="dark"] {
-${dark.replace(/^ {4}/gm, '  ')}
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-${dark}
-  }
-}
-`
-}
 
 const obj = (o: Record<string, string | number>, indent = '  ') =>
   Object.entries(o).map(([k, v]) => `${indent}'${k}': ${typeof v === 'number' ? v : `'${v}'`},`).join('\n')

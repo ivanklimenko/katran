@@ -1,4 +1,4 @@
-/** Единственный источник правды. Правится только этот файл; tokens.css и tokens.ts генерируются. */
+/** Единственный источник правды. Правится только этот файл; tokens.ts, vars.ts и declarations.ts генерируются. */
 
 export type ColorSet = Record<string, string>
 

@@ -12,13 +12,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./tokens.css": "./src/tokens.css",
     "./fonts.css": "./src/fonts.css",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "src/tokens.css",
     "src/fonts.css"
   ],
   "scripts": {
