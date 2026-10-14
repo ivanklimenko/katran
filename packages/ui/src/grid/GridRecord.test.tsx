@@ -42,6 +42,14 @@ describe('GridRecord', () => {
   it('выделение помечает обе строки', () => {
     renderK(<Table><GridRecord row={row} rowKey="r1" visible={columns} spanRows={spanRows} lead={null} rowIndex={1} selected /></Table>)
     screen.getAllByRole('row').forEach((r) => expect(r).toHaveAttribute('aria-selected', 'true'))
+    // выделение — атрибутом на tbody (горячий путь: постоянный класс k-record, модификатор — data-selected)
+    const body = screen.getByRole('rowgroup')
+    expect(body).toHaveClass('k-record')
+    expect(body).toHaveAttribute('data-selected')
+  })
+  it('невыделенная запись — без data-selected', () => {
+    renderK(<Table><GridRecord row={row} rowKey="r1" visible={columns} spanRows={[]} lead={null} rowIndex={1} /></Table>)
+    expect(screen.getByRole('rowgroup')).not.toHaveAttribute('data-selected')
   })
   it('fillSegments закрывает пропуски заглушками', () => {
     const segs = [{ def: purpose, colStart: 2, colSpan: 1 }]
@@ -93,19 +101,19 @@ describe('GridSkeleton', () => {
     renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={1} firstOrd={1} /></Table>)
     const cells = screen.getAllByRole('gridcell', { hidden: true })
     const lead = cells[0]!.firstElementChild
-    expect(lead?.className).toMatch(/leadSkeleton/)
+    expect(lead).toHaveClass('k-lead', 'k-lead-skeleton')
     const clamped = cells.map((c) => c.firstElementChild).filter((el): el is Element => el !== null)
     const numColClamp = clamped[2]! // lead(0), st(1), ячейка колонки "num" (lines: 2)
-    expect(numColClamp.className).toMatch(/clampSkeleton/)
+    expect(numColClamp).toHaveClass('k-clamp', 'k-clamp-skeleton')
     expect(numColClamp).toHaveStyle({ '--k-lines': '2' })
     const purposeClamp = clamped[clamped.length - 1]! // сегмент "purpose" в строке спанов
-    expect(purposeClamp.className).toMatch(/clampSkeleton/)
+    expect(purposeClamp).toHaveClass('k-clamp', 'k-clamp-skeleton')
     expect(purposeClamp).toHaveStyle({ '--k-lines': '1' })
   })
-  it('служебная ячейка — номера строк страницы (firstOrd + i), как в записи (класс ord)', () => {
+  it('служебная ячейка — номера строк страницы (firstOrd + i), как в записи (класс k-ord)', () => {
     renderK(<Table><GridSkeleton visible={columns} spanRows={spanRows} rows={3} firstOrd={21} /></Table>)
     const groups = screen.getAllByRole('rowgroup', { hidden: true })
-    const ords = groups.map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent)
+    const ords = groups.map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.k-ord')!.textContent)
     expect(ords).toEqual(['21', '22', '23'])
   })
   it('плашка колонки align: "right" прижата вправо (data-align на обёртке)', () => {

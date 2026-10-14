@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Skeleton } from '../state'
 import { fillSegments, type SpanCell } from './GridRecord'
-import s from './Grid.module.css'
 import type { ColumnDef } from './types'
 
 export type GridSkeletonProps<Row> = {
@@ -24,12 +23,12 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, firstOrd = 1 }: Gri
   return (
     <>
       {Array.from({ length: rows }, (_, i) => (
-        <tbody key={i} className={s.record} aria-hidden="true">
+        <tbody key={i} className="k-record" aria-hidden="true">
           <tr role="row">
-            <td role="gridcell" className={s.cell} rowSpan={span}><div className={[s.lead, s.leadSkeleton].join(' ')}><span className={s.ord}>{firstOrd + i}</span></div></td>
+            <td role="gridcell" className="k-cell" rowSpan={span}><div className="k-lead k-lead-skeleton"><span className="k-ord">{firstOrd + i}</span></div></td>
             {visible.map((c) => (
-              <td key={c.id} role="gridcell" className={s.cell} rowSpan={c.fullHeight ? span : undefined}>
-                <div className={[s.clamp, s.clampSkeleton].join(' ')} data-align={c.align} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>
+              <td key={c.id} role="gridcell" className="k-cell" rowSpan={c.fullHeight ? span : undefined}>
+                <div className="k-clamp k-clamp-skeleton" data-align={c.align} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>
                   <Skeleton.Line lines={c.lines ?? 1} width="70%" align={c.align === 'right' ? 'right' : undefined} />
                 </div>
               </td>
@@ -39,8 +38,8 @@ export function GridSkeleton<Row>({ visible, spanRows, rows, firstOrd = 1 }: Gri
             <tr key={si} role="row">
               {fillSegments(segs, tall).map((seg, k) =>
                 'filler' in seg
-                  ? <td key={`f${k}`} className={s.filler} colSpan={seg.colSpan} aria-hidden="true" />
-                  : <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan}><div className={[s.clamp, s.clampSkeleton].join(' ')} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={(seg.def.lines ?? 1) as 1 | 2} width="58%" /></div></td>,
+                  ? <td key={`f${k}`} className="k-filler" colSpan={seg.colSpan} aria-hidden="true" />
+                  : <td key={seg.def.id} role="gridcell" className="k-cell" colSpan={seg.colSpan}><div className="k-clamp k-clamp-skeleton" style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}><Skeleton.Line lines={(seg.def.lines ?? 1) as 1 | 2} width="58%" /></div></td>,
               )}
             </tr>
           ))}

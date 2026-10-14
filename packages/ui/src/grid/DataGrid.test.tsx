@@ -208,7 +208,7 @@ describe('DataGrid', () => {
     const skeleton = screen.getAllByRole('rowgroup', { hidden: true }).filter((g) => g.getAttribute('aria-hidden') === 'true')
     expect(skeleton).toHaveLength(8)
     // номера скелетона страницы 1 — 1, 2, 3…
-    const firstOrds = skeleton.slice(0, 3).map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent)
+    const firstOrds = skeleton.slice(0, 3).map((g) => within(g).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.k-ord')!.textContent)
     expect(firstOrds).toEqual(['1', '2', '3'])
   })
 
@@ -218,13 +218,18 @@ describe('DataGrid', () => {
     act(() => { vi.advanceTimersByTime(250) })
     vi.useRealTimers()
     const skeleton = screen.getAllByRole('rowgroup', { hidden: true }).filter((g) => g.getAttribute('aria-hidden') === 'true')
-    const firstOrd = within(skeleton[0]!).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.ord')!.textContent
+    const firstOrd = within(skeleton[0]!).getAllByRole('gridcell', { hidden: true })[0]!.querySelector('.k-ord')!.textContent
     expect(firstOrd).toBe('21')
+  })
+
+  it('номер записи в служебной ячейке — обычный элемент с постоянным классом k-ord (горячий путь)', () => {
+    const { container } = renderK(<DataGrid {...base({ page: 2 })} />)
+    expect(Array.from(container.querySelectorAll('tbody[data-key] .k-lead .k-ord')).map((el) => el.textContent)).toEqual(['21', '22'])
   })
 
   it('GridSkeleton без firstOrd нумерует с 1 (проп необязателен, финал 5b I5)', () => {
     const { container } = renderK(<table><GridSkeleton visible={layout.columns.slice(0, 2)} spanRows={[]} rows={2} /></table>)
-    expect(Array.from(container.querySelectorAll('.ord')).map((el) => el.textContent)).toEqual(['1', '2'])
+    expect(Array.from(container.querySelectorAll('.k-ord')).map((el) => el.textContent)).toEqual(['1', '2'])
   })
 
   it('ARIA: refreshing — aria-busy; empty и error — строка состояния с aria-rowindex=2 в пределах aria-rowcount', () => {
@@ -307,10 +312,11 @@ describe('DataGrid', () => {
       expect(box).toBeDisabled()
       const body = document.querySelector('tbody[data-key="b"]')!
       body.querySelectorAll('tr').forEach((tr) => expect(tr).not.toHaveAttribute('aria-selected', 'true'))
-      expect(body.className).not.toMatch(/selected/)
+      expect(body).not.toHaveAttribute('data-selected')
       // доступная запись при этом выбрана
       expect((screen.getByRole('checkbox', { name: 'Выбрать запись 1' }) as HTMLInputElement).checked).toBe(true)
       expect(document.querySelector('tbody[data-key="a"] tr')).toHaveAttribute('aria-selected', 'true')
+      expect(document.querySelector('tbody[data-key="a"]')).toHaveAttribute('data-selected')
     }
     const { rerender } = renderK(<DataGrid {...base({ rows, total: 2, selection: { mode: 'all', except: [] }, onSelect: () => {}, rowState })} />)
     check()

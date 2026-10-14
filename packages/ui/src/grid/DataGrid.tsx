@@ -202,7 +202,8 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                     {st?.kind === 'locked' ? <Lock /> : <Open />}
                   </IconButton>
                 )}
-                <span className={s.ord}>{ord}</span>
+                {/* номер записи — горячий путь: обычный элемент, правило k-ord в gridHot */}
+                <span className="k-ord">{ord}</span>
               </>
             )
             return (

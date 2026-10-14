@@ -1,4 +1,3 @@
-import s from './Value.module.css'
 export type StatusTone = 'flow' | 'flowl' | 'flowd' | 'bad' | 'badd' | 'warn' | 'ok' | 'okl' | 'grey'
 export type StatusDotProps = {
   tone: StatusTone
@@ -18,5 +17,5 @@ export type StatusDotProps = {
  */
 export function StatusDot({ tone, size = 'm', letter, label }: StatusDotProps) {
   const a11y = label ? { role: 'img', 'aria-label': label, 'data-k-tip': label } : { 'aria-hidden': true as const }
-  return <span className={[s.dot, s[`dot${size.toUpperCase()}`]].filter(Boolean).join(' ')} data-st={tone} {...a11y}>{letter}</span>
+  return <span className="k-dot" data-size={size} data-st={tone} {...a11y}>{letter}</span>
 }

@@ -1,5 +1,4 @@
 import { formatTimestamp } from '../format/time'
-import s from './Value.module.css'
 
 export type TimestampProps = { iso: string }
 
@@ -9,10 +8,10 @@ export type TimestampProps = { iso: string }
  */
 export function Timestamp({ iso }: TimestampProps) {
   const t = formatTimestamp(iso)
-  if (!t) return <span className={s.tm}>{iso.trim() || '—'}</span>
+  if (!t) return <span className="k-tm">{iso.trim() || '—'}</span>
   return (
-    <time className={s.tm} dateTime={iso.trim()} data-k-tip={t.full}>
-      {t.date} <b className={s.tmTime}>{t.time}</b>{t.ms && <span className={s.tmMs}>.{t.ms}</span>}
+    <time className="k-tm" dateTime={iso.trim()} data-k-tip={t.full}>
+      {t.date} <b className="k-tm-time">{t.time}</b>{t.ms && <span className="k-tm-ms">.{t.ms}</span>}
     </time>
   )
 }

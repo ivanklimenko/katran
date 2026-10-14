@@ -1,5 +1,3 @@
-import s from './Value.module.css'
-
 /** pending — правка ждёт утверждения, confirmed — утверждена, rejected — отклонена второй рукой. */
 export type EditStatus = 'pending' | 'confirmed' | 'rejected'
 export type EditMarkProps = {
@@ -16,9 +14,9 @@ export type EditMarkProps = {
  */
 export function EditMark({ tip, status }: EditMarkProps) {
   return (
-    <span role="img" aria-label={tip} data-k-tip={tip} data-status={status} className={s.mark}>
-      <span className={s.markDot} />
-      {status && <span className={s.markOk}>✓</span>}
+    <span role="img" aria-label={tip} data-k-tip={tip} data-status={status} className="k-mark">
+      <span className="k-mark-dot" />
+      {status && <span className="k-mark-ok">✓</span>}
     </span>
   )
 }

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import s from './Value.module.css'
 
 /** ok — успех, bad — ошибка/отказ, wait — в ожидании/на проверке, neutral — без оценки. */
 export type BadgeTone = 'ok' | 'bad' | 'wait' | 'neutral'
@@ -12,8 +11,8 @@ export type StatusBadgeProps = { tone: BadgeTone; children: ReactNode }
  */
 export function StatusBadge({ tone, children }: StatusBadgeProps) {
   return (
-    <span className={s.badge} data-badge={tone}>
-      <span className={s.badgeDot} aria-hidden="true" />
+    <span className="k-badge" data-badge={tone}>
+      <span className="k-badge-dot" aria-hidden="true" />
       {children}
     </span>
   )

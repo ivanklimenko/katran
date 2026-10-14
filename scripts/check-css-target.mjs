@@ -134,5 +134,7 @@ for (const file of files) {
   failed += found.length
 }
 if (!args.length) console.log(`Шаблоны styled: ${templates} в ${files.length - 1} файлах .ts/.tsx, правил @font-face: ${fontFaces}; групп объявлений токенов: ${tokenGroups}`)
+// Ноль групп — формат declarations.ts разошёлся с разбором выше: объявления токенов не проверены, это не «чисто»
+if (!args.length && tokenGroups === 0) { console.error(`${DECLARATIONS}: не найдено ни одной группы объявлений токенов — формат генератора изменился, разбор declarationParts не видит групп`); failed++ }
 if (failed) process.exit(1)
 console.log(`CSS: синтаксиса новее ${browsers.join(', ')} нет`)

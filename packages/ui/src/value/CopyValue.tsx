@@ -2,7 +2,6 @@ import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { copyText } from '../format/clipboard'
 import { useKatran } from '../provider/useKatran'
 import { useUnmountGuard } from './useUnmountGuard'
-import s from './Value.module.css'
 
 export type CopyValueProps = {
   value: string
@@ -37,7 +36,10 @@ export function CopyValue({ value, display, short, tone = 'val', size, maxWidth,
   return (
     <button
       type="button"
-      className={[s.copy, s[tone], size === 's' ? s.small : '', flash ? s.flash : '', className].filter(Boolean).join(' ')}
+      className={className ? `k-copy ${className}` : 'k-copy'}
+      data-tone={tone}
+      data-size={size}
+      data-flash={flash || undefined}
       style={style}
       tabIndex={tabIndex}
       data-k-tip={value}

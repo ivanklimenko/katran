@@ -1,4 +1,3 @@
-import s from './Value.module.css'
 export type CounterProps = {
   value: number
   active?: boolean | undefined
@@ -9,5 +8,5 @@ export type CounterProps = {
   tone?: 'accent' | undefined
 }
 export function Counter({ value, active, tone }: CounterProps) {
-  return <span className={s.counter} data-zero={value === 0 || undefined} data-active={active || undefined} data-tone={tone}>{value}</span>
+  return <span className="k-counter" data-zero={value === 0 || undefined} data-active={active || undefined} data-tone={tone}>{value}</span>
 }
