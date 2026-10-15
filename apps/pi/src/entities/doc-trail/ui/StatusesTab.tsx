@@ -1,15 +1,45 @@
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { MiniTable, Tag, Timestamp, formatDuration, timestampDiff, type MiniColumn } from '@katran/ui'
 import type { StatusEvent } from '../model/types'
 import { SLOW_MS, type TrailTabProps } from './lib'
-import { Nil } from './parts'
-import s from './trail.module.css'
+import { Code, Nil } from './parts'
+
+/* Статусы (эталон .tt .code/.suf/.fin/.reason/.dur): суффикс кода — data-suf="start|end", Δ больше 30 с — data-slow */
+const Suf = styled.span`
+  &:where([data-suf='start']) {
+    color: ${k.muted};
+  }
+
+  &:where([data-suf='end']) {
+    color: ${k.ok};
+  }
+`
+
+const Reason = styled.span`
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: ${k.fs1};
+  color: ${k.warn};
+`
+
+const Dur = styled.span`
+  font: ${k.fs3} / ${k.lh3} ${k.mono};
+  color: ${k.faint};
+
+  &:where([data-slow]) {
+    color: ${k.warn};
+  }
+`
 
 /** Код статуса (эталон codeHtml): суффикс .start серым, .end зелёным; финальный шаг процесса (….finish) — зелёным жирным. */
 function StatusCode({ code }: { code: string }) {
-  if (/\.finish$/.test(code)) return <span className={[s.code, s.fin].join(' ')}>{code}</span>
+  if (/\.finish$/.test(code)) return <Code data-fin="">{code}</Code>
   const m = /^(.*)\.(start|end)$/.exec(code)
-  if (!m) return <span className={s.code}>{code}</span>
-  return <span className={s.code}>{m[1]}<span className={m[2] === 'end' ? s.end : s.start}>.{m[2]}</span></span>
+  if (!m) return <Code>{code}</Code>
+  return <Code>{m[1]}<Suf data-suf={m[2]}>.{m[2]}</Suf></Code>
 }
 
 /** Δ от предыдущей строки; не дата или время назад — пусто. */
@@ -31,13 +61,13 @@ export function StatusesTab({ data }: TrailTabProps<StatusEvent[]>) {
     { id: 'code', header: 'Статус', width: 262, render: (r) => <StatusCode code={r.code} /> },
     {
       id: 'reason', header: 'Причина',
-      render: (r) => (r.reason ? <span className={s.reason} data-k-tip={r.reason} data-k-tip-if="truncated">{r.reason}</span> : null),
+      render: (r) => (r.reason ? <Reason data-k-tip={r.reason} data-k-tip-if="truncated">{r.reason}</Reason> : null),
     },
     {
       id: 'delta', header: 'Δ', width: 50, align: 'end',
       render: (_r, i) => {
         const d = delta(data, i)
-        return d ? <span className={[s.dur, d.slow ? s.slow : ''].filter(Boolean).join(' ')}>{d.text}</span> : null
+        return d ? <Dur data-part="dur" data-slow={d.slow ? '' : undefined}>{d.text}</Dur> : null
       },
     },
   ]

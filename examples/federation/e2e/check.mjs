@@ -1,9 +1,13 @@
 // Проверка встраивания remote в хост в настоящем Chromium (Playwright).
-// Запуск: node e2e/check.mjs [URL хоста] — по умолчанию http://localhost:5210/.
+// Запуск: node e2e/check.mjs [URL хоста] [эталон.json] — по умолчанию http://localhost:5210/.
+//   эталон.json — вывод этой же проверки на варианте без shared styled-components (REMOTE_STYLED=own,
+//   шапка remote/webpack.config.js): высота записи грида должна с ним совпасть. Без эталона проверка не пройдена.
 // Печатает JSON с результатами и завершается с кодом 1, если хоть одна проверка не прошла.
+import { readFileSync } from 'node:fs'
 import { chromium } from 'playwright'
 
 const HOST = process.argv[2] ?? 'http://localhost:5210/'
+const REFERENCE = process.argv[3]
 const results = []
 const ok = (name, pass, details) => results.push({ name, pass: !!pass, ...(details === undefined ? {} : { details }) })
 
@@ -41,6 +45,15 @@ if (await hostError.count()) {
 }
 ok('экран смонтирован в хосте', await page.locator('[data-host-slot] [data-k-root] table[role=grid]').count() === 1)
 
+// --- тема хоста: ThemeProvider хоста над remote, KatranProvider её не затирает (спека styled §4.4, §4.7) ---
+// Элемент remote под KatranProvider читает useTheme(): hostMark — из темы хоста, katran — токены кита.
+// При своей копии styled-components в remote (REMOTE_STYLED=own) контекст темы хоста другой — hostMark не виден.
+await step('тема хоста', async () => {
+  const mark = page.locator('[data-k-root] [data-host-mark]')
+  const seen = { hostMark: await mark.getAttribute('data-host-mark'), katran: await mark.getAttribute('data-katran'), text: await mark.innerText() }
+  ok('тема хоста видна под KatranProvider: theme.hostMark = host, theme.katran — токены кита', seen.hostMark === 'host' && seen.katran === 'var(--k-paper)' && /host/.test(seen.text), seen)
+})
+
 // --- один React, один effector ---
 await step('рантайм: React/effector', async () => {
   const rt = await page.evaluate(() => {
@@ -58,12 +71,15 @@ await step('рантайм: React/effector', async () => {
       sameEffector: s.hostEffector.createStore === s.remoteEffector.createStore,
       hostEffectorVersion: s.hostEffector.version,
       remoteEffectorVersion: s.remoteEffector.version,
+      sameStyled: !!s.hostStyled && !!s.remoteStyled && s.hostStyled.ThemeContext === s.remoteStyled.ThemeContext,
+      styledSheets: document.querySelectorAll('style[data-styled]').length,
     }
   })
   ok('один рендерер react-dom 17.0.2', rt.renderers.length === 1 && rt.renderers[0] === 'react-dom@17.0.2', rt.renderers)
   ok('React remote = React хоста (17.0.2, тот же модуль)', rt.sameCreateElement && rt.sameUseState && rt.remoteReact === '17.0.2', rt)
   ok('jsx-runtime remote создаёт элементы React 17', rt.jsxIsReact17Element, rt.jsxElementType)
   results.push({ name: 'effector remote = effector хоста', info: { same: rt.sameEffector, host: rt.hostEffectorVersion, remote: rt.remoteEffectorVersion } })
+  results.push({ name: 'styled-components remote = styled-components хоста', info: { same: rt.sameStyled, sheets: rt.styledSheets } })
 })
 
 // --- единицы хоста в remote ---
@@ -87,6 +103,10 @@ await step('геометрия', async () => {
   const big = await h('tbody[data-key]')
   ok('плотность 125 % → запись ×1.25', Math.abs(big - record * 1.25) <= 2, { big })
   await page.getByRole('button', { name: '100 %' }).click()
+  // Высота записи — и в итог (её читает следующий прогон как эталон), и сравнение с эталоном варианта без shared styled-components
+  results.push({ name: 'высота записи', info: { record, big } })
+  const ref = REFERENCE ? readReport(REFERENCE).find((r) => r.name === 'высота записи')?.info : undefined
+  ok('запись грида той же высоты, что без shared styled-components', !!ref && ref.record === record && ref.big === big, { record, big, reference: REFERENCE ? (ref ?? 'в эталоне нет высоты записи') : 'эталон не задан' })
 })
 
 // --- стили хоста не протекают в кит ---
@@ -106,6 +126,21 @@ await step('стили хоста → кит', async () => {
   })
   results.push({ name: 'вычисленные стили кита внутри хоста', info: kitStyle })
   ok('шрифты IBM Plex загружены (нет ошибок загрузки)', kitStyle.fontsError.length === 0 && kitStyle.fontsLoaded.some((f) => f.includes('IBM Plex Sans')), { loaded: kitStyle.fontsLoaded.length, errors: kitStyle.fontsError })
+})
+
+// --- шрифты KatranFonts: адреса new URL(…, import.meta.url) из @katran/tokens после сборки remote ---
+// Начертание грузится явно текстом с кириллицей и латиницей: оба подмножества Sans 600 загружены с адреса remote
+// (publicPath 'auto'; в prod — другой origin, нужен CORS), document.fonts.check — true (как в pnpm check:install).
+await step('шрифты KatranFonts', async () => {
+  const fonts = await page.evaluate(async () => {
+    const faces = await document.fonts.load('600 12px "IBM Plex Sans"', 'Проверка Check')
+    return {
+      faces: faces.map((f) => `${f.family} ${f.weight} ${f.status}`),
+      check: document.fonts.check('600 12px "IBM Plex Sans"', 'Проверка Check'),
+      woff2: performance.getEntriesByType('resource').map((e) => e.name).filter((n) => n.endsWith('.woff2')),
+    }
+  })
+  ok('KatranFonts: Sans 600 (кириллица и латиница) загружен, document.fonts.check — true', fonts.check && fonts.faces.length === 2 && fonts.faces.every((f) => f.endsWith('loaded')), fonts)
 })
 
 // --- стили кита не протекают в хост ---
@@ -141,7 +176,7 @@ await step('панель фильтров', async () => {
   await page.getByRole('button', { name: 'Применить' }).click()
   const chips = await page.getByRole('list', { name: 'Применённые условия' }).innerText().catch(() => '')
   ok('панель фильтров применяет условие', /Ромашка/.test(chips) && /Ошибка/.test(chips), chips.replace(/\s+/g, ' '))
-  await page.getByRole('button', { name: 'Сбросить' }).click()
+  await page.getByRole('button', { name: 'Сбросить', exact: true }).click()
   await page.waitForFunction(() => !document.querySelector('table[role=grid]').getAttribute('aria-busy'))
 })
 
@@ -218,6 +253,14 @@ await step('тёмная тема ОС', async () => {
 })
 
 await finish()
+
+/** Итог прошлого прогона: JSON и строка-сводка после него (так его пишет scripts/matrix.sh). */
+// Отчёт — JSON-массив, за ним итоговая строка; matrix.sh пишет в файл и stderr (2>&1), поэтому до и после
+// массива бывают предупреждения сборки и браузера — массив ищется по началу '[\n' и концу '\n]'.
+function readReport(file) {
+  const text = readFileSync(file, 'utf8')
+  return JSON.parse(text.slice(text.indexOf('[\n'), text.lastIndexOf('\n]') + 2))
+}
 
 async function finish() {
   results.push({ name: 'консоль', info: console_ })

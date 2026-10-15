@@ -1,4 +1,4 @@
-import { KatranProvider } from '@katran/ui'
+import { KatranFonts, KatranProvider } from '@katran/ui'
 import { Shell } from './Shell'
 import { useRoute } from './router'
 import { TokensPage } from './pages/TokensPage'
@@ -16,8 +16,11 @@ export function App() {
   const route = useRoute()
   const Page = pages[route]
   return (
-    <KatranProvider storageKey="katran-demo">
-      <Shell route={route}><Page /></Shell>
-    </KatranProvider>
+    <>
+      <KatranFonts />
+      <KatranProvider storageKey="katran-demo">
+        <Shell route={route}><Page /></Shell>
+      </KatranProvider>
+    </>
   )
 }

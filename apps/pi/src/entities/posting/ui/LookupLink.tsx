@@ -1,7 +1,71 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Button, Popover, Skeleton, dimClass, exitOnEdgeTab, useStableId } from '@katran/ui'
 import type { LookupView } from '../../../shared/lib/detail'
-import s from './posting.module.css'
+import { Sr } from '../../../shared/ui'
+
+/* Кнопка-ссылка справочного запроса (эталон a.lnk, grid.html:88–89; сверка Д85): цвет --k-val, подчёркивание при наведении.
+   data-framed — «Курс» рядом с суммой 32A, с рамкой (эталон .amt .lnk, grid.html:158) */
+const LinkBtn = styled.button`
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 500 ${k.fsKv} / ${k.lh2} ${k.sans};
+  color: ${k.val};
+  white-space: nowrap;
+  cursor: pointer;
+
+  /* модификатор до состояний — порядок по возрастанию специфичности (no-descending-specificity); свойства не пересекаются */
+  &:where([data-framed]) {
+    margin-left: ${k.sp2};
+    padding: 0 ${k.sp1};
+    border: 1px solid ${k.line};
+    border-radius: ${k.rS};
+    vertical-align: middle;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: 1px;
+  }
+`
+
+/* Поповер справочного запроса — styled(Popover): группа приложения определена позже панели поповера кита (0,1,0)
+   и перебивает её отступ порядком групп */
+const LkPop = styled(Popover)`
+  padding: ${k.sp2};
+  font: ${k.fs1} / ${k.lh1} ${k.sans};
+  text-align: left;
+  white-space: normal;
+`
+
+/* фокус ставит сам поповер (программно) — обводка не нужна, как у заголовка drawer */
+const LkBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+
+  &:focus {
+    outline: none;
+  }
+`
+
+const LkSkeleton = styled.div`
+  min-width: ${k.menuMin};
+`
+
+const LkError = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  margin-top: ${k.sp2};
+  color: ${k.bad};
+`
 
 export type LookupLinkProps = {
   /** Текст кнопки-ссылки и доступное имя поповера: «Курс», «Проверить баланс». */
@@ -56,22 +120,22 @@ export function LookupLink({ label, view, framed = false, children }: LookupLink
   }
   return (
     <>
-      <button
+      <LinkBtn
         ref={btn}
         type="button"
-        className={[s.lnk, framed ? s.lnkFramed : ''].filter(Boolean).join(' ')}
+        data-framed={framed ? '' : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={toggle}
       >
         {label}
-      </button>
-      <Popover open={open} anchor={btn} onClose={() => setOpen(false)} id={id} label={label} manualFocus className={s.lkPop}>
+      </LinkBtn>
+      <LkPop open={open} anchor={btn} onClose={() => setOpen(false)} id={id} label={label} manualFocus>
         <div role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, btn, () => setOpen(false))}>
-          <div ref={body} tabIndex={-1} className={s.lkBody}>{children}</div>
+          <LkBody ref={body} tabIndex={-1}>{children}</LkBody>
         </div>
-      </Popover>
+      </LkPop>
     </>
   )
 }
@@ -86,10 +150,10 @@ export type LookupBodyProps<T> = {
 /** Отказ запроса: текст (role="alert") и «Повторить». */
 function LookupError({ text, onRetry }: { text: string | null; onRetry: () => void }) {
   return (
-    <div className={s.lkError}>
+    <LkError>
       <span role="alert">{text}</span>
       <Button size="s" onClick={onRetry}>Повторить</Button>
-    </div>
+    </LkError>
   )
 }
 
@@ -103,10 +167,10 @@ export function LookupBody<T>({ view, lines = 2, children }: LookupBodyProps<T>)
     if (view.state === 'error') return <LookupError text={view.error} onRetry={view.retry} />
     // idle — load уже отправлен открытием, ответа ещё нет
     return (
-      <div className={s.lkSkeleton} aria-busy="true">
-        <span className={s.sr}>Загрузка</span>
+      <LkSkeleton aria-busy="true">
+        <Sr>Загрузка</Sr>
         <Skeleton.Line lines={lines} width="60%" />
-      </div>
+      </LkSkeleton>
     )
   }
   const busy = view.state === 'loading'

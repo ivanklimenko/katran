@@ -8,7 +8,7 @@ import { createRegistry } from './createRegistry'
 type Row = { id: string; status: string }
 const layout: RecordLayout<Row> = { rowKey: (r) => r.id, columns: [{ id: 'status', render: (r) => r.status }] }
 
-function setup(metaFails = false) {
+function setup(metaFails = false, pageSize?: number) {
   const calls = { search: 0, meta: 0 }
   const ports = {
     searchFx: createEffect<GridQuery, GridPage<Row>, ApiError>(async () => { calls.search += 1; return { rows: [{ id: 'a', status: 'DONE' }], total: 1 } }),
@@ -17,11 +17,19 @@ function setup(metaFails = false) {
     filterMetaFx: createEffect<void, FilterMeta, ApiError>(async () => { calls.meta += 1; if (metaFails) throw new ApiError(500, null, 'сбой'); return { fields: [] } }),
   }
   const lifecycle = createPageLifecycle()
-  const r = createRegistry({ id: 'docs', layout, ports, lifecycle, persist: memoryPersist() })
+  const r = createRegistry({ id: 'docs', layout, ports, lifecycle, pageSize, persist: memoryPersist() })
   return { r, calls, lifecycle, scope: fork() }
 }
 
 describe('createRegistry', () => {
+  it('размер страницы: 20; регулятор стенда ?size=N — начальный размер; pageSize конфигурации важнее', () => {
+    expect(fork().getState(setup().r.grid.$pageSize)).toBe(20)
+    history.replaceState(null, '', '/?size=200')
+    try {
+      expect(fork().getState(setup().r.grid.$pageSize)).toBe(200)
+      expect(fork().getState(setup(false, 50).r.grid.$pageSize)).toBe(50)
+    } finally { history.replaceState(null, '', '/') }
+  })
   it('pageOpened: запрос реестра и один раз каталог за несколько открытий', async () => {
     const { r, calls, lifecycle, scope } = setup()
     await allSettled(lifecycle.pageOpened, { scope })

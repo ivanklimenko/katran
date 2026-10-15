@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import { axe } from 'jest-axe'
 import { renderK } from '../test/renderK'
+import { isSrOnly } from '../test/srOnly'
 import { KeyValueList, type KeyValueItem } from './KeyValueList'
 
 // Данные — вымышленные, по форме групп «Доп. поля» и «Комплаенс» эталона (XTAB, index.html:650–667; compHtml, 1263–1270)
@@ -34,7 +35,7 @@ describe('KeyValueList (спека 2b §2)', () => {
       const dd = row(key).querySelector('dd')!
       expect(dd).toHaveAttribute('data-empty')
       expect(within(dd).getByText('—')).toHaveAttribute('aria-hidden', 'true')
-      expect(within(dd).getByText('не заполнено')).toHaveClass('sr')
+      expect(isSrOnly(within(dd).getByText('не заполнено'))).toBe(true)
     }
     expect(row('20').querySelector('dd')).not.toHaveAttribute('data-empty')
   })
@@ -52,10 +53,12 @@ describe('KeyValueList (спека 2b §2)', () => {
 
   it('моноширинное значение и приписка справа', () => {
     renderK(<KeyValueList items={refs} />)
-    expect(screen.getByText('FX2609220000417')).toHaveClass('kvMono')
+    expect(screen.getByText('FX2609220000417')).toHaveAttribute('data-mono')
+    expect(screen.getByText('3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b')).toHaveAttribute('data-mono')
     // обёртка значения сжимается в колонке (min-width: 0) — обрезка внутри неё работает; геометрия — e2e
-    expect(screen.getByText('UETR').nextElementSibling?.firstElementChild).toHaveClass('kvText')
-    expect(screen.getByText('15 симв.')).toHaveClass('kvAside')
+    expect(getComputedStyle(screen.getByText('UETR').nextElementSibling!.firstElementChild!).minWidth).toBe('0px')
+    // приписка прижата вправо строки значения
+    expect(getComputedStyle(screen.getByText('15 симв.')).marginLeft).toBe('auto')
     expect(screen.getByText('15 симв.').closest('dd')).toBe(row('20').querySelector('dd'))
   })
 
@@ -67,13 +70,13 @@ describe('KeyValueList (спека 2b §2)', () => {
     expect(document.querySelector('dl')).toHaveStyle({ '--k-kv-label': 'calc(40px * var(--k-density))' })
   })
 
-  it('две колонки: dt/dd прямо в сетке .kvs, без рамки; ширина подписи — только заданная', () => {
+  it('две колонки: dt/dd прямо в сетке, без рамки; ширина подписи — только заданная', () => {
     const { container } = renderK(<KeyValueList columns={2} items={refs} />)
     const dl = container.querySelector('dl')!
-    expect(dl).toHaveClass('kvs')
+    expect(getComputedStyle(dl).display).toBe('grid')
     expect(Array.from(dl.children).map((el) => el.tagName)).toEqual(['DT', 'DD', 'DT', 'DD', 'DT', 'DD', 'DT', 'DD'])
     expect(dl.getAttribute('style')).toBeNull()
-    expect(dl.parentElement).toHaveClass('kvPlain')
+    expect(dl.parentElement).toHaveAttribute('data-columns', '2')
   })
 
   it('wide: в две колонки — dd с data-wide (значение до конца строки); в одну колонку не влияет', () => {

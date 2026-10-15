@@ -1,9 +1,11 @@
+// Корень — первым импортом: группа его стилей должна идти в листе раньше групп компонентов кита
+import { Root } from './Root'
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
-import { densityOptions, type Density } from '@katran/tokens'
+import { ThemeProvider, type DefaultTheme } from '../styled'
+import { densityOptions, k, type Density } from '@katran/tokens'
 import { KatranContext, type Theme } from './useKatran'
 import { LiveRegion, type LiveRegionHandle } from './LiveRegion'
 import { TooltipLayer } from '../tooltip/TooltipLayer'
-import s from './Provider.module.css'
 
 export type KatranProviderProps = {
   children: ReactNode
@@ -32,6 +34,9 @@ function write(key: string | undefined, name: string, v: string | number) {
   if (!key) return
   try { localStorage.setItem(`${key}:${name}`, String(v)) } catch { /* приватный режим — молча */ }
 }
+
+/** Тема для кода приложений: тема хоста (если есть) плюс токены кита под ключом katran. Кит её не читает. */
+const withKatran = (outer?: DefaultTheme): DefaultTheme => ({ ...outer, katran: k })
 
 /** Плотность по умолчанию: 1.25 на широких мониторах (эталон: 2K при 100 % мелко). */
 function autoDensity(): Density {
@@ -72,17 +77,18 @@ export function KatranProvider(p: KatranProviderProps) {
 
   return (
     <KatranContext.Provider value={value}>
-      <div
-        ref={(el) => { rootRef.current = el; setPortalRoot(el) }}
-        className={s.root}
-        data-theme={theme === 'system' ? undefined : theme}
-        data-k-root=""
-        style={{ '--k-density': String(density) } as React.CSSProperties}
-      >
-        {p.children}
-        <LiveRegion ref={live} />
-        <TooltipLayer root={rootRef} />
-      </div>
+      <ThemeProvider theme={withKatran}>
+        <Root
+          ref={(el: HTMLDivElement | null) => { rootRef.current = el; setPortalRoot(el) }}
+          data-theme={theme === 'system' ? undefined : theme}
+          data-k-root=""
+          style={{ '--k-density': String(density) } as React.CSSProperties}
+        >
+          {p.children}
+          <LiveRegion ref={live} />
+          <TooltipLayer root={rootRef} />
+        </Root>
+      </ThemeProvider>
     </KatranContext.Provider>
   )
 }

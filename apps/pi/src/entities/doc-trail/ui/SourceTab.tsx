@@ -1,8 +1,7 @@
 import { CodeView, Disclosure } from '@katran/ui'
 import type { SourceTexts } from '../model/types'
 import { accordionOf, charsLabel, codeLanguage, type TrailTabProps } from './lib'
-import { HeadNote, TrailEmpty } from './parts'
-import s from './trail.module.css'
+import { HeadNote, Stack, TrailEmpty } from './parts'
 
 /**
  * Вкладки «Исходный текст» (валюта) и «ED244» (рубль) — эталон sourceHtml, index.html:1246: аккордеон на ключ,
@@ -14,7 +13,7 @@ export function SourceTab({ data, ctx }: TrailTabProps<SourceTexts>) {
   if (!names.length) return <TrailEmpty text="Исходного текста нет" />
   const accordion = accordionOf(ctx, names.filter((k) => Boolean(data[k])))
   return (
-    <div className={s.stack}>
+    <Stack>
       {names.map((name) => {
         const text = data[name] ?? ''
         if (!text) return <Disclosure key={name} title={name} mono empty emptyText="нет" />
@@ -24,6 +23,6 @@ export function SourceTab({ data, ctx }: TrailTabProps<SourceTexts>) {
           </Disclosure>
         )
       })}
-    </div>
+    </Stack>
   )
 }

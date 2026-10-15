@@ -44,7 +44,8 @@ describe('виды правки валюты (план 2c, Task 9)', () => {
     expect(f57).toHaveTextContent('Кузнецов Д. А., Иванова М. П.')
     await userEvent.click(pen('57')!)
     expect(edit.open).toHaveBeenCalledWith('field:57', d.fields['57'])
-  })
+    // двенадцать поисков по роли во всей «Общих данных» — около 4,5 с в полном прогоне (у базы тоже), у порога 5 с по умолчанию
+  }, 20_000)
 
   it('открытый редактор 57: «Как есть» — исходное, черновик — edit.draft, правило подвала', async () => {
     const edit = ctx({ editing: 'field:57', draft: { opt: 'A', lines: ['N'.repeat(36), 'VKRBRU8KXXX'] }, error: 'Строка 1: 36 символов, максимум 35' })

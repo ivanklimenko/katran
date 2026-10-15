@@ -13,12 +13,20 @@ describe('ButtonLink', () => {
     expect(a).toHaveAttribute('target', '_blank')
     expect(a).toHaveAttribute('rel', 'noopener')
   })
-  it('классы варианта и размера — те же, что у Button', () => {
+  it('вариант и размер — те же атрибуты, что у Button', () => {
     renderK(<><Button variant="primary" size="s">Кнопка</Button><ButtonLink href="#x" variant="primary" size="s">Ссылка</ButtonLink></>)
-    expect(screen.getByRole('link')).toHaveClass(...screen.getByRole('button').className.split(' '))
+    for (const el of [screen.getByRole('button'), screen.getByRole('link')]) {
+      expect(el).toHaveAttribute('data-variant', 'primary')
+      expect(el).toHaveAttribute('data-size', 's')
+    }
   })
   it('по умолчанию ghost и размер m, как у Button', () => {
     renderK(<><Button>Кнопка</Button><ButtonLink href="#x">Ссылка</ButtonLink></>)
+    for (const el of [screen.getByRole('button'), screen.getByRole('link')]) {
+      expect(el).toHaveAttribute('data-variant', 'ghost')
+      expect(el).toHaveAttribute('data-size', 'm')
+    }
+    // одни и те же правила стилей: ссылка — тот же styled-компонент, что и кнопка
     expect(screen.getByRole('link').className).toBe(screen.getByRole('button').className)
   })
   it('ref указывает на <a>, className добавляется', () => {

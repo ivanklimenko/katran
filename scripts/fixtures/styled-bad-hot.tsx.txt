@@ -1,0 +1,19 @@
+// Образец для scripts/check-style-rules.mjs — не код кита: копируется в packages/ui/src/value (горячий путь)
+// на время проверки. «ждём: …» — нарушения, которые проверка обязана найти; «чисто» — строка без замечаний.
+/* eslint-disable import-x/no-duplicates -- импорты разнесены по строкам ради меток */
+import styled from 'styled-components' // ждём: eslint:hot
+import kitStyled from '../styled' // ждём: eslint:hot
+import { styled as namedStyled } from '../styled' // ждём: eslint:hot
+import { css, createGlobalStyle } from '../styled' // чисто
+import { k } from '@katran/tokens'
+
+export { styled, kitStyled, namedStyled }
+
+// Горячий путь — только фрагменты css и createGlobalStyle, классы k-…
+export const hot = css`
+  .k-field-main { color: ${k.ink}; } /* чисто */
+  .k-field-main:has(b) { color: ${k.ink}; } /* ждём: target:css-has */
+`
+export const HotGlobal = createGlobalStyle`
+  :where([data-k-root]) { ${hot} } /* чисто */
+`

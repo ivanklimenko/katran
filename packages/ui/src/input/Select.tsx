@@ -1,5 +1,5 @@
 import { forwardRef, type SelectHTMLAttributes } from 'react'
-import s from './Input.module.css'
+import { FieldBox, FieldSelect } from './parts'
 
 export type SelectOption = { value: string; label: string; disabled?: boolean | undefined }
 export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
@@ -12,11 +12,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { options, size = 'm', placeholder, className, ...rest }, ref,
 ) {
   return (
-    <span className={[s.field, s[`size${size.toUpperCase()}`], className].filter(Boolean).join(' ')}>
-      <select ref={ref} className={s.select} {...rest}>
+    <FieldBox className={className} data-size={size}>
+      <FieldSelect ref={ref} {...rest}>
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
-      </select>
-    </span>
+      </FieldSelect>
+    </FieldBox>
   )
 })

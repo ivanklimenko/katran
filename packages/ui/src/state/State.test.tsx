@@ -5,7 +5,7 @@ import { renderK } from '../test/renderK'
 import { EmptyState } from './EmptyState'
 import { ErrorState } from './ErrorState'
 import { ProgressBar } from './ProgressBar'
-import { Skeleton } from './Skeleton'
+import { Skeleton, dimClass } from './Skeleton'
 
 describe('состояния', () => {
   it('скелетон скрыт от скринридера и рисует N строк', () => {
@@ -13,6 +13,18 @@ describe('состояния', () => {
     const root = container.querySelector('[aria-hidden="true"]')!
     expect(root).toHaveAttribute('aria-hidden', 'true')
     expect(root.children).toHaveLength(3)
+  })
+  it('dimClass — постоянный класс k-dim, правило под корнем провайдера приглушает элемент', () => {
+    expect(dimClass).toBe('k-dim')
+    renderK(<span className={dimClass}>Данные</span>)
+    const st = getComputedStyle(screen.getByText('Данные'))
+    expect(st.opacity).toBe('0.55')
+    expect(st.pointerEvents).toBe('none')
+  })
+  it('высота строки скелетона — атрибутом data-h', () => {
+    const { container } = renderK(<Skeleton.Line lines={2} height="s" />)
+    const bars = container.querySelectorAll('[aria-hidden="true"] > span')
+    expect([...bars].map((b) => b.getAttribute('data-h'))).toEqual(['s', 's'])
   })
   it('прогресс с именем', () => {
     renderK(<ProgressBar label="Обновление данных" />)

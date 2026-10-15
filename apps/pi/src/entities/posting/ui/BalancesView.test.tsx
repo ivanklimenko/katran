@@ -115,6 +115,19 @@ describe('«Проверить баланс» в блоке «Транзакци
     expect(head).toHaveAttribute('aria-expanded', 'false')
   })
 
+  it('R19: поповер справочного запроса — styled(Popover) приложения перебивает отступ панели кита порядком групп, без удвоения', async () => {
+    renderTx(viewOf({ state: 'ready', value: BAL }))
+    await userEvent.click(screen.getByRole('button', { name: 'Проверить баланс' }))
+    const pop = screen.getByRole('dialog', { name: 'Проверить баланс' })
+    // jsdom не вычисляет var(): сверяем лист — правила отступа панели одиночным классом (0,1,0), последнее по порядку — приложения
+    const classes = [...pop.classList].map((c) => `.${c}`)
+    const paddings = [...document.styleSheets]
+      .flatMap((sheet) => [...sheet.cssRules])
+      .filter((r): r is CSSStyleRule => r instanceof CSSStyleRule && classes.includes(r.selectorText) && /padding:/.test(r.cssText))
+      .map((r) => /padding: ([^;]+);/.exec(r.cssText)?.[1])
+    expect(paddings).toEqual(['var(--k-sp-1)', 'var(--k-sp-2)'])
+  })
+
   it('Esc в поповере закрывает только его: деталь открыта, фокус на ссылке', async () => {
     const t = renderTx(viewOf({ state: 'ready', value: BAL }))
     const link = screen.getByRole('button', { name: 'Проверить баланс' })

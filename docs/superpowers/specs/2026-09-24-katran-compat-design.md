@@ -26,7 +26,7 @@
 
 ### 2.2. Сборка и поставка
 
-- `@katran/ui`, `@katran/tokens`, `@katran/effector` публикуются **собранными**: `dist` (ESM, один файл) + `d.ts`, `publishConfig` переключает `main`/`types`/`exports` на `dist`. В монорепо пакеты по-прежнему указывают на `src` (разработка без пересборки). `@katran/effector` перестаёт быть `private`.
+- `@katran/ui`, `@katran/tokens`, `@katran/effector` публикуются **собранными**: `dist` (ESM, один файл) + `d.ts`, `main`/`types`/`exports` манифеста указывают на `dist`. В монорепо пакеты подключаются исходниками через условие экспорта `katran-source` (разработка без пересборки; до 13.10.2026 — `publishConfig`, который применяет только pnpm, отчего публикация через npm ломала пакет). `@katran/effector` перестаёт быть `private`.
 - Таргет сборки — `chrome88` (`build.target` и `build.cssTarget`); без него Vite 8 собирает под `baseline-widely-available` (Chromium 107+).
 - `@katran/ui` собирается с **classic JSX runtime**: элементы создаёт `createElement` того React, что пришёл из общего доступа хоста; `dist` не импортирует `react/jsx-runtime` (у React 17 нет поля `exports`, и webpack 5 в ESM-пакете не разрешает `react/jsx-runtime` без `.js`).
 - Корневое поле `browserslist: ["chrome >= 88"]` — единственный источник планки. Проверка `pnpm check:target` (входит в `pnpm check`): `es-check` по `dist` трёх пакетов (синтаксис и API новее планки) и `scripts/check-css-target.mjs` по CSS (`doiuse` + регулярки для того, чего нет в базе caniuse). Осознанное исключение — `accent-color` (Chromium 93): в 88 чекбокс системного цвета, разметка та же.
@@ -40,10 +40,12 @@
 - Ячейки грида без рамок по умолчанию (`.table :where(td, th) { border: 0 }`) — глобальное `td, th { border }` хоста не протекает в запись.
 - Контролы под корнем сбрасывают `text-transform` и `letter-spacing` (глобальная типографика `button` хоста).
 - Фокус ячеек — только внутри `.table`: глобальный `td[tabindex]:focus-visible` красил бы таблицы хоста.
-- Наружу кит выпускает только `--k-*` на `:root` и `@font-face` IBM Plex — это допустимо.
+- Наружу кит выпускает только `--k-*` на `:root` и `@font-face` IBM Plex — это допустимо. *С `0.2.0` (спека 2026-10-13) `--k-*` объявляются только под корнем провайдера, `@font-face` — компонент `KatranFonts`.*
 - Демо проверяет изоляцию режимом `?hostile`: подключается файл глобальных стилей «враждебного хоста», e2e сверяет геометрию записи, ширину колонки, высоту кнопки (= токену высоты контрола) и то, что пункт меню не шире поповера — и на чистой странице, и во враждебном хосте. Предусловие каждого теста `?hostile` — стили хоста действительно применились (шрифт `body` — Georgia).
 
 ### 2.4. Контракт для remote команды
+
+> **Стилизация отменена спекой 2026-10-13** (`2026-10-13-katran-styled-design.md`): CSS Modules и импорты CSS заменены styled-components 5 (shared singleton хоста), шрифты — `KatranFonts`; ниже — состояние на `0.1.x`, актуальное подключение — `docs/consuming.md`.
 
 Документ `docs/consuming.md`: установка, импорт `@katran/tokens/fonts.css` и `@katran/ui/styles.css`, `KatranProvider` с `storageKey`, shared-конфиг, CORS для шрифтов, ErrorBoundary у хоста. Рекомендуемый shared (проверен макетом, 21/21):
 

@@ -43,7 +43,8 @@ describe('DocRegistry', () => {
     expect(screen.getByRole('group', { name: 'Статусы' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: /Ошибка/ })).toHaveTextContent('1'))
     expect(await axe(container)).toHaveNoViolations()
-  })
+    // axe по всему реестру — около 4 с в полном прогоне (у базы тоже), у порога 5 с по умолчанию; так же, как registries.a11y
+  }, 20_000)
   it('пока каталога нет — кнопка «Фильтры» недоступна, лейн работает', async () => {
     const { registry, lifecycle } = make({ meta: null })
     renderK(<DocRegistry registry={registry} layout={layout} title="Реестр" describe={(r) => r.name} />)

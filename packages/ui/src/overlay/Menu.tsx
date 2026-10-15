@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { k } from '@katran/tokens'
+import { styled } from '../styled'
 import { Popover } from './Popover'
-import s from './Overlay.module.css'
 
 export type MenuItem = {
   id: string
@@ -23,9 +24,72 @@ export type MenuProps = {
   onClose: () => void
   items: MenuItem[]
   title?: string | undefined
+  /** Класс панели меню (корень — панель поповера в портале). */
+  className?: string | undefined
 }
 
-export function Menu({ open, anchor, onClose, items, title }: MenuProps) {
+const Title = styled.div`
+  padding: ${k.sp1} ${k.sp2};
+  font: 500 ${k.fs3} / ${k.lh3} ${k.sans};
+  color: ${k.muted};
+`
+
+/*
+ * Порядок правил — по возрастанию специфичности (stylelint no-descending-specificity): focus-visible, aria-checked и
+ * disabled имеют одинаковую специфичность (класс + один селектор состояния), hover:not() выше на единицу за счёт :not().
+ * Итог каскада не меняется: background задают только focus-visible и hover, обводку — только focus-visible (иначе более
+ * специфичный hover погасил бы её у наведённого пункта с фокусом); disabled идёт после aria-checked, поэтому цвет
+ * disabled побеждает и для отмеченного-и-недоступного пункта.
+ */
+const Item = styled.button`
+  display: flex;
+  justify-content: space-between;
+  gap: ${k.sp3};
+  width: 100%;
+  height: ${k.hCtlM};
+  padding: 0 ${k.sp2};
+  border: 0;
+  border-radius: ${k.rS};
+  background: none;
+  font: 400 ${k.fs1} / 1 ${k.sans};
+  color: ${k.ink};
+  text-align: left;
+  cursor: pointer;
+  align-items: center;
+
+  &:focus-visible {
+    background: ${k.hover};
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+
+  &[aria-checked='true'] {
+    color: ${k.val};
+    font-weight: 500;
+  }
+
+  &:disabled {
+    color: ${k.faint};
+    cursor: default;
+  }
+
+  &:hover:not(:disabled) {
+    background: ${k.hover};
+  }
+`
+
+const Hint = styled.span`
+  color: ${k.faint};
+  font-size: ${k.fs2};
+`
+
+const Note = styled.div`
+  padding: ${k.sp1} ${k.sp2};
+  font-size: ${k.fs3};
+  color: ${k.muted};
+`
+
+export function Menu({ open, anchor, onClose, items, title, className }: MenuProps) {
   const enabled = items.map((it, i) => (it.disabled || it.note ? -1 : i)).filter((i) => i >= 0)
   const [active, setActive] = useState(enabled[0] ?? -1)
   const refs = useRef<(HTMLButtonElement | null)[]>([])
@@ -54,14 +118,14 @@ export function Menu({ open, anchor, onClose, items, title }: MenuProps) {
   const pick = (it: MenuItem, shiftKey: boolean) => { it.onSelect?.({ shiftKey }); onClose() }
 
   return (
-    <Popover open={open} anchor={anchor} onClose={onClose} role="menu" label={title} manualFocus>
+    <Popover open={open} anchor={anchor} onClose={onClose} role="menu" label={title} manualFocus className={className}>
       <div>
-        {title && <div className={s.menuTitle} aria-hidden="true">{title}</div>}
+        {title && <Title aria-hidden="true">{title}</Title>}
         {items.map((it, i) =>
           it.note ? (
-            <div key={it.id} role="presentation" className={s.menuNote}>{it.label}</div>
+            <Note key={it.id} role="presentation">{it.label}</Note>
           ) : (
-            <button
+            <Item
               key={it.id}
               ref={(el) => { refs.current[i] = el }}
               type="button"
@@ -71,13 +135,12 @@ export function Menu({ open, anchor, onClose, items, title }: MenuProps) {
               aria-disabled={it.disabled || undefined}
               disabled={it.disabled}
               tabIndex={i === active ? 0 : -1}
-              className={s.item}
               onClick={(e) => !it.disabled && pick(it, e.shiftKey)}
               onKeyDown={onKey}
             >
               <span>{it.label}</span>
-              {it.hint && <span className={s.hint}>{it.hint}</span>}
-            </button>
+              {it.hint && <Hint>{it.hint}</Hint>}
+            </Item>
           ),
         )}
       </div>

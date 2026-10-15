@@ -1,6 +1,7 @@
 export { CURRENCIES, DIRECTION_LABEL, DIRECTIONS, FX_TYPES, ROUTE_TYPES, type Direction, type FxDoc, type RouteType } from './model/fxDoc'
 export { fxAnnulPorts, fxDocPorts, fxEditPorts } from './api/ports'
-export { fxDocLayout } from './ui/layout'
+/** Раскладка колонок реестра и стили своих элементов её ячеек (правило 2): страница монтирует FxCellStyles рядом с реестром. */
+export { FxCellStyles, fxDocLayout } from './ui/layout'
 export type { FxDocDetail, SwiftValue } from './model/detail'
 export { currentOf, fieldTarget, isChanged, originalOf, sameEditValue, type FxEdit, type FxHistEntry } from './model/edit'
 export { FX_ACTIONS, FX_DETAIL_TITLE, FX_FIELDS, FX_OPTION_LABELS, FX_PROFILES, FX_TABS, fxSchemaOf, swiftPresent } from './model/swift'

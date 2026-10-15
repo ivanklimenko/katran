@@ -17,7 +17,7 @@ test('подзаголовок отсортированной колонки —
   await page.locator('table[role=grid] thead th').filter({ hasText: 'ID' }).getByRole('button').first().click()
   await page.getByRole('menu').getByText('Номер документа', { exact: true }).click()
   const th = page.locator('table[role=grid] thead th[aria-sort]').filter({ hasText: 'ID' })
-  const [head, sub] = await th.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.querySelector('[class*="thSub"]')!).color])
+  const [head, sub] = await th.evaluate((el) => [getComputedStyle(el).color, getComputedStyle(el.querySelector('[data-part="th-sub"]')!).color])
   expect(sub).toBe(head)
 })
 
@@ -43,15 +43,16 @@ test('B1: заблокированная запись — кнопка откр�
   const inactive = page.locator('tbody[data-state="inactive"]').first()
   await inactive.waitFor()
   await expect(inactive.getByRole('checkbox')).toBeDisabled()
-  // значение внутри заблокированной записи приглушено переопределением --k-val на записи (STATE §8): проверяем computed color, а не класс
+  // значение внутри заблокированной записи приглушено переопределением --k-val на записи (STATE §8): проверяем computed color, а не класс;
+  // токены объявлены на корне провайдера, не на :root (срез styled) — пробы читают и вставляются в корень
   // запись без метки деталки: у открытой (автооткрытие В-Д4) акцент не приглушается — Д28
   const { valueColor, mutedColor } = await page.evaluate(() => {
     const el = document.querySelector('tbody[data-state="locked"]:not([data-mark]) [class*="copy"]') as HTMLElement
     const probe = document.createElement('div')
-    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-muted')
-    document.body.appendChild(probe)
+    probe.style.color = getComputedStyle(document.querySelector('[data-k-root]')!).getPropertyValue('--k-muted')
+    document.querySelector('[data-k-root]')!.appendChild(probe)
     const mutedColor = getComputedStyle(probe).color
-    document.body.removeChild(probe)
+    document.querySelector('[data-k-root]')!.removeChild(probe)
     return { valueColor: getComputedStyle(el).color, mutedColor }
   })
   expect(valueColor).toBe(mutedColor)
@@ -70,10 +71,10 @@ test('Кт валютирования, если отличается от Дт, 
   const res = await page.evaluate(() => {
     const probe = (v: string) => {
       const el = document.createElement('div')
-      el.style.color = getComputedStyle(document.documentElement).getPropertyValue(v)
-      document.body.appendChild(el)
+      el.style.color = getComputedStyle(document.querySelector('[data-k-root]')!).getPropertyValue(v)
+      document.querySelector('[data-k-root]')!.appendChild(el)
       const c = getComputedStyle(el).color
-      document.body.removeChild(el)
+      document.querySelector('[data-k-root]')!.removeChild(el)
       return c
     }
     const heads = [...document.querySelectorAll('table[role=grid] thead th')]
@@ -126,10 +127,10 @@ test('заблокированная запись: тег типа непроз�
     const dot = rec.querySelector('[data-st]') as HTMLElement
     const lock = rec.querySelector('button[aria-label^="Заблокирована"]') as HTMLElement
     const probe = document.createElement('div')
-    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--k-warn')
-    document.body.appendChild(probe)
+    probe.style.color = getComputedStyle(document.querySelector('[data-k-root]')!).getPropertyValue('--k-warn')
+    document.querySelector('[data-k-root]')!.appendChild(probe)
     const warn = getComputedStyle(probe).color
-    document.body.removeChild(probe)
+    document.querySelector('[data-k-root]')!.removeChild(probe)
     return { tagOpacity: getComputedStyle(tag).opacity, tagFilter: getComputedStyle(tag).filter, tagText: tag.textContent, dotOpacity: getComputedStyle(dot).opacity, lock: getComputedStyle(lock).color, warn }
   })
   expect(r.tagText).toMatch(/^MT/)
@@ -148,10 +149,10 @@ test('бейдж «Фильтры» читаем в нуле; лейн на фо
   const r = await page.evaluate(() => {
     const probe = (v: string) => {
       const el = document.createElement('div')
-      el.style.color = getComputedStyle(document.documentElement).getPropertyValue(v)
-      document.body.appendChild(el)
+      el.style.color = getComputedStyle(document.querySelector('[data-k-root]')!).getPropertyValue(v)
+      document.querySelector('[data-k-root]')!.appendChild(el)
       const c = getComputedStyle(el).color
-      document.body.removeChild(el)
+      document.querySelector('[data-k-root]')!.removeChild(el)
       return c
     }
     const toggle = [...document.querySelectorAll('button[aria-expanded]')].find((b) => b.textContent?.startsWith('Фильтры'))!

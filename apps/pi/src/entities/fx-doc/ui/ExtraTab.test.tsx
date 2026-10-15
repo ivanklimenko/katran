@@ -61,18 +61,18 @@ describe('ExtraTab', () => {
   })
   it('референсы: коды моноширинно, длина поля справа, UETR — копирование', () => {
     renderK(<ExtraTab detail={d} />)
-    expect(screen.getByText('FX2609220000417')).toHaveClass('mono')
-    expect(screen.getByText('NONREF')).not.toHaveClass('mono')
+    expect(screen.getByText('FX2609220000417')).toHaveAttribute('data-mono')
+    expect(screen.getByText('NONREF')).not.toHaveAttribute('data-mono')
     expect(screen.getAllByText('16 симв.')).toHaveLength(3)
     expect(screen.getByText('36 симв.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'eb6305c9-1f8c-41e3-a3b2-6d7e9f2a4c10' })).toBeInTheDocument()
   })
   it('даты валютирования: отличная от «Вх» — выделена и озвучена', () => {
     const { unmount } = renderK(<ExtraTab detail={d} />)
-    expect(document.querySelector('.diff')).toBeNull()
+    expect(document.querySelector('[data-diff]')).toBeNull()
     unmount()
     renderK(<ExtraTab detail={shifted} />)
-    expect(screen.getByText('24.09.2026')).toHaveClass('diff')
+    expect(screen.getByText('24.09.2026')).toHaveAttribute('data-diff')
     expect(screen.getByText('— отличается от даты «Вх»')).toBeInTheDocument()
   })
   it('fxExtraView — локальный вид, рисует ExtraTab', () => {

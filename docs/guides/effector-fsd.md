@@ -40,8 +40,7 @@ src/
     api/ports.ts             # fxDocPorts: searchFx, facetsFx, filterMetaFx, detailFx, tabFx; fxEditPorts — правка (2c)
     api/fxDoc.mapper.ts      # parseFxDoc: строка content[] → FxDoc
     model/fxDoc.ts           # тип записи FxDoc
-    ui/layout.tsx            # fxDocLayout — раскладка колонок и рендер ячеек
-    ui/cells.module.css      # классы ячеек (двойные классы .num.num — перебить стиль кита)
+    ui/layout.tsx            # fxDocLayout — раскладка колонок, рендер ячеек и FxCellStyles (правило 2)
     model/rules.ts           # validateFxEdit, normalizeFxEdit, fxEditableTargets — правила правки (домен)
     ui/edit.tsx              # виды правки 20 исх, счетов, даты; formEdit для ConfigForm — по EditContext
   features/doc-edit/

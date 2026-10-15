@@ -14,7 +14,7 @@ import { expandColumns, resolveSpans, visibleColumns } from './resolveSpans'
 import { isSelected, pageState } from './selection'
 import { SortChips } from './SortChips'
 import { useGridKeyboard } from './useGridKeyboard'
-import s from './Grid.module.css'
+import { Foot, LeadHead, OpenLocked, Progress, Root, StateRow, Table, Th, Toolbar, Wrap } from './parts'
 import type { ColumnsState, GridViewState, RecordLayout, RowState, Selection, SpanDef, Sort } from './types'
 
 export type DataGridProps<Row> = {
@@ -65,6 +65,7 @@ export type DataGridProps<Row> = {
   openHint?: string | undefined
   /** Открытые в деталке записи (спека 2a §3.1, эталон selA/selB grid.html:651–654): 'a' — основная, 'b' — сравнение. */
   marked?: ((row: Row) => 'a' | 'b' | null) | undefined
+  className?: string | undefined
 }
 
 const DEFAULT_WIDTH = 120
@@ -138,11 +139,11 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
   const rowCount = Math.max(1 + p.total * perRecord, empty || failed ? 2 : 1)
 
   return (
-    <div className={s.root}>
+    <Root className={p.className}>
       <SortChips sort={p.sort} columns={layout.columns} onSort={p.onSort} />
-      <div className={s.wrap}>
-        {dim && <div className={s.progress}><ProgressBar label="Обновление данных" /></div>}
-        <table
+      <Wrap>
+        {dim && <Progress><ProgressBar label="Обновление данных" /></Progress>}
+        <Table
           role="grid"
           aria-label={p.label}
           aria-rowcount={rowCount}
@@ -150,21 +151,20 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
           aria-busy={state === 'loading' || state === 'refreshing' || showSkeleton || undefined}
           aria-multiselectable={selection ? true : undefined}
           data-dim={dim || undefined}
-          className={[s.table, dim ? s.dim : ''].filter(Boolean).join(' ')}
           style={{ width: `calc(${tableWidth}px * var(--k-density))` } as CSSProperties}
         >
           <thead>
             <tr role="row" aria-rowindex={1}>
-              <th role="columnheader" scope="col" className={s.th} style={{ width: 'var(--k-grid-lead)' } as CSSProperties} {...cp(1)(0, 0)}>
-                <div className={s.leadHead}>
+              <Th role="columnheader" scope="col" style={{ width: 'var(--k-grid-lead)' } as CSSProperties} {...cp(1)(0, 0)}>
+                <LeadHead>
                   {selection && p.onSelectPage && (
                     <Checkbox tabIndex={-1} aria-label="Выбрать все на странице" checked={pageSel === 'all'} indeterminate={pageSel === 'some'} disabled={selectable.length === 0}
                       onChange={() => p.onSelectPage!({ ids: selectable, on: pageSel !== 'all' })} />
                   )}
                   <IconButton ref={colsBtn} tabIndex={-1} size="s" label="Состав колонок" pressed={colsOpen} onClick={() => setColsOpen(true)}><Cols /></IconButton>
-                </div>
+                </LeadHead>
                 <ColumnsMenu open={colsOpen} anchor={colsBtn} onClose={() => setColsOpen(false)} columns={layout.columns} order={p.order} hidden={p.hidden} onChange={p.onColumns} split={p.split} onSplit={p.onSplit} />
-              </th>
+              </Th>
               {visible.map((c, i) => (
                 <ColumnHeader key={c.id} column={c} sort={p.sort} onSort={p.onSort} width={widthOf(c.id, c.width)}
                   onResize={(c.resizable ?? true) ? (w) => p.onResize({ id: c.id, width: w }) : undefined}
@@ -196,13 +196,19 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
                     disabled={st?.kind === 'inactive'} data-k-tip={st?.kind === 'inactive' ? `${st.why} · выбрать нельзя` : undefined}
                     onChange={(e) => p.onSelect!({ id, on: e.target.checked })} />
                 )}
-                {p.onOpen && (
-                  <IconButton tabIndex={-1} size="s" className={st?.kind === 'locked' ? s.openLocked : undefined} label={openLabel} data-k-tip={openTip}
-                    data-k-open={id} onClick={openClick(row, st)}>
-                    {st?.kind === 'locked' ? <Lock /> : <Open />}
-                  </IconButton>
-                )}
-                <span className={s.ord}>{ord}</span>
+                {p.onOpen && (st?.kind === 'locked'
+                  ? (
+                    <OpenLocked tabIndex={-1} size="s" label={openLabel} data-k-tip={openTip} data-k-open={id} onClick={openClick(row, st)}>
+                      <Lock />
+                    </OpenLocked>
+                  )
+                  : (
+                    <IconButton tabIndex={-1} size="s" label={openLabel} data-k-tip={openTip} data-k-open={id} onClick={openClick(row, st)}>
+                      <Open />
+                    </IconButton>
+                  ))}
+                {/* номер записи — горячий путь: обычный элемент, правило k-ord в gridHot */}
+                <span className="k-ord">{ord}</span>
               </>
             )
             return (
@@ -212,22 +218,22 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
           })}
 
           {empty && (
-            <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
+            <tbody><StateRow role="row" aria-rowindex={2}><td role="gridcell" colSpan={1 + visible.length}>
               <EmptyState title={p.emptyTitle ?? 'По заданным условиям записей нет'} text={p.emptyText} action={p.emptyAction} />
-            </td></tr></tbody>
+            </td></StateRow></tbody>
           )}
           {failed && (
-            <tbody><tr role="row" aria-rowindex={2} className={s.stateRow}><td role="gridcell" colSpan={1 + visible.length}>
+            <tbody><StateRow role="row" aria-rowindex={2}><td role="gridcell" colSpan={1 + visible.length}>
               <ErrorState title="Не удалось загрузить данные" text={p.error ?? undefined} retry={p.onRetry} />
-            </td></tr></tbody>
+            </td></StateRow></tbody>
           )}
-        </table>
-      </div>
-      <div className={s.foot}>
+        </Table>
+      </Wrap>
+      <Foot>
         {/* как слот действий BulkBar: пустым считаются только null/undefined/false, валидные falsy (0, '') рендерятся */}
-        {p.toolbar != null && p.toolbar !== false && <div className={s.toolbar}>{p.toolbar}</div>}
+        {p.toolbar != null && p.toolbar !== false && <Toolbar data-part="toolbar">{p.toolbar}</Toolbar>}
         <Pagination page={page} pageSize={pageSize} total={p.total} onPage={p.onPage} pageSizes={p.pageSizes} onPageSize={p.onPageSize} />
-      </div>
-    </div>
+      </Foot>
+    </Root>
   )
 }

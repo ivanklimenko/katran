@@ -8,7 +8,10 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview --port 5185",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "visual": "playwright test -c playwright.visual.config.ts",
+    "perf:base": "bash perf/build-base.sh",
+    "perf": "vite build --outDir perf/head --emptyOutDir --logLevel warn && node perf/measure.mjs"
   },
   "dependencies": {
     "@katran/effector": "workspace:*",
@@ -17,7 +20,8 @@
     "effector": "^23.4.4",
     "effector-react": "^23.3.0",
     "react": "17.0.2",
-    "react-dom": "17.0.2"
+    "react-dom": "17.0.2",
+    "styled-components": "5.3.11"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -27,6 +31,7 @@
     "@testing-library/user-event": "^14.6.7",
     "@types/react": "^17.0.93",
     "@types/react-dom": "^17.0.26",
+    "@types/styled-components": "5.1.34",
     "@vitejs/plugin-react": "^6",
     "jest-axe": "^11.0.0",
     "jsdom": "^30.1.1",

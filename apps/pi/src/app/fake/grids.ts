@@ -1,5 +1,6 @@
 import { fxDocLayout, fxEditableTargets, validateFxEdit, type FxDoc, type FxDocDetail } from '../../entities/fx-doc'
 import type { EditValue } from '../../shared/api'
+import { standParam } from '../../shared/lib/stand'
 import { rubDocLayout } from '../../entities/rub-doc'
 import { STATUS_LABEL } from '../../entities/doc-status'
 import { annulSeedsOf, createAnnulStore } from './annul'
@@ -51,8 +52,10 @@ export const plainNotifOf = (fx: readonly FxDoc[]): { docId: string; nid: string
  * и переотправка нотификаций (срез 2e).
  */
 export function createFakeGrids(): Record<string, FakeGrid> {
-  const fx = makeFxDocs()
-  const rub = makeRubDocs()
+  // регулятор стенда ?docs=N (params.ts): размер обоих наборов, по умолчанию 87
+  const docs = Number(standParam('docs')) || 87
+  const fx = makeFxDocs(docs)
+  const rub = makeRubDocs(docs)
   const { seedId, accKtSeedId } = editSeedIdsOf(fx)
   const fxAnnul = annulSeedsOf(fx, [seedId, accKtSeedId])
   const rubAnnul = annulSeedsOf(rub, [], 0)

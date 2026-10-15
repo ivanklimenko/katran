@@ -1,5 +1,4 @@
 import { CopyValue } from './CopyValue'
-import s from './Value.module.css'
 
 export type SwiftFieldProps = {
   /** Буква опции (A, F, K…); нет — не показывается. */
@@ -11,18 +10,20 @@ export type SwiftFieldProps = {
   /** Обрезка главного значения, px при плотности 1; полное — в тултипе. */
   maxWidth?: number | undefined
   tabIndex?: number | undefined
+  /** Класс потребителя — на первый корень: «—» или строка значения (подпись — второй корень, если есть). */
+  className?: string | undefined
 }
 
 /** Ячейка SWIFT-поля (эталон fld()): буква опции, главное значение mono, подпись прописными (спека 5b §3). */
-export function SwiftField({ opt, main, caption, maxWidth, tabIndex }: SwiftFieldProps) {
-  if (!main) return <span className={s.none}>—</span>
+export function SwiftField({ opt, main, caption, maxWidth, tabIndex, className }: SwiftFieldProps) {
+  if (!main) return <span className={className ? `k-none ${className}` : 'k-none'}>—</span>
   return (
     <>
-      <span className={s.field}>
-        {opt && <span className={s.opt}>{opt}</span>}
-        <CopyValue value={main} tone="ink" className={s.fieldMain} maxWidth={maxWidth} tabIndex={tabIndex} />
+      <span className={className ? `k-field ${className}` : 'k-field'}>
+        {opt && <span className="k-opt">{opt}</span>}
+        <CopyValue value={main} tone="ink" className="k-field-main" maxWidth={maxWidth} tabIndex={tabIndex} />
       </span>
-      {caption && <div><CopyValue value={caption} tone="muted" className={s.caption} tabIndex={tabIndex} /></div>}
+      {caption && <div><CopyValue value={caption} tone="muted" className="k-caption" tabIndex={tabIndex} /></div>}
     </>
   )
 }

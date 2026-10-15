@@ -1,6 +1,7 @@
 import { createEvent, createStore, sample } from 'effector'
 import { rubDocLayout, rubDocPorts } from '../../../entities/rub-doc'
 import { createPageLifecycle } from '../../../shared/lib/lifecycle'
+import { standParam } from '../../../shared/lib/stand'
 import { createDetail } from '../../../widgets/doc-detail'
 import { createRegistry } from '../../../widgets/doc-registry'
 
@@ -29,7 +30,8 @@ sample({ clock: linked, fn: (id) => ({ id, secondary: false }), target: detail.o
 const firstRow = sample({
   clock: registry.grid.$rows.updates,
   source: { done: $autoOpened, opened: lifecycle.$opened },
-  filter: ({ done, opened }, rows) => opened && !done && rows.length > 0,
+  // регулятор стенда ?noauto (замеры): реестр без автооткрытия деталки
+  filter: ({ done, opened }, rows) => opened && !done && rows.length > 0 && standParam('noauto') === null,
   fn: (_, rows) => rows[0]!,
 })
 $autoOpened.on(firstRow, () => true)

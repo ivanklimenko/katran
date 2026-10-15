@@ -1,10 +1,11 @@
 import { Fragment } from 'react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Button, ButtonLink, MiniTable, StatusDot, Tag, Timestamp, formatTimestamp, type MiniColumn, type StatusTone } from '@katran/ui'
 import { HOST_LINK_MISSING, hostLink } from '../../../shared/lib/host-links'
 import type { DocTask } from '../model/types'
 import { STUB, type TrailTabProps } from './lib'
-import { LinkButton } from './parts'
-import s from './trail.module.css'
+import { Count, Cut, LinkButton } from './parts'
 
 /** Точка открытой задачи по тону (эталон .tk .dot.ok/.info/.warn); выполненная — всегда ok. */
 const DOT: Record<DocTask['tone'], StatusTone> = { ok: 'ok', info: 'flow', warn: 'warn' }
@@ -12,19 +13,51 @@ const DOT: Record<DocTask['tone'], StatusTone> = { ok: 'ok', info: 'flow', warn:
 const clock = (at: string) => formatTimestamp(at)?.time ?? at
 
 /** Тело задачи: полный текст и история. Закрытие («Закрыта · кто») — последняя запись истории, её присылает бек. */
+/* тело раскрытой строки (эталон .tk.open .txt, .tk .hist); data-closed — запись о закрытии задачи */
+const Task = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+`
+
+const TaskText = styled.p`
+  margin: 0;
+  color: ${k.ink};
+`
+
+const Hist = styled.div`
+  display: grid;
+  grid-template-columns: ${k.dtHist} minmax(0, 1fr);
+  gap: 0 ${k.sp2};
+  padding-top: ${k.sp1};
+  border-top: 1px dashed ${k.line};
+  font-size: ${k.fs2};
+`
+
+const HistAt = styled.span`
+  font: ${k.fs2} / ${k.lh2} ${k.mono};
+  color: ${k.muted};
+`
+
+const HistText = styled.span`
+  &:where([data-closed]) {
+    color: ${k.val};
+  }
+`
+
 function TaskBody({ t }: { t: DocTask }) {
   return (
-    <div className={s.task}>
-      <p className={s.taskText}>{t.text}</p>
-      <div className={s.hist}>
+    <Task>
+      <TaskText>{t.text}</TaskText>
+      <Hist>
         {t.history.map((h, i) => (
           <Fragment key={i}>
-            <span className={s.histAt}>{clock(h.at)}</span>
-            <span className={/^Закрыта/.test(h.text) ? s.closed : undefined}>{h.text}</span>
+            <HistAt>{clock(h.at)}</HistAt>
+            <HistText data-closed={/^Закрыта/.test(h.text) ? '' : undefined}>{h.text}</HistText>
           </Fragment>
         ))}
-      </div>
-    </div>
+      </Hist>
+    </Task>
   )
 }
 
@@ -45,7 +78,7 @@ export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
     // время и тег — по содержимому строки, как эталон .tk (14px 100px auto minmax(0,1fr) auto 14px): длинный тег не налезает
     { id: 'at', header: '', width: 'auto', render: (t) => <Timestamp iso={t.at} /> },
     { id: 'type', header: '', width: 'auto', render: (t) => <Tag>{t.type}</Tag> },
-    { id: 'text', header: '', render: (t) => <span className={s.cut} data-k-tip={t.text} data-k-tip-if="truncated">{t.text}</span> },
+    { id: 'text', header: '', render: (t) => <Cut data-k-tip={t.text} data-k-tip-if="truncated">{t.text}</Cut> },
     { id: 'history', header: '', width: 64, align: 'end', render: () => <LinkButton onClick={() => ctx.announce(STUB)}>История</LinkButton> },
   ]
   return (
@@ -58,7 +91,7 @@ export function TasksTab({ data, ctx }: TrailTabProps<DocTask[]>) {
       empty="Задач нет"
       toolbar={(
         <>
-          <span className={s.count}>{`${data.length} задач${open ? `, открытых ${open}` : ''}`}</span>
+          <Count>{`${data.length} задач${open ? `, открытых ${open}` : ''}`}</Count>
           {toManual !== null
             ? <ButtonLink size="s" href={toManual} target="_blank" rel="noopener">Перейти в блок «Ручные отклонения»</ButtonLink>
             : <Button size="s" aria-disabled="true" data-k-tip={HOST_LINK_MISSING}>Перейти в блок «Ручные отклонения»</Button>}

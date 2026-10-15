@@ -1,9 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import * as effector from 'effector'
+import { ThemeContext, ThemeProvider } from 'styled-components'
 
-// Отладочный маркер макета: проверка «React/effector в рантайме один» сравнением модулей.
-window.__katranExample = Object.assign(window.__katranExample || {}, { hostReact: React, hostReactDom: ReactDOM, hostEffector: effector })
+// Отладочный маркер макета: проверка «React/effector/styled-components в рантайме один» сравнением модулей.
+window.__katranExample = Object.assign(window.__katranExample || {}, { hostReact: React, hostReactDom: ReactDOM, hostEffector: effector, hostStyled: { ThemeContext: ThemeContext } })
+
+// Тема styled-components хоста (метаприложение само на styled-components): экран remote лежит под ней,
+// KatranProvider добавляет токены кита под ключом katran и тему хоста не затирает (спека styled §4.4).
+var hostTheme = { hostMark: 'host' }
 
 // Единица хоста, которую он передаёт встроенному экрану (как это делает метаприложение: пользователь, контекст канала).
 var visit = effector.createEvent()
@@ -45,7 +50,7 @@ function App() {
         <div className="host-slot" data-host-slot="">
           <Boundary>
             <React.Suspense fallback={<p>Загрузка экрана…</p>}>
-              {shown[0] && <DocumentsScreen $visits={$visits} visit={visit} />}
+              {shown[0] && <ThemeProvider theme={hostTheme}><DocumentsScreen $visits={$visits} visit={visit} /></ThemeProvider>}
             </React.Suspense>
           </Boundary>
         </div>

@@ -27,6 +27,14 @@ describe('Prompt (спека 2c §2.1, эталон prompt.js)', () => {
     expect(screen.getByRole('button', { name: 'Отмена' })).toHaveFocus()
   })
 
+  it('tone="danger" — data-tone основной кнопки (цвет bad); neutral — без него, у «Отмены» — никогда', () => {
+    const { rerender } = renderK(<Prompt open okLabel="Утвердить" onResult={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Утвердить' })).not.toHaveAttribute('data-tone')
+    rerender(<Prompt open tone="danger" okLabel="Отклонить" onResult={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Отклонить' })).toHaveAttribute('data-tone', 'danger')
+    expect(screen.getByRole('button', { name: 'Отмена' })).not.toHaveAttribute('data-tone')
+  })
+
   it('Tab и Shift+Tab ходят только между двумя кнопками', async () => {
     renderK(
       <>

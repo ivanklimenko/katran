@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { k } from '@katran/tokens'
 import { useStableId } from '../compat/useStableId'
-import s from './MiniTable.module.css'
+import { styled } from '../styled'
 
 export type MiniColumn<T> = {
   id: string
@@ -37,7 +38,154 @@ export type MiniTableProps<T> = {
   onExpandedChange?: ((keys: string[]) => void) | undefined
   /** Полоса над таблицей (эталон .tbar): счётчик слева, кнопки справа. */
   toolbar?: ReactNode | undefined
+  className?: string | undefined
 }
+
+/* компактная таблица вкладок деталки (эталон .tt/.tbar/.ld/.tk, index.html:299–342).
+   Модификаторы — атрибутами: шапка — data-head, раскрываемая строка — data-k-xrow (уже нужен делегированию клика),
+   раскрытая — data-open, моно-ячейка — data-mono; под :where() — специфичность прежних классов (.head, .xrow, .open, .mono) */
+const Root = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+  min-width: 0;
+`
+
+/* полоса над таблицей (.tbar): первый элемент — подпись-счётчик, остальное прижато вправо */
+const Bar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.ttGap};
+  min-height: ${k.ttRowX};
+
+  & > :first-child {
+    margin-right: auto;
+  }
+`
+
+const Frame = styled.div`
+  border: 1px solid ${k.line};
+  border-radius: ${k.rS};
+  background: ${k.paper};
+  overflow: hidden;
+`
+
+const Table = styled(Frame)`
+  font: ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.ink};
+`
+
+const Row = styled.div`
+  display: grid;
+  box-sizing: border-box;
+  grid-template-columns: var(--k-cols);
+  gap: 0 ${k.ttGap};
+  align-items: center;
+  min-height: ${k.ttRow};
+  padding: 0 ${k.ttGap};
+  border-bottom: 1px solid ${k.line2};
+
+  &:where([data-head]) {
+    min-height: ${k.ttHead};
+    background: ${k.sunk};
+    font: 600 ${k.fs3} / ${k.lh3} ${k.sans};
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: ${k.muted};
+  }
+
+  &:where([data-k-xrow]) {
+    min-height: ${k.ttRowX};
+    cursor: pointer;
+  }
+`
+
+const Cell = styled.div`
+  min-width: 0;
+
+  &[data-align='end'] {
+    text-align: end;
+  }
+
+  &:where([data-mono]) {
+    font-family: ${k.mono};
+  }
+`
+
+const Num = styled.div`
+  min-width: 0;
+  font: ${k.fs2} / ${k.lh2} ${k.mono};
+  color: ${k.faint};
+  text-align: end;
+`
+
+const Toggle = styled.button`
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: ${k.rS};
+  background: none;
+  color: ${k.faint};
+  font: ${k.fs3} / ${k.lh3} ${k.sans};
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: 0;
+  }
+`
+
+const Chev = styled.span`
+  display: inline-block;
+
+  ${Row}:where([data-open]) & {
+    transform: rotate(180deg);
+  }
+`
+
+/* панель раскрытой строки (эталон .ldb): на всю ширину, подложка sunk */
+const Panel = styled.div`
+  padding: ${k.ttPanelPt} ${k.ttGap} ${k.sp2};
+  border-bottom: 1px solid ${k.line2};
+  background: ${k.sunk};
+`
+
+/* Тело таблицы: правила строк и панелей по их месту в теле. Специфичность прежняя — Body > Row:hover (0,3,0),
+   последняя строка (0,3,0), свёрнутая раскрываемая перед панелью (0,4,0), панель последней строки (0,3,0) — выше
+   правил самих Row и Panel (0,1,0), поэтому группа тела может стоять после них. */
+const Body = styled.div`
+  & > ${Row}:hover {
+    background: ${k.hover};
+  }
+
+  /* у последней строки нижней границы нет — её даёт рамка таблицы (эталон .tt .tr:last-child, .au>*:last-child);
+     у раскрываемых последний элемент тела — строка панели: свёрнутая строка перед ней — последняя видимая */
+  & > ${Row}:last-child,
+  & > ${Row}:where([data-k-xrow]):nth-last-child(2):not([data-open]),
+  & > :last-child > ${Panel} {
+    border-bottom: 0;
+  }
+`
+
+const Empty = styled.p`
+  margin: 0;
+  padding: ${k.ttEmpty} ${k.ttGap};
+  font: ${k.fs1} / ${k.lh1} ${k.sans};
+  color: ${k.muted};
+  text-align: center;
+`
+
+/* только для скринридера — как Sr форм */
+const Sr = styled.span`
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+`
 
 const track = (width: number | 'auto' | undefined) =>
   width === undefined ? 'minmax(0, 1fr)' : width === 'auto' ? 'auto' : `calc(${width}px * var(--k-density))`
@@ -53,7 +201,7 @@ const INTERACTIVE = 'a[href], button, input, select, textarea, [role="button"], 
  * в последней ячейке; клик мышью по свободному месту строки — тоже переключает. Новый ключ дописывается в конец набора.
  */
 export function MiniTable<T>(props: MiniTableProps<T>) {
-  const { label, columns, rows, rowKey, empty, numbered, renderExpanded, rowLabel, expanded, defaultExpanded, onExpandedChange, toolbar } = props
+  const { label, columns, rows, rowKey, empty, numbered, renderExpanded, rowLabel, expanded, defaultExpanded, onExpandedChange, toolbar, className } = props
   const base = useStableId()
   const [inner, setInner] = useState<string[]>(() => defaultExpanded ?? [])
   const open = expanded ?? inner
@@ -88,69 +236,68 @@ export function MiniTable<T>(props: MiniTableProps<T>) {
     return () => el.removeEventListener('click', onClick)
   }, [body, expandable])
 
-  const bar = toolbar !== undefined ? <div className={s.bar}>{toolbar}</div> : null
+  const bar = toolbar !== undefined ? <Bar>{toolbar}</Bar> : null
   if (rows.length === 0) {
     return (
-      <div className={s.root}>
+      <Root className={className}>
         {bar}
-        <div className={s.frame}><p className={s.empty}>{empty}</p></div>
-      </div>
+        <Frame><Empty>{empty}</Empty></Frame>
+      </Root>
     )
   }
 
   const template = [numbered ? 'var(--k-tt-num)' : null, ...columns.map((c) => track(c.width)), expandable ? 'var(--k-tt-chev)' : null]
     .filter((x): x is string => x !== null)
     .join(' ')
-  const cellClass = (c: MiniColumn<T>) => [s.cell, c.mono ? s.mono : ''].filter(Boolean).join(' ')
   const hasHead = columns.some((c) => c.header !== '')
 
   return (
-    <div className={s.root}>
+    <Root className={className}>
       {bar}
-      <div role="table" aria-label={label} className={[s.frame, s.table].join(' ')} style={{ '--k-cols': template } as CSSProperties}>
+      <Table role="table" aria-label={label} style={{ '--k-cols': template } as CSSProperties}>
         {hasHead && (
           <div role="rowgroup">
-            <div role="row" className={[s.row, s.head].join(' ')}>
-              {numbered && <div role="columnheader" className={s.num}><span className={s.sr}>№</span></div>}
+            <Row role="row" data-head="">
+              {numbered && <Num role="columnheader"><Sr>№</Sr></Num>}
               {columns.map((c) => c.header === ''
-                ? <div key={c.id} role="cell" className={s.cell} />
-                : <div key={c.id} role="columnheader" className={s.cell} data-align={c.align}>{c.header}</div>)}
-              {expandable && <div role="cell" className={s.cell} />}
-            </div>
+                ? <Cell key={c.id} role="cell" />
+                : <Cell key={c.id} role="columnheader" data-align={c.align}>{c.header}</Cell>)}
+              {expandable && <Cell role="cell" />}
+            </Row>
           </div>
         )}
-        <div role="rowgroup" ref={setBody} className={s.body}>
+        <Body role="rowgroup" ref={setBody}>
           {rows.map((row, i) => {
             const key = rowKey(row, i)
             const isOpen = expandable && open.includes(key)
             const id = `${base}-${i}`
             return (
               <Fragment key={key}>
-                <div role="row" className={[s.row, expandable ? s.xrow : '', isOpen ? s.open : ''].filter(Boolean).join(' ')} data-k-xrow={expandable ? key : undefined}>
-                  {numbered && <div role="cell" className={s.num}>{i + 1}</div>}
+                <Row role="row" data-k-xrow={expandable ? key : undefined} data-open={isOpen ? '' : undefined}>
+                  {numbered && <Num role="cell">{i + 1}</Num>}
                   {columns.map((c) => (
-                    <div key={c.id} role="cell" className={cellClass(c)} data-align={c.align}>{c.render(row, i)}</div>
+                    <Cell key={c.id} role="cell" data-align={c.align} data-mono={c.mono ? '' : undefined}>{c.render(row, i)}</Cell>
                   ))}
                   {expandable && (
-                    <div role="cell" className={s.cell}>
+                    <Cell role="cell">
                       {/* имя — действие и строка: кнопок в таблице столько же, сколько строк, и имена различимы */}
-                      <button type="button" className={s.toggle} aria-expanded={isOpen} aria-controls={`${id}-p`} onClick={() => toggle(key)}>
-                        <span className={s.sr}>{`${isOpen ? 'Свернуть' : 'Раскрыть'} ${rowLabel ? rowLabel(row, i) : `строку ${i + 1}`}`}</span>
-                        <span className={s.chev} aria-hidden="true">▼</span>
-                      </button>
-                    </div>
+                      <Toggle type="button" aria-expanded={isOpen} aria-controls={`${id}-p`} onClick={() => toggle(key)}>
+                        <Sr>{`${isOpen ? 'Свернуть' : 'Раскрыть'} ${rowLabel ? rowLabel(row, i) : `строку ${i + 1}`}`}</Sr>
+                        <Chev aria-hidden="true">▼</Chev>
+                      </Toggle>
+                    </Cell>
                   )}
-                </div>
+                </Row>
                 {expandable && (
                   <div role="row" hidden={!isOpen}>
-                    <div role="cell" id={`${id}-p`} className={s.panel}>{isOpen ? renderExpanded(row) : null}</div>
+                    <Panel role="cell" id={`${id}-p`}>{isOpen ? renderExpanded(row) : null}</Panel>
                   </div>
                 )}
               </Fragment>
             )
           })}
-        </div>
-      </div>
-    </div>
+        </Body>
+      </Table>
+    </Root>
   )
 }

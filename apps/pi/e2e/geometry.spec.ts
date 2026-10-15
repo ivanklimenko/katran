@@ -51,9 +51,9 @@ for (const route of ['fx-docs', 'rub-docs'] as const) {
   })
 }
 
-// Заголовок сортируемой колонки сидит внутри <button class="thBtn">: провайдер сбрасывает типографику
-// контролов (`:where(button,...) { text-transform: none }`), значение не наследуется от .th — падает
-// на само правило .thBtn (плане 5b, находка контроллера — прописные не применялись, хотя .th их задаёт).
+// Заголовок сортируемой колонки сидит внутри <button> (ThBtn): провайдер сбрасывает типографику
+// контролов (`:where(button,...) { text-transform: none }`), значение не наследуется от th — падает
+// на само правило кнопки заголовка (плане 5b, находка контроллера — прописные не применялись, хотя th их задаёт).
 test('заголовок колонки — прописные (текст сортируемой кнопки, не только .th)', async ({ page }) => {
   await page.goto('/#/fx-docs')
   await page.locator('tbody[data-key]').first().waitFor()
@@ -74,7 +74,7 @@ test('подвал: неактивная кнопка номера без вид
     const cs = getComputedStyle(el)
     return { borderWidth: cs.borderTopWidth, borderColor: cs.borderTopColor, background: cs.backgroundColor }
   })
-  // рамка не видна: либо нулевая ширина, либо прозрачный цвет (Button.module.css `.button` держит
+  // рамка не видна: либо нулевая ширина, либо прозрачный цвет (кнопка кита, ButtonBase, держит
   // border: 1px solid transparent как базу — .pageBtn/.navBtn лишь подтверждают transparent поверх ghost)
   expect(style.borderWidth === '0px' || style.borderColor === 'rgba(0, 0, 0, 0)').toBe(true)
   expect(style.background).toBe('rgba(0, 0, 0, 0)')

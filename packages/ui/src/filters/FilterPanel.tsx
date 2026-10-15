@@ -1,12 +1,12 @@
 import { useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { useStableId } from '../compat/useStableId'
-import { Button, IconButton } from '../button'
+import { Button } from '../button'
 import { Counter } from '../value'
 import type { DateFormat } from '../date/dateStr'
 import { FilterField } from './FilterField'
 import { fieldChip } from './opLabels'
+import { Actions, Bar, Body, Chip, ChipBtn, ChipField, ChipOp, Chips, ChipValue, ChipX, Fields, None, Panel, Toggle, ToggleIcon } from './parts'
 import type { Condition, Filter, FilterMeta, SuggestState } from './types'
-import s from './Filters.module.css'
 
 const Cross = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></svg>
 // Воронка — эталон (стенд pi-constructor, .fbtn svg), путь как есть.
@@ -38,13 +38,14 @@ export type FilterPanelProps = {
   onRevert: () => void
   onReset: () => void
   onRemove: (field: string) => void
+  className?: string | undefined
 }
 
 /** Панель фильтров simple (спека 1e, 6.2; спека 2026-09-30 §6): строка «Фильтры N» с чипами видна всегда — чип и счёт
  * по полю, — тело с контролами по типу поля сворачивается. */
 export function FilterPanel({
   label = 'Фильтры', meta, conditions, draft, dirty, open, onOpenChange, onEdit, onDiscard, onSetField,
-  suggest, onSuggest, onSuggestClose, dateFormat = 'DD.MM.YYYY', onApply, onRevert, onReset, onRemove,
+  suggest, onSuggest, onSuggestClose, dateFormat = 'DD.MM.YYYY', onApply, onRevert, onReset, onRemove, className,
 }: FilterPanelProps) {
   const bodyId = useStableId()
   const toggleRef = useRef<HTMLButtonElement>(null)
@@ -80,42 +81,42 @@ export function FilterPanel({
   }
   const reset = () => { toggleRef.current?.focus(); onReset() }
   return (
-    <div className={s.panel}>
-      <div className={s.bar}>
-        <Button ref={toggleRef} variant="primary" size="s" aria-expanded={open} aria-controls={bodyId} className={s.toggle} onClick={() => onOpenChange(!open)}>
-          <span className={s.toggleIcon} aria-hidden="true"><Funnel /></span>
+    <Panel className={className}>
+      <Bar>
+        <Toggle ref={toggleRef} variant="primary" size="s" aria-expanded={open} aria-controls={bodyId} onClick={() => onOpenChange(!open)}>
+          <ToggleIcon aria-hidden="true"><Funnel /></ToggleIcon>
           <span>{label}</span>
           <Counter value={groups.length} tone="accent" />
-        </Button>
+        </Toggle>
         {groups.length === 0
-          ? <span className={s.none}>условия не заданы</span>
+          ? <None>условия не заданы</None>
           : (
-            <ul className={s.chips} aria-label="Применённые условия">
+            <Chips aria-label="Применённые условия">
               {groups.map((g) => {
                 const chip = fieldChip(g.field, g.conditions, meta, dateFormat)
                 return (
-                  <li key={g.field} className={s.chip} data-k-tip={chip.full}>
-                    <span className={s.cf}>{chip.field}</span> <span className={s.co}>{chip.op}</span> <span className={s.cv}>{chip.value}</span>
-                    <IconButton size="s" label={`Убрать условие: ${chip.full}`} className={s.chipX} onClick={(e) => remove(e, g.field)}><Cross /></IconButton>
-                  </li>
+                  <Chip key={g.field} data-k-tip={chip.full}>
+                    <ChipField>{chip.field}</ChipField> <ChipOp>{chip.op}</ChipOp> <ChipValue>{chip.value}</ChipValue>
+                    <ChipX size="s" label={`Убрать условие: ${chip.full}`} onClick={(e) => remove(e, g.field)}><Cross /></ChipX>
+                  </Chip>
                 )
               })}
-            </ul>
+            </Chips>
           )}
-        {groups.length > 0 && <Button size="s" className={s.chipBtn} onClick={reset}>Сбросить</Button>}
-      </div>
-      <form id={bodyId} hidden={!open} className={s.body} onSubmit={submit}>
-        <div className={s.fields}>
+        {groups.length > 0 && <ChipBtn size="s" onClick={reset}>Сбросить</ChipBtn>}
+      </Bar>
+      <Body id={bodyId} hidden={!open} onSubmit={submit}>
+        <Fields>
           {meta.fields.map((f) => (
             <FilterField key={f.id} field={f} draft={draft} epoch={seen.epoch} onSet={setField} compat={onSetField === undefined} dateFormat={dateFormat}
               suggest={suggest} onSuggest={onSuggest} onSuggestClose={onSuggestClose} />
           ))}
-        </div>
-        <div className={s.actions}>
+        </Fields>
+        <Actions>
           <Button type="submit" variant="primary" size="s" disabled={!dirty}>Применить</Button>
           <Button size="s" disabled={!dirty} onClick={onRevert}>Отменить</Button>
-        </div>
-      </form>
-    </div>
+        </Actions>
+      </Body>
+    </Panel>
   )
 }

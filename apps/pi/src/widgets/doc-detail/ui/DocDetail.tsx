@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useUnit } from 'effector-react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import {
   Button, ConfigForm, Drawer, DrawerStack, ErrorState, IconButton, Input, LinkValue, Menu, Prompt, Skeleton, StatusDot, TabPanel, Tabs, Tag,
   useKatran, useLoadingGate, useStableId, type DrawerStackItem,
@@ -8,10 +10,162 @@ import {
   type ActionNotice, type ActionsView, type AnnulLane, type AnnulView, type DecisionState, type DetailAction, type DetailDomain, type DetailLookups, type DetailSummary, type EditContext,
   type NotifView, type PrintFormItem, type RemoteTabView, type TabContext,
 } from '../../../shared/lib/detail'
-import { ReasonField } from '../../../shared/ui'
+import { ReasonField, Sr } from '../../../shared/ui'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
-import s from './DocDetail.module.css'
+
+/* Лейн действий 36 (эталон .lane, index.html:103): border-box — высота с рамками, как на эталоне */
+const LaneBar = styled.div`
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  height: ${k.lane};
+  padding: 0 ${k.sp2} 0 ${k.dwPad};
+  border-top: 1px solid ${k.line};
+  border-bottom: 1px solid ${k.line};
+  background: ${k.sunk};
+  white-space: nowrap;
+`
+
+const Status = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp1};
+  font: 600 ${k.fs3} / 1 ${k.sans};
+  color: ${k.ink2};
+`
+
+const Kind = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: ${k.fs1};
+  color: ${k.ink2};
+`
+
+const Acts = styled.div`
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+`
+
+const Sep = styled.span`
+  height: ${k.iconM};
+  margin: 0 ${k.sp1};
+  border-left: 1px solid ${k.line};
+`
+
+/*
+ * Кнопка действия лейна — styled(IconButton); data-danger — «Аннулировать»: при наведении цвет bad.
+ * && — прежний двойной класс .danger.danger:hover (0,3,0): равен наведению ghost-кнопки кита и перебивает его порядком групп
+ * (группа приложения определена позже кнопки кита).
+ */
+const ActButton = styled(IconButton)`
+  &&:where([data-danger]):hover {
+    color: ${k.bad};
+  }
+`
+
+/* полоса вкладок: нижнюю линию рисует сам Tabs variant="line" (inset box-shadow, полоса ровно 32) — своей рамки нет */
+const TabsBar = styled.div`
+  padding: 0 ${k.dwPad};
+`
+
+/* содержимое вкладки (эталон .db: 10 14 14, зазор 8) — styled(TabPanel) */
+const PanelBody = styled(TabPanel)`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+  padding: ${k.sp2} ${k.dwPad} ${k.dwPad};
+
+  /* display выше перебил бы атрибут hidden: неактивные панели вкладок — пустые блоки с отступами */
+  &[hidden] {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${k.val};
+    outline-offset: -2px;
+  }
+`
+
+const StubBox = styled.div`
+  padding: ${k.sp6} ${k.sp3};
+  border: 1px dashed ${k.line};
+  border-radius: ${k.rS};
+  text-align: center;
+  color: ${k.muted};
+`
+
+const SkeletonBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp2};
+`
+
+/* лейн и уведомление запасной ссылки под ним (поверх содержимого вкладки, только этого drawer) */
+const LaneBox = styled.div`
+  position: relative;
+`
+
+/* плашка запроса на аннулирование — под лейном во всю ширину, отступы как у лейна */
+const Annul = styled.div`
+  padding: ${k.sp2} ${k.sp2} 0 ${k.dwPad};
+`
+
+/* уведомления под лейном (действие, запасная ссылка) — столбиком, поверх содержимого вкладки */
+const Under = styled.div`
+  position: absolute;
+  top: 100%;
+  right: ${k.sp2};
+  left: ${k.dwPad};
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: ${k.sp1};
+  margin-top: ${k.sp1};
+`
+
+/* запасная ссылка и уведомление действия — одна плашка */
+const Plate = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${k.sp2};
+  padding: ${k.sp2};
+  border: 1px solid ${k.line};
+  border-radius: ${k.rM};
+  background: ${k.paper};
+  box-shadow: ${k.shadow};
+  font-size: ${k.fs1};
+  color: ${k.ink};
+`
+
+const LinkField = styled(Input)`
+  flex: 1;
+  min-width: 0;
+`
+
+const LinkHint = styled.span`
+  color: ${k.ink2};
+  white-space: nowrap;
+`
+
+/* тон уведомления — полосой слева: текст остаётся цвета --k-ink (контраст), цвет — только признак */
+const Notice = styled(Plate)`
+  &[data-tone='ok'] {
+    border-left: 3px solid ${k.ok};
+  }
+
+  &[data-tone='bad'] {
+    border-left: 3px solid ${k.bad};
+  }
+`
+
+const NoticeText = styled.span`
+  flex: 1;
+  min-width: 0;
+`
 
 export type DocDetailProps<D, Row> = {
   detail: Detail<D>
@@ -74,13 +228,13 @@ function ActionButton({ action, onAction, state }: { action: DetailAction; onAct
   const off = pending || state.off
   return (
     <>
-      {action.danger && <span className={s.sep} aria-hidden="true" />}
-      <IconButton
+      {action.danger && <Sep aria-hidden="true" />}
+      <ActButton
         ref={ref}
         label={action.label}
         // недоступная с причиной («Аннулировать», спека 2e §4 п. 1) — подсказка причины
         data-k-tip={hint ?? (action.hotkey ? `${action.label} · ${action.hotkey}` : action.label)}
-        className={action.danger ? s.danger : undefined}
+        data-danger={action.danger ? '' : undefined}
         aria-haspopup={menu ? 'menu' : undefined}
         aria-expanded={menu ? open : undefined}
         // запрос действия в полёте (скачать, печать, ссылка) — кнопка недоступна до ответа (спека 2d §4 п. 7):
@@ -95,7 +249,7 @@ function ActionButton({ action, onAction, state }: { action: DetailAction; onAct
         }}
       >
         <ActionGlyph icon={action.icon} />
-      </IconButton>
+      </ActButton>
       {menu && (
         <Menu open={open} anchor={ref} onClose={() => setOpen(false)} title={`${action.label} — печатная форма`}
           items={menu.map((f) => ({ id: f.form, label: f.label, onSelect: () => onAction(action, f) }))} />
@@ -112,18 +266,18 @@ function Lane({ summary, actions, onAction, stateOf }: {
   stateOf: (actionId: string) => ButtonState
 }) {
   return (
-    <div className={s.lane} data-part="lane">
+    <LaneBar data-part="lane">
       {summary && (
         <>
           <Tag tone="mt">{summary.type}</Tag>
-          <span className={s.status}><StatusDot tone={summary.status.tone} size="s" />{summary.status.label}</span>
-          <span className={s.kind}>{summary.kind}</span>
+          <Status><StatusDot tone={summary.status.tone} size="s" />{summary.status.label}</Status>
+          <Kind>{summary.kind}</Kind>
         </>
       )}
-      <div role="group" aria-label="Действия с документом" className={s.acts}>
+      <Acts role="group" aria-label="Действия с документом">
         {actions.map((a) => <ActionButton key={a.id} action={a} onAction={onAction} state={stateOf(a.id)} />)}
-      </div>
-    </div>
+      </Acts>
+    </LaneBar>
   )
 }
 
@@ -154,12 +308,12 @@ function LinkFallback({ link, onClose }: { link: string; onClose: () => void }) 
     onClose()
   }
   return (
-    <div role="group" aria-label="Ссылка на документ" className={s.link} data-part="link-fallback" data-k-edit="">
-      <Input ref={field} size="s" readOnly value={link} aria-label="Ссылка на документ" aria-describedby={hintId} className={s.linkField}
+    <Plate role="group" aria-label="Ссылка на документ" data-part="link-fallback" data-k-edit="">
+      <LinkField ref={field} size="s" readOnly value={link} aria-label="Ссылка на документ" aria-describedby={hintId}
         onKeyDown={onKeyDown} />
-      <span id={hintId} className={s.linkHint}>{LINK_HINT}</span>
+      <LinkHint id={hintId}>{LINK_HINT}</LinkHint>
       <Button size="s" aria-label="Закрыть ссылку" onClick={onClose} onKeyDown={onKeyDown}>Закрыть</Button>
-    </div>
+    </Plate>
   )
 }
 
@@ -169,10 +323,10 @@ function LinkFallback({ link, onClose }: { link: string; onClose: () => void }) 
  */
 function ActionNoticeBar({ notice, onClose }: { notice: ActionNotice; onClose: () => void }) {
   return (
-    <div className={s.notice} data-part="action-notice" data-tone={notice.tone}>
-      <span className={s.noticeText}>{notice.text}</span>
+    <Notice data-part="action-notice" data-tone={notice.tone}>
+      <NoticeText>{notice.text}</NoticeText>
       <Button size="s" aria-label="Закрыть уведомление" onClick={onClose}>Закрыть</Button>
-    </div>
+    </Notice>
   )
 }
 
@@ -210,30 +364,30 @@ function DecisionPrompt({ decision, note, onResult, onReason, fallbackFocus }: {
 
 function FormSkeleton() {
   return (
-    <div className={s.skeleton} data-part="skeleton" aria-busy="true">
-      <span className={s.sr}>Загрузка документа</span>
+    <SkeletonBox data-part="skeleton" aria-busy="true">
+      <Sr>Загрузка документа</Sr>
       <Skeleton.Block height={44} />
       <Skeleton.Block height={60} />
       <Skeleton.Line lines={3} width="60%" />
       <Skeleton.Block height={120} />
-    </div>
+    </SkeletonBox>
   )
 }
 
 /** Скелетон нелокальной вкладки (эталон skeleton.js): полоса шапки таблицы и rows строк (у вида — skeletonRows, по умолчанию 4). */
 function TabSkeleton({ rows }: { rows: number }) {
   return (
-    <div className={s.skeleton} data-part="tab-skeleton" data-rows={rows} aria-busy="true">
-      <span className={s.sr}>Загрузка вкладки</span>
+    <SkeletonBox data-part="tab-skeleton" data-rows={rows} aria-busy="true">
+      <Sr>Загрузка вкладки</Sr>
       <Skeleton.Block height={22} />
       {Array.from({ length: rows }, (_, i) => <Skeleton.Block key={i} height={24} />)}
-    </div>
+    </SkeletonBox>
   )
 }
 
 /** Вкладка без вида в домене: для fx/rub недостижимо (полноту tabViews проверяет страница), виджет — общий. */
 function Stub({ label }: { label: string }) {
-  return <div className={s.stub}>Вкладка «{label}» не подключена</div>
+  return <StubBox>Вкладка «{label}» не подключена</StubBox>
 }
 
 /**
@@ -405,18 +559,18 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
       overlay={overlay}
       onKeyDown={onKeyDown}
     >
-      <div ref={laneBox} className={s.laneBox}>
+      <LaneBox ref={laneBox}>
         <Lane summary={summary} actions={domain.actions} onAction={onAction} stateOf={stateOf} />
         {/* плашка запроса на аннулирование — под лейном, над вкладками (спека 2e §4 п. 4); уведомления действий — поверх под ней */}
-        {banner !== null && banner !== undefined && <div className={s.annul} data-part="annul-banner">{banner}</div>}
+        {banner !== null && banner !== undefined && <Annul data-part="annul-banner">{banner}</Annul>}
         {actions && (actions.linkFallback || actions.notice) && (
-          <div className={s.under}>
+          <Under>
             {actions.notice && <ActionNoticeBar notice={actions.notice} onClose={actions.closeNotice} />}
             {actions.linkFallback && <LinkFallback link={actions.linkFallback} onClose={actions.closeLinkFallback} />}
-          </div>
+          </Under>
         )}
-      </div>
-      <div className={s.tabs} data-part="tabs">
+      </LaneBox>
+      <TabsBar data-part="tabs">
         <Tabs
           id={tabsId}
           label="Разделы документа"
@@ -426,9 +580,9 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
           onChange={(tab) => setTab({ slot: view.slot, tab })}
           items={domain.tabs.map((t) => ({ id: t.id, label: t.label, disabled: off.includes(t.id), hint: off.includes(t.id) ? 'Нет данных' : undefined }))}
         />
-      </div>
+      </TabsBar>
       {domain.tabs.map((t) => (
-        <TabPanel key={t.id} tabsId={tabsId} tabId={t.id} active={t.id === view.tab} className={s.body}>
+        <PanelBody key={t.id} tabsId={tabsId} tabId={t.id} active={t.id === view.tab}>
           <Body
             view={view}
             domain={domain}
@@ -443,7 +597,7 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
             edit={edit}
             lookups={lookups}
           />
-        </TabPanel>
+        </PanelBody>
       ))}
     </Drawer>
   )

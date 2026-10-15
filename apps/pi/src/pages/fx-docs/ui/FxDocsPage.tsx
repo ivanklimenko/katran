@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { fxCommitView, fxDocLayout } from '../../../entities/fx-doc'
+import { FxCellStyles, fxCommitView, fxDocLayout } from '../../../entities/fx-doc'
 import { useEditContexts } from '../../../features/doc-edit'
 import { useActionsOf } from '../../../features/doc-actions'
 import { useAnnulOf } from '../../../features/doc-annul'
@@ -36,6 +36,8 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
   const notifOf = useNotifOf(docNotif)
   return (
     <>
+      {/* стили своих элементов ячеек реестра (правило 2, спека styled §4.7) */}
+      <FxCellStyles />
       <DocRegistry
         registry={registry}
         layout={fxDocLayout}

@@ -3,12 +3,11 @@ import { copyText } from '../format/clipboard'
 import { useKatran } from '../provider/useKatran'
 import { FLASH_MS } from './CopyValue'
 import { useUnmountGuard } from './useUnmountGuard'
-import s from './Value.module.css'
 
-export type LinkValueProps = { name: string; value?: string | undefined; tabIndex?: number | undefined }
+export type LinkValueProps = { name: string; value?: string | undefined; tabIndex?: number | undefined; className?: string | undefined }
 
 /** Длинная непонятная строка (uuid, референс) показывается именем; клик копирует значение. */
-export function LinkValue({ name, value, tabIndex }: LinkValueProps) {
+export function LinkValue({ name, value, tabIndex, className }: LinkValueProps) {
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -24,7 +23,8 @@ export function LinkValue({ name, value, tabIndex }: LinkValueProps) {
   return (
     <button
       type="button"
-      className={[s.link, value ? '' : s.off, flash ? s.flash : ''].filter(Boolean).join(' ')}
+      className={className ? `k-link ${className}` : 'k-link'}
+      data-flash={flash || undefined}
       disabled={!value}
       tabIndex={tabIndex}
       data-k-tip={value ? `${value} — копировать` : `${name}: нет значения`}

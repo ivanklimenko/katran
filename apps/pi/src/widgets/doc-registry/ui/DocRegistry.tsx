@@ -2,9 +2,49 @@ import { useState } from 'react'
 import { useFilters, useGrid } from '@katran/effector'
 import { BulkBar, Button, Counter, DataGrid, FilterPanel, StatusLane, useKatran, type RecordLayout, type RowState } from '@katran/ui'
 import { useUnit } from 'effector-react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { laneItems } from '../../../entities/doc-status'
 import type { Registry } from '../lib/createRegistry'
-import s from './DocRegistry.module.css'
+
+/* Реестр занимает всю высоту, которую ему дал хост (у стенда — app/Shell, Content); сам геометрию хоста не знает.
+   Хосту нужна определённая высота контейнера, иначе грид вырастет по содержимому. */
+const Page = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+`
+
+const Head = styled.div`
+  flex: none;
+`
+
+/* Заголовок и пояснение — перенесены из apps/demo/src/pages/Page.module.css дословно (R13: без .explain/.hlSpans — обучающая часть демо) */
+const H1 = styled.h1`
+  font: 700 ${k.fsH1} / 1.2 ${k.sans};
+  margin: 0 0 ${k.sp2};
+`
+
+/* счётчик общего числа в заголовке экрана: Counter обёрнут, чтобы не адресовать класс компонента */
+const H1Counter = styled.span`
+  margin-left: ${k.sp2};
+  vertical-align: middle;
+`
+
+const Note = styled.p`
+  color: ${k.muted};
+  margin: 0 0 ${k.sp5};
+  max-width: ${k.noteMax};
+`
+
+const Lane = styled.div`
+  margin: ${k.sp3} 0 ${k.sp2};
+`
+
+const Filters = styled.div`
+  margin: 0 0 ${k.sp3};
+`
 
 export type BulkAction = { label: string; onClick: (count: number) => void }
 export type DocRegistryProps<Row> = {
@@ -36,21 +76,21 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
   if (!counted && g.facets.length > 0) setCounted(true)
   const selected = g.selection.mode === 'all' ? g.total - g.selection.except.length : g.selection.ids.length
   return (
-    <div className={s.page}>
-      <div className={s.head}>
-        <h1 className={s.h1}>{title}{' '}<span className={s.h1Counter}><Counter value={g.total} /></span></h1>
-        {note && <p className={s.note}>{note}</p>}
+    <Page>
+      <Head>
+        <H1>{title}{' '}<H1Counter><Counter value={g.total} /></H1Counter></H1>
+        {note && <Note>{note}</Note>}
         {/* Строка всегда на месте: появляясь, она сдвигала бы грид. Объявление — через announce (живая область провайдера), поэтому без role="status". */}
-        <p className={s.note}>{opened ?? 'Документ не открыт'}</p>
-        <div className={s.lane}><StatusLane label="Статусы" items={laneItems(g.facets, counted)} value={f.lane} onChange={f.setLane} /></div>
-        <div className={s.filters}>
+        <Note>{opened ?? 'Документ не открыт'}</Note>
+        <Lane><StatusLane label="Статусы" items={laneItems(g.facets, counted)} value={f.lane} onChange={f.setLane} /></Lane>
+        <Filters>
           {f.meta
             ? <FilterPanel meta={f.meta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
                 onEdit={f.edit} onSetField={f.setField} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove}
                 suggest={f.suggest} onSuggest={f.onSuggest} onSuggestClose={f.onSuggestClose} />
             : <Button size="s" disabled>Фильтры</Button>}
-        </div>
-      </div>
+        </Filters>
+      </Head>
       <DataGrid
         {...g}
         label={title}
@@ -80,6 +120,6 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
           </BulkBar>
         }
       />
-    </div>
+    </Page>
   )
 }

@@ -42,11 +42,19 @@ describe('CopyValue', () => {
     expect(err).not.toHaveBeenCalled()
     err.mockRestore()
   })
-  it('size="s" и tone="muted" — классы второго кегля и приглушённого тона', () => {
+  it('size="s" и tone="muted" — атрибуты второго кегля и приглушённого тона на элементе k-copy', () => {
     renderK(<CopyValue value="x" size="s" tone="muted" />)
     const btn = screen.getByRole('button', { name: /x/ })
-    expect(btn.className).toMatch(/small/)
-    expect(btn.className).toMatch(/muted/)
+    expect(btn).toHaveClass('k-copy')
+    expect(btn).toHaveAttribute('data-size', 's')
+    expect(btn).toHaveAttribute('data-tone', 'muted')
+  })
+  it('без size — нет data-size; тон по умолчанию val', () => {
+    renderK(<CopyValue value="y" />)
+    const btn = screen.getByRole('button', { name: /y/ })
+    expect(btn).not.toHaveAttribute('data-size')
+    expect(btn).toHaveAttribute('data-tone', 'val')
+    expect(btn).not.toHaveAttribute('data-flash')
   })
 })
 
@@ -134,7 +142,8 @@ describe('StatusDot / FieldTag / Counter', () => {
     renderK(<StatusDot tone="ok" size="l" letter="✓" />)
     const dot = screen.getByText('✓')
     expect(dot).toHaveAttribute('data-st', 'ok')
-    expect(dot.className).toMatch(/dotL/)
+    expect(dot).toHaveClass('k-dot')
+    expect(dot).toHaveAttribute('data-size', 'l')
   })
   it('точки с буквами на всех девяти тонах — без нарушений axe', async () => {
     const letters: Record<StatusTone, string> = { flow: 'О', flowl: 'К', flowd: 'П', bad: 'О', badd: 'Н', warn: 'В', ok: 'И', okl: 'Э', grey: 'О' }

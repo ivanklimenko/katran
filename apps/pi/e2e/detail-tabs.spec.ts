@@ -223,7 +223,8 @@ test('Д28: метка открытой записи сильнее состоя
       const probe = (value: string) => {
         const p = document.createElement('div')
         p.style.color = value
-        document.body.appendChild(p)
+        // токены объявлены на корне провайдера, не на :root (срез styled) — проба внутри корня
+        document.querySelector('[data-k-root]')!.appendChild(p)
         const c = getComputedStyle(p).color
         p.remove()
         return c

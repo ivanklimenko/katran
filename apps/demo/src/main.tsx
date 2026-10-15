@@ -1,5 +1,4 @@
 import { render } from 'react-dom'
-import '@katran/tokens/fonts.css'
 import { App } from './App'
 
 // Демо — на React 17, как прод: хост метаприложения отдаёт React 17, корень там монтирует хост.

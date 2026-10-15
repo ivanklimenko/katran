@@ -1,5 +1,4 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from 'react'
-import s from './Grid.module.css'
 import type { ColumnDef, RowState, SpanDef } from './types'
 
 export type SpanCell<Row> = { def: SpanDef<Row>; colStart: number; colSpan: number }
@@ -56,23 +55,23 @@ export function GridRecord<Row>({ row, rowKey, visible, spanRows, lead, selected
   const span = perRecord > 1 ? perRecord : undefined
   const tall = visible.map((c) => c.fullHeight === true)
   return (
-    <tbody className={[s.record, selected ? s.selected : ''].filter(Boolean).join(' ')} data-key={rowKey} data-state={state?.kind} data-mark={mark ?? undefined}>
+    <tbody className="k-record" data-selected={selected || undefined} data-key={rowKey} data-state={state?.kind} data-mark={mark ?? undefined}>
       <tr role="row" aria-rowindex={rowIndex} aria-selected={selected}>
-        <td role="gridcell" className={s.cell} rowSpan={span} {...cp(0, 0)}><div className={s.lead}>{lead}</div></td>
+        <td role="gridcell" className="k-cell" rowSpan={span} {...cp(0, 0)}><div className="k-lead">{lead}</div></td>
         {visible.map((c, i) => (
-          <td key={c.id} role="gridcell" className={s.cell} data-align={c.align} rowSpan={c.fullHeight ? span : undefined} {...cp(0, i + 1)}>
-            <div className={s.clamp} style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
+          <td key={c.id} role="gridcell" className="k-cell" data-align={c.align} rowSpan={c.fullHeight ? span : undefined} {...cp(0, i + 1)}>
+            <div className="k-clamp" style={{ '--k-lines': String(c.lines ?? 1) } as CSSProperties}>{c.render(row)}</div>
           </td>
         ))}
       </tr>
       {spanRows.map((segs, si) => (
         <tr key={si} role="row" aria-rowindex={rowIndex + 1 + si} aria-selected={selected}>
           {fillSegments(segs, tall).map((seg, k) => {
-            if ('filler' in seg) return <td key={`f${k}`} className={s.filler} colSpan={seg.colSpan} aria-hidden="true" />
+            if ('filler' in seg) return <td key={`f${k}`} className="k-filler" colSpan={seg.colSpan} aria-hidden="true" />
             const content = seg.def.render(row)
             return (
-              <td key={seg.def.id} role="gridcell" className={s.cell} colSpan={seg.colSpan} data-empty={content == null ? 'true' : undefined} {...cp(si + 1, seg.colStart + 1)}>
-                <div className={content == null ? s.spanEmpty : s.clamp} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
+              <td key={seg.def.id} role="gridcell" className="k-cell" colSpan={seg.colSpan} data-empty={content == null ? 'true' : undefined} {...cp(si + 1, seg.colStart + 1)}>
+                <div className={content == null ? 'k-span-empty' : 'k-clamp'} style={{ '--k-lines': String(seg.def.lines ?? 1) } as CSSProperties}>{content}</div>
               </td>
             )
           })}

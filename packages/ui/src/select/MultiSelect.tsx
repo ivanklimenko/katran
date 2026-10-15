@@ -3,13 +3,14 @@ import { Button, IconButton } from '../button'
 import { useStableId } from '../compat/useStableId'
 import type { Scalar } from '../filters/types'
 import { Input } from '../input'
-import is from '../input/Input.module.css'
-import { Popover } from '../overlay'
+import { FieldBox } from '../input/parts'
 import { exitOnEdgeTab } from '../overlay/edgeTab'
 import { useKatran } from '../provider/useKatran'
+import { styled } from '../styled'
 import { Chevron, Cross, Listbox, optionId } from './Listbox'
 import { filterOptions, sameScalar, type Option } from './options'
-import s from './Select.module.css'
+import { Chev, Ph, Pop } from './parts'
+import { k } from '@katran/tokens'
 
 export type MultiSelectProps = {
   options: Option[]
@@ -24,10 +25,100 @@ export type MultiSelectProps = {
   size?: 's' | 'm' | undefined
   id?: string | undefined
   'aria-label'?: string | undefined
+  className?: string | undefined
 }
 
+const MultiField = styled(FieldBox)`
+  gap: ${k.sp1};
+  padding-right: ${k.sp1};
+  overflow: hidden;
+`
+
+const MultiBtn = styled.button`
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  min-width: ${k.sp6};
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 0;
+  }
+`
+
+const Chip = styled.span`
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  height: calc(${k.hCtlS} - ${k.sp1});
+  padding-left: ${k.sp1};
+  border-radius: ${k.rS};
+  background: ${k.valSoft};
+  color: ${k.ink};
+  font-size: ${k.fs2};
+`
+
+const ChipText = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const ChipX = styled(IconButton)`
+  flex: none;
+  color: ${k.muted};
+`
+
+const More = styled.span`
+  flex: none;
+  font-size: ${k.fs2};
+  color: ${k.ink2};
+`
+
+const MultiPop = styled.div`
+  display: grid;
+  gap: ${k.sp1};
+`
+
+const Foot = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${k.sp2};
+  padding: ${k.sp1} ${k.sp1} 0;
+  border-top: 1px solid ${k.line};
+  font-size: ${k.fs2};
+  color: ${k.ink2};
+`
+
+const Chips = styled.span`
+  display: inline-flex;
+  flex: 0 1 auto;
+  gap: ${k.sp1};
+  align-items: center;
+  min-width: 0;
+`
+
+/* только для скринридера: «ещё N» у «+N» */
+const Sr = styled.span`
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+`
+
 /** Несколько значений из справочника (спека §4.3): чипы в поле, поиск и список с отметками в поповере. */
-export function MultiSelect({ options, value, onChange, placeholder = 'Не выбрано', maxChips = 2, max, disabled, size = 'm', id, ...aria }: MultiSelectProps) {
+export function MultiSelect({ options, value, onChange, placeholder = 'Не выбрано', maxChips = 2, max, disabled, size = 'm', id, className, ...aria }: MultiSelectProps) {
   const name = aria['aria-label'] ?? 'Выбор'
   const listId = useStableId()
   const popId = useStableId()
@@ -99,26 +190,26 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
   return (
     <>
       {/* role=presentation: рамка лишь ловит всплывший mousedown, сама не интерактивна (jsx-a11y) */}
-      <span ref={anchor} role="presentation" onMouseDown={onFrameDown} className={[is.field, size === 's' ? is.sizeS : is.sizeM, s.multiField].join(' ')}>
-        <span className={s.chips}>
+      <MultiField ref={anchor} role="presentation" onMouseDown={onFrameDown} data-size={size} className={className}>
+        <Chips>
           {shownChips.map((c, i) => (
-            <span key={`${typeof c.value}:${String(c.value)}`} className={s.chip}>
-              <span id={`${chipsId}-c${i}`} className={s.chipText}>{c.label}</span>
+            <Chip key={`${typeof c.value}:${String(c.value)}`}>
+              <ChipText id={`${chipsId}-c${i}`}>{c.label}</ChipText>
               {!disabled && (
-                <IconButton size="s" tabIndex={-1} label={`Убрать: ${c.label}`} className={s.chipX} onClick={() => { remove(c.value); (open ? search : trigger).current?.focus() }}>
+                <ChipX size="s" tabIndex={-1} label={`Убрать: ${c.label}`} onClick={() => { remove(c.value); (open ? search : trigger).current?.focus() }}>
                   <Cross />
-                </IconButton>
+                </ChipX>
               )}
-            </span>
+            </Chip>
           ))}
           {chips.length > maxChips && (
             <>
-              <span aria-hidden="true" className={s.more}>{`+${chips.length - maxChips}`}</span>
-              <span id={`${chipsId}-more`} className={s.sr}>{`ещё ${chips.length - maxChips}`}</span>
+              <More aria-hidden="true">{`+${chips.length - maxChips}`}</More>
+              <Sr id={`${chipsId}-more`}>{`ещё ${chips.length - maxChips}`}</Sr>
             </>
           )}
-        </span>
-        <button
+        </Chips>
+        <MultiBtn
           ref={trigger}
           id={id}
           type="button"
@@ -128,17 +219,16 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
           aria-describedby={describedBy}
           aria-label={`${name}: ${value.length > 0 ? `выбрано ${value.length}` : placeholder}`}
           disabled={disabled}
-          className={s.multiBtn}
           onClick={() => (open ? close() : openList())}
           onKeyDown={onTriggerKey}
         >
-          {value.length === 0 && <span className={s.ph}>{placeholder}</span>}
-          <span className={s.chev} aria-hidden="true"><Chevron /></span>
-        </button>
-      </span>
-      <Popover open={open} anchor={anchor} returnFocus={trigger} onClose={close} id={popId} label={name} className={s.pop}>
+          {value.length === 0 && <Ph>{placeholder}</Ph>}
+          <Chev aria-hidden="true"><Chevron /></Chev>
+        </MultiBtn>
+      </MultiField>
+      <Pop open={open} anchor={anchor} returnFocus={trigger} onClose={close} id={popId} label={name}>
         {/* role=presentation: обёртка лишь выводит Tab с краёв поповера на поле (jsx-a11y) */}
-        <div role="presentation" className={s.multiPop} onKeyDown={(e) => exitOnEdgeTab(e, trigger, close)}>
+        <MultiPop role="presentation" onKeyDown={(e) => exitOnEdgeTab(e, trigger, close)}>
           <Input
             ref={search}
             size="s"
@@ -154,12 +244,12 @@ export function MultiSelect({ options, value, onChange, placeholder = 'Не вы
             onKeyDown={onSearchKey}
           />
           <Listbox id={listId} label={`Варианты: ${name}`} options={shown} active={active} isSelected={(o) => has(o.value)} isDisabled={(o) => full && !has(o.value)} multi onPick={toggle} onActive={setActive} />
-          <div className={s.foot}>
+          <Foot>
             <span aria-live="polite">{`Выбрано ${value.length}${max !== undefined && max > 1 ? ` из ${max}` : ''}`}</span>
             <Button size="s" disabled={value.length === 0} onClick={() => { onChange([]); search.current?.focus() }}>Очистить</Button>
-          </div>
-        </div>
-      </Popover>
+          </Foot>
+        </MultiPop>
+      </Pop>
     </>
   )
 }

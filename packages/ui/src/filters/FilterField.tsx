@@ -7,8 +7,8 @@ import { MultiSelect } from '../select/MultiSelect'
 import { SearchSelect } from '../select/SearchSelect'
 import { TagInput } from '../tag/TagInput'
 import { conditionsFrom, draftOf, fieldControl, fieldMax, foreignOf, isNumberText, rangeToDisabled, type FieldRaw } from './fieldOps'
+import { FieldBox, FieldLabel } from './parts'
 import type { Condition, Filter, FilterField as Field, SuggestState } from './types'
-import s from './Filters.module.css'
 
 export type FilterFieldProps = {
   field: Field
@@ -52,7 +52,7 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
   const control = fieldControl(field)
   if (control === null) return null
   // Видимая подпись групп (период, справочники): доступное имя контролы получают своим aria-label, <label> не нужен.
-  const caption = <span className={s.fieldLabel}>{field.label}</span>
+  const caption = <FieldLabel>{field.label}</FieldLabel>
 
   switch (control) {
     case 'values':
@@ -64,8 +64,8 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
       const ask = field.suggest === true ? onSuggest : undefined
       const mine = suggest && suggest.field === field.id ? suggest : null
       return (
-        <div className={s.fieldBox}>
-          <label htmlFor={id} className={s.fieldLabel}>{field.label}</label>
+        <FieldBox data-part="field-box">
+          <FieldLabel as="label" htmlFor={id}>{field.label}</FieldLabel>
           <TagInput
             id={id} aria-label={field.label} size="s" mode={control} value={r.value} text={r.text}
             onChange={(v) => set({ ...base(), value: v })}
@@ -77,40 +77,40 @@ export function FilterField({ field, draft, epoch, onSet, compat, dateFormat, su
             onQuery={ask ? (q) => ask({ field: field.id, query: q }) : undefined}
             onSuggestClose={ask ? onSuggestClose : undefined}
           />
-        </div>
+        </FieldBox>
       )
     }
     case 'dateRange':
       return (
-        <div className={field.type === 'DATETIME' ? `${s.fieldBox} ${s.fieldWide}` : s.fieldBox}>
+        <FieldBox data-wide={field.type === 'DATETIME' ? '' : undefined} data-part="field-box">
           {caption}
           <DateRange label={field.label} size="s" time={field.type === 'DATETIME'} format={dateFormat} toDisabled={rangeToDisabled(field)}
             value={raw.kind === 'range' ? raw.value : { from: '', to: '' }} onChange={(v) => set({ kind: 'range', value: v })} />
-        </div>
+        </FieldBox>
       )
     case 'enum':
       return (
-        <div className={s.fieldBox}>
+        <FieldBox data-part="field-box">
           {caption}
           <MultiSelect id={id} aria-label={field.label} size="s" max={fieldMax(field)} options={(field.values ?? []).map((v) => ({ value: v.value, label: v.label }))}
             value={raw.kind === 'enum' ? raw.value : []} onChange={(v) => set({ kind: 'enum', value: v })} />
-        </div>
+        </FieldBox>
       )
     case 'boolean':
       return (
-        <div className={s.fieldBox}>
+        <FieldBox data-part="field-box">
           {caption}
           <SearchSelect id={id} aria-label={field.label} size="s" searchable={false} options={BOOL}
             value={raw.kind === 'text' && raw.value !== '' ? raw.value === 'true' : null}
             onChange={(v) => set({ kind: 'text', value: v === null ? '' : String(v) })} />
-        </div>
+        </FieldBox>
       )
     case 'number':
       return (
-        <div className={s.fieldBox}>
-          <label htmlFor={id} className={s.fieldLabel}>{field.label}</label>
+        <FieldBox data-part="field-box">
+          <FieldLabel as="label" htmlFor={id}>{field.label}</FieldLabel>
           <Input id={id} size="s" inputMode="decimal" value={raw.kind === 'text' ? raw.value : ''} onChange={(e) => set({ kind: 'text', value: e.target.value })} />
-        </div>
+        </FieldBox>
       )
     default: {
       // новый вид контрола в FieldControl без ветки здесь — ошибка компиляции

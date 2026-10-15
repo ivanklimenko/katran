@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { rubDocLayout } from '../../../entities/rub-doc'
+import { RubCellStyles, rubDocLayout } from '../../../entities/rub-doc'
 import { useActionsOf } from '../../../features/doc-actions'
 import { useAnnulOf } from '../../../features/doc-annul'
 import { useLookupOf } from '../../../features/doc-lookups'
@@ -31,6 +31,8 @@ export function RubDocsPage({ note }: { note?: string | undefined }) {
   const notifOf = useNotifOf(docNotif)
   return (
     <>
+      {/* стили своих элементов ячеек реестра (правило 2, спека styled §4.7) */}
+      <RubCellStyles />
       <DocRegistry
         registry={registry}
         layout={rubDocLayout}

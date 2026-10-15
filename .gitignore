@@ -11,3 +11,12 @@ apps/demo/test-results/
 apps/demo/playwright-report/
 apps/pi/test-results/
 apps/pi/playwright-report/
+# тарболы выпуска: pnpm release:pack
+release/
+# замер скорости apps/pi (срез styled): сборки базы и head, результаты прогона
+apps/pi/perf/base/
+apps/pi/perf/head/
+apps/pi/perf/result.json
+# временные образцы pnpm check:rules (scripts/check-style-rules.mjs удаляет их сам; на случай kill -9)
+packages/ui/src/__style-rules-sample*__.tsx
+packages/ui/src/value/__style-rules-sample*__.tsx

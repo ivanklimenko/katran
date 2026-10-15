@@ -1,11 +1,110 @@
 import type { ReactNode } from 'react'
+import styled from 'styled-components'
+import { k } from '@katran/tokens'
 import { Disclosure, LinkValue, StatusDot, formatAmount, formatDateTimeFull, formatDateTimeShort, type StatusTone } from '@katran/ui'
 import type { Balances } from '../../../shared/api'
 import type { LookupView } from '../../../shared/lib/detail'
 import type { Tx, TxDir, TxState } from '../model/posting'
 import { BalancesView } from './BalancesView'
 import { LookupLink } from './LookupLink'
-import s from './posting.module.css'
+
+/* Блок «Транзакции» (эталон .tx/.txs, index.html:176–186) */
+const Summary = styled.span`
+  display: inline-flex;
+  gap: ${k.sp1};
+`
+
+const SumItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp1};
+  font: 600 ${k.fs3} / 1 ${k.mono};
+  color: ${k.ink2};
+`
+
+const Ids = styled.span`
+  display: inline-flex;
+  align-items: baseline;
+  gap: ${k.sp2};
+  margin-left: auto;
+`
+
+const At = styled.span`
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+const Rows = styled.div`
+  margin: 0 calc(-1 * ${k.sp2});
+`
+
+const Row = styled.div`
+  display: grid;
+  grid-template-columns: ${k.dtDir} ${k.dtAcc} ${k.dtSum} ${k.dtSt} minmax(0, 1fr) ${k.dtTime};
+  gap: 0 ${k.sp2};
+  align-items: center;
+  min-height: ${k.hField};
+  padding: 0 ${k.sp2};
+  border-top: 1px solid ${k.line2};
+  white-space: nowrap;
+
+  & > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`
+
+const Dir = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp1};
+  font: 600 ${k.fs3} / 1 ${k.mono};
+  color: ${k.ink2};
+
+  & svg {
+    flex: none;
+    width: ${k.fs1};
+    height: ${k.fs1};
+  }
+`
+
+const Acc = styled.span`
+  font: ${k.fs2} / ${k.lh2} ${k.mono};
+  color: ${k.val};
+`
+
+const Sum = styled.span`
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+`
+
+const Ccy = styled.small`
+  margin-left: ${k.sp1};
+  font-size: ${k.fs2};
+  font-weight: 600;
+  color: ${k.val};
+`
+
+const St = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${k.sp1};
+  font: 600 ${k.fs3} / 1 ${k.sans};
+  color: ${k.ink2};
+`
+
+const Reg = styled.span`
+  font-size: ${k.fs2};
+  color: ${k.muted};
+`
+
+const Time = styled.span`
+  font: ${k.fs2} / ${k.lh2} ${k.mono};
+  font-variant-numeric: tabular-nums;
+  color: ${k.ink2};
+`
 
 const TONE: Record<TxState, StatusTone> = { EXECUTED: 'ok', PENDING: 'warn', CANCELED: 'bad' }
 const ORDER: TxState[] = ['EXECUTED', 'PENDING', 'CANCELED']
@@ -41,27 +140,27 @@ export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances 
       defaultOpen={defaultOpen}
       aside={(
         <>
-          <span className={s.summary}>
-            {counts.map(({ st, n }) => <span key={st} className={s.sumItem}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</span>)}
-          </span>
+          <Summary>
+            {counts.map(({ st, n }) => <SumItem key={st}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</SumItem>)}
+          </Summary>
           {balances && <LookupLink label="Проверить баланс" view={balances}><BalancesView view={balances} /></LookupLink>}
           {aside}
-          <span className={s.ids}><LinkValue name="txId" value={txId} /><span className={s.at}>{formatDateTimeFull(txAt)}</span></span>
+          <Ids><LinkValue name="txId" value={txId} /><At>{formatDateTimeFull(txAt)}</At></Ids>
         </>
       )}
     >
-      <div className={s.rows}>
+      <Rows>
         {txs.map((t, i) => (
-          <div key={i} className={s.row}>
-            <span className={s.dir}><Arrow dir={t.dir} />{t.dir}</span>
-            <span className={s.acc}>{t.acc}</span>
-            <span className={s.sum}>{formatAmount(t.amount)}<small className={s.ccy}>{t.currency}</small></span>
-            <span className={s.st}><StatusDot tone={TONE[t.st]} size="s" />{t.st}</span>
-            <span className={s.reg} data-k-tip={`Тип регистра: ${t.reg}`}>{t.reg}</span>
-            <span className={s.time} data-k-tip={t.time ?? undefined}>{t.time ? formatDateTimeShort(t.time) : '—'}</span>
-          </div>
+          <Row key={i}>
+            <Dir><Arrow dir={t.dir} />{t.dir}</Dir>
+            <Acc>{t.acc}</Acc>
+            <Sum>{formatAmount(t.amount)}<Ccy>{t.currency}</Ccy></Sum>
+            <St><StatusDot tone={TONE[t.st]} size="s" />{t.st}</St>
+            <Reg data-k-tip={`Тип регистра: ${t.reg}`}>{t.reg}</Reg>
+            <Time data-k-tip={t.time ?? undefined}>{t.time ? formatDateTimeShort(t.time) : '—'}</Time>
+          </Row>
         ))}
-      </div>
+      </Rows>
     </Disclosure>
   )
 }

@@ -2,13 +2,13 @@ import { MiniTable, StatusBadge, Tag, Timestamp, type MiniColumn } from '@katran
 import { toneOf } from '../model/tone'
 import type { StreamEvent } from '../model/types'
 import type { TrailTabProps } from './lib'
-import s from './trail.module.css'
+import { Code, Cut } from './parts'
 
 const COLUMNS: MiniColumn<StreamEvent>[] = [
   { id: 'at', header: 'Дата/время', width: 120, render: (e) => <Timestamp iso={e.at} /> },
   { id: 'system', header: 'Код ИС', width: 60, render: (e) => <Tag tone="mt">{e.system}</Tag> },
-  { id: 'destination', header: 'ИС куда', width: 90, render: (e) => <span className={[s.muted, s.cut].join(' ')}>{e.destination}</span> },
-  { id: 'event', header: 'Событие', mono: true, render: (e) => <span className={s.code}>{e.event}</span> },
+  { id: 'destination', header: 'ИС куда', width: 90, render: (e) => <Cut data-tone="muted">{e.destination}</Cut> },
+  { id: 'event', header: 'Событие', mono: true, render: (e) => <Code>{e.event}</Code> },
   { id: 'status', header: 'Статус', width: 70, render: (e) => <StatusBadge tone={toneOf(e.status)}>{e.status}</StatusBadge> },
   { id: 'tries', header: 'Попытки', width: 60, align: 'end', mono: true, render: (e) => e.tries },
 ]
