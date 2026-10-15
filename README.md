@@ -1,6 +1,6 @@
 # katran
 
-Дизайн-система для интерфейсов проекта: React + effector. Спецификация — `docs/superpowers/specs/2026-09-23-katran-design.md`.
+Дизайн-система для интерфейсов проекта: React + effector, стили — styled-components 5. Спецификация — `docs/superpowers/specs/2026-09-23-katran-design.md`, стилизация — `docs/superpowers/specs/2026-10-13-katran-styled-design.md`.
 
 Пакеты: `@katran/tokens` (токены, шрифты), `@katran/ui` (компоненты), `@katran/effector` (модели). Демо-витрина — `apps/demo`; реестры ПИ на FSD (валютный и рублёвый, фейковый сервер на контракте `vtb-filters`) — `apps/pi`.
 
@@ -22,15 +22,26 @@
     pnpm release:pack     # сборка трёх пакетов → release/*.tgz, проверка манифестов и состава
     pnpm check:install    # тарболы ставятся npm в чистый проект: импорт, Vite, типы (нужна сеть)
 
-Публикуется готовый тарбол — любым клиентом: `npm publish release/katran-tokens-<версия>.tgz`, затем `ui`, затем `effector` (в этом порядке: `ui` зависит от `tokens`, `effector` — от `ui`). Тем же файлом пакет переносится в контур без реестра. Из папки пакета публиковать можно только `pnpm publish`: npm не заменяет `workspace:*` на версию, такую публикацию останавливает `prepublishOnly`. Версия у трёх пакетов одна; перед выпуском её поднимают во всех трёх `package.json`.
+Версия — `0.2.0` (переход на styled-components, breaking для потребителя — `CHANGELOG.md`, `docs/consuming.md`). Публикуется готовый тарбол — любым клиентом: `npm publish release/katran-tokens-<версия>.tgz`, затем `ui`, затем `effector` (в этом порядке: `ui` зависит от `tokens`, `effector` — от `ui`). Тем же файлом пакет переносится в контур без реестра. Из папки пакета публиковать можно только `pnpm publish`: npm не заменяет `workspace:*` на версию, такую публикацию останавливает `prepublishOnly`. Версия у трёх пакетов одна; перед выпуском её поднимают во всех трёх `package.json`.
 
-```ts
-import '@katran/tokens/fonts.css'
-import '@katran/ui/styles.css'
-import { KatranProvider, Button } from '@katran/ui'
+```tsx
+import { Button, KatranFonts, KatranProvider } from '@katran/ui'
+
+export const App = () => (
+  <>
+    <KatranFonts />   {/* @font-face IBM Plex — один раз на приложение */}
+    <KatranProvider defaultTheme="light">
+      <Button>Сохранить</Button>
+    </KatranProvider>
+  </>
+)
 ```
 
-Peer-зависимости: `react` ≥ 17, `react-dom` ≥ 17 (прод — React 17.0.2 хоста). Встраивание в метаприложение (webpack 5, Module Federation, Chromium 88) — `docs/consuming.md`, макет — `examples/federation/`.
+Импортов CSS нет: стили кита — styled-components, переменные `--k-*` объявляет корень `KatranProvider` (вне его их нет). Peer-зависимости: `react` ≥ 17, `react-dom` ≥ 17 (прод — React 17.0.2 хоста), `styled-components` `^5.3.11`; `react-is` у потребителя закрепляется под мажорную версию React (`docs/consuming.md`). Встраивание в метаприложение (webpack 5, Module Federation, Chromium 88) — `docs/consuming.md`, макет — `examples/federation/`.
+
+## Стилизация
+
+Два правила (спека styled, §4.2–§4.3): весь кит — статические styled-компоненты (в шаблонах нет функций, токены — объектом `k` из `@katran/tokens`: `${k.paper}` → `var(--k-paper)`, состояния — атрибутами); горячий путь грида (`value/`, запись и скелетон) — обычные элементы с классами `k-…`, правила объявлены один раз в шаблоне корня провайдера. `KatranProvider` кладёт токены в тему styled-components под ключом `katran` и тему хоста не затирает. Правила проверяют `pnpm lint` (stylelint по шаблонам, eslint — функции в шаблонах и `styled` в горячем пути) и `pnpm check:target` (планка Chromium 88 по шаблонам). Скорость грида против базы — `pnpm --filter pi perf:base <коммит> && pnpm --filter pi perf` (вне `pnpm check`); снимки вида — `pnpm --filter pi visual`, `pnpm --filter demo visual`.
 
 ## DataGrid
 

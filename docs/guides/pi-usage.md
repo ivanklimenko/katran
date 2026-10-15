@@ -37,27 +37,58 @@ apps/pi/src/
 
 Импорты в скопированном коде относительные (`../../../shared/api`, без алиасов `@/...`) — переносятся как есть, ничего не переписывать. Если в вашем проекте настроен алиас `@/`, можно (не обязательно) заменить относительные пути на алиас — это косметика, на поведение не влияет.
 
-**Сборка должна понимать CSS Modules.** В слайсах есть свои стили — `entities/fx-doc/ui/cells.module.css`, `entities/fx-doc/ui/detail.module.css`, `entities/fx-doc/ui/edit.module.css` (правка, срез 2c), `entities/fx-doc/ui/extra.module.css` (вкладка «Доп. поля»), `entities/doc-trail/ui/trail.module.css` (вкладки следа документа), `entities/rub-doc/ui/cells.module.css`, `entities/rub-doc/ui/detail.module.css`, `entities/posting/ui/posting.module.css`, `widgets/doc-registry/ui/DocRegistry.module.css`, `widgets/doc-detail/ui/DocDetail.module.css`, — они импортируются как объект классов (`import s from './cells.module.css'`, дальше `s.num`, `s.dirRow`). Поэтому у вас нужно:
+**Стили — styled-components 5, CSS-файлов в слайсах нет** (с `0.2.0` кита; спека `docs/superpowers/specs/2026-10-13-katran-styled-design.md`). Стили лежат рядом с компонентом: styled-части в файле компонента (`ui/detail.tsx`, `ui/edit.tsx`, `ui/DocRegistry.tsx`…) и стили своих элементов ячеек реестра — `FxCellStyles`/`RubCellStyles` в `entities/*/ui/layout.tsx` (раздел «Стили ячеек реестра» ниже). Поэтому у вас нужно:
 
-- **CSS Modules для `*.module.css`** в сборщике. Vite включает их сам; webpack — `css-loader` с `modules: { auto: true }` (или правило на `/\.module\.css$/`). Имена классов в файлах — camelCase (`dirRow`, `srTag`), обращение в коде — `s.dirRow`, так что `localsConvention`/`exportLocalsConvention` можно не настраивать; у нас (`apps/pi/vite.config.ts`) стоят `camelCaseOnly` и `generateScopedName` вида `k-<файл>__<класс>` — это удобство отладки, не требование.
-- **Объявление типа `*.module.css` для TypeScript**, иначе `tsc` не пропустит импорт стиля. У нас — `packages/ui/src/css-modules.d.ts` (одна строка `declare module '*.module.css' { const classes: Record<string, string>; export default classes }`), подключён через `include` в `apps/pi/tsconfig.json`. У вас — такой же файл в своём `src` (или готовое объявление из `vite/client`, если вы на Vite).
-- **Порядок подключения стилей не важен**: там, где стиль слайса должен перебить класс компонента кита (моноширинный шрифт, жирный номер, цвет `warn`), в файле стоит удвоенный класс (`.num.num`, `.mono.mono`, `.warn.warn`) — специфичность выше, чем у одиночного класса кита, в каком бы порядке сборщик ни положил CSS. Не «упрощайте» эти селекторы до одинарных.
+- **`styled-components` `^5.3.11`** в зависимостях (и `@types/styled-components` `5.1.34` для TypeScript), а под Module Federation — в `shared` как singleton, копия хоста (`docs/consuming.md`, «webpack remote»); **`react-is` закреплён под мажорную версию React** — без этого styled-components с `react-is` 19 не распознаёт элементы React 17 (`docs/consuming.md`, «Установка»).
+- **Ничего в сборщике.** Загрузчики CSS, CSS Modules и объявление `*.module.css` для TypeScript не нужны.
+- **Порядок стилей.** Свои стили слайса, перебивающие компонент кита (моноширинный шрифт, жирный номер, цвет `warn`), — `styled(КомпонентКита)` или класс из `FxCellStyles`/`RubCellStyles` при той же специфичности: выигрывает порядок групп styled-components — стиль, объявленный позже корня кита, стоит в листе после правил кита. Удвоения классов (`.num.num`) больше не нужны.
+
+### Как писать стили (образец `apps/pi`)
+
+- **Шаблоны статические, как в ките:** без функций от пропсов и `theme`; токены — объектом `k` из `@katran/tokens` (`${k.muted}` → `var(--k-muted)`); состояния — атрибутами (`data-*`, `aria-*`, `:disabled`), переменные значения — инлайновой CSS-переменной. Правило проверяет eslint (`APP_STYLED_RULES` в `eslint.config.js`), размеры и цвета только токенами — stylelint по шаблонам. `theme.katran` под `KatranProvider` доступна, но в образце не используется: функции в шаблоне — самый медленный вариант (числа ниже), а `k` даёт то же без функции.
+- **Имена частей** — с заглавной буквы (`Kv`, `KvRow`, `RatesBox`), не совпадают с именами типов; хук для тестов — `data-part="<имя>"`, лучше роли и подписи.
+
+### Стили ячеек реестра
+
+То, что рисуется в каждой записи грида (содержимое ячеек колонок `cells` обеих сущностей), подчиняется **правилу 2** спеки стилизации: обычные элементы с постоянными классами и один `createGlobalStyle` на сущность, а не styled-компонент на каждом элементе. Цена обёртки styled-компонента — на каждом элементе каждой записи; в форме, окне, панели (десятки элементов) она незаметна, в гриде (≈110 элементов на запись, 5 489 на 50 записей) — нет.
+
+Опыт `spike/styled` (спека §3.2; полное время действия против CSS Modules, 50 / 200 записей, процессор обычный и ×4):
+
+| Вариант | Первый показ | Смена страницы | Выделить все | Смена темы |
+|---|---|---|---|---|
+| styled, токены функцией от `theme` | +18…+30 % | +28…+56 % | +55…+90 % | +30…+43 % |
+| styled, статические шаблоны | +12…+14 % | +14…+24 % | +46…+78 % | +19…+31 % |
+| ячейки обычными элементами, содержимое — styled | +6…+11 % | +13…+17 % | +28…+60 % | +11…+17 % |
+| весь горячий путь — обычные элементы и один `createGlobalStyle` | +2…+3 % | 0…+5 % | −1…+26 % | −24…+1 % |
+
+Время скриптов: функции от `theme` — в 2,5–3 раза выше базы, статические styled — примерно вдвое, обычные элементы — в пределах ±11 %. Порог — **не медленнее на 15 %** по каждому сценарию (для действий короче 100 мс — по времени скриптов).
+
+Итог в `apps/pi` (срез styled, Task 9): свои элементы ячеек — статическими styled-компонентами (`SrTag`, `Mono`, `Num`, значок направления…) — вышли за порог дважды подряд на одном сценарии: «выбрать все», 200 записей, время скриптов +30 % и +34 %. После перевода на правило 2 — в пределах порога; итоговый замер среза — `docs/STATE.md` §6. Поэтому правило:
+
+1. **В ячейке — компоненты значений кита** (`CopyValue`, `LinkValue`, `StatusDot`, `Tag`, `FieldTag`, `SwiftField`, `AccountValue`…) и **обычные элементы** (`span`, `div`, `svg`) с классами. Никаких `styled.*` в `render` колонок.
+2. **Правила — один `createGlobalStyle` рядом с раскладкой колонок** (`FxCellStyles` в `entities/fx-doc/ui/layout.tsx`, `RubCellStyles` в `entities/rub-doc/ui/layout.tsx`), каждое правило — под корнем провайдера: `:where([data-k-root]) .fxNum { … }` — специфичность (0,1,0), как у правил кита; переопределение `CopyValue` (`className="fxNum"`) выигрывает порядком: стиль ячеек зарегистрирован позже корня кита.
+3. **Имена классов — camelCase с префиксом сущности** (`fxSrTag`, `fxDirRow`, `rubMono`): правила глобальные (под корнем провайдера), без префикса классы двух реестров столкнутся. Классы `k-…` — кита, своим элементам их не давать.
+4. **Монтирование — рядом с реестром.** Страница ставит `<FxCellStyles />` рядом с `DocRegistry` (так в `pages/fx-docs`, `pages/rub-docs`); без него ячейки останутся без своих стилей. Смена раздела перемонтирует стиль — его правила снова встают после правил кита (тест `entities/fx-doc/ui/layout.test.tsx`).
+5. **Повторяющееся в обоих реестрах** (сейчас 7 правил-двойников в `FxCellStyles`/`RubCellStyles`) — кандидат в компоненты значений кита, отдельным срезом (`docs/STATE.md` §7).
+
+Скорость реестра проверяет `pnpm --filter pi perf:base <коммит> && pnpm --filter pi perf` (`apps/pi/README.md`).
 
 ## 3. Монтирование страниц
 
 Обе страницы — обычные React-компоненты: `FxDocsPage` (`pages/fx-docs`), `RubDocsPage` (`pages/rub-docs`). Единственный проп — необязательный `note?: string` — строка пояснения под заголовком реестра; без него строки нет. У нас текст про фейковый сервер передаёт `apps/pi/src/app/App.tsx` — в самих страницах текста стенда нет. Над ними обязателен `KatranProvider` (`@katran/ui`) — без него компоненты кита не находят тему/плотность/тултипы. Нужны также шрифты кита.
 
 ```tsx
-import '@katran/tokens/fonts.css'
-import '@katran/ui/styles.css'
-import { KatranProvider } from '@katran/ui'
+import { KatranFonts, KatranProvider } from '@katran/ui'
 import { FxDocsPage } from './pages/fx-docs'
 
 export function DocumentsScreen() {
   return (
-    <KatranProvider storageKey="documents">
-      <FxDocsPage />
-    </KatranProvider>
+    <>
+      <KatranFonts />
+      <KatranProvider storageKey="documents">
+        <FxDocsPage />
+      </KatranProvider>
+    </>
   )
 }
 ```
@@ -76,8 +107,7 @@ export const registry = createRegistry({
 
 Адаптер — любой объект `PersistAdapter` (`{ load(key), save(key, value) }`, тип экспортирует `@katran/effector`): `localStoragePersist(prefix)`, `memoryPersist()` (ничего не сохраняет между перезагрузками — так в тестах) или свой — например, на серверные настройки пользователя. Подробности про `KatranProvider`, изоляцию стилей и CORS для шрифтов — `docs/consuming.md`.
 
-**Почему сам `apps/pi` не импортирует `@katran/ui/styles.css`.** Пример выше — для вас, потребителя опубликованного пакета; в исходниках `apps/pi/src/app/entry.tsx` этой строки нет, и это не упущение. Внутри монорепо `apps/pi` берёт `@katran/ui` из исходников (`exports["."]` в `packages/ui/package.json` — `./src/index.ts`, не `dist`): `packages/ui/src/index.ts` сам импортирует `@katran/tokens/tokens.css` как побочный эффект первой строкой, а CSS каждого компонента (`Button.module.css` и т. п.) приезжает вместе с компонентом при импорте — Vite подключает такие модульные стили в общий бандл сам, отдельно собирать их не нужно. Отсюда у нас в `entry.tsx` — только `@katran/tokens/fonts.css` (шрифты `index.ts` не тянет, это осознанно отдельный импорт).
-Если вы ставите кит опубликованным пакетом (не из монорепо) — источников `src/*.module.css` у вас нет, только собранный `packages/ui/package.json` → `exports["./styles.css"]` = `./dist/ui.css` (единый файл со стилями всех компонентов, собранный при публикации). Поэтому в вашем коде явный `import '@katran/ui/styles.css'` обязателен — без него компоненты кита останутся без стилей. `@katran/tokens/tokens.css` в `dist/ui.css` уже включён (тот же побочный импорт в исходнике собирается в бандл), но шрифты `@katran/tokens/fonts.css` всё равно импортируются отдельно — `@font-face` не зависит от компонентов.
+**Импортов CSS нет** ни у вас, ни в `apps/pi` (`apps/pi/src/app/entry.tsx`): стили кита и слайсов — styled-components, они вставляются в `<style>` при рендере; переменные `--k-*` объявляет корень `KatranProvider` (вне него их нет); шрифты — компонент `KatranFonts` (`@font-face` IBM Plex, файлы `woff2` из `@katran/tokens`), один раз на приложение. Внутри монорепо `apps/pi` берёт `@katran/ui` исходниками (условие экспорта `katran-source`), вы — собранным пакетом; разницы в подключении нет.
 
 Рендер — legacy, без `createRoot` (React 17):
 
@@ -251,6 +281,7 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 - [ ] Правка валютной деталки сохраняется в ваш бек: `POST …/documents/{id}/edits` и `GET …/documents/{id}/accounts` проходят контрактный тест (раздел 14.5); `409` вашего бека показывает «Документ изменили — откройте заново».
 - [ ] `?slow=N`, `?fail=search|facets|suggest|meta|detail|tab|tab:<id>|edit|accounts` и `?conflict=edit` нигде не нужны — это регуляторы фейкового сервера (`apps/pi/src/app/fake/params.ts`), у вашего транспорта их нет и не должно быть.
 - [ ] Контрактные тесты (раздел 7) зелёные против вашего бека.
+- [ ] `styled-components` `^5.3.11` в зависимостях (под федерацией — shared singleton хоста), `react-is` закреплён под версию React; `FxCellStyles`/`RubCellStyles` смонтированы рядом с реестрами (раздел 2, «Стили ячеек реестра»).
 - [ ] eslint-границы FSD перенесены в ваш конфиг (раздел 11) — импорты вверх по слоям и между соседними слайсами одного слоя запрещены линтом, не только на словах.
 - [ ] В скопированных слайсах нет упоминаний стенда (тексты, геометрия Shell, префикс persist): пояснение `note` страниц — ваше или не передано (раздел 3); высоту реестру даёт ваш контейнер экрана — `DocRegistry` занимает `height: 100%` родителя, у нас определённую высоту задаёт `apps/pi/src/app/Shell.module.css` (`.main`/`.content`), без неё грид вырастет по содержимому; раскладка грида хранится под вашим префиксом (`RegistryConfig.persist`, раздел 3), а не под `katran-pi`.
 
@@ -288,14 +319,14 @@ export const fxDocsQuery = createQuery({ effect: fxDocPorts.searchFx })
 | `shared/api/index.ts` (2b) | экспорт `TabQuery`, `TabParser`, `TabPort` |
 | `shared/lib/detail/*` (2b) | `TabContext`, `TabView`, `LocalTabView`, `RemoteTabView`, `remoteTab`, `DetailDomain.tabViews` |
 | `entities/fx-doc/api/ports.ts`, `entities/rub-doc/api/ports.ts` (2b) | `parseTab: trailParsersFor(FX_TABS)` / `trailParsersFor(RUB_TABS)` — парсеры `TRAIL_PARSERS` сущности `doc-trail` по набору вкладок реестра (через `@x`) |
-| `entities/fx-doc` (2b) | «Доп. поля»: `ExtraTab`, `fxExtraView`, `fxExtraGroups` (`model/extra.ts`, `ui/ExtraTab.tsx`, `ui/extra.module.css`); тип детали не менялся |
+| `entities/fx-doc` (2b) | «Доп. поля»: `ExtraTab`, `fxExtraView`, `fxExtraGroups` (`model/extra.ts`, `ui/ExtraTab.tsx`); тип детали не менялся |
 | `entities/fx-doc/index.ts` (2b) | экспорт `fxExtraView`, `ExtraTab`, `fxExtraGroups` |
 | `widgets/doc-detail/*` (2b) | `tabFx`, `localTabs`, `tabView` слота, `retryTab`, `$expanded`, `setExpanded`; скелетон, ошибка и «Повторить» вкладки (раздел 13.1) |
 | `pages/*/model/registry.model.ts` (2b) | `FX_LOCAL_TABS` / `RUB_LOCAL_TABS`, `tabFx` и `localTabs` в `createDetail` (раздел 13.2) |
 | `pages/*/ui/detailDomain.ts` (2b, новый), `pages/*/ui/*Page.tsx` | домен деталки с `tabViews` — `fxDetailDomain` / `rubDetailDomain` вместо домена сущности; виды `doc-trail` — `trailViewsFor(FX_TABS)` / `trailViewsFor(RUB_TABS)` (раздел 13.2) |
 | `pages/*/index.ts` (2b) | экспорт `fxDetailDomain` / `rubDetailDomain` и `FX_LOCAL_TABS` / `RUB_LOCAL_TABS` |
 
-Новые папки — целиком: `widgets/doc-detail/`, `entities/posting/`, `shared/lib/detail/`, `entities/doc-trail/` (2b, вместе с `@x/fx-doc.ts` и `@x/rub-doc.ts`), а в `entities/fx-doc/` и `entities/rub-doc/` — новые файлы `model/detail.ts`, `model/swift.ts` / `model/profiles.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `ui/detail.tsx`, `ui/detail.module.css`. `app/fake/*` (фейк детали) по-прежнему не переносится.
+Новые папки — целиком: `widgets/doc-detail/`, `entities/posting/`, `shared/lib/detail/`, `entities/doc-trail/` (2b, вместе с `@x/fx-doc.ts` и `@x/rub-doc.ts`), а в `entities/fx-doc/` и `entities/rub-doc/` — новые файлы `model/detail.ts`, `model/swift.ts` / `model/profiles.ts`, `api/detail.mapper.ts`, `api/detail.example.ts`, `ui/detail.tsx`. `app/fake/*` (фейк детали) по-прежнему не переносится.
 
 **Кит нужен свежий.** Версия трёх пакетов кита меняется редко (сейчас `0.1.1`), а срезы лежат в `CHANGELOG.md` в одном разделе «в работе»: номер версии не отличает кит с деталкой от кита без неё. Если вы ставили кит тарболами, соберите их заново из текущего кода — `pnpm release:pack` в корне (собирает три пакета и кладёт `.tgz` в `release/`; подробности — `docs/consuming.md`, «Откуда пакеты»), и переустановите; во внутренний реестр — опубликуйте заново. Со старыми тарболами сборка упадёт на импорте `Drawer`/`createDrawerStackModel`. Срез 2b добавил в кит (тот же раздел `CHANGELOG.md`): `MiniTable`, `StatusBadge`, `Timestamp`, `KeyValueList`, `CodeView`, форматтеры `formatTimestamp`, `formatDuration`, `timestampDiff`, `Disclosure` с `mono`/`emptyText`, `ConfigForm` с управляемым раскрытием `expanded`/`onExpandedChange`; тег-метка `Tag tone="mt"` — прежний.
 
@@ -529,7 +560,7 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
 | `entities/fx-doc/model/detail.ts`, `api/detail.mapper.ts`, `api/detail.example.ts` | поле детали `edits` и его разбор (`parseEdits`); пример с правкой поля 57 |
 | `entities/fx-doc/model/swift.ts` | `editable: true` у 50, 52, 56, 57, 59, 70, 72 в `FX_FIELDS` |
 | `entities/fx-doc/api/ports.ts` | `fxEditPorts = createEditPorts({ gridId: 'fx-docs', parseDetail: parseFxDocDetail })` |
-| `entities/fx-doc/ui/edit.tsx`, `ui/edit.module.css` (новые), `ui/detail.tsx`, `ui/detail.module.css`, `index.ts` | виды правки: 20 исх, счета с подсказкой, дата валютирования, маршрут «пересчитан», `fxFormEdit` (карандаши, редактор и аудит полей в `ConfigForm`), `fxCommitView` (текст `Prompt` даты); `renderHero`/`renderBlock` домена принимают `edit` |
+| `entities/fx-doc/ui/edit.tsx` (новый), `ui/detail.tsx`, `index.ts` | виды правки: 20 исх, счета с подсказкой, дата валютирования, маршрут «пересчитан», `fxFormEdit` (карандаши, редактор и аудит полей в `ConfigForm`), `fxCommitView` (текст `Prompt` даты); `renderHero`/`renderBlock` домена принимают `edit` |
 | `features/doc-edit/` (новая папка) | `createDocEdit` — модель правки документа, справочники счетов, факты `docEdited`/`conflict`; `useEditContexts` — `EditContext` по документу; `editKey`, `editScope`, `CONFLICT_TEXT`, `DISCARD_VIEW` |
 | `widgets/doc-detail/lib/createDetail.ts` | `guard` (охрана ухода): `leaveRequested`/`leave`; `replaceDetail` (деталь ответа — в кэш, сброс вкладок документа), `reloadDetail` (перезапрос после `409`); эпоха документа — ответы, ушедшие до `replaceDetail`, кэш не трогают |
 | `widgets/doc-detail/ui/DocDetail.tsx` | проп `editOf`; `Prompt` правки — в слое `overlay` drawer'а своего документа |
@@ -661,10 +692,10 @@ const editOf = useEditContexts(docEdit, fxCommitView)
 | `shared/lib/detail/types.ts`, `index.ts` | `PrintFormItem` (`menu` действия — `{ label, form }[]`), `ActionsView`, `DecisionKind`/`DecisionState`; у `EditContext` — `decision`, `canDecide`, `confirmEdit`, `rejectEdit`, `changeReason`, `onDecision`; у `DetailDomain` — `decisionNote`, `decisionFocus`; `LeaveIntent` — вид `refresh`; из `ActionIcon` ушла `edit` |
 | `entities/fx-doc/model/edit.ts`, `api/detail.mapper.ts`, `api/detail.example.ts` | `FxEdit.canConfirm`, `FxHistEntry.reason`, статус `rejected`; `parseEdits` читает `canConfirm` (не boolean — нарушение контракта с путём, нет ключа — `false`) |
 | `entities/fx-doc/model/swift.ts`, `entities/rub-doc/model/profiles.ts` | из наборов действий ушло `edit`; пункты меню печати — `PrintFormItem` с кодами форм |
-| `entities/fx-doc/ui/edit.tsx`, `edit.module.css`, `index.ts` | кнопки решения у 20 исх и счетов, маркер «отклонено», `fxDecisionNote` (тело `Prompt` решения), `fxDecisionFocus` (карандаш цели после решения); в аудите поля — кнопки решения у последней `pending` |
+| `entities/fx-doc/ui/edit.tsx`, `index.ts` | кнопки решения у 20 исх и счетов, маркер «отклонено», `fxDecisionNote` (тело `Prompt` решения), `fxDecisionFocus` (карандаш цели после решения); в аудите поля — кнопки решения у последней `pending` |
 | `features/doc-actions/` (новая папка) | `createDocActions` — модель действий лейна, `useActionsOf` — виды по документам; эффекты `writeClipboardFx`, `saveFileFx`, `showInWindowFx`, `closeWindowFx`, `revokeUrlsFx`; тексты `LINK_COPIED_TEXT`, `PRINT_BLOCKED_TEXT`, `PRINT_PENDING_TEXT`, `ACTION_FAILED_TEXT` |
 | `features/doc-edit/model/createDocEdit.ts`, `ui/useEditContexts.ts`, `index.ts` | `confirmRequested`, `rejectRequested`, `reasonChanged`, `decisionResult`, `$decision`, `$decided`; `useEditContexts` отдаёт виду `decision`/`canDecide` и объявляет `$decided`; `DECISION_TEXT`, `REJECT_MAX` |
-| `widgets/doc-detail/lib/createDetail.ts`, `ui/DocDetail.tsx`, `ui/DocDetail.module.css` | `refreshDoc(id)`; проп `actionsOf`; F5 на корне drawer; запасное поле ссылки; `Prompt` решения с полем «Причина» |
+| `widgets/doc-detail/lib/createDetail.ts`, `ui/DocDetail.tsx` | `refreshDoc(id)`; проп `actionsOf`; F5 на корне drawer; запасное поле ссылки; `Prompt` решения с полем «Причина» |
 | `pages/fx-docs/model/actions.model.ts`, `pages/rub-docs/model/actions.model.ts` (новые), `registry.model.ts`, `pages/fx-docs/model/edit.model.ts`, `ui/*Page.tsx`, `index.ts` | `docActions` страницы и её связи; событие `docLinkOpened`; `useActionsOf` и `actionsOf`; снятие открытого решения ушедшего документа |
 | `app/routes.ts`, `app/transport.ts`, `app/fake/*` | чтение `?doc=` и `docLinkOpened` после `pageOpened`; подключение `requestFileFx` стенда; фейк — решения, чужие правки в сиде, сообщение, PDF, регуляторы `?fail=decide`, `?fail=message`, `?fail=print` |
 
@@ -841,7 +872,7 @@ requestFileFx.use(async ({ url }) => {
 | `features/doc-annul/`, `features/doc-lookups/`, `features/doc-notif/` (новые папки) | модели и виды: 16.1–16.3 |
 | `features/doc-edit/model/createDocEdit.ts`, `ui/useEditContexts.ts` | необязательный `blockedDocs` (без него — поведение 2d), стор `$blockedDocs`; `$busyDocs` — стабильный набор (`stableKeySet`) |
 | `widgets/doc-detail/lib/createDetail.ts` | `replaceTab({ id, tab, data })` (16.3) |
-| `widgets/doc-detail/ui/DocDetail.tsx`, `DocDetail.module.css` | свойства `annulOf`, `lookupsOf`, `notifOf`; плашка под лейном; `Prompt` аннулирования в `overlay` drawer; `ReasonField` в `Prompt` решения |
+| `widgets/doc-detail/ui/DocDetail.tsx` | свойства `annulOf`, `lookupsOf`, `notifOf`; плашка под лейном; `Prompt` аннулирования в `overlay` drawer; `ReasonField` в `Prompt` решения |
 | `pages/*/model/annul.model.ts`, `lookups.model.ts`, `notif.model.ts` (новые), `pages/fx-docs/model/edit.model.ts`, `ui/*Page.tsx`, `ui/detailDomain.ts`, `index.ts` | модели страницы и их связи (16.1–16.3), `$annulBusy`, `annulInfo` домена, `NotifOverlay` |
 | `app/transport.ts`, `app/fake/*` | комментарий-образец `configureHostLinks` и регулятор `?hostlinks=1`; фейк — аннулирование, курсы, остатки, нотификации, регуляторы (16.6) |
 
@@ -1053,7 +1084,10 @@ const notifOf = useNotifOf(docNotif)
 | `effector-react` | `^23.3.0` | `useUnit` — вызывается напрямую в `widgets/doc-registry/ui/DocRegistry.tsx`, `widgets/doc-detail/ui/DocDetail.tsx` и в страницах (не только внутри `@katran/effector`); peer-зависимость `@katran/effector` — `>=23` |
 | `@katran/ui` | `workspace:*` (в вашем приложении — версия из `docs/consuming.md`, «Установка») | компоненты (`KatranProvider`, `DataGrid`, `FilterPanel`, `Drawer`, `ConfigForm` и т. д.); `entities/*/ui`, `widgets/doc-registry/ui`, `widgets/doc-detail/ui`, страницы (`gridFocusTarget`) |
 | `@katran/effector` | `workspace:*` | `createFiltersModel`, `createGridModel`, персист-адаптеры — используются внутри `widgets/doc-registry/lib/createRegistry.ts`; `createDrawerStackModel` — внутри `widgets/doc-detail/lib/createDetail.ts`; `createEditModel` — внутри `features/doc-edit/model/createDocEdit.ts` |
-| `@katran/tokens` | `workspace:*` | шрифты (`@katran/tokens/fonts.css`, раздел 3); токены переезжают вместе с `@katran/ui` (см. ниже) |
+| `@katran/tokens` | `workspace:*` | токены `k` в шаблонах styled слайсов (раздел 2); шрифты приходят через `KatranFonts` из `@katran/ui` (раздел 3); переезжает вместе с `@katran/ui` (см. ниже) |
+| `styled-components` | `5.3.11` (у потребителя `^5.3.11`) | стили слайсов и peer-зависимость `@katran/ui`; под Module Federation — shared singleton хоста (`docs/consuming.md`) |
+| `react-is` | `17.0.2` — под мажорную версию React | закрепляется для styled-components (`overrides`, `docs/consuming.md`, «Установка»): с `react-is` 19 styled-components не распознаёт элементы React 17 |
+| `@types/styled-components` | `5.1.34` (dev) | типы styled-components 5 |
 
 **Для тестов слайсов** (если оставляете `*.test.ts(x)`, раздел 2) — dev-зависимости, версии как в `apps/pi/package.json` (библиотеки тестирования — под React 17):
 
