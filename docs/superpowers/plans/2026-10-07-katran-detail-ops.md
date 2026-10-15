@@ -8,7 +8,7 @@
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-10-07-katran-detail-ops-design.md` (утверждена владельцем 07.10, ответы на открытые вопросы — г7–г11 в §1.3). Эталон — `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`grid.html`: «Курс» ~1250, «Проверить баланс» ~1342, `tasksHtml` ~1359, `notifHtml` ~1373, `ACTIONS` 919–928; `rub-grid.html` — те же места выше на ~13 строк). Образец плана — `docs/superpowers/plans/2026-10-07-katran-lane-actions.md` (2d).
+**Spec:** `docs/superpowers/specs/2026-10-07-katran-detail-ops-design.md` (утверждена владельцем 07.10, ответы на открытые вопросы — г7–г11 в §1.3). Эталон — `../pi-constructor`, коммит `e065bfb` (`grid.html`: «Курс» ~1250, «Проверить баланс» ~1342, `tasksHtml` ~1359, `notifHtml` ~1373, `ACTIONS` 919–928; `rub-grid.html` — те же места выше на ~13 строк). Образец плана — `docs/superpowers/plans/2026-10-07-katran-lane-actions.md` (2d).
 
 ## Global Constraints
 
@@ -276,7 +276,7 @@ export const COPY_FAILED = 'Не удалось скопировать — вы�
 
 - [ ] **Step 1:** `git worktree add .worktrees/detail-ops -b feat/detail-ops main` в `katran`; `pnpm install`.
 - [ ] **Step 2:** `pnpm check` — зелёный. Записать в леджер числа тестов по пакетам (`tokens`, `ui`, `effector`, `apps/pi`) и e2e (`pnpm --filter pi e2e`, передний план) — база для приращений.
-- [ ] **Step 3:** записать в `/Users/shaman/_CODE/VTB/.claude/launch.json` **и** его `.bak` конфигурацию `katran-ops` (`--dir katran/.worktrees/detail-ops`, порт 5185) — удалить после слияния.
+- [ ] **Step 3:** записать в `../.claude/launch.json` **и** его `.bak` конфигурацию `katran-ops` (`--dir katran/.worktrees/detail-ops`, порт 5185) — удалить после слияния.
 
 ### Task 1: Сверка 2e
 

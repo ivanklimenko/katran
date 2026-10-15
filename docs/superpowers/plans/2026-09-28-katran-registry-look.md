@@ -8,7 +8,7 @@
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2 (CI-задача `react19`), effector 23.4, Vitest + Testing Library + jest-axe, Playwright, eslint + stylelint, Chromium 88 (`check:target`).
 
-**Spec:** `docs/superpowers/specs/2026-09-28-katran-registry-look-design.md` (5b). Сверка и эталон: `docs/reference/registry-drift.md` (Г1–Г5, таблицы R/T/L/P/W/Z), стенд `/Users/shaman/_CODE/VTB/pi-constructor`, файл `grid.tpl.html` на коммите `887b37f` (`git -C /Users/shaman/_CODE/VTB/pi-constructor show 887b37f:grid.tpl.html`).
+**Spec:** `docs/superpowers/specs/2026-09-28-katran-registry-look-design.md` (5b). Сверка и эталон: `docs/reference/registry-drift.md` (Г1–Г5, таблицы R/T/L/P/W/Z), стенд `../pi-constructor`, файл `grid.tpl.html` на коммите `887b37f` (`git -C ../pi-constructor show 887b37f:grid.tpl.html`).
 
 ## Global Constraints
 
@@ -157,7 +157,7 @@ CSS: `.opt` — mono 700 `fs-1` `opt`, отступ справа `sp-1`; `.field
   - `prov` 122, `fullHeight`, `lines: 2` — `Tag tone="warn"` отправителя и `Tag tone="ok"` получателя столбиком;
   - сегменты: причина — `from: 'status', to: 'id'`, `StatusDot size="s"` + текст `size="s" tone="ink2"`; назначение — `from: 'f50', to: 'f59'`, `FieldTag tag="70" title="70 · Детали платежа"` + текст `size="s" tone="ink2"` прописными с разрядкой 0.02em (класс демо);
   - `SPANS_SNIPPET` — дословно по `spans`.
-- [ ] **Step 3: проверка в браузере.** Сборка демо, preview (`/Users/shaman/_CODE/VTB/.claude/launch.json`, запись `katran-demo`; файл откатывается из `.bak` — восстановить `cp .bak launch.json` при необходимости), экран «Реестр»: запись 68, строки не переносятся, тултипы у обрезанных, консоль чистая. Скриншот — в отчёт.
+- [ ] **Step 3: проверка в браузере.** Сборка демо, preview (`../.claude/launch.json`, запись `katran-demo`; файл откатывается из `.bak` — восстановить `cp .bak launch.json` при необходимости), экран «Реестр»: запись 68, строки не переносятся, тултипы у обрезанных, консоль чистая. Скриншот — в отчёт.
 - [ ] **Step 4: запуск и commit.** `pnpm check`, `pnpm --filter demo e2e` (правка локаторов, если нужны) — «Демо: реестр по эталону — колонки 58, «Маршрут», «S / R out», ячейки SWIFT-полей, дата, направление, провайдеры, ширины».
 
 ---

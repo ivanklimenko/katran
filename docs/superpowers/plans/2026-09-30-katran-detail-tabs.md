@@ -4,11 +4,11 @@
 
 **Goal:** все вкладки деталки «Платёжная инструкция» валюты и рубля показывают содержимое: «Доп. поля» (валюта), Статусы, Комплаенс, Связанные документы, Задачи, Нотификации, Исходный текст / ED244, Стриминг, MPU, Аудит — по замороженному эталону `e065bfb`, с ленивой загрузкой каждой вкладки отдельным запросом, своим скелетоном, ошибкой и «Повторить»; связанный документ открывается в drawer B.
 
-**Architecture:** механизмы — в ките `@katran/ui`: `MiniTable` (новый модуль `table`), `StatusBadge`, `Timestamp`, `CodeView` (модуль `code`: подсветка JSON, SWIFT, XML), `KeyValueList`, форматтеры `formatTimestamp` / `formatDuration`, управляемое раскрытие `ConfigForm`. Домен — в `apps/pi` по FSD: порт `tabFx` в `shared/api` (`GET /grids/{gridId}/documents/{id}/tabs/{tab}` — предложение в контракт `vtb-filters`), новая сущность `entities/doc-trail` (типы, мапперы и виды восьми общих вкладок), `ExtraTab` в `entities/fx-doc`; виджет `widgets/doc-detail` грузит нелокальную вкладку лениво (кэш `id:tab`, счётчик визитов), держит раскрытие по документу и рендерит вкладку через `DetailDomain.tabViews`; страницы собирают `tabViews` и открывают связанный документ в B. Фейк отдаёт данные вкладок детерминированно по `id`, рубль — со своими данными, `tabsOff` согласован с пустотой данных.
+**Architecture:** механизмы — в ките `@katran/ui`: `MiniTable` (новый модуль `table`), `StatusBadge`, `Timestamp`, `CodeView` (модуль `code`: подсветка JSON, SWIFT, XML), `KeyValueList`, форматтеры `formatTimestamp` / `formatDuration`, управляемое раскрытие `ConfigForm`. Домен — в `apps/pi` по FSD: порт `tabFx` в `shared/api` (`GET /grids/{gridId}/documents/{id}/tabs/{tab}` — предложение в контракт `filters-contract`), новая сущность `entities/doc-trail` (типы, мапперы и виды восьми общих вкладок), `ExtraTab` в `entities/fx-doc`; виджет `widgets/doc-detail` грузит нелокальную вкладку лениво (кэш `id:tab`, счётчик визитов), держит раскрытие по документу и рендерит вкладку через `DetailDomain.tabViews`; страницы собирают `tabViews` и открывают связанный документ в B. Фейк отдаёт данные вкладок детерминированно по `id`, рубль — со своими данными, `tabsOff` согласован с пустотой данных.
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md` (§7 — порядок задач 0–13). Спека 2a — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; основная — `docs/superpowers/specs/2026-09-23-katran-design.md` (§5.2); спека `apps/pi` — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Эталон — стенд `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`index.html`: вкладки 1066–1299, CSS 257–364, моки 767–920; `skeleton.js`).
+**Spec:** `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md` (§7 — порядок задач 0–13). Спека 2a — `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md`; основная — `docs/superpowers/specs/2026-09-23-katran-design.md` (§5.2); спека `apps/pi` — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Эталон — стенд `../pi-constructor`, коммит `e065bfb` (`index.html`: вкладки 1066–1299, CSS 257–364, моки 767–920; `skeleton.js`).
 
 ## Global Constraints
 
@@ -239,7 +239,7 @@ docs/STATE.md · docs/superpowers/specs/*                                       
 - [x] **Step 1: `main` содержит 2a и спеку 2b.**
 
 ```bash
-cd /Users/shaman/_CODE/VTB/katran
+cd katran
 git merge-base --is-ancestor fda9f91 main && git merge-base --is-ancestor f08e522 main && echo OK
 git status --short
 ```
@@ -249,18 +249,18 @@ Expected: `OK`. `git status --short` пуст, кроме этого плана,
 - [x] **Step 2: worktree и ветка.**
 
 ```bash
-cd /Users/shaman/_CODE/VTB/katran
+cd katran
 git worktree add .worktrees/detail-tabs -b feat/detail-tabs main
 cd .worktrees/detail-tabs
 git log --oneline -1
 ```
 
-Expected: `Preparing worktree (new branch 'feat/detail-tabs')`, последний коммит — вершина `main`. Дальше все задачи — в `/Users/shaman/_CODE/VTB/katran/.worktrees/detail-tabs`; в основной checkout не коммитить.
+Expected: `Preparing worktree (new branch 'feat/detail-tabs')`, последний коммит — вершина `main`. Дальше все задачи — в `.worktrees/detail-tabs`; в основной checkout не коммитить.
 
 - [x] **Step 3: зависимости и проверка.**
 
 ```bash
-cd /Users/shaman/_CODE/VTB/katran/.worktrees/detail-tabs
+cd .worktrees/detail-tabs
 pnpm install
 pnpm check
 ```
@@ -279,7 +279,7 @@ Expected: `pnpm install` без ошибок (lockfile не меняется: `g
   - `packages/tokens/src/generate.test.ts` — тест «`«Общие данные» деталки: строка поля 27, …`»;
   - корневой `package.json` — `gen:check` = `pnpm gen && git diff --exit-code -- packages/tokens/src/tokens.css packages/tokens/src/tokens.ts` (сравнение с **индексом**: сгенерированные токены добавлять в индекс до `pnpm check`, см. Task 2–3);
   - CHANGELOG кита — корневой `CHANGELOG.md` (файла `packages/ui/CHANGELOG.md` нет; карта файлов плана называет его для Task 13 — писать в корневой).
-- [x] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — пусто (рабочая копия равна эталону). Иначе — остановиться: замер Task 1 идёт только по `e065bfb`.
+- [x] **Step 6: стенд.** `git -C ../pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `git -C ../pi-constructor status --short` — пусто (рабочая копия равна эталону). Иначе — остановиться: замер Task 1 идёт только по `e065bfb`.
 
 ---
 
@@ -293,9 +293,9 @@ Expected: `pnpm install` без ошибок (lockfile не меняется: `g
 **Interfaces:**
 - Produces: числа эталона `REF` для e2e Task 12 и токенов Task 2–5. Значения, полученные прогоном этого же скрипта при написании плана (Chromium headless 1600×1000, `pi-zoom=1`, `e065bfb`; Task 1 их подтверждает или заменяет): **шапка таблицы `.tt .th` 22**, **строка `.tt .tr` 24** (Статусы, Нотификации, история Комплаенса, мини-таблицы «Связанных»), **строка Стриминга 33.4** (не 24: колонка «ИС куда» 90 px переносит «Шина сообщений» на две строки — высота по содержимому, минимум 24), **строка «ключ–значение» `.xr` 24** (Доп. поля, Комплаенс), **заголовок группы `h6` 24**, **раскрываемые строки `.ld` 26 и `.tk` 26**, **полоса `.tbar` 26**, **заголовок аккордеона `.au .ah` 25** (Аудит, Исходный текст, MPU, ED244), **код `pre` / `pre.sw` 11.5 / 16.675** (строка XML `.sw.xml .xl` 16.7), **бейдж `.st` 18** (10.5 px, `padding` 2 / 7, радиус 10, точка `::before` 6 × 6, отступ точки 5; в Комплаенсе `.xr .kv .st` — 10 px, высота 17), **№ `.tt .n`** — моно 11, `faint`; шапка — 600 10.5, `letter-spacing` 0.525 px (0.05em), прописные.
 - Produces: решения владельца 30.09 — В-Д6 «а» (Д29 → класс C), R13 «закрывает деталку» — записаны в `detail-drift.md` и STATE; раздел «2b» сверки — пункты Д31–Д42 (все класса C, известны заранее по спеке §6 и решениям Task 2–3).
-- Consumes: стенд `/Users/shaman/_CODE/VTB/pi-constructor` на `e065bfb` (Task 0 Step 6); `@playwright/test` из `apps/pi`.
+- Consumes: стенд `../pi-constructor` на `e065bfb` (Task 0 Step 6); `@playwright/test` из `apps/pi`.
 
-- [x] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — `e065bfb 2026-09-28 18:38:28 +0300`; `git log -1 --format='%h %ci'` в worktree — хеш `feat/detail-tabs` до кода 2b (в леджер, идёт в шапку раздела «2b»).
+- [x] **Step 1: хеши.** `git -C ../pi-constructor log -1 --format='%h %ci'` — `e065bfb 2026-09-28 18:38:28 +0300`; `git log -1 --format='%h %ci'` в worktree — хеш `feat/detail-tabs` до кода 2b (в леджер, идёт в шапку раздела «2b»).
 - [x] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
 
 ```ts
@@ -307,7 +307,7 @@ export default defineConfig({
   timeout: 90_000,
   use: { baseURL: 'http://localhost:5187', viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 },
   webServer: {
-    command: 'python3 -m http.server 5187 --directory /Users/shaman/_CODE/VTB/pi-constructor',
+    command: 'python3 -m http.server 5187 --directory ../pi-constructor',
     url: 'http://localhost:5187/index.html',
     reuseExistingServer: false,
   },
@@ -3213,13 +3213,13 @@ export type GridPorts<Row> = {
 }
 /** Документ целиком (спека 2a §4.1): сущность проверяет форму ответа и переименовывает поля бека. Бросает contractError. */
 export type DetailParser<D> = (raw: unknown, path: string) => D
-/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт vtb-filters, как /facets (docs/reference/pi-api.md). */
+/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт filters-contract, как /facets (docs/reference/pi-api.md). */
 export type DetailPort<D> = { detailFx: Effect<string, D, ApiError> }
 /** Запрос одной вкладки деталки (спека 2b §3.1): id документа и id вкладки из FX_TABS / RUB_TABS. */
 export type TabQuery = { id: string; tab: string }
 /** Парсер данных вкладки: получает объект ответа, бросает contractError. Тип данных знают сущность и её вид вкладки. */
 export type TabParser = (raw: unknown, path: string) => unknown
-/** Порт вкладок: GET /grids/{gridId}/documents/{id}/tabs/{tab} — предложение в контракт vtb-filters (docs/reference/pi-api.md). */
+/** Порт вкладок: GET /grids/{gridId}/documents/{id}/tabs/{tab} — предложение в контракт filters-contract (docs/reference/pi-api.md). */
 export type TabPort = { tabFx: Effect<TabQuery, unknown, ApiError> }
 export type GridPortsConfig<Row> = { gridId: string; parseRow: RowParser<Row> }
 
@@ -8379,7 +8379,7 @@ git -c user.name="Ivan Klimenko" -c user.email=ivan.klimenko@gmail.com commit -m
 ```markdown
 ### 1.5. `GET /grids/{gridId}/documents/{id}/tabs/{tab}` (предложение)
 
-В контракте `vtb-filters` не описан. Нужен деталке (срез 2b): данные одной вкладки документа. Фронт запрашивает вкладку лениво — когда пользователь её выбирает; повторный выбор, переключение между drawer'ами A и B и повторное открытие документа на том же экране не перезапрашивают (кэш по паре `id` + `tab` до ухода с экрана).
+В контракте `filters-contract` не описан. Нужен деталке (срез 2b): данные одной вкладки документа. Фронт запрашивает вкладку лениво — когда пользователь её выбирает; повторный выбор, переключение между drawer'ами A и B и повторное открытие документа на том же экране не перезапрашивают (кэш по паре `id` + `tab` до ухода с экрана).
 
 - `id` — как в 1.4 (кодируется в пути). `tab` — ключ вкладки из таблицы 7.4, кроме локальных `main` и `extra` (их данные приходят в детали, раздел 7): `statuses`, `compliance`, `linked`, `tasks`, `notif`, `source` (только `fx-docs`), `ed244` (только `rub-docs`), `stream`, `mpu`, `audit`. Тела запроса и query-параметров нет.
 - `200` — данные вкладки, состав — раздел 8. Вкладка без данных — пустой массив или объект по форме раздела 8, и её ключ должен быть в `tabsOff` детали: фронт такую вкладку не показывает и не запрашивает.
@@ -8446,7 +8446,7 @@ export const TRAIL_VIEWS: Record<TrailTabId, RemoteTabView> = {
   - §1 — строка о возможностях `apps/pi`: деталка на просмотр со всеми вкладками (срезы 2a, 2b).
   - §5 «Карта проекта»: `packages/ui/src` — `value/` + `StatusBadge`, `Timestamp`; `form/` + `KeyValueList`, `ConfigForm` с `expanded`; новые `table/ (MiniTable — срез 2b)`, `code/ (CodeView, токенизаторы json/swift/xml — срез 2b)`; `format/` — `formatTimestamp`, `formatDuration`. `apps/pi/src` — `widgets/doc-detail` (… + ленивые вкладки, кэш `id:tab`, раскрытие по документу; срез 2b), `entities/doc-trail` (история обработки: типы, `toneOf`, `TRAIL_PARSERS`, `TRAIL_EXAMPLES`, `TRAIL_VIEWS`; соседям через `@x`; срез 2b), `entities/fx-doc` — `ExtraTab`, `pages/*/ui/detailDomain.ts`, `shared/api` — `createGridPorts` с `parseTab`, `shared/lib/detail` — `TabContext`, `TabView`, `remoteTab`, фейк — `trail.data.ts`, `fx-docs.trail.ts`, `rub-docs.trail.ts`. `apps/pi/e2e` — `detail-tabs.spec.ts` (высоты вкладок против эталона, «Связанный» → B, `?fail=tab:audit`, кэш, `?hostile`, Д28, скриншоты; срез 2b). `docs/reference` — `pi-api.md` §1.5, §8; `detail-drift.md` раздел «2b». Список исполненных планов — + «2b «вкладки деталки»».
   - §6 «Состояние»: новый пункт «**План 2b «Остальные вкладки деталки» исполнен целиком**, ветка `feat/detail-tabs` (worktree `katran/.worktrees/detail-tabs`, от `main` `f08e522`), спека — `docs/superpowers/specs/2026-09-30-katran-detail-tabs-design.md`, план — `docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, 14 задач (0–13). Проверки: `pnpm check` зелёный, тестов <число из вывода `pnpm test` по пакетам: tokens, ui, effector, pi>, e2e 50/50.» Пункт «Открытые решения владельца (30.09): В-Д6 … R13 …» — удалить (решения приняты, спека 2b §1.3; фиксируются в §7 и `detail-drift.md`).
-  - §7 «Техдолг»: заголовок — «Техдолг (после плана 2b)». Удалить: из пункта «Объём среза, не дефекты» — «вкладки кроме «Общих данных» — состояние «будет в срезе 2b»»; из пункта «Сверка, класс D» — Д28; из пункта «Esc и наложения» — фразу про Esc в гриде при открытой деталке (R13): решение владельца «закрывает деталку, как сейчас» переносится одной строкой в §3 «Архитектурные решения» или в `detail-drift.md` «Вопросы владельцу» (уже сделано Step 4.5); из пункта «`Tabs` с переполнением» — «вкладка из `tabsOff`, выбранная до загрузки, остаётся выбранной после (финальное ревью M-f)» и «`TabPanel` сбрасывает раскрытие полей при переключении вкладок (M-g)»; из пункта «`createDetail`» — «нет теста минимальной длительности скелетона в виджете (M4)» (закрыт тестом скелетона вкладки, Task 11). Добавить: «Кнопки вкладок («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — заглушки с `announce` до 2d»; «Связанный документ другого реестра не открывается — межреестровая навигация вне 2b (спека 2b §8)»; «Эндпоинт вкладок — предложение владельцу контракта `vtb-filters`, форма ответа — черновик до согласования»; «Вкладка без вида, но не в `localTabs`, запрашивается впустую (виджет не знает видов в модели; для `fx`/`rub` недостижимо — полноту проверяют тесты страниц)»; техдолг из ревью задач 2–12 (леджер SDD) — по пункту на находку уровня M.
+  - §7 «Техдолг»: заголовок — «Техдолг (после плана 2b)». Удалить: из пункта «Объём среза, не дефекты» — «вкладки кроме «Общих данных» — состояние «будет в срезе 2b»»; из пункта «Сверка, класс D» — Д28; из пункта «Esc и наложения» — фразу про Esc в гриде при открытой деталке (R13): решение владельца «закрывает деталку, как сейчас» переносится одной строкой в §3 «Архитектурные решения» или в `detail-drift.md` «Вопросы владельцу» (уже сделано Step 4.5); из пункта «`Tabs` с переполнением» — «вкладка из `tabsOff`, выбранная до загрузки, остаётся выбранной после (финальное ревью M-f)» и «`TabPanel` сбрасывает раскрытие полей при переключении вкладок (M-g)»; из пункта «`createDetail`» — «нет теста минимальной длительности скелетона в виджете (M4)» (закрыт тестом скелетона вкладки, Task 11). Добавить: «Кнопки вкладок («Переотправить», «Перейти в блок «Ручные отклонения»», «История», «Исходное сообщение») — заглушки с `announce` до 2d»; «Связанный документ другого реестра не открывается — межреестровая навигация вне 2b (спека 2b §8)»; «Эндпоинт вкладок — предложение владельцу контракта `filters-contract`, форма ответа — черновик до согласования»; «Вкладка без вида, но не в `localTabs`, запрашивается впустую (виджет не знает видов в модели; для `fx`/`rub` недостижимо — полноту проверяют тесты страниц)»; техдолг из ревью задач 2–12 (леджер SDD) — по пункту на находку уровня M.
   - §9 «Следующий шаг»: «**Срез 2b «Остальные вкладки деталки» слит в `main`** (`<коммит слияния>`, <дата>). Следующий — **срез 2c: правка** (правка полей, аудит поля, саджест, `Prompt`, `DateInput`, перезапрос реестра после действий): brainstorming → спека-дельта → план → subagent-driven-development; первая задача плана — сверка правки против того же замороженного эталона `e065bfb` (`detail-drift.md`, раздел «2c»). Готово для него: раскрытие и состояние вкладок в модели (`$expanded`), `ConfigForm` с управляемым раскрытием, `FieldDef.kind` `party`/`bank` и `FieldDef.width` ждут правки (§7).»
   - §10 — ссылка на `detail-drift.md` раздел «2b» с итогом сверки (число пунктов по классам).
 - [x] **Step 7: `CHANGELOG.md`.** В «0.1.0 — в работе» — пункт:

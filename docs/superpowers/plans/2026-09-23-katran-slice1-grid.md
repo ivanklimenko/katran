@@ -487,7 +487,7 @@ git add -A && git commit -m "Грид: помощники выделения —
 
 Run:
 ```bash
-cd /Users/shaman/_CODE/VTB/katran && pnpm --filter @katran/effector add -D effector@^23 effector-react@^23 react@^19 react-dom@^19 @types/react@^19 vitest@^5 jsdom@^30 @testing-library/react@^16
+cd katran && pnpm --filter @katran/effector add -D effector@^23 effector-react@^23 react@^19 react-dom@^19 @types/react@^19 vitest@^5 jsdom@^30 @testing-library/react@^16
 ```
 
 `packages/effector/tsconfig.json`:
@@ -508,7 +508,7 @@ export default defineConfig({ test: { environment: 'jsdom', globals: true, setup
 
 `packages/effector/src/types.ts`:
 ```ts
-/** Модель фильтра — спека 7.1, контракт vtb-filters/docs/filter-contract.md. */
+/** Модель фильтра — спека 7.1, контракт filters-contract/docs/filter-contract.md. */
 export type Scalar = string | number | boolean
 
 export type Condition =
@@ -2587,7 +2587,7 @@ git add -A && git commit -m "Хуки useGrid и useFilters: сторы и со�
 
 - [ ] **Step 1: Зависимости и маршрут**
 
-Run: `cd /Users/shaman/_CODE/VTB/katran && pnpm --filter demo add @katran/effector@workspace:* effector@^23 effector-react@^23`
+Run: `cd katran && pnpm --filter demo add @katran/effector@workspace:* effector@^23 effector-react@^23`
 В `apps/demo/src/router.ts`: `'grid'` в тип `Route` и `{ id: 'grid', title: 'Реестр' }` первым элементом `routes` (после `tokens`). В `App.tsx`: `grid: GridPage`.
 
 - [ ] **Step 2: Данные**
@@ -2830,7 +2830,7 @@ git add -A && git commit -m "Демо: реестр валютных докум�
 
 Run:
 ```bash
-cd /Users/shaman/_CODE/VTB/katran && pnpm --filter demo add -D @playwright/test && pnpm --filter demo exec playwright install chromium
+cd katran && pnpm --filter demo add -D @playwright/test && pnpm --filter demo exec playwright install chromium
 ```
 Если загрузка браузера недоступна (сеть) — записать в отчёт и выполнить остальные шаги; спека тесты не запускать.
 

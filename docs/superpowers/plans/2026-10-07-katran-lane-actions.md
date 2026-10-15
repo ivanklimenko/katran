@@ -8,7 +8,7 @@
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-10-07-katran-lane-actions-design.md` (утверждена владельцем 07.10; решение по §8 п. 1 — поле `reason` остаётся). Эталон — `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`grid.html`: `ACTIONS` 919–928, клик по `.dw` 1598–1640, печать 1602–1608, история правки 1160–1170; то же в `rub-grid.html` около 907). Образец плана — `docs/superpowers/plans/2026-10-06-katran-detail-edit.md` (2c).
+**Spec:** `docs/superpowers/specs/2026-10-07-katran-lane-actions-design.md` (утверждена владельцем 07.10; решение по §8 п. 1 — поле `reason` остаётся). Эталон — `../pi-constructor`, коммит `e065bfb` (`grid.html`: `ACTIONS` 919–928, клик по `.dw` 1598–1640, печать 1602–1608, история правки 1160–1170; то же в `rub-grid.html` около 907). Образец плана — `docs/superpowers/plans/2026-10-06-katran-detail-edit.md` (2c).
 
 ## Global Constraints
 
@@ -205,7 +205,7 @@ export const LINK_COPIED_TEXT = 'Ссылка скопирована'
 
 - [x] **Step 1:** `git worktree add .worktrees/lane-actions -b feat/lane-actions main` в `katran`; `pnpm install`.
 - [x] **Step 2:** `pnpm check` — зелёный. Записать в леджер числа тестов по пакетам (`tokens`, `ui`, `effector`, `apps/pi`) и e2e (`pnpm --filter pi e2e`, передний план) — это база для приращений.
-- [x] **Step 3:** записать в `/Users/shaman/_CODE/VTB/.claude/launch.json` **и** его `.bak` конфигурацию `katran-lane` (`--dir katran/.worktrees/lane-actions`, порт 5185) — удалить после слияния.
+- [x] **Step 3:** записать в `../.claude/launch.json` **и** его `.bak` конфигурацию `katran-lane` (`--dir katran/.worktrees/lane-actions`, порт 5185) — удалить после слияния.
 
 ### Task 1: Сверка 2d
 

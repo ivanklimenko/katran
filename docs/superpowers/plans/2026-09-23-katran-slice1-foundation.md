@@ -84,7 +84,7 @@ katran/
 
 Run:
 ```bash
-cd /Users/shaman/_CODE/VTB/katran && corepack enable && corepack use pnpm@10 && pnpm -v
+cd katran && corepack enable && corepack use pnpm@10 && pnpm -v
 ```
 Expected: печатает `10.x.y`, в `package.json` появляется поле `packageManager`.
 
@@ -220,7 +220,7 @@ export {}
 
 Run:
 ```bash
-cd /Users/shaman/_CODE/VTB/katran && pnpm add -Dw typescript@~5.9 eslint@^10 typescript-eslint@^8 eslint-plugin-import-x@^4 eslint-plugin-jsx-a11y@^6 eslint-plugin-react-hooks@^7 stylelint@^17 stylelint-config-standard@^40 tsx@^4 globals
+cd katran && pnpm add -Dw typescript@~5.9 eslint@^10 typescript-eslint@^8 eslint-plugin-import-x@^4 eslint-plugin-jsx-a11y@^6 eslint-plugin-react-hooks@^7 stylelint@^17 stylelint-config-standard@^40 tsx@^4 globals
 ```
 Expected: `pnpm-lock.yaml` создан, ошибок нет.
 
@@ -310,7 +310,7 @@ jobs:
 
 - [ ] **Step 7: Проверить, что скрипты живы**
 
-Run: `cd /Users/shaman/_CODE/VTB/katran && pnpm install && pnpm lint && pnpm test && pnpm build`
+Run: `cd katran && pnpm install && pnpm lint && pnpm test && pnpm build`
 Expected: линт проходит на пустом дереве (кроме `packages/effector/src/index.ts` — без ошибок), `test`/`build` печатают «No projects matched» или просто ничего не делают — ошибок нет.
 
 - [ ] **Step 8: Commit**
@@ -365,7 +365,7 @@ git add -A && git commit -m "Скелет монорепо: pnpm, eslint с гр
 import { defineConfig } from 'vitest/config'
 export default defineConfig({ test: { include: ['src/**/*.test.ts'] } })
 ```
-Run: `cd /Users/shaman/_CODE/VTB/katran && pnpm --filter @katran/tokens add -D vitest@^5 @types/node`
+Run: `cd katran && pnpm --filter @katran/tokens add -D vitest@^5 @types/node`
 
 - [ ] **Step 2: Источник токенов**
 
@@ -2884,7 +2884,7 @@ git add -A && git commit -m "Pagination: диапазон, окно номеро
 **Files:**
 - Create: `apps/demo/package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/router.ts`, `src/Shell.tsx`, `src/Shell.module.css`, `src/pages/TokensPage.tsx`, `ButtonsPage.tsx`, `InputsPage.tsx`, `ValuesPage.tsx`, `OverlaysPage.tsx`, `StatesPage.tsx`, `PaginationPage.tsx`, `src/pages/Page.module.css`
 - Create: `.github/workflows/pages.yml`
-- Modify: root `package.json` (скрипт `dev`), `.claude/launch.json` в **корне сессии `/Users/shaman/_CODE/VTB`** — добавить запись `katran-demo` (не трогать существующие записи; после работы не нужно восстанавливать — запись постоянная).
+- Modify: root `package.json` (скрипт `dev`), `.claude/launch.json` в **корне сессии `..`** — добавить запись `katran-demo` (не трогать существующие записи; после работы не нужно восстанавливать — запись постоянная).
 
 **Interfaces:**
 - Демо не публикуется как пакет; импортирует `@katran/ui` и `@katran/tokens` по workspace. Маршрутизация — хеш (`#/tokens`, `#/buttons`, …), без сторонних библиотек. `Shell` — левое меню разделов, справа страница; в шапке `ThemeSwitch` (light/dark/system) и `DensitySwitch` (100/110/125 %) — оба живут в демо как обычные кнопки на `useKatran()`, в кит не выносятся до появления второго потребителя.
@@ -3304,7 +3304,7 @@ export function PaginationPage() {
 
 - [ ] **Step 4: Запуск и проверка в браузере**
 
-В `/Users/shaman/_CODE/VTB/.claude/launch.json` добавить конфигурацию:
+В `../.claude/launch.json` добавить конфигурацию:
 ```json
 { "name": "katran-demo", "runtimeExecutable": "pnpm", "runtimeArgs": ["--dir", "katran", "--filter", "demo", "dev"], "port": 5180 }
 ```

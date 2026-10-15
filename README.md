@@ -2,7 +2,7 @@
 
 Дизайн-система для интерфейсов проекта: React + effector, стили — styled-components 5. Спецификация — `docs/superpowers/specs/2026-09-23-katran-design.md`, стилизация — `docs/superpowers/specs/2026-10-13-katran-styled-design.md`.
 
-Пакеты: `@katran/tokens` (токены, шрифты), `@katran/ui` (компоненты), `@katran/effector` (модели). Демо-витрина — `apps/demo`; реестры ПИ на FSD (валютный и рублёвый, фейковый сервер на контракте `vtb-filters`) — `apps/pi`.
+Пакеты: `@katran/tokens` (токены, шрифты), `@katran/ui` (компоненты), `@katran/effector` (модели). Демо-витрина — `apps/demo`; реестры ПИ на FSD (валютный и рублёвый, фейковый сервер на контракте `filters-contract`) — `apps/pi`.
 
     corepack enable && pnpm install
     pnpm check        # генерация токенов, линт, тесты, сборка

@@ -20,7 +20,7 @@
 - React: `peerDependencies` `>=17`; в `packages/ui` и `packages/effector` — никаких API React 18+ (список — спека совместимости 2.1).
 - Планка браузера — `browserslist: ["chrome >= 88"]` в корневом `package.json`, единственный источник.
 - Перед каждым коммитом `pnpm check` зелёный. e2e (`pnpm --filter demo e2e`) — вне `pnpm check`, прогоняется в задачах, где указано.
-- Порты: 5180–5184 заняты другими проектами и превью; для своих серверов — 5210+. Файл `/Users/shaman/_CODE/VTB/.claude/launch.json` не править.
+- Порты: 5180–5184 заняты другими проектами и превью; для своих серверов — 5210+. Файл `../.claude/launch.json` не править.
 - Коридоры e2e: запись 64–72, шапка 40–56, скелетон = запись ± 2, плотность 125 % = ×1.25 ± 2.
 
 ---
@@ -940,7 +940,7 @@ grep -rn 'spikes/' examples/federation   # пусто
 
   Глубина пути та же (`examples/federation` ↔ `spikes/federation`), относительные пути скриптов (`scripts/pack-kit.sh`: корень репо — `../../..` от `scripts/`) не меняются.
 
-- [ ] **Step 2: обезличивание данных макета.** `examples/federation/remote/src/data/docs.ts` снят со старого демо: заменить весь массив `BICS` на набор из Global Constraints, `CCY.RUB` → `'810'`, `INVALID` → `'INVALID'`, как в Task 7. Проверка: `grep -rnE 'DEUTDEFF|CHASUS33|SABRRUMM|VTBRRUMM|CITIUS33|HSBCHKHH|BNPAFRPP|BKCHCNBJ' examples` → пусто.
+- [ ] **Step 2: обезличивание данных макета.** `examples/federation/remote/src/data/docs.ts` снят со старого демо: заменить весь массив `BICS` на набор из Global Constraints, `CCY.RUB` → `'810'`, `INVALID` → `'INVALID'`, как в Task 7. Проверка: `grep -rnE 'DEUTDEFF|CHASUS33|SABRRUMM|CITIUS33|HSBCHKHH|BNPAFRPP|BKCHCNBJ' examples` → пусто.
 
 - [ ] **Step 3: прогон макета (руками, вне CI).** По `examples/federation/README.md`: `sh examples/federation/scripts/pack-kit.sh`; `npm i` в `host`, `remote` и корне макета; prod-сборка remote на 5213 (`--cors`), хост на 5212 (`REMOTE_URL=http://localhost:5213/remoteEntry.js`); `node e2e/check.mjs http://localhost:5212/` → 21/21, 0 ошибок консоли. В README макета заменить порты 5200–5203 на 5210–5213. Серверы остановить.
 

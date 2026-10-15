@@ -3891,7 +3891,7 @@ export const field = (id: string, label: string, type: FilterFieldType, dictiona
       const bad: ProblemError[] = []
       if (!f || f.suggest !== true) bad.push({ path: 'field', code: 'SUGGEST_NOT_SUPPORTED', message: `У поля ${sb.field} нет подсказок` })
       if (!(sb.limit >= 1 && sb.limit <= 50)) bad.push({ path: 'limit', code: 'LIMIT_OUT_OF_RANGE', message: 'limit — от 1 до 50' })
-      if (bad.length > 0) throw toApiError(400, { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
+      if (bad.length > 0) throw toApiError(400, { type: 'urn:katran:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
       return grid.suggest(sb)
     }
 ```
@@ -4083,7 +4083,7 @@ test('тёмная тема: поповер на paper темы, скриншо�
 - Create: `docs/reference/suggest-proposal.md`
 - Modify: `docs/superpowers/specs/2026-09-23-katran-design.md`, `docs/superpowers/specs/2026-09-24-katran-slice1e-registry-design.md`, `docs/superpowers/specs/2026-09-30-katran-filter-inputs-design.md`, `CHANGELOG.md`, `README.md`, `docs/STATE.md`
 
-- [x] **Step 1: Предложение в контракт.** `docs/reference/suggest-proposal.md` — для владельца контракта `vtb-filters`, по-русски, сухо, по разделам:
+- [x] **Step 1: Предложение в контракт.** `docs/reference/suggest-proposal.md` — для владельца контракта `filters-contract`, по-русски, сухо, по разделам:
   1. **Зачем:** подсказки при вводе в текстовые поля фильтра (наименования, BIC, назначение, причина статуса) — пользователь выбирает существующее значение вместо угадывания написания.
   2. **`filter-meta`:** у поля необязательный `suggest: boolean` (по умолчанию `false`); бек включает там, где подсказки дешёвые (индекс по полю). Пример поля.
   3. **`POST /grids/{gridId}/suggest`:** тело `{ field, query, filter, limit }` с таблицей свойств и обязательности; ответ `{ items: string[] }`; семантика — различные значения поля среди записей, удовлетворяющих `filter` (применённые условия без условий по самому полю — фронт убирает их сам), содержащие `query` без учёта регистра, экранирование `%`/`_` как у `CONTAINS` (контракт §4.2); порядок — по убыванию частоты, при равенстве по алфавиту; `limit` 1–50, по умолчанию 10; права — как у `search`.

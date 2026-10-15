@@ -68,7 +68,7 @@
 
 ## 3. `apps/pi`
 
-### 3.1. Контракт (предложение в `vtb-filters`)
+### 3.1. Контракт (предложение в `filters-contract`)
 
 - **Сохранение правки:** `POST /grids/{gridId}/documents/{id}/edits` с телом `{ target, was, now }`, где `target` — `field:<tag>` (с `B.` у seqB), `refOut`, `accDt`, `accKt`, `valueDate`; ответ — **обновлённая деталь целиком** (тот же разбор, что `detailFx`). Ошибки: `400 VALIDATION` (бек повторяет правила; фронт показывает `problem.errors[0].message` дословно), `409 CONFLICT` (`was` не совпал — документ изменили; Problem `type` `urn:katran:edit-conflict`, `title` «Документ изменили»), `403`. ↺ — обычная правка «стало = исходное»: правилами домена не проверяется (исходное могло быть пустым или вне правил), §9 п. 9.
 - **Аудит в детали:** поле детали `edits: Record<target, { now, hist: HistEntry[] }>`; `HistEntry = { who, when, was, now, note?, status: 'pending' | 'confirmed', by?, at? }`. Бек ставит `status/by/at`; автоматическое подтверждение даты валютирования автором — тоже бек (`confirmed`, `by = who`).

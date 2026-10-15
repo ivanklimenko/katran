@@ -52,7 +52,7 @@ function validate(meta: FilterMetaDto, conditions: Filter, size: number | null):
   return errors
 }
 
-/** Обработчик requestFx на контракте vtb-filters: JSON на входе и выходе, ошибки — Problem Details через toApiError, как у настоящего клиента. */
+/** Обработчик requestFx на контракте filters-contract: JSON на входе и выходе, ошибки — Problem Details через toApiError, как у настоящего клиента. */
 export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServerOptions = {}) {
   return async (req: HttpRequest): Promise<unknown> => {
     opts.observe?.(req)
@@ -182,7 +182,7 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
     const body = req.body as SearchBody | FacetsBody | SuggestBody
     const errors = validate(grid.meta, body.filter.conditions, 'page' in body ? body.page.size : null)
     if (errors.length > 0) {
-      const p: Problem = { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: `Ошибок: ${errors.length}`, errors }
+      const p: Problem = { type: 'urn:katran:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: `Ошибок: ${errors.length}`, errors }
       throw toApiError(400, p)
     }
     if (op === 'suggest') {
@@ -195,7 +195,7 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
       if (typeof sb.query !== 'string') bad.push({ path: 'query', code: 'QUERY_NOT_STRING', message: 'query — строка' })
       if (!(typeof limit === 'number' && limit >= 1 && limit <= 50)) bad.push({ path: 'limit', code: 'LIMIT_OUT_OF_RANGE', message: 'limit — от 1 до 50' })
       if (bad.length > 0 || typeof sb.query !== 'string' || typeof limit !== 'number') {
-        throw toApiError(400, { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
+        throw toApiError(400, { type: 'urn:katran:grid:filter-validation', title: 'Некорректный запрос подсказок', status: 400, detail: `Ошибок: ${bad.length}`, errors: bad })
       }
       return grid.suggest({ ...sb, query: sb.query, limit })
     }

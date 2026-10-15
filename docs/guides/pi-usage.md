@@ -222,7 +222,7 @@ function FxDocsRoute() {
 
 Деталь документа (`GET /grids/{gridId}/documents/{id}`, `docs/reference/pi-api.md` §7) разбирают свои мапперы — раздел 13.3.
 
-Если у бека отличается **каталог** `filter-meta` (набор доступных полей, справочники) или тело `search`/`facets` — правится `apps/pi/src/shared/api/grid-contract.ts` (`toSearchBody`, `toFacetsBody`, `fromSearchResponse`, `fromFacetsResponse`, `fromFilterMetaResponse`) — это уже расхождение не в составе строки, а в самом контракте `vtb-filters` §5–6, и меняется на весь `apps/pi`, а не на один грид.
+Если у бека отличается **каталог** `filter-meta` (набор доступных полей, справочники) или тело `search`/`facets` — правится `apps/pi/src/shared/api/grid-contract.ts` (`toSearchBody`, `toFacetsBody`, `fromSearchResponse`, `fromFacetsResponse`, `fromFilterMetaResponse`) — это уже расхождение не в составе строки, а в самом контракте `filters-contract` §5–6, и меняется на весь `apps/pi`, а не на один грид.
 
 ## 7. Контрактные тесты против своего бека
 

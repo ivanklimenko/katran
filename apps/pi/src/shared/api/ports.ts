@@ -15,13 +15,13 @@ export type GridPorts<Row> = {
 }
 /** Документ целиком (спека 2a §4.1): сущность проверяет форму ответа и переименовывает поля бека. Бросает contractError. */
 export type DetailParser<D> = (raw: unknown, path: string) => D
-/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт vtb-filters, как /facets (docs/reference/pi-api.md). */
+/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт filters-contract, как /facets (docs/reference/pi-api.md). */
 export type DetailPort<D> = { detailFx: Effect<string, D, ApiError> }
 /** Запрос одной вкладки деталки (спека 2b §3.1): id документа и id вкладки из FX_TABS / RUB_TABS. */
 export type TabQuery = { id: string; tab: string }
 /** Парсер данных вкладки: получает объект ответа, бросает contractError. Тип данных знают сущность и её вид вкладки. */
 export type TabParser = (raw: unknown, path: string) => unknown
-/** Порт вкладок: GET /grids/{gridId}/documents/{id}/tabs/{tab} — предложение в контракт vtb-filters (docs/reference/pi-api.md). */
+/** Порт вкладок: GET /grids/{gridId}/documents/{id}/tabs/{tab} — предложение в контракт filters-contract (docs/reference/pi-api.md). */
 export type TabPort = { tabFx: Effect<TabQuery, unknown, ApiError> }
 export type GridPortsConfig<Row> = { gridId: string; parseRow: RowParser<Row> }
 

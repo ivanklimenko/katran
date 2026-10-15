@@ -111,7 +111,7 @@ describe('уровни сортировки', () => {
 export type SortLevel = { key: string; dir: 'asc' | 'desc' }
 /** Многоуровневая сортировка (решение владельца В1): порядок уровней — порядок сравнения; [] — без сортировки. */
 export type Sort = SortLevel[]
-/** Контракт vtb-filters §5.1: sort — массив до 5 элементов. */
+/** Контракт filters-contract §5.1: sort — массив до 5 элементов. */
 export const MAX_SORT_LEVELS = 5
 ```
 
@@ -192,7 +192,7 @@ export type FakeBackendOptions = {
 и в `searchFx`: `const get = (row: Row, key: string) => { const v = row[key]; const labels = opts.sortLabels?.[key]; return labels && typeof v === 'string' ? (labels[v] ?? v) : v }`. В `GridPage.tsx`: `createFakeBackend(docs, docsLayout, { sortLabels: { status: STATUS_LABEL } })`.
 - [ ] **Step 8: остальные тесты — на массив.** Во всех тестах `packages/ui`, `packages/effector` и в демо `sort: null` → `sort: []`, `{ key, dir }` → `[{ key, dir }]`, ожидания `$sort`/`GridQuery.sort` — массивом. Найти: `rg -n "sort: null|sort: \{|toEqual\(\{ key:|onSort\(\{|\$sort" packages apps --glob '*.{ts,tsx}'`. В `ColumnHeader.test.tsx` добавить: при `sort=[{ key: 'amount', dir: 'desc' }, { key: 'type', dir: 'asc' }]` клик по колонке «Тип» с одним ключом → `onSort([{ key: 'type', dir: 'asc' }])` (единственным).
 - [ ] **Step 9: запуск.** `pnpm check` — зелёный; `pnpm --filter demo e2e` — зелёный.
-- [ ] **Step 10: CHANGELOG.** «Изменено (breaking): `Sort` — массив уровней `SortLevel[]` (`[]` — без сортировки), `GridQuery.sort` — массивом, как в контракте `vtb-filters`. Добавлено: `soleSort`, `addSortLevel`, `flipSortLevel`, `removeSortLevel`, `MAX_SORT_LEVELS`; `sortRows` — по уровням».
+- [ ] **Step 10: CHANGELOG.** «Изменено (breaking): `Sort` — массив уровней `SortLevel[]` (`[]` — без сортировки), `GridQuery.sort` — массивом, как в контракте `filters-contract`. Добавлено: `soleSort`, `addSortLevel`, `flipSortLevel`, `removeSortLevel`, `MAX_SORT_LEVELS`; `sortRows` — по уровням».
 - [ ] **Step 11: commit.**
 
 ```bash
@@ -831,7 +831,7 @@ git commit -m "Грид: состояния записи — заблокиро�
 
 - [ ] **Step 1: основная спека.** §1.2 — строку «Мульти-сортировка — не делаем» убрать, в §6 — многоуровневая сортировка (ссылка на В1 и спеку 5a §3). §6.1 — колонки на всю высоту и правило обрезки сегмента. §6.2 — `fullHeight`, `split`, `rowState`, `openHint`, `Sort`, `SortChips`, `onResetWidth(s)`. §6.3 — клавиатура (↓/↑ по высоким ячейкам, Shift+Enter, Home/Shift+Home на ползунке), выделение без неактивных. §8.2 — `$sort` массивом, `$split`/`setSplit`, `resetWidths`/`resetWidth`, `GridPersisted.split`.
 - [ ] **Step 2: спека 5a §4** — «Раскрытие — `expandColumns` после `visibleColumns`: части следуют за хостом и скрываются вместе с ним».
-- [ ] **Step 3: CHANGELOG** — всё добавленное в Task 2–8 (Task 1 уже записан). **`docs/consuming.md`** — раздел «Сортировка — массив уровней»: было `Sort = { key, dir } | null`, стало `SortLevel[]`; `sort: null` → `[]`; бек `vtb-filters` получает `sort` массивом, как в контракте; плюс новые необязательные пропы грида.
+- [ ] **Step 3: CHANGELOG** — всё добавленное в Task 2–8 (Task 1 уже записан). **`docs/consuming.md`** — раздел «Сортировка — массив уровней»: было `Sort = { key, dir } | null`, стало `SortLevel[]`; `sort: null` → `[]`; бек `filters-contract` получает `sort` массивом, как в контракте; плюс новые необязательные пропы грида.
 - [ ] **Step 4: `registry-drift.md`** — R6, S1, S3, R5, W1, B1, B7: «**Исправлено** планом 5a (`<коммит>`)», сводка «План 5a закрыл …».
 - [ ] **Step 5: STATE** — §3 (решения: сегменты не заходят на высокие колонки; раскрытие `split` после `visibleColumns`; состояния записи — данные с бека, без модели), §6 (план 5a, проверки: число тестов, e2e, геометрия), §7 (техдолг из ревью), §9 — дальше 5b «Реестр по эталону: вид» (спека-дельта), затем `apps/pi`.
 - [ ] **Step 6: план `apps/pi`.** Task 0 Step 2 — «`Sort = SortLevel[]` — подтверждено планом 5a»; Task 8: `STATUS_LABEL.INVALID = 'INVALID'`, каталог `direction` — кодами (`inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' })`); Task 1 Step 3 — убрать класс C «INVALID → Невалидный»; Task 10 `DocRegistry` — пропы `rowState`, `openHint`, `split`/`onSplit` идут из `useGrid`, `columns: gridColumns(layout.columns)` в `createRegistry` (Task 9).

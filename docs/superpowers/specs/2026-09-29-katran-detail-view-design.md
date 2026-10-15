@@ -117,7 +117,7 @@ type ConfigFormProps = {
 ### 4.1. Шов данных
 
 - `createGridPorts({ gridId, parseRow, parseDetail? })`: при `parseDetail` порты получают `detailFx: Effect<string, Detail, ApiError>` — `GET /grids/{gridId}/documents/{id}`. Ответ проверяется гардом `obj` и парсером сущности; ошибки — `ApiError` / `contractError`, как у поиска.
-- Эндпоинт — **предложение** в контракт `vtb-filters`, как `/facets`; в `docs/reference/pi-api.md` — с пометкой «предложение» и составом детали для `fx-docs` и `rub-docs`.
+- Эндпоинт — **предложение** в контракт `filters-contract`, как `/facets`; в `docs/reference/pi-api.md` — с пометкой «предложение» и составом детали для `fx-docs` и `rub-docs`.
 
 ### 4.2. Сущности (домен)
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md` (§7 — порядок задач 0–12). Основная спека — `docs/superpowers/specs/2026-09-23-katran-design.md` (§5.2), спека `apps/pi` — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Эталон — стенд `/Users/shaman/_CODE/VTB/pi-constructor` (`index.html`, `grid.html`, `rub-grid.html`), коммит фиксирует Task 1.
+**Spec:** `docs/superpowers/specs/2026-09-29-katran-detail-view-design.md` (§7 — порядок задач 0–12). Основная спека — `docs/superpowers/specs/2026-09-23-katran-design.md` (§5.2), спека `apps/pi` — `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Эталон — стенд `../pi-constructor` (`index.html`, `grid.html`, `rub-grid.html`), коммит фиксирует Task 1.
 
 ## Global Constraints
 
@@ -84,7 +84,7 @@ docs/superpowers/specs/2026-09-23-katran-design.md · docs/superpowers/specs/202
   - `packages/tokens/src/tokens.src.ts` — `z.drawer = 100`, `durations` без `drawer` и `open-delay`, `sizes['h-field'] = 23`;
   - `apps/pi/src/shared/api/ports.ts` — `createGridPorts({ gridId, parseRow })` без детали; `apps/pi/src/app/fake/server.ts` — `ROUTE` без `documents`;
   - `apps/pi/src/widgets/doc-registry/lib/createRegistry.ts` — `openRequested: EventCallable<{ id: string; secondary: boolean }>`.
-- [x] **Step 5: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` и `git -C /Users/shaman/_CODE/VTB/pi-constructor status --short` — рабочая копия чистая. Хеш — в леджер (Task 1 фиксирует его эталоном).
+- [x] **Step 5: стенд.** `git -C ../pi-constructor log --oneline -1` и `git -C ../pi-constructor status --short` — рабочая копия чистая. Хеш — в леджер (Task 1 фиксирует его эталоном).
 
 ---
 
@@ -99,7 +99,7 @@ docs/superpowers/specs/2026-09-23-katran-design.md · docs/superpowers/specs/202
 - Produces: числа эталона `REF` для e2e Task 11 — ширина drawer, высота шапки, лейна, полосы вкладок, строки SWIFT-поля (валюта), строки таблицы сторон (рубль), положение B относительно A. Значения, прочитанные из CSS стенда при написании плана (Task 1 их подтверждает или заменяет): **drawer 800** (`.dw{width:800px}`), **шапка 44** (`.dh` 10 + кнопка 26 + 8), **лейн 36** (`.lane{height:36px}`), **полоса вкладок 32** (`.tabs span` 7 + 16.9 + 6 + 2), **строка SWIFT-поля 27** (`.cell{min-height:27px}`), **строка сторон рубля 23** (`.rpr{min-height:23px}`), **B вплотную слева от A**.
 - Produces: список вопросов B владельцу `В-Д1…` — ответы нужны до Task 8 (В-Д1), Task 9 (В-Д2, В-Д3), Task 11 (В-Д4). Задачи кита (2–6), шва данных (7) и виджета (10) решений не ждут.
 
-- [x] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` — хеш и дата. В `docs/STATE.md` §10 в строке «Деталка валюты и рубля (`index.html`)» заменить «не заморожена — развивается на стенде» на `<хеш>, <дата время> (замер: …; Step 3)`, срез — «2 (2a–2d)», расхождения — «`docs/reference/detail-drift.md`». Абзац «**Непереданные части** стенд развивает свободно (сейчас — деталка)» заменить на «**Непереданных частей** больше нет: деталка заморожена целиком (срез 2a, решение владельца 29.09); до конца 2d стенд остаётся витриной для пользователей и получает только исправления».
+- [x] **Step 1: зафиксировать эталон.** `git -C ../pi-constructor log -1 --format='%h %ci'` — хеш и дата. В `docs/STATE.md` §10 в строке «Деталка валюты и рубля (`index.html`)» заменить «не заморожена — развивается на стенде» на `<хеш>, <дата время> (замер: …; Step 3)`, срез — «2 (2a–2d)», расхождения — «`docs/reference/detail-drift.md`». Абзац «**Непереданные части** стенд развивает свободно (сейчас — деталка)» заменить на «**Непереданных частей** больше нет: деталка заморожена целиком (срез 2a, решение владельца 29.09); до конца 2d стенд остаётся витриной для пользователей и получает только исправления».
 - [x] **Step 2: замер эталона.** Создать `apps/pi/e2e-stand/playwright.config.ts`:
 
 ```ts
@@ -111,7 +111,7 @@ export default defineConfig({
   timeout: 60_000,
   use: { baseURL: 'http://localhost:5187', viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 },
   webServer: {
-    command: 'python3 -m http.server 5187 --directory /Users/shaman/_CODE/VTB/pi-constructor',
+    command: 'python3 -m http.server 5187 --directory ../pi-constructor',
     url: 'http://localhost:5187/grid.html',
     reuseExistingServer: false,
   },
@@ -2932,7 +2932,7 @@ export type GridPorts<Row> = {
 }
 /** Документ целиком (спека 2a §4.1): сущность проверяет форму ответа и переименовывает поля бека. Бросает contractError. */
 export type DetailParser<D> = (raw: unknown, path: string) => D
-/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт vtb-filters, как /facets (docs/reference/pi-api.md). */
+/** Порт детали: GET /grids/{gridId}/documents/{id} — предложение в контракт filters-contract, как /facets (docs/reference/pi-api.md). */
 export type DetailPort<D> = { detailFx: Effect<string, D, ApiError> }
 export type GridPortsConfig<Row> = { gridId: string; parseRow: RowParser<Row> }
 

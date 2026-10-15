@@ -2,7 +2,7 @@ import type { Condition, Facet, FacetsQuery, Filter, FilterField, FilterFieldTyp
 import { contractError } from './problem'
 import { arr, num, obj, oneOf, scalar, str } from './guards'
 
-/** Тела и ответы POST /grids/{gridId}/search|facets|suggest и GET /grids/{gridId}/filter-meta — контракт vtb-filters §5–6 (facets и suggest — предложения, docs/reference/pi-api.md). */
+/** Тела и ответы POST /grids/{gridId}/search|facets|suggest и GET /grids/{gridId}/filter-meta — контракт filters-contract §5–6 (facets и suggest — предложения, docs/reference/pi-api.md). */
 export type SortDto = { field: string; direction: 'ASC' | 'DESC' }
 export type SearchBody = { filter: { conditions: Filter }; sort: SortDto[]; page: { number: number; size: number }; includeTotal: boolean }
 export type FacetsBody = { filter: { conditions: Filter }; field: string }

@@ -43,7 +43,7 @@
 ```ts
 export type SortLevel = { key: string; dir: 'asc' | 'desc' }
 export type Sort = SortLevel[]              // [] — без сортировки; было { key, dir } | null
-export const MAX_SORT_LEVELS = 5            // контракт vtb-filters §5.1: sort — массив до 5 элементов
+export const MAX_SORT_LEVELS = 5            // контракт filters-contract §5.1: sort — массив до 5 элементов
 ```
 
 **Помощники** (`ui/grid/sortRows.ts`), общие для шапки и чипов:
@@ -142,7 +142,7 @@ export type RowState =
 ## 7. Совместимость и контракты
 
 - Всё — в пределах плана 4: React 17–19, Chromium 88 (`check:target`), без API React 18+ в пакетах кита.
-- Breaking для потребителей кита — только `Sort`/`GridQuery.sort` (массив). CHANGELOG — «Изменено (breaking)», `docs/consuming.md` — раздел о переходе. Для бека `vtb-filters` ничего не меняется: `sort` там уже массив.
+- Breaking для потребителей кита — только `Sort`/`GridQuery.sort` (массив). CHANGELOG — «Изменено (breaking)», `docs/consuming.md` — раздел о переходе. Для бека `filters-contract` ничего не меняется: `sort` там уже массив.
 - Новые пропы и поля (`fullHeight`, `split`, `rowState`, `openHint`, `$split`, `resetWidths`) совместимы назад.
 
 ## 8. Проверки

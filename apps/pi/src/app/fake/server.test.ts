@@ -54,7 +54,7 @@ describe('фейковый сервер', () => {
     await expect(run).rejects.toBeInstanceOf(ApiError)
     const e = (await run.catch((x: unknown) => x)) as ApiError
     expect(e.status).toBe(400)
-    expect(e.problem?.type).toBe('urn:vtb:grid:filter-validation')
+    expect(e.problem?.type).toBe('urn:katran:grid:filter-validation')
     expect(e.problem?.errors?.map((x) => x.code)).toEqual(['UNKNOWN_FIELD', 'OPERATOR_NOT_ALLOWED', 'PAGE_SIZE_OUT_OF_RANGE'])
   })
   it('404 на неизвестный грид и маршрут', async () => {

@@ -55,7 +55,7 @@
 
 ## 3. `apps/pi`
 
-### 3.1. Контракт (предложение в `vtb-filters`, `docs/reference/pi-api.md`)
+### 3.1. Контракт (предложение в `filters-contract`, `docs/reference/pi-api.md`)
 
 1. **`FxEdit.canConfirm: boolean`** (§7.6). `true` — последняя запись `pending`, её автор — не текущий пользователь, у пользователя есть право утверждать. Ключ бек отдаёт всегда; отсутствующий маппер читает как `false`. У `route` и `valueDate` — всегда `false`.
 2. **`FxHistEntry.status`** — `'pending' | 'confirmed' | 'rejected'`. У `rejected`: `by`/`at` — кто и когда отклонил, новое поле **`reason`** — причина отклонения (строка или `null`, ключ отдаётся всегда, как `note`). Примечание автора `note` не трогается — аудит хранит обе стороны.

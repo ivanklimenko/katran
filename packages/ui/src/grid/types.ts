@@ -68,7 +68,7 @@ export type RecordLayout<Row> = {
 export type SortLevel = { key: string; dir: 'asc' | 'desc' }
 /** Многоуровневая сортировка (решение владельца В1): порядок уровней — порядок сравнения; [] — без сортировки. */
 export type Sort = SortLevel[]
-/** Контракт vtb-filters §5.1: sort — массив до 5 элементов. */
+/** Контракт filters-contract §5.1: sort — массив до 5 элементов. */
 export const MAX_SORT_LEVELS = 5
 export type Selection = { mode: 'ids'; ids: string[] } | { mode: 'all'; except: string[] }
 export type ColumnsState = { order: string[]; hidden: string[] }

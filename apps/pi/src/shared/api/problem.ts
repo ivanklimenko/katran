@@ -1,4 +1,4 @@
-/** Ошибка бека в формате RFC 9457 (контракт vtb-filters §8). */
+/** Ошибка бека в формате RFC 9457 (контракт filters-contract §8). */
 export type ProblemError = { path: string; code: string; message: string }
 export type Problem = { type: string; title: string; status?: number | undefined; detail?: string | undefined; errors?: ProblemError[] | undefined }
 

@@ -2,7 +2,7 @@ import { ApiError, contractError, toApiError } from './problem'
 
 describe('toApiError', () => {
   it('Problem Details: title и detail в message, problem сохраняется', () => {
-    const body = { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: '1 условие не прошло проверку',
+    const body = { type: 'urn:katran:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: '1 условие не прошло проверку',
       errors: [{ path: 'filter.conditions[0].op', code: 'OPERATOR_NOT_ALLOWED', message: 'Оператор CONTAINS недопустим' }] }
     const e = toApiError(400, body)
     expect(e).toBeInstanceOf(ApiError)

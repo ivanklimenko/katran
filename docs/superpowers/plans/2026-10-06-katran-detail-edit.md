@@ -8,7 +8,7 @@
 
 **Tech Stack:** pnpm-монорепо, React 17.0.2, effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library 12 + jest-axe, Playwright 1.63, eslint (`import-x`, `jsx-a11y`, `react-hooks`), stylelint.
 
-**Spec:** `docs/superpowers/specs/2026-10-06-katran-detail-edit-design.md` (утверждена владельцем 06.10; §7 — порядок задач 0–13, сохранён). Исследование с дословными текстами и адресами эталона — `.superpowers/sdd/2026-10-06-katran-detail-edit/research.md` (git-ignored, читать вместе с планом). Эталон — стенд `/Users/shaman/_CODE/VTB/pi-constructor`, коммит `e065bfb` (`index.html`: FIELDS 597–620, правимые профили 625, счета 668–684, ROUTES 740–746, сид 825–829, `editor()` 981–994, `validate()` 1480–1489, сохранение 1456–1471, 20 исх 1326–1340, счета 1302–1352, дата валютирования 1037–1065 и 1380–1400; CSS 138–153, 202–245, 365–443; `prompt.js`, `prompt.css`). Предыдущие планы-образцы — `docs/superpowers/plans/2026-09-30-katran-detail-tabs.md` (2b), `docs/superpowers/plans/2026-09-30-katran-filter-inputs.md` (план 7).
+**Spec:** `docs/superpowers/specs/2026-10-06-katran-detail-edit-design.md` (утверждена владельцем 06.10; §7 — порядок задач 0–13, сохранён). Исследование с дословными текстами и адресами эталона — `.superpowers/sdd/2026-10-06-katran-detail-edit/research.md` (git-ignored, читать вместе с планом). Эталон — стенд `../pi-constructor`, коммит `e065bfb` (`index.html`: FIELDS 597–620, правимые профили 625, счета 668–684, ROUTES 740–746, сид 825–829, `editor()` 981–994, `validate()` 1480–1489, сохранение 1456–1471, 20 исх 1326–1340, счета 1302–1352, дата валютирования 1037–1065 и 1380–1400; CSS 138–153, 202–245, 365–443; `prompt.js`, `prompt.css`). Предыдущие планы-образцы — `docs/superpowers/plans/2026-09-30-katran-detail-tabs.md` (2b), `docs/superpowers/plans/2026-09-30-katran-filter-inputs.md` (план 7).
 
 ## Global Constraints
 
@@ -379,7 +379,7 @@ docs/STATE.md · CHANGELOG.md (корень) · docs/superpowers/specs/2026-10-0
 - [x] **Step 1: `main` содержит спеку 2c и 2b.**
 
 ```bash
-cd /Users/shaman/_CODE/VTB/katran
+cd katran
 git merge-base --is-ancestor 33269e4 main && git merge-base --is-ancestor 358b2d3 main && echo OK
 git status --short
 ```
@@ -389,12 +389,12 @@ Expected: `OK`; `git status --short` пуст, кроме этого плана,
 - [x] **Step 2: worktree и ветка.**
 
 ```bash
-cd /Users/shaman/_CODE/VTB/katran
+cd katran
 git worktree add .worktrees/detail-edit -b feat/detail-edit main
 cd .worktrees/detail-edit && git log --oneline -1
 ```
 
-Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `main`. Дальше все задачи — в `/Users/shaman/_CODE/VTB/katran/.worktrees/detail-edit`.
+Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `main`. Дальше все задачи — в `.worktrees/detail-edit`.
 
 - [x] **Step 3: зависимости и проверка.** `pnpm install` (lockfile не меняется), `pnpm check`. Expected: `Tests 20 passed` (tokens), `622` (ui), `58` (effector), `258` (apps/pi), `ES-Check passed`, `CSS: синтаксиса новее chrome >= 88 нет`. Другие числа — записать фактические и считать от них; красный — остановиться.
 - [x] **Step 4: e2e на переднем плане.** `pnpm --filter pi e2e` — `59 passed`.
@@ -412,7 +412,7 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
   - `apps/pi/src/app/fake/fx-docs.data.ts` — `makeFxDocs()[0]` первая запись реестра при пустой сортировке (`createGridModel` `$sort` = `[]`), её `type` — записать (Task 8 сидирует правку поля 57 на этот документ; MT199 — остановиться и спросить контроллера);
   - `eslint.config.js:10` — `LAYERS = ['app', 'pages', 'widgets', 'entities', 'shared']`, зона `widgets/doc-detail ← entities`;
   - `packages/tokens/src/tokens.src.ts` — нет имён `prompt-*`, `fe-*`, `sug-*`, `mark-dot`, `edit-dot`, `pen`, `h-inline`, `fs-edit`, `scrim`; генератор принимает цвет `#RRGGBBAA` (проверить `generate.ts`; не принимает — в леджер, Task 2 решает через контроллера).
-- [x] **Step 6: стенд.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `status --short` пуст. Иначе — остановиться.
+- [x] **Step 6: стенд.** `git -C ../pi-constructor log --oneline -1` — `e065bfb Стенд: новый пароль заглушки`; `status --short` пуст. Иначе — остановиться.
 
 ---
 
@@ -428,8 +428,8 @@ Expected: `Preparing worktree (new branch 'feat/detail-edit')`, вершина `
 - Produces: числа эталона для токенов Task 2 и `REF` e2e Task 12. Ожидаемые по CSS эталона (Task 1 подтверждает или заменяет, расхождение > 0.5 px — фактическое число в леджер и в Task 2): **поле ввода редактора `.fe input` 21** (и строка `pre` «Как есть» 21), **кнопка опции `.opts button` 18 × мин. 22**, отступы `.fe` 7 / 9 / 8, `.box` 5 / 7, зазор колонок `.two` 10, **поле 20 исх / счёта / даты `.txted input`, `.acced input`, `.vdinp` 22**, **строка подсказки `.sug .si` 24**, ширина списка ≥ 320 (min 300), колонки строки 34 / 120, **коробка `Prompt` `.pr` 340**, отступы 16 / 16 / 12, радиус 8, **кнопка `Prompt` 30**, отступ кнопки 14, заголовок 600 14 / 1.35, note 12.5 / 1.45, **карандаш даты 17 × 17**, значок 12–13, **точка `.mark i` 6**, галочка 8 px, **точка угла `.cell.edited::after` 8**, точка таймлайна 8, кегль поля правки 12 моно.
 - Produces: раздел «2c» сверки — пункты Д49–Д60 класса C, известные до кода.
 
-- [x] **Step 1: хеши.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log -1 --format='%h %ci'` и `git log -1 --format='%h %ci'` в worktree — в шапку раздела и в леджер.
-- [x] **Step 2: замер.** Конфиг — копия конфига Task 1 плана 2b (`docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, Task 1 Step 2: `baseURL` `http://localhost:5187`, `python3 -m http.server 5187 --directory /Users/shaman/_CODE/VTB/pi-constructor`, 1600 × 1000, `deviceScaleFactor` 1), помощники `h(page, sel)` и `css(page, sel, props, pseudo?)` — оттуда же. Сценарий `замер правки деталки стенда (2c)` на `#dw0` (первый валютный документ, у него сид правки поля 57), каждый шаг — ключ в объекте вывода:
+- [x] **Step 1: хеши.** `git -C ../pi-constructor log -1 --format='%h %ci'` и `git log -1 --format='%h %ci'` в worktree — в шапку раздела и в леджер.
+- [x] **Step 2: замер.** Конфиг — копия конфига Task 1 плана 2b (`docs/superpowers/plans/2026-09-30-katran-detail-tabs.md`, Task 1 Step 2: `baseURL` `http://localhost:5187`, `python3 -m http.server 5187 --directory ../pi-constructor`, 1600 × 1000, `deviceScaleFactor` 1), помощники `h(page, sel)` и `css(page, sel, props, pseudo?)` — оттуда же. Сценарий `замер правки деталки стенда (2c)` на `#dw0` (первый валютный документ, у него сид правки поля 57), каждый шаг — ключ в объекте вывода:
   1. `fe`: клик `#dw0 [data-no="57"] [data-act="edit"]` → `h('.fe input')`, `h('.fe pre')`, `h('.opts button')`, `css('.opts button', ['min-width'])`, `css('.fe', ['padding-top','padding-left','padding-bottom'])`, `css('.box', ['padding-top','padding-left'])`, `css('.fe .two', ['column-gap'])`, ширина `.fe` против ширины сетки `.fg`; ввести «ПРИВЕТ» в первую строку → текст `.fe [data-err]` (ожидается «Строка 1: недопустимые символы (только латиница, цифры и / - ? : ( ) . , ' +)»); скриншот `stand-editor.png`; «Отмена».
   2. `hist`: клик по ячейке 57 (раскрыть) → «История» `.hs-t` → `h('.hl li')`, `css('.hl li', ['width','height'], '::before')`, `css('.cell.edited', ['width','height'], '::after')`; скриншот `stand-history.png`.
   3. `ref`: клик первого `#dw0 [data-txtedit]` → `h('.txted input')`, `css('.txted input', ['font-size','font-family'])`; Esc.

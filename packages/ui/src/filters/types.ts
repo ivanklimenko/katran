@@ -1,4 +1,4 @@
-/** Модель фильтра — спека 7.1, контракт vtb-filters/docs/filter-contract.md. Живёт в ui: панели нужны эти типы, а ui не импортирует effector (спека 3.2). */
+/** Модель фильтра — спека 7.1, контракт filters-contract/docs/filter-contract.md. Живёт в ui: панели нужны эти типы, а ui не импортирует effector (спека 3.2). */
 export type Scalar = string | number | boolean
 
 export type Condition =

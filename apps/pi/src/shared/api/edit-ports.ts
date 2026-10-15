@@ -35,7 +35,7 @@ export function fromAccountsResponse(raw: unknown): AccountItem[] {
   })
 }
 
-/** Порты правки документа — предложение в контракт vtb-filters (docs/reference/pi-api.md), как деталь и вкладки. */
+/** Порты правки документа — предложение в контракт filters-contract (docs/reference/pi-api.md), как деталь и вкладки. */
 export function createEditPorts<D>({ gridId, parseDetail }: { gridId: string; parseDetail: DetailParser<D> }): EditPorts<D> {
   // id — в пути: кодируется, как у detailFx; вызов requestFx внутри обработчика сохраняет scope (effector 23)
   const doc = (id: string) => `/grids/${gridId}/documents/${encodeURIComponent(id)}`

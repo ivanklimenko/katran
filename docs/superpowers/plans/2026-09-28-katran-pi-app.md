@@ -4,11 +4,11 @@
 
 **Goal:** новое приложение `apps/pi` в монорепо katran с экранами «Валютные документы» и «Рублёвые документы», разложенное по FSD так, чтобы внутри его код переносился слайсами или целиком, а менялся только обработчик транспорта.
 
-**Architecture:** FSD-слои `app → pages → widgets → entities → shared`. Шов данных — один эффект `requestFx` в `shared/api`; контракт грида (`vtb-filters`) маппится в `shared/api`, строки — парсерами сущностей; порты сущностей строятся фабрикой `createGridPorts`. Фейковый сервер в `app/fake` — обработчик `requestFx`, говорящий JSON на контракте. Общая сборка реестра — виджет `doc-registry` поверх моделей `@katran/effector`.
+**Architecture:** FSD-слои `app → pages → widgets → entities → shared`. Шов данных — один эффект `requestFx` в `shared/api`; контракт грида (`filters-contract`) маппится в `shared/api`, строки — парсерами сущностей; порты сущностей строятся фабрикой `createGridPorts`. Фейковый сервер в `app/fake` — обработчик `requestFx`, говорящий JSON на контракте. Общая сборка реестра — виджет `doc-registry` поверх моделей `@katran/effector`.
 
 **Tech Stack:** pnpm-монорепо, React (17–19 после плана 4), effector 23.4, effector-react, Vite 8, Vitest 5 + jsdom + Testing Library + jest-axe, Playwright, eslint (`import-x`).
 
-**Spec:** `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Рекомендации потребителям — `docs/guides/effector-fsd.md`. Контракт бека — `/Users/shaman/_CODE/VTB/vtb-filters/docs/filter-contract.md`.
+**Spec:** `docs/superpowers/specs/2026-09-28-katran-pi-app-design.md`. Рекомендации потребителям — `docs/guides/effector-fsd.md`. Контракт бека — `../filters-contract/docs/filter-contract.md`.
 
 ## Global Constraints
 
@@ -86,7 +86,7 @@ export const MAX_SORT_LEVELS = 5
 - Modify: `docs/reference/registry-drift.md` (раздел «Рублёвый реестр»)
 - Create (временно, удаляется в этой же задаче): `apps/demo/e2e-stand/stand.spec.ts`, `apps/demo/e2e-stand/playwright.config.ts`
 
-- [x] **Step 1: зафиксировать эталон.** `git -C /Users/shaman/_CODE/VTB/pi-constructor log --oneline -1` — хеш и дата. В `docs/STATE.md` §10 в строке «Рублёвый реестр (`rub-grid.html`)» заменить «не заморожен» на `<хеш>, <дата время>`, срез — «`apps/pi`», расхождения — «`docs/reference/registry-drift.md`, раздел «Рублёвый реестр»».
+- [x] **Step 1: зафиксировать эталон.** `git -C ../pi-constructor log --oneline -1` — хеш и дата. В `docs/STATE.md` §10 в строке «Рублёвый реестр (`rub-grid.html`)» заменить «не заморожен» на `<хеш>, <дата время>`, срез — «`apps/pi`», расхождения — «`docs/reference/registry-drift.md`, раздел «Рублёвый реестр»».
 - [x] **Step 2: замер эталона.** Создать `apps/demo/e2e-stand/playwright.config.ts`:
 
 ```ts
@@ -432,7 +432,7 @@ import { ApiError, contractError, toApiError } from './problem'
 
 describe('toApiError', () => {
   it('Problem Details: title и detail в message, problem сохраняется', () => {
-    const body = { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: '1 условие не прошло проверку',
+    const body = { type: 'urn:katran:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: '1 условие не прошло проверку',
       errors: [{ path: 'filter.conditions[0].op', code: 'OPERATOR_NOT_ALLOWED', message: 'Оператор CONTAINS недопустим' }] }
     const e = toApiError(400, body)
     expect(e).toBeInstanceOf(ApiError)
@@ -480,7 +480,7 @@ Run: `pnpm --filter pi test` — FAIL (модулей нет).
 - [x] **Step 6: реализация.** `shared/api/problem.ts`:
 
 ```ts
-/** Ошибка бека в формате RFC 9457 (контракт vtb-filters §8). */
+/** Ошибка бека в формате RFC 9457 (контракт filters-contract §8). */
 export type ProblemError = { path: string; code: string; message: string }
 export type Problem = { type: string; title: string; status?: number | undefined; detail?: string | undefined; errors?: ProblemError[] | undefined }
 
@@ -682,7 +682,7 @@ import type { Condition, Facet, FacetsQuery, Filter, FilterField, FilterFieldTyp
 import { contractError } from './problem'
 import { arr, num, obj, oneOf, scalar, str } from './guards'
 
-/** Тела и ответы POST /grids/{gridId}/search|facets и GET /grids/{gridId}/filter-meta — контракт vtb-filters §5–6. */
+/** Тела и ответы POST /grids/{gridId}/search|facets и GET /grids/{gridId}/filter-meta — контракт filters-contract §5–6. */
 export type SortDto = { field: string; direction: 'ASC' | 'DESC' }
 export type SearchBody = { filter: { conditions: Filter }; sort: SortDto[]; page: { number: number; size: number }; includeTotal: boolean }
 export type FacetsBody = { filter: { conditions: Filter }; field: string }
@@ -836,7 +836,7 @@ export { createGridPorts, type GridPorts } from './ports'
 
 ```bash
 git add apps/pi/src/shared/api
-git commit -m "apps/pi: контракт грида vtb-filters и порты createGridPorts поверх requestFx"
+git commit -m "apps/pi: контракт грида filters-contract и порты createGridPorts поверх requestFx"
 ```
 
 ---
@@ -963,7 +963,7 @@ describe('фейковый сервер', () => {
     await expect(run).rejects.toBeInstanceOf(ApiError)
     const e = await run.catch((x: ApiError) => x)
     expect(e.status).toBe(400)
-    expect(e.problem?.type).toBe('urn:vtb:grid:filter-validation')
+    expect(e.problem?.type).toBe('urn:katran:grid:filter-validation')
     expect(e.problem?.errors?.map((x) => x.code)).toEqual(['UNKNOWN_FIELD', 'OPERATOR_NOT_ALLOWED', 'PAGE_SIZE_OUT_OF_RANGE'])
   })
   it('404 на неизвестный грид и маршрут', async () => {
@@ -1100,7 +1100,7 @@ function validate(meta: FilterMetaDto, conditions: Filter, size: number | null):
   return errors
 }
 
-/** Обработчик requestFx на контракте vtb-filters: JSON на входе и выходе, ошибки — Problem Details через toApiError, как у настоящего клиента. */
+/** Обработчик requestFx на контракте filters-contract: JSON на входе и выходе, ошибки — Problem Details через toApiError, как у настоящего клиента. */
 export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServerOptions = {}) {
   return async (req: HttpRequest): Promise<unknown> => {
     const delay = opts.delayMs?.() ?? 0
@@ -1115,7 +1115,7 @@ export function createFakeServer(grids: Record<string, FakeGrid>, opts: FakeServ
     const body = req.body as SearchBody | FacetsBody
     const errors = validate(grid.meta, body.filter.conditions, 'page' in body ? body.page.size : null)
     if (errors.length > 0) {
-      const p: Problem = { type: 'urn:vtb:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: `Ошибок: ${errors.length}`, errors }
+      const p: Problem = { type: 'urn:katran:grid:filter-validation', title: 'Некорректный фильтр', status: 400, detail: `Ошибок: ${errors.length}`, errors }
       throw toApiError(400, p)
     }
     return op === 'search' ? grid.search(body as SearchBody) : grid.facets(body as FacetsBody)
@@ -1894,7 +1894,7 @@ Run: `pnpm --filter pi e2e` — 3/3 PASS, те же числа, что у дем
 ```
 
 В `Page.module.css` удалить правила `.gridPage`, `.gridHead`, `.lane`, `.filters`, `.explain*`, `.code`, `.hlSpans …`, `.srTag`, `.h1Counter` (перенесены или больше не нужны; `rg -n "gridPage|h1Counter|srTag|explain|hlSpans" apps/demo/src` — пусто). В `.github/workflows/pages.yml` у шага сборки демо: `run: PAGES_BASE=/katran/ VITE_PI_URL=/katran/pi/ pnpm --filter demo build`.
-- [x] **Step 5: запуск.** `pnpm check` — зелёный; `pnpm --filter pi e2e` — зелёный. Проверка в браузере: preview-конфигурация `pi` в `/Users/shaman/_CODE/VTB/.claude/launch.json` (`pnpm --dir katran --filter pi dev`, порт 5185; файл откатывается из `.bak` — добавить запись и в `.bak`, свои временные записи удалять точечно) → реестр грузится, лейн с числами, «Фильтры» открываются после каталога, `?fail=search` — ошибка и «Повторить», `?fail=meta` — кнопка «Фильтры» недоступна, консоль чистая.
+- [x] **Step 5: запуск.** `pnpm check` — зелёный; `pnpm --filter pi e2e` — зелёный. Проверка в браузере: preview-конфигурация `pi` в `../.claude/launch.json` (`pnpm --dir katran --filter pi dev`, порт 5185; файл откатывается из `.bak` — добавить запись и в `.bak`, свои временные записи удалять точечно) → реестр грузится, лейн с числами, «Фильтры» открываются после каталога, `?fail=search` — ошибка и «Повторить», `?fail=meta` — кнопка «Фильтры» недоступна, консоль чистая.
 - [x] **Step 6: commit.**
 
 ```bash
@@ -2021,7 +2021,7 @@ export function parseRubDoc(raw: unknown, path: string): RubDoc {
 ```
 
 `api/ports.ts`: `export const rubDocPorts = createGridPorts({ gridId: 'rub-docs', parseRow: parseRubDoc })` (импорты — как у `fx-doc`).
-- [x] **Step 3: данные.** `app/fake/rub-docs.data.ts`: словари `RNAMES`, `RBANKS`, `RPURP`, `RTYPES`, `STS`, `REASONS`, `REASON_BY_ST`, `DIRS`, `SYS` — дословно из `/Users/shaman/_CODE/VTB/pi-constructor/rub-grid.tpl.html` на хеше эталона (Task 1; на 28.09 — строки 250–289), переведённые в `const` с типами. Генератор:
+- [x] **Step 3: данные.** `app/fake/rub-docs.data.ts`: словари `RNAMES`, `RBANKS`, `RPURP`, `RTYPES`, `STS`, `REASONS`, `REASON_BY_ST`, `DIRS`, `SYS` — дословно из `../pi-constructor/rub-grid.tpl.html` на хеше эталона (Task 1; на 28.09 — строки 250–289), переведённые в `const` с типами. Генератор:
 
 ```ts
 import type { RubDoc } from '../../entities/rub-doc'
@@ -2179,7 +2179,7 @@ git commit -m "apps/pi: рублёвый реестр — сущность rub-d
 - Modify: `docs/guides/effector-fsd.md`, `docs/STATE.md`, `CHANGELOG.md`, `docs/superpowers/specs/2026-09-23-katran-design.md` (§3, §10, §11)
 
 - [x] **Step 1: `docs/reference/pi-api.md`** (для бекенда). Разделы:
-  1. Эндпоинты фронта: `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — ссылкой на контракт `vtb-filters` §5–6; `POST /grids/{gridId}/facets` — **предложение**: тело `{ filter: { conditions }, field }`, ответ `[{ value, count }]`, семантика фильтра как у search, счёт без условий по `field`.
+  1. Эндпоинты фронта: `POST /grids/{gridId}/search`, `GET /grids/{gridId}/filter-meta` — ссылкой на контракт `filters-contract` §5–6; `POST /grids/{gridId}/facets` — **предложение**: тело `{ filter: { conditions }, field }`, ответ `[{ value, count }]`, семантика фильтра как у search, счёт без условий по `field`.
   2. `gridId`: `fx-docs`, `rub-docs`.
   3. Состав строки `content[]` для каждого грида — таблица «поле · тип · обязательно · пример» по `FxDoc` и `RubDoc` (Task 8, 12).
   4. Примеры запросов и ответов — взять из `grid-contract.test.ts` и `contract.test.ts` (по одному search, facets, filter-meta и одна ошибка 400 для каждого грида).
@@ -2214,7 +2214,7 @@ requestFx.use(async ({ method, url, query, body }) => {
 ```
 
   5. Адаптер роутера: на вход экрана — `lifecycle.pageOpened()`, на уход — `lifecycle.pageClosed()`; пример на `useEffect` с очисткой (как `startRouting` в `app/routes.ts`).
-  6. Строка бека отличается — правится только `entities/*/api/*.mapper.ts`; каталог и тело поиска — `shared/api/grid-contract.ts`, если бек отошёл от контракта `vtb-filters`.
+  6. Строка бека отличается — правится только `entities/*/api/*.mapper.ts`; каталог и тело поиска — `shared/api/grid-contract.ts`, если бек отошёл от контракта `filters-contract`.
   7. Контрактные тесты против своего бека: `contract.test.ts` с обработчиком из п. 4 в `fork({ handlers })`.
   8. Farfetched: `createQuery({ effect: fxDocPorts.searchFx })` — порты оборачиваются без переписывания.
   9. Чек-лист «перенос завершён»: транспорт подключён (нет ошибки «Транспорт не подключён»), оба экрана грузятся, `?`-регуляторы не нужны, контрактные тесты зелёные против своего бека, eslint-границы перенесены.
