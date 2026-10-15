@@ -13,10 +13,14 @@
 //                     своего React 17, внутри он зовёт React через share scope); 1 — singleton ^17.0.2
 //                     со своей запасной копией; host — только копия хоста (import: false);
 //   REMOTE_REACT19=1 — react/jsx-runtime remote разрешается в React 19 (моделирует React 19 в devDeps);
-//   REMOTE_STYLED   = shared (по умолчанию) | own — styled-components: shared — singleton ^5.3.11 со своей
-//                     запасной копией (хост шарит свой, при равных версиях на странице одна копия); own — не шарить:
-//                     своя копия в бандле remote — стили кита те же (шаблоны кита от темы не зависят), но контекст
-//                     темы у remote свой и ThemeProvider хоста под KatranProvider не виден (e2e/check.mjs — «тема хоста»).
+//   REMOTE_STYLED   = host (по умолчанию) | shared | own — styled-components:
+//                     host   — только копия хоста, как React (import: false; R25): хост сам на styled-components,
+//                              запасная копия в remote лежала бы впустую — при равных версиях webpack выбирал её
+//                              и грузил лишние ~40 KiB gzip;
+//                     shared — singleton ^5.3.11 со своей запасной копией (на странице одна копия — remote или хоста);
+//                     own    — не шарить: своя копия в бандле remote — стили кита те же (шаблоны кита от темы не
+//                              зависят), но контекст темы у remote свой и ThemeProvider хоста под KatranProvider не
+//                              виден (e2e/check.mjs — «тема хоста»).
 // Своего CSS у remote нет: стили кита и экрана — styled-components, шрифты — компонент KatranFonts.
 const path = require('path')
 const { ModuleFederationPlugin } = require('webpack').container
@@ -24,7 +28,7 @@ const { ModuleFederationPlugin } = require('webpack').container
 const EFFECTOR = process.env.REMOTE_EFFECTOR || 'host'
 const JSX_SHARE = process.env.REMOTE_JSX_SHARE || ''
 const REACT19 = process.env.REMOTE_REACT19 === '1'
-const STYLED = process.env.REMOTE_STYLED || 'shared'
+const STYLED = process.env.REMOTE_STYLED || 'host'
 
 const shared = {
   // React и react-dom — только хоста: import: false не кладёт в remote запасную копию,
@@ -49,7 +53,9 @@ if (EFFECTOR === 'shared') {
   if (deepEffector) shared['effector/effector.mjs'] = { ...shared.effector, shareKey: 'effector', import: false }
   shared['effector-react'] = { singleton: true, requiredVersion: '^23.3.0', strictVersion: true }
 }
-// styled-components — singleton, как React: одна копия на странице, тема хоста видна коду remote (спека styled §4.1).
+// styled-components — singleton, как React: одна копия на странице, тема хоста видна коду remote (спека styled §4.1);
+// по умолчанию — только копия хоста (R25), без хоста со styled-components экран не поднимется — это контракт с хостом.
+if (STYLED === 'host') shared['styled-components'] = { singleton: true, requiredVersion: '^5.3.11', strictVersion: true, import: false }
 if (STYLED === 'shared') shared['styled-components'] = { singleton: true, requiredVersion: '^5.3.11', strictVersion: true }
 if (JSX_SHARE) shared['react/jsx-runtime'] = { singleton: true, requiredVersion: '^17.0.2', strictVersion: true, ...(JSX_SHARE === 'host' ? { import: false } : {}) }
 

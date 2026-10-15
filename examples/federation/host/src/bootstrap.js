@@ -50,7 +50,7 @@ function App() {
         <div className="host-slot" data-host-slot="">
           <Boundary>
             <React.Suspense fallback={<p>Загрузка экрана…</p>}>
-              {shown[0] && React.createElement(ThemeProvider, { theme: hostTheme }, <DocumentsScreen $visits={$visits} visit={visit} />)}
+              {shown[0] && <ThemeProvider theme={hostTheme}><DocumentsScreen $visits={$visits} visit={visit} /></ThemeProvider>}
             </React.Suspense>
           </Boundary>
         </div>

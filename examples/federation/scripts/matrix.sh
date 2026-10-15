@@ -24,6 +24,7 @@ run() {
 
 build_host HOST_EFFECTOR=
 build_remote REMOTE_STYLED=own && run styled-own none
+build_remote REMOTE_STYLED=shared && run styled-shared
 build_remote REMOTE_EFFECTOR=host && run effector-host
 build_remote REMOTE_EFFECTOR=host REMOTE_EFFECTOR_DEEP=0 && run effector-host-no-deep
 build_remote REMOTE_EFFECTOR=shared && run effector-shared

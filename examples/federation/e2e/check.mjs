@@ -255,9 +255,11 @@ await step('тёмная тема ОС', async () => {
 await finish()
 
 /** Итог прошлого прогона: JSON и строка-сводка после него (так его пишет scripts/matrix.sh). */
+// Отчёт — JSON-массив, за ним итоговая строка; matrix.sh пишет в файл и stderr (2>&1), поэтому до и после
+// массива бывают предупреждения сборки и браузера — массив ищется по началу '[\n' и концу '\n]'.
 function readReport(file) {
   const text = readFileSync(file, 'utf8')
-  return JSON.parse(text.slice(0, text.lastIndexOf('\n]') + 2))
+  return JSON.parse(text.slice(text.indexOf('[\n'), text.lastIndexOf('\n]') + 2))
 }
 
 async function finish() {

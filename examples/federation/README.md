@@ -20,6 +20,7 @@ e2e/      check.mjs (проверки в Chromium через Playwright), sizes.
 ## Запуск
 
 ```sh
+mkdir -p test-results
 sh scripts/pack-kit.sh                     # из корня репо тоже можно: собрать и упаковать кит в .kit/
 (cd host && npm i) && (cd remote && npm i) && npm i
 
@@ -29,7 +30,7 @@ sh scripts/pack-kit.sh                     # из корня репо тоже �
 # dev: remote на 5211, хост на 5210; сначала эталон без shared styled-components, затем рекомендуемый вариант
 (cd remote && REMOTE_STYLED=own npm run dev) & (cd host && npm run dev) &
 node e2e/check.mjs http://localhost:5210/ > test-results/dev-styled-own.json
-# перезапустить remote без REMOTE_STYLED
+# перезапустить remote без REMOTE_STYLED (рекомендуемый вариант — styled-components хоста)
 node e2e/check.mjs http://localhost:5210/ test-results/dev-styled-own.json
 
 # prod: remote на 5213 (CORS обязателен — шрифты), хост на 5212
@@ -42,24 +43,27 @@ node e2e/sizes.mjs http://localhost:5212/ http://localhost:5213 remote/dist
 sh scripts/matrix.sh                       # все варианты shared, JSON — в test-results/; первый — styled-own (эталон)
 ```
 
-Каталог `test-results/` перед первым запуском — `mkdir -p test-results`.
+Версия кита в `remote/package.json` (имена тарболов в `.kit/`) — та же, что в `packages/*/package.json`.
 
 Переключатели вариантов описаны в шапках `host/webpack.config.js` и `remote/webpack.config.js`.
 
-## styled-components (14.10.2026, срез styled, Task 10)
+## styled-components (15.10.2026, кит 0.2.0, срез styled)
 
 Кит и remote на styled-components 5.3.11, CSS-файлов у remote нет; проверок 24 (добавлены «тема хоста» и
 «запись той же высоты, что без shared styled-components»; прочие — как в таблице ниже).
 
 | Вариант (prod) | Результат |
 |---|---|
-| рекомендуемый: styled-components — shared singleton `^5.3.11` у хоста и remote | 24/24 (dev и prod), один `ThemeContext`, theme.hostMark = host под KatranProvider, запись 68 / 84.75 px (100 / 125 %) |
-| без shared styled-components (`REMOTE_STYLED=own`) | 22/24: тема хоста не видна (контекст темы у копии remote свой); запись та же — 68 / 84.75 px; в dev — предупреждение styled-components о нескольких копиях |
+| рекомендуемый: styled-components — shared singleton `^5.3.11`, у remote только копия хоста (`import: false`, как React) | 24/24 (dev и prod), один `ThemeContext`, theme.hostMark = host под KatranProvider, запись 68 / 84.75 px (100 / 125 %) |
+| singleton со своей запасной копией у remote (`REMOTE_STYLED=shared`) | 24/24, но при равных версиях webpack берёт копию remote — +13.9 KiB gzip впустую |
+| без shared styled-components (`REMOTE_STYLED=own`) | 22/24: тема хоста не видна (контекст темы у копии remote свой); запись та же — 68 / 84.75 px; в dev 21/24 — ещё предупреждение styled-components о нескольких копиях |
 
-Размер JS remote (рекомендуемый вариант, `e2e/sizes.mjs`): 83.5 KiB gzip (при равных версиях webpack берёт копию
-styled-components из remote), без shared — 83.0 KiB; шрифты 193.8 KiB. Вариант `REMOTE_CSS=extract` снят — CSS нет.
+Размер JS remote (`e2e/sizes.mjs`, gzip): рекомендуемый — 69.6 KiB (remoteEntry 3.2, экран с данными 7.9, кит и
+зависимости 58.5); со своей запасной копией — 83.5 KiB (её чанк 13.7); без shared — 83.0 KiB; шрифты 193.8 KiB
+(14 woff2). Варианты матрицы effector и jsx-runtime — прежние результаты (24 или 22 проверки вместо 21 и 19).
+Вариант `REMOTE_CSS=extract` снят — CSS нет.
 
-## Итог (24.09.2026, Chromium 153 из Playwright 1.63)
+## Итог (24.09.2026, кит 0.1.x на CSS Modules, Chromium 153 из Playwright 1.63)
 
 | Вариант (prod) | Результат |
 |---|---|
