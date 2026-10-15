@@ -29,10 +29,24 @@ describe('ячейки валютного реестра — правило 2', 
 
   it('правила под корнем провайдера и после правил значения кита в листе стилей', () => {
     renderK(<><FxCellStyles />{cell('id')}</>)
-    const selectors = [...document.styleSheets].flatMap((s) => [...s.cssRules]).map((r) => (r instanceof CSSStyleRule ? r.selectorText : ''))
+    const selectors = selectorsOf()
     const kit = selectors.findIndex((x) => /\.k-copy(,|$)/.test(x))
     const app = selectors.indexOf(':where([data-k-root]) .fxNum')
     expect(kit).toBeGreaterThanOrEqual(0)
     expect(app).toBeGreaterThan(kit)
   })
+
+  it('перемонтирование (смена раздела): правила снова после правил значения кита, вес 600', () => {
+    const first = renderK(<><FxCellStyles />{cell('id')}</>)
+    first.unmount()
+    expect(selectorsOf().indexOf(':where([data-k-root]) .fxNum')).toBe(-1)
+    renderK(<><FxCellStyles />{cell('id')}</>)
+    const selectors = selectorsOf()
+    const kit = selectors.findIndex((x) => /\.k-copy(,|$)/.test(x))
+    expect(kit).toBeGreaterThanOrEqual(0)
+    expect(selectors.indexOf(':where([data-k-root]) .fxNum')).toBeGreaterThan(kit)
+    expect(getComputedStyle(screen.getByRole('button', { name: /812345/ })).fontWeight).toBe('600')
+  })
 })
+
+const selectorsOf = (): string[] => [...document.styleSheets].flatMap((s) => [...s.cssRules]).map((r) => (r instanceof CSSStyleRule ? r.selectorText : ''))

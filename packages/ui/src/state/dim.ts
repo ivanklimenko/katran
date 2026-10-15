@@ -9,10 +9,15 @@ import { css } from '../styled'
  */
 export const dimClass = 'k-dim'
 
+/** Объявления приглушения — общие для класса `k-dim` и таблицы грида на время обновления (`data-dim`). */
+export const dimmed = css`
+  opacity: 0.55;
+  transition: opacity ${k.tBase};
+  pointer-events: none;
+`
+
 export const dimRule = css`
   .k-dim {
-    opacity: 0.55;
-    transition: opacity ${k.tBase};
-    pointer-events: none;
+    ${dimmed}
   }
 `

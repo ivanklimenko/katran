@@ -1,12 +1,13 @@
 // Проверка установки пакетов кита у потребителя: node scripts/check-install.mjs (после pnpm release:pack).
 // Ставит три тарбола из release/ через npm в чистый проект вне монорепо и повторяет путь первой интеграции:
-// импорт в Node, предсборка зависимостей Vite (на ней падал хост — «Failed to resolve entry for package»),
-// production-сборка и проверка типов. Шрифты (спека styled §3.3): проект ставит KatranFonts без импорта CSS шрифтов,
+// react-is у styled-components той же мажорной версии, что React (R9), импорт в Node, предсборка зависимостей
+// Vite (на ней падал хост — «Failed to resolve entry for package»), production-сборка и проверка типов.
+// Импортов CSS в проекте нет (спека styled §4.6): стили кита — в JS, styled-components — в зависимостях. Шрифты (спека styled §3.3): проект ставит KatranFonts без импорта CSS шрифтов,
 // сборка кладёт 14 файлов woff2 в dist/assets, а в Chromium (Playwright монорепо) страница Vite dev — с предсборкой
 // зависимостей — и страница готовой сборки загружают IBM Plex. Нужна сеть (npm ставит react, effector, vite) —
 // поэтому не входит в pnpm check; запускается в CI отдельной задачей и вручную перед выпуском.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -41,6 +42,8 @@ write('package.json', `${JSON.stringify({
     'react-dom': '17.0.2',
   },
   devDependencies: { '@types/react': '^17.0.93', '@types/react-dom': '^17.0.26', typescript: '~5.9.3', vite: '^8.3.0' },
+  // react-is для styled-components — под мажорную версию React (R9, docs/consuming.md): без этого npm ставит последний
+  overrides: { 'styled-components': { 'react-is': '17.0.2' } },
 }, null, 2)}\n`)
 write('tsconfig.json', `${JSON.stringify({
   compilerOptions: { target: 'ES2020', lib: ['ES2020', 'DOM', 'DOM.Iterable'], module: 'ESNext', moduleResolution: 'bundler', jsx: 'react', strict: true, noEmit: true, skipLibCheck: true, types: [] },
@@ -64,17 +67,37 @@ console.log('импорт в Node: ' + mods.map((m) => Object.keys(m).length).jo
 
 try {
   run('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'])
+  checkReactIs()
   run('node', ['import.mjs'])
   run('npx', ['vite', 'optimize', '--force'])
   run('npx', ['vite', 'build'])
-  const woff2 = readdirSync(join(dir, 'dist/assets')).filter((f) => f.endsWith('.woff2'))
+  const assets = readdirSync(join(dir, 'dist/assets'))
+  const css = assets.filter((f) => f.endsWith('.css'))
+  if (css.length) throw new Error(`в dist/assets файлы CSS (${css.join(', ')}): кит 0.2.0 не должен приносить CSS`)
+  const woff2 = assets.filter((f) => f.endsWith('.woff2'))
   if (woff2.length !== FONT_COUNT) throw new Error(`в dist/assets файлов woff2: ${woff2.length}, ожидалось ${FONT_COUNT}`)
-  console.log(`сборка Vite: ${woff2.length} файлов woff2 в dist/assets`)
+  console.log(`сборка Vite: ${woff2.length} файлов woff2 в dist/assets, файлов CSS нет`)
   run('npx', ['tsc', '-p', 'tsconfig.json'])
   await checkFonts()
   console.log('Установка тарболов через npm: импорт, предсборка и сборка Vite, типы, шрифты в браузере — в порядке')
 } finally {
   rmSync(dir, { recursive: true, force: true })
+}
+
+/**
+ * react-is у styled-components (R9): styled-components 5 распознаёт элементы и компоненты через react-is, а его
+ * диапазон (>= 16.8.0) менеджер пакетов закрывает последней версией — react-is 19 элементов React 17 не узнаёт
+ * (ломается рендер styled(Компонент) и ThemeProvider). Потребитель закрепляет react-is под мажорную версию своего
+ * React (docs/consuming.md); проект проверки делает то же через overrides npm, а здесь сверяется, что именно
+ * эту копию styled-components и получит.
+ */
+function checkReactIs() {
+  const version = (path) => JSON.parse(readFileSync(join(dir, path, 'package.json'), 'utf8')).version
+  const own = 'node_modules/styled-components/node_modules/react-is'
+  const reactIs = version(existsSync(join(dir, own)) ? own : 'node_modules/react-is')
+  const react = version('node_modules/react')
+  if (reactIs.split('.')[0] !== react.split('.')[0]) throw new Error(`styled-components получает react-is ${reactIs} при React ${react}: мажорные версии должны совпадать (docs/consuming.md, overrides)`)
+  console.log(`react-is у styled-components: ${reactIs} при React ${react}`)
 }
 
 /**

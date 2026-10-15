@@ -9,13 +9,4 @@ export default defineConfig({
   plugins: [react()],
   // Pages отдаёт сайт из /katran/
   base: process.env.PAGES_BASE ?? '/',
-  css: {
-    modules: {
-      generateScopedName: (local, filename) => {
-        const base = filename.replace(/^.*[\\/]/, '').replace(/\.module\.css$/, '')
-        return `k-${base}__${local}`
-      },
-      localsConvention: 'camelCaseOnly',
-    },
-  },
 })

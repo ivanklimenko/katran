@@ -6,5 +6,5 @@ export default mergeConfig(viteConfig, defineConfig({
   // только в серверный лист, и в jsdom их нет (KatranFonts). Тесты — на браузерной сборке, как у
   // потребителя (Vite и webpack читают поле browser).
   resolve: { alias: [{ find: /^styled-components$/, replacement: 'styled-components/dist/styled-components.browser.cjs.js' }] },
-  test: { environment: 'jsdom', globals: true, setupFiles: ['./vitest.setup.ts'], css: { modules: { classNameStrategy: 'non-scoped' } } },
+  test: { environment: 'jsdom', globals: true, setupFiles: ['./vitest.setup.ts'] },
 }))

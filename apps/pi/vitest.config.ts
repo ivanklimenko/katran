@@ -6,5 +6,5 @@ export default mergeConfig(viteConfig, defineConfig({
   // createGlobalStyle (стили своих элементов ячеек, FxCellStyles/RubCellStyles) пишет правила только в серверный лист,
   // и в jsdom их нет. Тесты — на браузерной сборке, как у приложения (Vite читает поле browser).
   resolve: { alias: [{ find: /^styled-components$/, replacement: 'styled-components/dist/styled-components.browser.cjs.js' }] },
-  test: { environment: 'jsdom', globals: true, setupFiles: ['./vitest.setup.ts'], include: ['src/**/*.test.{ts,tsx}'], css: { modules: { classNameStrategy: 'non-scoped' } } },
+  test: { environment: 'jsdom', globals: true, setupFiles: ['./vitest.setup.ts'], include: ['src/**/*.test.{ts,tsx}'] },
 }))

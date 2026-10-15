@@ -5,7 +5,7 @@ import type { Rates } from '../../../shared/api'
 import type { LookupView } from '../../../shared/lib/detail'
 import { LookupBody } from '../../posting/@x/fx-doc'
 
-const Rates = styled.div`
+const RatesBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${k.sp1};
@@ -29,13 +29,13 @@ export function RatesView({ view, ccy }: { view: LookupView<Rates>; ccy: string 
   return (
     <LookupBody view={view} lines={2}>
       {(r) => (
-        <Rates>
+        <RatesBox>
           <p>Курс ЦБ на {formatDate(r.cb.date)} — <RateNum>{r.cb.rate}</RateNum> RUB за 1 {ccy}</p>
           <p>Рублёвый эквивалент — <RateNum>{r.cb.rub}</RateNum> RUB</p>
           {r.deal && (
             <p>Курс сделки {r.deal.from}→{r.deal.to} — <RateNum>{r.deal.rate}</RateNum> · списано <RateNum>{r.deal.amount}</RateNum> {r.deal.from}</p>
           )}
-        </Rates>
+        </RatesBox>
       )}
     </LookupBody>
   )

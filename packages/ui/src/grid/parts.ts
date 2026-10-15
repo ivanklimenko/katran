@@ -1,6 +1,7 @@
 import { k } from '@katran/tokens'
 import { IconButton } from '../button'
 import { Popover } from '../overlay'
+import { dimmed } from '../state/dim'
 import { styled } from '../styled'
 
 /**
@@ -62,9 +63,7 @@ export const Table = styled.table`
 
   /* приглушение на время обновления */
   &:where([data-dim]) {
-    opacity: 0.55;
-    pointer-events: none;
-    transition: opacity ${k.tBase};
+    ${dimmed}
   }
 `
 

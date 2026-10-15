@@ -276,30 +276,30 @@ const Cnt = styled.span`
 /** Есть ли хоть одно непустое значение (эталон filled, index.html:1134). */
 function filled(o: unknown): boolean {
   if (Array.isArray(o)) return o.length > 0
-  if (o && typeof o === 'object') return Object.keys(o).some((k) => filled((o as Record<string, unknown>)[k]))
+  if (o && typeof o === 'object') return Object.keys(o).some((name) => filled((o as Record<string, unknown>)[name]))
   return typeof o === 'string' ? o !== '' : o != null
 }
 
 const None = () => <NoneText><span aria-hidden="true">—</span><Sr>не заполнено</Sr></NoneText>
-function RLabel({ k }: { k: string }) {
-  const m = RFIELDS[k] ?? { label: k }
+function RLabel({ field }: { field: string }) {
+  const m = RFIELDS[field] ?? { label: field }
   return <>{m.no && <No data-k-tip={`${m.no} · ${m.label}`}>{m.no}</No>}{m.label}</>
 }
-function RVal({ k, v, mono }: { k: string; v: string; mono?: boolean | undefined }) {
+function RVal({ field, v, mono }: { field: string; v: string; mono?: boolean | undefined }) {
   if (!v) return <None />
-  return (mono ?? RFIELDS[k]?.mono) ? <ValMono>{v}</ValMono> : <Val>{v}</Val>
+  return (mono ?? RFIELDS[field]?.mono) ? <ValMono>{v}</ValMono> : <Val>{v}</Val>
 }
 
 /** Строки «реквизит — значение» секции; «|» — разделитель групп (эталон rubSectionHtml kv). */
 function Kv({ rows, data }: { rows: readonly string[]; data: Record<string, string> }) {
   return (
     <KvList>
-      {rows.map((k, i) => (k === '|'
+      {rows.map((name, i) => (name === '|'
         ? <KvSep key={`sep${i}`} aria-hidden="true" />
         : (
-          <KvRow key={k} data-null={data[k] ? undefined : ''}>
-            <KvName><RLabel k={k} /></KvName>
-            <RVal k={k} v={data[k] ?? ''} />
+          <KvRow key={name} data-null={data[name] ? undefined : ''}>
+            <KvName><RLabel field={name} /></KvName>
+            <RVal field={name} v={data[name] ?? ''} />
           </KvRow>
         )))}
     </KvList>
@@ -312,7 +312,7 @@ function Agents({ d }: { d: RubDocDetail }) {
       <thead><tr>{AGENT_COLS.map(([title]) => <th key={title} scope="col">{title}</th>)}</tr></thead>
       <tbody>
         {d.agents.map((a, i) => (
-          <tr key={i}>{AGENT_COLS.map(([, key]) => <td key={key}><RVal k={key} v={a[key]} mono={key !== 'name'} /></td>)}</tr>
+          <tr key={i}>{AGENT_COLS.map(([, key]) => <td key={key}><RVal field={key} v={a[key]} mono={key !== 'name'} /></td>)}</tr>
         ))}
       </tbody>
     </AgentsTable>
@@ -324,10 +324,10 @@ function Ed107({ e }: { e: RubEd107 }) {
   return (
     <Ed>
       <Kvs>
-        {ED107_HEAD.map(([k, label]) => (
-          <KvsItem key={k}>
+        {ED107_HEAD.map(([name, label]) => (
+          <KvsItem key={name}>
             <Lbl>{label}</Lbl>
-            {e[k] ? <Val>{k.endsWith('Date') ? formatDate(e[k]) : e[k]}</Val> : <None />}
+            {e[name] ? <Val>{name.endsWith('Date') ? formatDate(e[name]) : e[name]}</Val> : <None />}
           </KvsItem>
         ))}
       </Kvs>
@@ -341,7 +341,7 @@ function Ed107({ e }: { e: RubEd107 }) {
               return (
                 <KvRow key={path} data-null={v ? undefined : ''}>
                   <KvName data-mono="">ed:{path}</KvName>
-                  <RVal k={path} v={v} mono={r === 'BIC' || /Acc|Account/.test(r)} />
+                  <RVal field={path} v={v} mono={r === 'BIC' || /Acc|Account/.test(r)} />
                 </KvRow>
               )
             })}
@@ -401,13 +401,13 @@ function Party({ d }: { d: RubDocDetail }) {
         <colgroup><col style={{ width: 'var(--k-dt-label-s)' } as CSSProperties} /><col /><col /></colgroup>
         <thead><tr><th scope="col"><Sr>Реквизит</Sr></th><th scope="col">Отправитель</th><th scope="col">Получатель</th></tr></thead>
         <tbody>
-          {RUB_PARTY.map((k, i) => {
-            const a = d.party.s[k], b = d.party.r[k]
+          {RUB_PARTY.map((name, i) => {
+            const a = d.party.s[name], b = d.party.r[name]
             return (
-              <tr key={k} data-empty={!a && !b ? '' : undefined} data-null={!a && !b ? '' : undefined} data-part={i === 0 ? 'party-row' : undefined}>
-                <KvName as="th" scope="row">{RFIELDS[k]?.label ?? k}</KvName>
-                <td><RVal k={k} v={a} /></td>
-                <td><RVal k={k} v={b} /></td>
+              <tr key={name} data-empty={!a && !b ? '' : undefined} data-null={!a && !b ? '' : undefined} data-part={i === 0 ? 'party-row' : undefined}>
+                <KvName as="th" scope="row">{RFIELDS[name]?.label ?? name}</KvName>
+                <td><RVal field={name} v={a} /></td>
+                <td><RVal field={name} v={b} /></td>
               </tr>
             )
           })}

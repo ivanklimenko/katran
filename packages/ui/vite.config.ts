@@ -17,29 +17,13 @@ export default defineConfig({
     jsx: { runtime: 'classic', pragma: '__kCreate', pragmaFrag: '__kFragment' },
     jsxInject: `import { createElement as __kCreate, Fragment as __kFragment } from 'react'`,
   },
-  // Детерминированные имена классов: k-Component__part (спека 3.3). Хеша нет намеренно.
-  // Строковый шаблон 'k-[name]__[local]' здесь не подходит: Vite/generic-names вырезает
-  // из имени файла только последнее расширение (.css), поэтому для Provider.module.css
-  // [name] превращается в "Provider.module" (точка санируется в дефис) — получаем
-  // k-Provider-module__root вместо требуемого k-Provider__root. Функция ниже сама
-  // отрезает суффикс .module.css.
-  css: {
-    modules: {
-      generateScopedName: (local, filename) => {
-        const base = filename.replace(/^.*[\\/]/, '').replace(/\.module\.css$/, '')
-        return `k-${base}__${local}`
-      },
-      localsConvention: 'camelCaseOnly',
-    },
-  },
   build: {
     // Реальная планка браузера метаприложения — Chromium 88 (хост не транспилирует node_modules,
     // поэтому кит должен приходить уже пониженным). Без явного target Vite 8 собирает под
-    // 'baseline-widely-available' (Chrome 107+), cssTarget наследует его же.
+    // 'baseline-widely-available' (Chrome 107+). CSS сборка не выпускает: стили — шаблоны styled-components
+    // в JS, их планку Chromium 88 проверяет check-css-target.
     target: 'chrome88',
-    cssTarget: 'chrome88',
     lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'ui' },
-    cssFileName: 'ui',
     rollupOptions: { external: ['react', 'react-dom', 'styled-components', '@katran/tokens', '@katran/tokens/fonts', '@floating-ui/dom'] },
     sourcemap: true,
   },

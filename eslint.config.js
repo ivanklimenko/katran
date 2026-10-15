@@ -84,8 +84,10 @@ const STYLED_RULES = [
 // Приложения apps/pi (образец) и apps/demo (спека styled §4.7, Task 9–10): шаблоны по правилам кита — статические, без функций и строк-интерполяций.
 // styled-components приложение импортирует напрямую (Vite сам нормализует default пакета CJS) — под каноническими именами.
 const APP_STYLED_NAMES_MESSAGE = 'Импорт из styled-components под другим именем или целиком (* as): проверки стилей узнают шаблоны только по именам styled, css, createGlobalStyle, keyframes (R15)'
+const APP_STYLED_FN_MESSAGE = 'Функция в шаблоне styled: в приложении, как в ките, шаблоны статические — состояния атрибутами (data-*, aria-*), переменные значения — инлайновой CSS-переменной, токены — через k (спека styled §4.7, R24)'
 const APP_STYLED_RULES = [
-  ...STYLED_RULES.filter((r) => !r.selector.startsWith('ImportDeclaration')),
+  ...STYLED_RULES.filter((r) => !r.selector.startsWith('ImportDeclaration'))
+    .map((r) => (r.message === STYLED_FN_MESSAGE ? { ...r, message: APP_STYLED_FN_MESSAGE } : r)),
   ...['styled', 'css', 'createGlobalStyle', 'keyframes'].map((name) => ({
     selector: `ImportDeclaration[source.value='styled-components'] > ImportSpecifier[imported.name='${name}'][local.name!='${name}']`,
     message: APP_STYLED_NAMES_MESSAGE,
@@ -182,8 +184,8 @@ export default tseslint.config(
     ignores: ['packages/ui/src/styled.ts'],
     rules: { '@typescript-eslint/no-restricted-imports': ['error', { paths: [STYLED_COMPONENTS_ONLY_IN_STYLED_TS], patterns: [STYLED_COMPONENTS_SUBPATHS] }] },
   },
-  // Горячий путь (спека styled, правило 2): без styled.* — только фрагменты css и createGlobalStyle
-  // (классы k-…, их монтирует HotStyles). Этот блок заменяет предыдущий для своих файлов, поэтому R13 — и здесь.
+  // Горячий путь (спека styled, правило 2): без styled.* — только фрагменты css (классы k-…; правила —
+  // в шаблоне корня провайдера под *:where(&), R16). Этот блок заменяет предыдущий для своих файлов, поэтому R13 — и здесь.
   {
     files: HOT_PATH,
     rules: {

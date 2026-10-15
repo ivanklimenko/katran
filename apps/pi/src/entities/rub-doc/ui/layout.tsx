@@ -109,7 +109,7 @@ export const rubDocLayout: RecordLayout<RubDoc> = {
     { id: 'toBank', title: 'Банк получателя', subtitle: 'БИК · наименование', width: 162, lines: 2, sort: [{ id: 'toBic', label: 'БИК' }, { id: 'toBank', label: 'Наименование банка' }], render: (d) => bank(d.toBic, d.toBank) },
     { id: 'systems', title: 'Системы', subtitle: 'I · S · D', width: 115, lines: 3, fullHeight: true,
       sort: [{ id: 'initiator', label: 'Initiator' }, { id: 'source', label: 'Source' }, { id: 'destination', label: 'Destination' }],
-      render: (d) => <>{([['I', d.initiator], ['S', d.source], ['D', d.destination]] as const).map(([k, v]) => <div key={k}><span className="rubSrTag">{k}:</span><CopyValue value={v} tone="ink" tabIndex={T} className="rubMono" /></div>)}</> },
+      render: (d) => <>{([['I', d.initiator], ['S', d.source], ['D', d.destination]] as const).map(([tag, v]) => <div key={tag}><span className="rubSrTag">{tag}:</span><CopyValue value={v} tone="ink" tabIndex={T} className="rubMono" /></div>)}</> },
     { id: 'queue', title: 'Очерёдн.', subtitle: 'приоритет', width: 101, lines: 2, fullHeight: true,
       sort: [{ id: 'queue', label: 'Очерёдность', type: 'number' }, { id: 'prio', label: 'Приоритет', type: 'number' }],
       render: (d) => <><CopyValue value={String(d.queue)} tone="ink" tabIndex={T} className="rubMono" /><div>{d.prio === 1 ? <Tag tone="warn">СРОЧНО</Tag> : <CopyValue value="неприоритетный" tone="muted" size="s" tabIndex={T} />}</div></> },

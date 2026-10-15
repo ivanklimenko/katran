@@ -47,6 +47,10 @@ function fonts(pkgDir, fail) {
   if (js.includes('data:')) fail('dist/fonts.js содержит встроенные data:-адреса — сборка встроила шрифты')
 }
 
+/** Все файлы архива относительно корня пакета. */
+const filesOf = (dir, prefix = '') => readdirSync(join(dir, prefix), { withFileTypes: true })
+  .flatMap((d) => (d.isDirectory() ? filesOf(dir, join(prefix, d.name)) : [join(prefix, d.name)]))
+
 const errors = []
 const tarballs = readdirSync(OUT).filter((f) => f.endsWith('.tgz')).sort()
 if (tarballs.length !== PACKAGES.length) errors.push(`ожидалось тарболов: ${PACKAGES.length}, получено: ${tarballs.length}`)
@@ -66,6 +70,8 @@ for (const file of tarballs) {
       if (/\.tsx?$/.test(path) && !path.endsWith('.d.ts')) fail(`вход ${path} — исходник TypeScript, потребитель должен получать сборку`)
     }
     if (manifest.name === '@katran/ui' && existsSync(join(pkgDir, 'src'))) fail('в архив попали исходники src')
+    // 0.2.0 (спека styled §4.6): стили кита — в JS (styled-components), CSS-файлов в пакете нет
+    if (manifest.name === '@katran/ui') for (const css of filesOf(pkgDir).filter((f) => f.endsWith('.css'))) fail(`в архиве файл CSS ${css} — у кита 0.2.0 стилей в CSS нет`)
     if (manifest.name === '@katran/tokens') fonts(pkgDir, fail)
   } finally {
     rmSync(tmp, { recursive: true, force: true })
