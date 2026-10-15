@@ -20,7 +20,9 @@
 ### Выпуск
 
     pnpm release:pack     # сборка трёх пакетов → release/*.tgz, проверка манифестов и состава
-    pnpm check:install    # тарболы ставятся npm в чистый проект: импорт, Vite, типы (нужна сеть)
+    pnpm check:install    # тарболы ставятся npm в чистый проект: react-is под React, импорт в Node, Vite, типы,
+                          # отсутствие импортов CSS, шрифты в Chromium (нужны сеть и Chromium Playwright:
+                          # pnpm exec playwright install chromium)
 
 Версия — `0.2.0` (переход на styled-components, breaking для потребителя — `CHANGELOG.md`, `docs/consuming.md`). Публикуется готовый тарбол — любым клиентом: `npm publish release/katran-tokens-<версия>.tgz`, затем `ui`, затем `effector` (в этом порядке: `ui` зависит от `tokens`, `effector` — от `ui`). Тем же файлом пакет переносится в контур без реестра. Из папки пакета публиковать можно только `pnpm publish`: npm не заменяет `workspace:*` на версию, такую публикацию останавливает `prepublishOnly`. Версия у трёх пакетов одна; перед выпуском её поднимают во всех трёх `package.json`.
 

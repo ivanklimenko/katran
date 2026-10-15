@@ -46,6 +46,10 @@ singleton выбирает 19 и падает весь хост.
 `pnpm check:install` кита ставит пакеты в чистый проект именно так и проверяет, что styled-components получает
 `react-is` той же мажорной версии, что React (без закрепления npm ставил 19.3.1 при React 17.0.2).
 
+Под Module Federation с `import: false` (см. «webpack remote») в рантайме работает копия styled-components хоста —
+и с ней `react-is` хоста; копия remote в бандл не попадает. Закрепление `react-is` у remote всё равно нужно: его
+тесты, dev-сервер и сборка без хоста идут на собственной копии styled-components.
+
 ## Точка входа экрана
 
 ```tsx
@@ -114,6 +118,12 @@ styled-components предупреждает о нескольких копия�
 
 ## Что нужно от хоста
 
+- `styled-components` в `shared` хоста — singleton той же линии, что требует remote: `^5.3.11` (хост на 5.3.11).
+  Remote объявляет его с `import: false` и `strictVersion: true` — своей копии у него нет; если хост styled-components
+  не шарит или шарит версию вне `^5.3.11`, экран не поднимется (`Unsatisfied version …` или нет модуля в share scope).
+  Запасной путь, когда хост этого дать не может, — вариант макета `REMOTE_STYLED=shared` (singleton со своей копией у
+  remote, `examples/federation/remote/webpack.config.js`): на странице по-прежнему одна копия, но remote несёт
+  лишние 13.9 KiB gzip.
 - ErrorBoundary вокруг точки встраивания: если effector хоста окажется ниже `^23.4.0`, `strictVersion`
   не даст экрану подняться (`Unsatisfied version …`) — хост должен показать заглушку, а не упасть.
 - Место под экран. Растягиваться на слот хоста экран сам не умеет: у корня `KatranProvider` только
@@ -140,6 +150,37 @@ styled-components предупреждает о нескольких копия�
 и на разметку команды внутри `KatranProvider`: глобальный `* { box-sizing: border-box }` хоста до неё
 не дойдёт, поэтому свои блоки экрана задают `box-sizing` явно (или считают размеры с паддингом и рамкой).
 
+## Тесты хоста
+
+Два места, где тесты экрана на ките ведут себя иначе, чем сборка.
+
+**`import.meta.url` в `dist`.** Адреса шрифтов `@katran/tokens/fonts` (`dist/fonts.js`) — `new URL(…, import.meta.url)`,
+и `@katran/ui` импортирует этот модуль на верхнем уровне. Vitest исполняет ESM и работает как есть. Jest с
+`babel-jest` в CommonJS падает при импорте `@katran/ui`: «Cannot use 'import.meta' outside a module». Два рецепта
+(пакеты кита — ESM, поэтому `@katran` и так должен быть в исключениях `transformIgnorePatterns`):
+
+```js
+// jest.config.js — заглушка вместо начертаний: KatranFonts в тестах ничего не вставляет
+moduleNameMapper: { '^@katran/tokens/fonts$': '<rootDir>/test/katranFontsStub.js' },
+// test/katranFontsStub.js
+export const fontFaces = []
+```
+
+или плагин Babel `babel-plugin-transform-import-meta` для файлов `@katran` (переписывает `import.meta.url` под
+CommonJS).
+
+**Серверная сборка styled-components в jsdom.** Node берёт styled-components по полю `main` — серверную сборку; в ней
+`createGlobalStyle` (`KatranFonts`, глобальные правила экрана) пишет правила только в серверный лист, и в `document` jsdom
+их нет. Тестам, которые проверяют вставленные правила, нужен алиас на браузерную сборку — так у кита и `apps/pi`
+(`packages/ui/vitest.config.ts`, `apps/pi/vitest.config.ts`):
+
+```js
+// vitest.config.ts
+resolve: { alias: [{ find: /^styled-components$/, replacement: 'styled-components/dist/styled-components.browser.cjs.js' }] }
+// jest.config.js
+moduleNameMapper: { '^styled-components$': '<rootDir>/node_modules/styled-components/dist/styled-components.browser.cjs.js' }
+```
+
 ## Переход на 0.2.0
 
 **Breaking (срез styled, спека §4.6).** API компонентов, разметка, геометрия, цвета и поведение не изменились.
@@ -153,7 +194,10 @@ styled-components предупреждает о нескольких копия�
   переходят на роли, подписи, `data-*` и `styled(Компонент)` (каждый компонент кита с корневым элементом принимает
   `className`). Классы горячего пути `k-…` (значения в ячейках, запись грида) — внутренние, не API; публичный остался
   только `dimClass` (`'k-dim'`).
-- Пакеты без побочных эффектов (`sideEffects: false`).
+- Типографика корня `KatranProvider` (шрифт, размер, цвет) — в листе styled-components, который вставляется в конец
+  `<head>`: правило хоста, попадающее на корень с той же специфичностью (0,1,0), её больше не перебивает (в 0.1.x
+  порядок решала сборка хоста). Перебить можно только селектором выше (0,1,0) — см. «Изоляция».
+- Все три пакета без побочных эффектов при загрузке (`sideEffects: false`): сборщик хоста выбрасывает неиспользуемые модули кита.
 
 ## Сортировка — массив уровней
 
