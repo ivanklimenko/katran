@@ -1,11 +1,14 @@
 // Макет хоста (канальное метаприложение). Моделирует факты о целевой среде:
 // - webpack 5 + классический webpack.container.ModuleFederationPlugin (не MF 2.0);
-// - React 17.0.2 / react-dom 17.0.2 и effector — shared singleton хоста;
+// - React 17.0.2 / react-dom 17.0.2, effector и styled-components 5 — shared singleton хоста; хост оборачивает
+//   экран remote в свой ThemeProvider (тема { hostMark: 'host' }) — кит не должен её затирать;
 // - babel-loader только для своего кода, таргет ES5; node_modules не транспилируются.
 // Переключатели (переменные окружения):
 //   REMOTE_URL      — адрес remoteEntry.js (по умолчанию dev-сервер remote на 5211);
 //   HOST_EFFECTOR=old — хост шарит effector 23.2.3 вместо 23.4.4 (проверка strictVersion у remote);
 //   HOST_SHARE_JSX=1  — хост собран с automatic JSX runtime и шарит react/jsx-runtime.
+// Вариант без shared styled-components — переключатель REMOTE_STYLED=own в remote/webpack.config.js: хост шарит
+// свою копию всегда, remote её не берёт.
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const { ModuleFederationPlugin } = require('webpack').container
@@ -20,6 +23,7 @@ const shared = {
   effector: oldEffector
     ? { singleton: true, import: 'effector-old', shareKey: 'effector', version: '23.2.3', requiredVersion: false }
     : { singleton: true, requiredVersion: '23.4.4' },
+  'styled-components': { singleton: true, requiredVersion: '^5.3.11' },
 }
 // Webpack отдаёт в share scope только то, что хост реально импортирует: шарить jsx-runtime имеет
 // смысл, только если хост сам собран с automatic runtime — поэтому переключается и babel.

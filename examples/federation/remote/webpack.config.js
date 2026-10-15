@@ -13,15 +13,18 @@
 //                     своего React 17, внутри он зовёт React через share scope); 1 — singleton ^17.0.2
 //                     со своей запасной копией; host — только копия хоста (import: false);
 //   REMOTE_REACT19=1 — react/jsx-runtime remote разрешается в React 19 (моделирует React 19 в devDeps);
-//   REMOTE_CSS      = style (по умолчанию) | extract — style-loader или mini-css-extract-plugin;
+//   REMOTE_STYLED   = shared (по умолчанию) | own — styled-components: shared — singleton ^5.3.11 со своей
+//                     запасной копией (хост шарит свой, при равных версиях на странице одна копия); own — не шарить:
+//                     своя копия в бандле remote — стили кита те же (шаблоны кита от темы не зависят), но контекст
+//                     темы у remote свой и ThemeProvider хоста под KatranProvider не виден (e2e/check.mjs — «тема хоста»).
+// Своего CSS у remote нет: стили кита и экрана — styled-components, шрифты — компонент KatranFonts.
 const path = require('path')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const { ModuleFederationPlugin } = require('webpack').container
 
 const EFFECTOR = process.env.REMOTE_EFFECTOR || 'host'
 const JSX_SHARE = process.env.REMOTE_JSX_SHARE || ''
 const REACT19 = process.env.REMOTE_REACT19 === '1'
-const CSS = process.env.REMOTE_CSS || 'style'
+const STYLED = process.env.REMOTE_STYLED || 'shared'
 
 const shared = {
   // React и react-dom — только хоста: import: false не кладёт в remote запасную копию,
@@ -46,9 +49,9 @@ if (EFFECTOR === 'shared') {
   if (deepEffector) shared['effector/effector.mjs'] = { ...shared.effector, shareKey: 'effector', import: false }
   shared['effector-react'] = { singleton: true, requiredVersion: '^23.3.0', strictVersion: true }
 }
+// styled-components — singleton, как React: одна копия на странице, тема хоста видна коду remote (спека styled §4.1).
+if (STYLED === 'shared') shared['styled-components'] = { singleton: true, requiredVersion: '^5.3.11', strictVersion: true }
 if (JSX_SHARE) shared['react/jsx-runtime'] = { singleton: true, requiredVersion: '^17.0.2', strictVersion: true, ...(JSX_SHARE === 'host' ? { import: false } : {}) }
-
-const styleLoader = CSS === 'extract' ? MiniCssExtractPlugin.loader : 'style-loader'
 
 module.exports = (_env, argv) => ({
   entry: {},
@@ -85,11 +88,6 @@ module.exports = (_env, argv) => ({
           },
         },
       },
-      {
-        test: /\.module\.css$/,
-        use: [styleLoader, { loader: 'css-loader', options: { modules: { localIdentName: 'docs-[local]-[hash:base64:5]', namedExport: false, exportLocalsConvention: 'as-is' } } }],
-      },
-      { test: /\.css$/, exclude: /\.module\.css$/, use: [styleLoader, 'css-loader'] },
     ],
   },
   plugins: [
@@ -99,7 +97,6 @@ module.exports = (_env, argv) => ({
       exposes: { './DocumentsScreen': './src/DocumentsScreen.tsx' },
       shared,
     }),
-    ...(CSS === 'extract' ? [new MiniCssExtractPlugin({ filename: '[name].[contenthash:8].css' })] : []),
   ],
   devServer: {
     port: 5211,

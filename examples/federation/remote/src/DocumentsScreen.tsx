@@ -7,18 +7,62 @@ import * as jsxRuntime from 'react/jsx-runtime'
 import * as effector from 'effector'
 import type { EventCallable, Store } from 'effector'
 import { useUnit } from 'effector-react'
+import styled, { ThemeContext, useTheme } from 'styled-components'
+import { k } from '@katran/tokens'
 import { createFiltersModel, createGridModel, localStoragePersist, useFilters, useGrid } from '@katran/effector'
 import { AccountValue, BulkBar, Button, CopyValue, Counter, DataGrid, FilterPanel, KatranFonts, KatranProvider, LinkValue, StatusDot, StatusLane, Tag, formatAmount, formatDateTimeShort, useKatran, type LaneItem, type RecordLayout } from '@katran/ui'
-// Стили кита: собранный CSS компонентов. Шрифты — компонент KatranFonts (IBM Plex, файлы woff2 из
+// Стили кита — styled-components, импортов CSS нет. Шрифты — компонент KatranFonts (IBM Plex, файлы woff2 из
 // @katran/tokens: webpack кладёт их в сборку remote, publicPath 'auto' — грузятся с адреса remote, нужен CORS).
-import '@katran/ui/styles.css'
 import { docsFilterMeta, makeDocs, STATUS_LABEL, STATUS_TONE, type Doc, type Status } from './data/docs'
 import { createFakeBackend } from './data/fakeBackend'
-import s from './DocumentsScreen.module.css'
 
 // Отладочный маркер макета: сравнение модулей React/effector remote с модулями хоста.
 const w = window as unknown as { __katranExample?: Record<string, unknown> }
-w.__katranExample = Object.assign(w.__katranExample ?? {}, { remoteReact: React, remoteEffector: effector, remoteJsx: jsxRuntime })
+w.__katranExample = Object.assign(w.__katranExample ?? {}, { remoteReact: React, remoteEffector: effector, remoteJsx: jsxRuntime, remoteStyled: { ThemeContext } })
+
+/* Раскладка экрана remote: грид прокручивается внутри. Высота фиксированная: корень KatranProvider
+   не принимает className/style и имеет только min-height: 100% — height: 100% от него не резолвится.
+   Под корнем провайдера content-box: 684 + 2 × 16 паддинга = 716 из 720 слота хоста. */
+const Page = styled.div`
+  display: flex;
+  flex-direction: column;
+  /* stylelint-disable-next-line unit-disallowed-list -- высота слота хоста (host.css), не размер кита */
+  height: 684px;
+  min-height: 0;
+  padding: ${k.sp4};
+`
+
+const Head = styled.div`
+  flex: none;
+`
+
+const H1 = styled.h1`
+  font: 700 ${k.fsH1} / 1.2 ${k.sans};
+  margin: 0 0 ${k.sp2};
+`
+
+const H1Counter = styled.span`
+  margin-left: ${k.sp2};
+  vertical-align: middle;
+`
+
+const Note = styled.p`
+  color: ${k.muted};
+  margin: 0 0 ${k.sp2};
+`
+
+const Lane = styled.div`
+  margin: ${k.sp3} 0 ${k.sp2};
+`
+
+const Filters = styled.div`
+  margin: 0 0 ${k.sp3};
+`
+
+const SrTag = styled.span`
+  color: ${k.faint};
+  font: 500 ${k.fs3} / 1 ${k.mono};
+`
 
 const T = -1
 
@@ -44,13 +88,13 @@ const docsLayout: RecordLayout<Doc> = {
     { id: 'f59', title: '59', subtitle: 'бенефициар', width: 170, lines: 2, sort: [{ id: 'f59name', label: 'Наименование' }, { id: 'f59acc', label: 'Счёт' }],
       render: (d) => <><CopyValue value={d.f59name} tabIndex={T} /><div><AccountValue value={d.f59acc} tabIndex={T} /></div></> },
     { id: 'sr', title: 'S / R in', width: 120, lines: 2, sort: [{ id: 'sender', label: 'S in' }, { id: 'receiver', label: 'R in' }],
-      render: (d) => <><span className={s.srTag}>S:</span> <CopyValue value={d.sender} tone="mono" tabIndex={T} /><div><span className={s.srTag}>R:</span> <CopyValue value={d.receiver} tone="mono" tabIndex={T} /></div></> },
+      render: (d) => <><SrTag>S:</SrTag> <CopyValue value={d.sender} tone="mono" tabIndex={T} /><div><SrTag>R:</SrTag> <CopyValue value={d.receiver} tone="mono" tabIndex={T} /></div></> },
     { id: 'prov', title: 'Провайдеры', width: 110, sort: [{ id: 'provS', label: 'Провайдер отправителя' }, { id: 'provR', label: 'Провайдер получателя' }],
       render: (d) => <><Tag>{d.provS}</Tag> <Tag>{d.provR}</Tag></> },
   ],
   spans: [[
     { id: 'reason', from: 'status', to: 'created', render: (d) => (d.reason ? <CopyValue value={d.reason} tone="ink2" tabIndex={T} /> : null) },
-    { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><span className={s.srTag}>70</span> <CopyValue value={d.purpose} tone="ink2" tabIndex={T} /></> : null) },
+    { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><SrTag>70</SrTag> <CopyValue value={d.purpose} tone="ink2" tabIndex={T} /></> : null) },
   ]],
 }
 
@@ -87,20 +131,20 @@ function Screen({ $visits, visit }: HostUnits) {
     announce(`${what}: выбрано ${n}`)
   }
   return (
-    <div className={s.page}>
-      <div className={s.head}>
-        <h1 className={s.h1}>Валютные документы{' '}<span className={s.h1Counter}><Counter value={g.total} /></span></h1>
-        <p className={s.note} data-remote-visits={visits}>Событий хоста: {visits}. <Button size="s" onClick={() => visit()}>Событие хоста из remote</Button></p>
-        <div className={s.note} role="group" aria-label="Плотность">
+    <Page>
+      <Head>
+        <H1>Валютные документы{' '}<H1Counter><Counter value={g.total} /></H1Counter></H1>
+        <Note data-remote-visits={visits}>Событий хоста: {visits}. <Button size="s" onClick={() => visit()}>Событие хоста из remote</Button> <HostMark /></Note>
+        <Note as="div" role="group" aria-label="Плотность">
           {([1, 1.25] as const).map((d) => <Button key={d} size="s" pressed={density === d} onClick={() => setDensity(d)}>{Math.round(d * 100)} %</Button>)}
-        </div>
-        {opened && <p className={s.note} role="status">{opened}</p>}
-        <div className={s.lane}><StatusLane label="Статусы" items={lane} value={f.lane} onChange={f.setLane} /></div>
-        <div className={s.filters}>
+        </Note>
+        {opened && <Note role="status">{opened}</Note>}
+        <Lane><StatusLane label="Статусы" items={lane} value={f.lane} onChange={f.setLane} /></Lane>
+        <Filters>
           <FilterPanel meta={docsFilterMeta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}
             onEdit={f.edit} onDiscard={f.discard} onApply={f.apply} onRevert={f.revert} onReset={f.reset} onRemove={f.remove} />
-        </div>
-      </div>
+        </Filters>
+      </Head>
       <DataGrid
         {...g}
         label="Валютные документы"
@@ -115,8 +159,15 @@ function Screen({ $visits, visit }: HostUnits) {
           </BulkBar>
         }
       />
-    </div>
+    </Page>
   )
+}
+
+/** Тема хоста глазами кода remote: элемент под KatranProvider читает useTheme() — hostMark из ThemeProvider хоста
+ * (styled-components — shared singleton, контекст темы один) и токены кита под ключом katran (их добавляет KatranProvider). */
+function HostMark() {
+  const theme = useTheme() as { hostMark?: string; katran?: { paper?: string } } | undefined
+  return <span data-host-mark={theme?.hostMark ?? ''} data-katran={theme?.katran?.paper ?? ''}>Тема хоста: {theme?.hostMark ?? 'не видна'}</span>
 }
 
 export type HostUnits = { $visits: Store<number>; visit: EventCallable<void> }
