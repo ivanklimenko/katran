@@ -110,7 +110,7 @@ const rows: Row[] = [
 ]
 
 /** Компонент, чей корень — в портале корня провайдера: пропы от якоря и поиск корня по роли или тексту. */
-type PortalRow = [name: string, X: unknown, props: (anchor: RefObject<HTMLButtonElement>) => Record<string, unknown>, find: () => Element | null]
+type PortalRow = [name: string, X: unknown, props: (anchor: RefObject<HTMLButtonElement | null>) => Record<string, unknown>, find: () => Element | null]
 const portals: PortalRow[] = [
   ['ColumnsMenu', ColumnsMenu, (anchor) => ({ open: true, anchor, onClose: noop, columns: layout.columns, order: ['num'], hidden: [], onChange: noop }), () => screen.getByRole('dialog', { name: 'Состав колонок' })],
   ['Popover', Popover, (anchor) => ({ open: true, anchor, onClose: noop, label: 'Панель', children: 'Тело' }), () => screen.getByRole('dialog', { name: 'Панель' })],
