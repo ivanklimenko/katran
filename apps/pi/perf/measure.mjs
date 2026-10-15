@@ -16,7 +16,9 @@ const ROUNDS = Number(process.argv[2] ?? 8)
 const PORT = 5290
 const LIMIT = 0.15
 const SHORT_MS = 100
-const ABS_MS = 2 // абсолютный допуск: при базе около 0 мс любой положительный head не считается ухудшением
+// Абсолютный допуск: при базе около 0 мс любой положительный head был бы «ухудшением» в процентах. 1 мс, не больше:
+// на сценариях со временем скриптов около 8 мс допуск 2 мс поднимал порог до ~+24 % вместо +15 % (R27; README, «Порог»)
+const ABS_MS = 1
 // обязательные сценарии; прокрутка — справочно (кадр упирается в частоту обновления экрана)
 const REQUIRED = ['first', 'page', 'select', 'theme']
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml' }

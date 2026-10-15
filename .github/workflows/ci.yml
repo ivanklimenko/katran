@@ -11,6 +11,9 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      # check:install открывает страницы в Chromium Playwright; скрипты установки пакетов закрыты
+      # (onlyBuiltDependencies), поэтому браузер ставится отдельным шагом
+      - run: pnpm exec playwright install --with-deps chromium
       # тарболы из pnpm check ставятся через npm в чистый проект — так пакеты получает хост
       - run: pnpm check:install
 

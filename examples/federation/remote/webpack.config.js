@@ -16,7 +16,8 @@
 //   REMOTE_STYLED   = host (по умолчанию) | shared | own — styled-components:
 //                     host   — только копия хоста, как React (import: false; R25): хост сам на styled-components,
 //                              запасная копия в remote лежала бы впустую — при равных версиях webpack выбирал её
-//                              и грузил лишние ~40 KiB gzip;
+//                              и грузил лишние 13.9 KiB gzip
+//                              (JS remote 83.5 → 69.6 KiB, e2e/sizes.mjs);
 //                     shared — singleton ^5.3.11 со своей запасной копией (на странице одна копия — remote или хоста);
 //                     own    — не шарить: своя копия в бандле remote — стили кита те же (шаблоны кита от темы не
 //                              зависят), но контекст темы у remote свой и ThemeProvider хоста под KatranProvider не

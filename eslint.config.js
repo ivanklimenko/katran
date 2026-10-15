@@ -190,11 +190,11 @@ export default tseslint.config(
     files: HOT_PATH,
     rules: {
       '@typescript-eslint/no-restricted-imports': ['error', {
-        paths: [{ ...STYLED_COMPONENTS_ONLY_IN_STYLED_TS, message: `Горячий путь без styled: только css и createGlobalStyle из ../styled. ${STYLED_COMPONENTS_ONLY_IN_STYLED_TS.message}` }],
+        paths: [{ ...STYLED_COMPONENTS_ONLY_IN_STYLED_TS, message: `Горячий путь без styled: только фрагменты css из ../styled (правила — в шаблоне корня провайдера, R16). ${STYLED_COMPONENTS_ONLY_IN_STYLED_TS.message}` }],
         patterns: [STYLED_COMPONENTS_SUBPATHS, {
           regex: '(^|/)styled$',
           importNames: ['default', 'styled'],
-          message: 'Горячий путь без styled: в модулях горячего пути нет styled.*, только фрагменты css и createGlobalStyle (спека styled, правило 2)',
+          message: 'Горячий путь без styled: в модулях горячего пути нет styled.*, только фрагменты css — их правила стоят в шаблоне корня провайдера под *:where(&) (спека styled, правило 2; R16)',
         }],
       }],
     },

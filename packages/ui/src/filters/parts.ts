@@ -15,7 +15,7 @@ export const Panel = styled.div`
 
 /* Полоса фильтров (эталон .filters стенда pi-constructor): sunk на всю ширину, 45 ≈ min-height
    (h-ctl-l + sp-3) с паддингом и рамкой внутри — border-box: провайдер делает content-box все
-   элементы внутри корня (`.root *`, см. Provider.module.css), и паддинг sp-2 сверху/снизу
+   элементы внутри корня (`& *`, изоляция в Root — provider/Root.tsx), и паддинг sp-2 сверху/снизу
    добавлялся бы поверх min-height, раздувая полосу. */
 export const Bar = styled.div`
   display: flex;

@@ -17,6 +17,7 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "test": "vitest run",
     "build": "vite build && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.build.json",

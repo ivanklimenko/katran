@@ -107,7 +107,7 @@ export const ThBtn = styled.button`
   border-radius: ${k.rS};
 
   /* Заголовок сортируемой колонки сидит внутри <button>: провайдер сбрасывает типографику контролов
-     (Provider.module.css «.root :where(button, input, select, textarea) { text-transform: none }»,
+     (шаблон Root, provider/Root.tsx: «& :where(button, input, select, textarea) { text-transform: none }»,
      специфичность (0,1,0)). Вложенный селектор Th ThBtn — (0,2,0) — бьёт сброс провайдера независимо от порядка
      листов. */
   ${Th} & {

@@ -32,12 +32,19 @@ const targets = (value, out = []) => {
   return out
 }
 
-// Шрифты @katran/tokens: 14 файлов woff2 в fonts/, а dist/fonts.js ссылается на каждый из них записью
+// Шрифты @katran/tokens: 14 файлов woff2 и две лицензии OFL в fonts/, а dist/fonts.js ссылается на каждый woff2 записью
 // new URL('../fonts/…', import.meta.url) — без встроенных data:-адресов (их сборщик потребителя не разрешает,
 // они лишь раздувают JS; спека styled §4.5).
 const FONT_COUNT = 14
+// Лицензия шрифтов (SIL OFL 1.1) обязана ехать вместе с файлами woff2: pnpm gen копирует её из @fontsource.
+const FONT_LICENSES = ['OFL-ibm-plex-sans.txt', 'OFL-ibm-plex-mono.txt']
 function fonts(pkgDir, fail) {
   const dir = join(pkgDir, 'fonts')
+  for (const license of FONT_LICENSES) {
+    const path = join(dir, license)
+    if (!existsSync(path)) fail(`в fonts/ нет файла лицензии ${license}`)
+    else if (!readFileSync(path, 'utf8').includes('SIL Open Font License')) fail(`fonts/${license} — не текст SIL Open Font License`)
+  }
   const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.woff2')) : []
   if (files.length !== FONT_COUNT) fail(`в fonts/ файлов woff2: ${files.length}, ожидалось ${FONT_COUNT}`)
   const js = existsSync(join(pkgDir, 'dist/fonts.js')) ? readFileSync(join(pkgDir, 'dist/fonts.js'), 'utf8') : ''
