@@ -167,7 +167,8 @@ export const fontFaces = []
 ```
 
 или плагин Babel `babel-plugin-transform-import-meta` для файлов `@katran` (переписывает `import.meta.url` под
-CommonJS).
+CommonJS). Плагин подключается в общем для проекта `babel.config.js`: файловый `.babelrc` к файлам из `node_modules`
+не применяется, и рецепт молча не сработает.
 
 **Серверная сборка styled-components в jsdom.** Node берёт styled-components по полю `main` — серверную сборку; в ней
 `createGlobalStyle` (`KatranFonts`, глобальные правила экрана) пишет правила только в серверный лист, и в `document` jsdom
