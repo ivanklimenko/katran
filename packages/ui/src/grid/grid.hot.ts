@@ -30,6 +30,8 @@ export const gridHot = css`
     padding-top: ${k.gridPad};
   }
 
+  /* Ячейки на всю запись начинаются в первом tr, но заканчиваются на той же нижней границе. */
+  .k-record > tr > td[rowspan],
   .k-record > tr:last-child > td {
     padding-bottom: ${k.gridPad};
     border-bottom: 1px solid ${k.line};

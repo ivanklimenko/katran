@@ -78,6 +78,9 @@ const Scroll = styled.div`
   box-sizing: border-box;
   height: 100%;
   overflow: hidden auto;
+
+  /* Колесо в короткой панели и на краях длинной не передаётся странице хоста. */
+  overscroll-behavior-y: contain;
 `
 
 /* Метка слота (эталон .slotlbl): прилипает к верху прокручиваемой части. B — warn-soft/ink2: paper на warn ниже 4.5 для мелкого текста */
@@ -176,6 +179,26 @@ function restoreFocus(ref: ReturnRef) {
  */
 export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, children, className }: DrawerProps) {
   const head = useRef<HTMLHeadingElement>(null)
+  const scroll = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = scroll.current
+    if (!root) return
+    // До Chromium 144 contain не действует без переполнения. React делегирует wheel пассивно,
+    // поэтому отменяем передачу колеса хосту локальным нативным listener, только в короткой панели.
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.defaultPrevented || Math.abs(event.deltaY) <= Math.abs(event.deltaX) || root.scrollHeight > root.clientHeight) return
+      // Вложенные textarea/списки сохраняют свою прокрутку, пока могут поглотить движение.
+      for (let node = event.target instanceof Element ? event.target : null; node && node !== root; node = node.parentElement) {
+        const style = getComputedStyle(node)
+        if (node.scrollHeight <= node.clientHeight || (style.overflowY !== 'auto' && style.overflowY !== 'scroll')) continue
+        const canScroll = event.deltaY < 0 ? node.scrollTop > 0 : node.scrollTop + node.clientHeight < node.scrollHeight
+        if (canScroll || style.overscrollBehaviorY === 'contain' || style.overscrollBehaviorY === 'none') return
+      }
+      if (event.cancelable) event.preventDefault()
+    }
+    root.addEventListener('wheel', onWheel, { passive: false })
+    return () => root.removeEventListener('wheel', onWheel)
+  }, [])
   const returnRef = useRef(returnFocus)
   // Актуализация ref — в эффекте, не в теле рендера (правило react-hooks/refs), как в Popover
   useEffect(() => { returnRef.current = returnFocus })
@@ -192,7 +215,7 @@ export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus 
     <Panel role="dialog" aria-label={label} data-k-drawer="" data-slot={badge?.tone} className={className}>
       {/* клавиши — на обёртке role="presentation" во всю панель (как подложка Prompt): keydown любого элемента панели всплывает сюда */}
       <Keys role="presentation" onKeyDown={onKeyDown}>
-        <Scroll data-part="scroll">
+        <Scroll ref={scroll} data-part="scroll">
           {badge && <Badge data-tone={badge.tone}>{badge.text}</Badge>}
           {/* div, а не header: два drawer'а дали бы два ориентира banner (axe landmark-no-duplicate-banner) */}
           <Head data-part="head">

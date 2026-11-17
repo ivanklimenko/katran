@@ -15,7 +15,7 @@ export const RubCellStyles = createGlobalStyle`
   /* «И:» / «S:» / «D:» — служебная подпись роли, не данные (спека 5b §2, R15) */
   :where([data-k-root]) .rubSrTag {
     display: inline-block;
-    width: ${k.sp4};
+    min-width: ${k.sp4};
     color: ${k.faint};
     font: 400 ${k.fs2} / ${k.lh2} ${k.sans};
   }
