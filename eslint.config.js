@@ -152,7 +152,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/effector/src/**/*.{ts,tsx}', 'apps/demo/src/**/*.{ts,tsx}', 'apps/pi/src/**/*.{ts,tsx}'],
+    files: ['packages/effector/src/**/*.{ts,tsx}', 'apps/demo/src/**/*.{ts,tsx}', 'apps/pi/src/**/*.{ts,tsx}', 'apps/pi/e2e/fixtures/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': 'off' },
   },
   // Граница слоёв для effector (спека 3.2): из @katran/ui — только типы, без DOM.
