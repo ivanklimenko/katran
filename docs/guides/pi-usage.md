@@ -211,6 +211,26 @@ function FxDocsRoute() {
 
 Подставьте `FxDocsRoute` туда, где ваш роутер обычно монтирует компонент экрана (react-router `<Route element={<FxDocsRoute />} />`, собственный конфиг маршрутов и т. п.) — принцип один: на вход экрана `pageOpened()`, на уход `pageClosed()`. Если ваш роутер держит компонент смонтированным между переходами (например, вкладки без размонтирования), вызывайте события из его собственных хуков активации, а не из `useEffect` с пустыми зависимостями.
 
+Для двух реестров на одном экране создайте один lifecycle страницы и передайте каждому собственную активность. Всё связывание остаётся в модуле модели страницы:
+
+```ts
+import { createEvent, createStore } from 'effector'
+// createPageLifecycle, createRegistry, layouts и ports — из слайсов приложения
+export const lifecycle = createPageLifecycle()
+export const tabChanged = createEvent<'fx' | 'rub'>()
+export const $tab = createStore<'fx' | 'rub'>('fx').on(tabChanged, (_, tab) => tab)
+export const fx = createRegistry({
+  id: 'fx-docs', layout: fxDocLayout, ports: fxDocPorts, lifecycle,
+  $active: $tab.map((tab) => tab === 'fx'),
+})
+export const rub = createRegistry({
+  id: 'rub-docs', layout: rubDocLayout, ports: rubDocPorts, lifecycle,
+  $active: $tab.map((tab) => tab === 'rub'),
+})
+```
+
+Роутер открывает/закрывает общий lifecycle, UI переключает `tabChanged`. Оба виджета могут оставаться смонтированы: эффективный `registry.$active` равен `lifecycle.$opened && переданный $active`. Скрытый реестр не запрашивает search/facets/подсказки/каталог, в том числе при изменении фильтров и внешнем `refreshRequested`. При показе — один search/facets с текущими параметрами и каталог, если он ещё не загружен и не загружается. Дублировать `grid.refresh()` при показе не нужно. Каталог кэшируется; фильтр, сортировка, страница и настройки вида сохраняются, выделение и подсказки очищаются. Ответы прошлой активации search/facets/подсказок игнорируются. Без опции `$active` реестр активен всё время открытой страницы. `createPageLifecycle()` остаётся обычной фабрикой независимых экземпляров; Gate может сообщать mount/unmount, но для смонтированных скрытых вкладок всё равно нужен признак выбранной вкладки.
+
 ## 6. Если строка бека отличается
 
 Состав `content[]`, который мы ожидаем от `POST /grids/{gridId}/search`, описан в `docs/reference/pi-api.md` §4. Если у вашего бека поля называются иначе (или структура другая) — **правится только один файл на грид**:

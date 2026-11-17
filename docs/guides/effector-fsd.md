@@ -102,22 +102,25 @@ export const registry = createRegistry({ id: 'fx-docs', layout: fxDocLayout, por
 
 **Компонент только связывает.** `useGrid(grid)` и `useFilters(filters)` — единственное место встречи модели с `DataGrid` и панелью фильтров; юнитов в компоненте не создавать (`pages/fx-docs/ui/FxDocsPage.tsx` передаёт готовый `registry` в `DocRegistry`, а не создаёт модель).
 
-**Первый запрос — из события страницы.** Модель грида сама в бек не ходит, нужен `grid.refresh()`. Роль «события страницы» в `apps/pi` играет `lifecycle.pageOpened` (`createPageLifecycle`, раздел 1) — его вызывает роутер, когда экран открылся (`docs/guides/pi-usage.md`, раздел 5), а не компонент в `useEffect`:
+**Первый запрос — из активности страницы.** Модель грида при создании в бек не ходит. Без опции `$active` первую загрузку запускает `grid.refresh()`. В `apps/pi` `createRegistry` передаёт эффективную активность в модель, и её переход в `true` запускает search/facets. `lifecycle.pageOpened` (`createPageLifecycle`, раздел 1) вызывает роутер, когда экран открылся (`docs/guides/pi-usage.md`, раздел 5):
 
 ```ts
 // widgets/doc-registry/lib/createRegistry.ts
-sample({ clock: lifecycle.pageOpened, target: grid.refresh })
+const $active = cfg.$active
+  ? combine(lifecycle.$opened, cfg.$active, (opened, visible) => opened && visible)
+  : lifecycle.$opened
+const grid = createGridModel({ /* параметры грида */, $active })
 ```
 
 ## 4. Статический граф: грабли, которые не видит линтер импортов
 
 **Модель страницы жива, пока жив модуль.** Импортированный модуль с `sample` реагирует всегда, даже когда экран закрыт; для remote в Module Federation — до перезагрузки хоста. Отсюда два следствия.
 
-1. Реакция страницы на событие фичи гейтится признаком «экран открыт», иначе закрытый реестр перезапрашивает данные после действия на другом экране. В `apps/pi` это уже сделано на уровне виджета: `Registry.refreshRequested` (`widgets/doc-registry/lib/createRegistry.ts`) — внешний код зовёт `registry.refreshRequested()`, сам виджет решает, обновлять ли грид, по `lifecycle.$opened`:
+1. Реакция страницы на событие фичи гейтится активностью реестра, иначе скрытый реестр перезапрашивает данные после действия на другом экране. В `apps/pi` это уже сделано на уровне виджета: `Registry.refreshRequested` (`widgets/doc-registry/lib/createRegistry.ts`) — внешний код зовёт `registry.refreshRequested()`, сам виджет решает, обновлять ли грид, по эффективному `$active` (страница открыта и реестр видим):
 
    ```ts
    // widgets/doc-registry/lib/createRegistry.ts
-   sample({ clock: refreshRequested, filter: lifecycle.$opened, target: grid.refresh })
+   sample({ clock: refreshRequested, filter: $active, target: grid.refresh })
    ```
 
    По тому же образцу — реакция страницы на факт фичи (`apps/pi/src/pages/fx-docs/model/edit.model.ts`): правка сохранена — реестр перезапрашивается через `refreshRequested`, гейт «экран открыт» уже внутри виджета:
@@ -129,11 +132,13 @@ sample({ clock: lifecycle.pageOpened, target: grid.refresh })
    sample({ clock: docEdit.docEdited, target: registry.refreshRequested })   // строка реестра могла измениться
    ```
 
-   Если у виджета такого шва нет, гейт ставится на стороне страницы: `sample({ clock: fact, source: lifecycle.$opened, filter: Boolean, target: grid.refresh })`.
+   Если у виджета такого шва нет, передайте `$active` в модель грида: тогда блокируются все триггеры search/facets, включая фильтры, сортировку, страницу, refresh/retry. Тот же стор в модели фильтров блокирует подсказки. Один гейт на внешнем `refresh` остальных триггеров не защищает.
 
    Если после действия нужно обновить несколько экранов, это не реакции в каждой странице, а одна инвалидация в `app` или в сущности — каждый реестр слушает общее событие через свой `refreshRequested`.
 
-2. Состояние моделей katran (фильтры, выделение, страница) переживает размонтирование экрана. Если при уходе с экрана оно должно сбрасываться — это решение экрана: в `apps/pi` `createRegistry` снимает выделение при уходе безусловно (`sample({ clock: lifecycle.pageClosed, target: grid.clearSelection })`), а фильтры и сортировку намеренно оставляет — то же поведение, что у стенда-эталона (спека `2026-09-28-katran-pi-app-design.md` §7.2). Полный сброс экрана — `sample({ clock: pageClosed, target: [filters.reset, grid.clearSelection] })`.
+2. Состояние моделей katran переживает размонтирование экрана. При деактивации грид снимает выделение, модель фильтров закрывает подсказки; фильтры, сортировка, страница и настройки вида сохраняются. При показе — один свежий search/facets. Ответы и ошибки прошлой активации не принимаются, даже если query совпадает; каталог фильтров кэшируется отдельно. Полный сброс экрана — решение экрана: `sample({ clock: pageClosed, target: [filters.reset, grid.clearSelection] })`.
+
+`createPageLifecycle()` создаёт независимый экземпляр на каждый вызов. Несколько реестров могут разделять один lifecycle страницы, передавая каждый свой `$active` из выбранной вкладки. Mount/unmount (в том числе Gate) может служить адаптером активности; если вкладки остаются смонтированы, нужна именно выбранная вкладка. Модели и связи создаются один раз на уровне модуля, вне React. Пример — `docs/guides/pi-usage.md`, раздел 5; проверяемый браузерный стенд — `apps/pi/e2e/fixtures/registries.tsx`.
 
 **Фича отдаёт факты, а не внутренности.** Публичный API фичи — фабрика или фасад, UI-связка и события-факты, а не голый эффект, на `.done` которого подписывается страница. Иначе страница зависит от реализации фичи и не отличит «сохранено» от «отказано» или «отменено пользователем». В `apps/pi` `createDocEdit` отдаёт факты `docEdited({ id, detail })` (бек принял правку) и `conflict({ id })` (`409`), а эффект сохранения — своя `attach`-копия порта внутри фичи, наружу не выходит:
 

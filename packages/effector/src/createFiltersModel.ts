@@ -13,6 +13,8 @@ export type SuggestConfig = {
 }
 
 export type FiltersModelConfig = {
+  /** Подсказки только активного виджета; скрытие закрывает список и отменяет ожидающий debounce. Без опции — как прежде. */
+  $active?: Store<boolean> | undefined
   /** Каталог полей: значением или стором (каталог, загружаемый с бека, — спека apps/pi §6.1). */
   meta?: FilterMeta | Store<FilterMeta | null> | undefined
   initial?: Filter | undefined
@@ -114,27 +116,30 @@ export function createFiltersModel(cfg: FiltersModelConfig = {}): FiltersModel {
   if (cfg.suggest) {
     const { fetchFx, delay = 250, minChars = 1, limit = 10 } = cfg.suggest
     const short = (q: string) => q.trim().length < minChars
-    const sameQuery = (a: SuggestQuery, b: SuggestQuery) => JSON.stringify(a) === JSON.stringify(b)
-    const requestFx = attach({ effect: fetchFx })
-    const waitFx = createEffect((q: SuggestQuery) => new Promise<SuggestQuery>((resolve) => { setTimeout(() => resolve(q), delay) }))
-    // последний запрошенный запрос: всё, что с ним не совпало (новый ввод, закрытие), отбрасывается
-    const $pending = createStore<SuggestQuery | null>(null)
+    const input = cfg.$active ? sample({ clock: suggest, filter: cfg.$active }) : suggest
+    if (cfg.$active) sample({ clock: cfg.$active.updates, filter: (active) => !active, fn: () => undefined, target: closeSuggest })
+    const $version = createStore(0).on(input, (version) => version + 1).on(closeSuggest, (version) => version + 1)
+    type Asked = { query: SuggestQuery; version: number }
+    const requestFx = attach({ effect: fetchFx, mapParams: (asked: Asked) => asked.query })
+    const waitFx = createEffect((q: Asked) => new Promise<Asked>((resolve) => { setTimeout(() => resolve(q), delay) }))
+    // Номер ввода переживает закрытие и новый показ: одинаковый текст не принимает старый ответ.
+    const $pending = createStore<Asked | null>(null)
     $suggest
-      .on(suggest, (st, { field, query }) => (short(query)
+      .on(input, (st, { field, query }) => (short(query)
         ? { field, query, items: [], loading: false }
         : { field, query, items: st !== null && st.field === field ? st.items : [], loading: true }))
       .on(closeSuggest, () => null)
     const asked = sample({
-      clock: suggest,
-      source: $conditions,
+      clock: input,
+      source: { conditions: $conditions, version: $version },
       filter: (_, { query }) => !short(query),
-      fn: (conds, { field, query }): SuggestQuery => ({ field, query: query.trim(), filter: conds.filter((c) => c.field !== field), limit }),
+      fn: ({ conditions, version }, { field, query }): Asked => ({ query: { field, query: query.trim(), filter: conditions.filter((c) => c.field !== field), limit }, version }),
     })
-    $pending.on(suggest, (p, { query }) => (short(query) ? null : p)).on(asked, (_, q) => q).on(closeSuggest, () => null)
+    $pending.on(input, (p, { query }) => (short(query) ? null : p)).on(asked, (_, q) => q).on(closeSuggest, () => null)
     sample({ clock: asked, target: waitFx })
-    sample({ clock: waitFx.doneData, source: $pending, filter: (p, q) => p !== null && sameQuery(p, q), fn: (_, q) => q, target: requestFx })
-    const got = sample({ clock: requestFx.done, source: $pending, filter: (p, { params }) => p !== null && sameQuery(p, params), fn: (_, { result }) => result })
-    const failed = sample({ clock: requestFx.fail, source: $pending, filter: (p, { params }) => p !== null && sameQuery(p, params) })
+    sample({ clock: waitFx.doneData, source: $pending, filter: (p, q) => p !== null && p.version === q.version, fn: (_, q) => q, target: requestFx })
+    const got = sample({ clock: requestFx.done, source: $pending, filter: (p, { params }) => p !== null && p.version === params.version, fn: (_, { result }) => result })
+    const failed = sample({ clock: requestFx.fail, source: $pending, filter: (p, { params }) => p !== null && p.version === params.version })
     $suggest
       .on(got, (st, items) => (st === null ? st : { ...st, items, loading: false }))
       .on(failed, (st) => (st === null ? st : { ...st, items: [], loading: false }))

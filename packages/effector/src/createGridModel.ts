@@ -1,5 +1,7 @@
-import { attach, combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
+import { combine, createEffect, createEvent, createStore, sample, type Effect, type EventCallable, type Store } from 'effector'
 import type { ColumnsState, Facet, FacetsQuery, Filter, GridPage, GridQuery, GridViewState, PersistAdapter, Selection, Sort } from './types'
+
+import { activeRequest } from './activeRequest'
 
 export type GridPersisted = { widths: Record<string, number>; order: string[]; hidden: string[]; pageSize: number; split: string[] }
 
@@ -8,6 +10,8 @@ export type GridModelConfig<Row> = {
   columns: { id: string; width?: number | undefined }[]
   pageSize?: number | undefined
   $filter: Store<Filter>
+  /** Неактивный грид не запрашивает данные; переход в true обновляет search/facets. Без опции — прежний ручной старт. */
+  $active?: Store<boolean> | undefined
   fetchFx: Effect<GridQuery, GridPage<Row>>
   persist?: PersistAdapter<Partial<GridPersisted>> | undefined
   rowKey: (row: Row) => string
@@ -67,6 +71,8 @@ function reconcileOrder(saved: string[] | undefined, ids: string[]): string[] {
 
 export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> {
   const ids = cfg.columns.map((c) => c.id)
+  const $active = cfg.$active ?? createStore(true)
+  const deactivated = sample({ clock: $active.updates, filter: (active) => !active, fn: () => undefined })
   const saved = cfg.persist?.load(cfg.id) ?? {}
   // ширины из конфига — базовые (по ним сбрасывает resetWidths/resetWidth), initialWidths поверх них накладывает сохранённые.
   const defaultWidths: Record<string, number> = {}
@@ -140,47 +146,28 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
       return { mode: 'all', except: on ? s.except.filter((x) => !page.includes(x)) : [...new Set([...s.except, ...page])] }
     })
     .on(selectAll, () => ({ mode: 'all', except: [] }))
-    .reset(clearSelection)
+    .reset(clearSelection, deactivated)
 
   // --- сортировка и страницы ---
   $sort.on(sortBy, (_, s) => s)
   $page.on(setPage, (_, n) => Math.max(1, n))
   // смена сортировки или размера страницы сбрасывает на первую страницу — .reset допустим, т.к. целевое значение (1) совпадает с начальным.
-  // Объявлено раньше sample({clock: cfg.$filter, ...}) ниже: в одном тике effector сперва применяет .on/.reset у сторов, потом читает их в sample.
+  // Сброс — reducer: combine успевает собрать новый фильтр и первую страницу до общего sample запросов.
   $page.reset(sortBy, setPageSize)
-  sample({ clock: cfg.$filter, fn: () => 1, target: $page })
+  $page.on(cfg.$filter, () => 1)
   sample({ clock: cfg.$filter, fn: () => EMPTY_SELECTION, target: $selection })
 
   const $query = combine(cfg.$filter, $sort, $page, $pageSize, (filter, sort, page, size): GridQuery => ({ filter, sort, page: page - 1, size }))
 
-  // Свой экземпляр эффекта на модель: fetchFx приложения может быть общим для нескольких гридов,
-  // а done/fail/pending у attach-копии — только от вызовов этой модели.
-  const requestFx = attach({ effect: cfg.fetchFx })
+  // Свой attached-запрос и поколение: общие порты не смешивают ответы моделей и визитов.
+  const request = activeRequest($active, $query, cfg.fetchFx, sameQuery)
 
-  // запрос: изменение фильтра, сортировки, страницы, размера страницы, refresh, retry.
-  // Для $filter — отдельный сэмпл: $page сбрасывается в том же тике, но $query (combine) может ещё не пересчитаться к моменту чтения source в общем сэмпле,
-  // поэтому страница берётся явной константой 0, а не через $query.
-  sample({
-    clock: cfg.$filter,
-    source: { sort: $sort, size: $pageSize },
-    fn: ({ sort, size }, filter): GridQuery => ({ filter, sort, page: 0, size }),
-    target: requestFx,
-  })
-  sample({ clock: [sortBy, setPage, setPageSize, refresh, retry], source: $query, target: requestFx })
+  // Один batched sample объединяет показ и восстановление параметров одним событием хоста.
+  // Переход в false тоже попадает в clock, но блокируется внутри activeRequest.
+  sample({ clock: [cfg.$filter, sortBy, setPage, setPageSize, refresh, retry, $active.updates], source: $query, target: request.request })
 
-  // Принимается только ответ на текущий запрос: поздний ответ на старую страницу/фильтр не перезапишет актуальный.
-  const doneData = sample({
-    clock: requestFx.done,
-    source: $query,
-    filter: (q, { params }) => sameQuery(q, params),
-    fn: (_, { result }) => result,
-  })
-  const failData = sample({
-    clock: requestFx.fail,
-    source: $query,
-    filter: (q, { params }) => sameQuery(q, params),
-    fn: (_, { error }) => error,
-  })
+  const doneData = request.done
+  const failData = request.failed
 
   $rows.on(doneData, (_, p) => p.rows)
   $total.on(doneData, (_, p) => p.total)
@@ -190,7 +177,7 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
     .reset(doneData, retry)
 
   const $state = combine(
-    requestFx.pending,
+    request.$pending,
     $hasData,
     $error,
     (pending, has, err): GridViewState => (pending ? (has ? 'refreshing' : 'loading') : err ? 'error' : has ? 'ready' : 'loading'),
@@ -200,19 +187,11 @@ export function createGridModel<Row>(cfg: GridModelConfig<Row>): GridModel<Row> 
   const $facets = createStore<Facet[]>([])
   if (cfg.facets) {
     const { field } = cfg.facets
-    const facetsFx = attach({ effect: cfg.facets.fetchFx })
     const toQuery = (filter: Filter): FacetsQuery => ({ filter: filter.filter((c) => c.field !== field), field })
     const $facetsQuery = cfg.$filter.map(toQuery)
-    // смена фильтра — запрос из значения clock, не из производного стора (тот же нюанс, что у $query выше)
-    sample({ clock: cfg.$filter, fn: toQuery, target: facetsFx })
-    sample({ clock: [refresh, retry], source: $facetsQuery, target: facetsFx })
-    const facetsDone = sample({
-      clock: facetsFx.done,
-      source: $facetsQuery,
-      filter: (q, { params }) => JSON.stringify(q) === JSON.stringify(params),
-      fn: (_, { result }) => result,
-    })
-    $facets.on(facetsDone, (_, r) => r)
+    const facets = activeRequest($active, $facetsQuery, cfg.facets.fetchFx, (a, b) => JSON.stringify(a) === JSON.stringify(b))
+    sample({ clock: [cfg.$filter, refresh, retry, $active.updates], source: $facetsQuery, target: facets.request })
+    $facets.on(facets.done, (_, result) => result)
   }
 
   // --- persist: изменения вида без запроса ---
