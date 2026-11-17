@@ -30,11 +30,13 @@ export const parseDocParam = (): string | null => {
 
 /**
  * Вход на экран — pageOpened, затем docLinkOpened, если в адресе есть ?doc= (спека 2d §3.6); doc из адреса не стирается.
- * На том же экране новая ссылка (вставили в адресную строку) открывает документ; тот же doc при смене прочего хвоста — нет.
+ * На том же экране новая ссылка открывает документ; тот же doc при смене прочего хвоста — нет.
+ * Явный повторный клик по ссылке на текущий URL снова открывает документ, не перезапуская экран.
  */
 export function startRouting(onRoute: (r: Route) => void): () => void {
   let current: Route | null = null
   let linked: string | null = null
+  const pendingLinks = new Set<number>()
   const go = () => {
     const next = parseRoute()
     const doc = parseDocParam()
@@ -50,9 +52,33 @@ export function startRouting(onRoute: (r: Route) => void): () => void {
     if (doc !== null) screens[next].docLinkOpened(doc)
     onRoute(next)
   }
+  // При повторном клике по текущему URL hash не меняется и браузер не посылает hashchange.
+  // Это новый явный запрос открыть документ, даже если после прошлой ссылки вручную открыли другой.
+  const repeatLink = (event: MouseEvent) => {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null
+    if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('download') || link.href !== location.href) return
+    const target = link.getAttribute('target') ?? document.querySelector('base[target]')?.getAttribute('target') ?? ''
+    if (target && target.toLowerCase() !== '_self') return
+    const doc = parseDocParam()
+    const route = current
+    if (doc === null || route === null || parseRoute() !== route) return
+    const href = location.href
+    // Window или следующий listener на document ещё могут отменить переход. Микрозадача
+    // между нативными listener недостаточна: ждём следующую задачу и проверяем решение снова.
+    const timer = window.setTimeout(() => {
+      pendingLinks.delete(timer)
+      if (!event.defaultPrevented && current === route && location.href === href) screens[route].docLinkOpened(doc)
+    }, 0)
+    pendingLinks.add(timer)
+  }
+  document.addEventListener('click', repeatLink)
   window.addEventListener('hashchange', go)
   go()
   return () => {
+    document.removeEventListener('click', repeatLink)
+    for (const timer of pendingLinks) window.clearTimeout(timer)
+    pendingLinks.clear()
     window.removeEventListener('hashchange', go)
     if (current) screens[current].lifecycle.pageClosed()
     current = null
