@@ -56,7 +56,103 @@ describe('parseDocParam', () => {
   })
 })
 
+
+
 describe('startRouting', () => {
+  it('поздняя отмена клика на window не открывает документ', async () => {
+    history.replaceState(null, '', '/#/fx-docs?doc=u1')
+    const stop = startRouting(() => {})
+    const link = document.createElement('a')
+    link.href = location.href
+    document.body.append(link)
+    const cancel = (event: MouseEvent) => event.preventDefault()
+    window.addEventListener('click', cancel)
+    try {
+      link.click()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open fx-docs', 'link fx-docs u1'])
+    } finally { window.removeEventListener('click', cancel); stop(); link.remove() }
+  })
+
+  it('stop отменяет отложенное открытие до завершения обработки клика', async () => {
+    history.replaceState(null, '', '/#/fx-docs?doc=u1')
+    const stop = startRouting(() => {})
+    const link = document.createElement('a')
+    link.href = location.href
+    document.body.append(link)
+    try {
+      link.click()
+      stop()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open fx-docs', 'link fx-docs u1', 'close fx-docs'])
+    } finally { stop(); link.remove() }
+  })
+
+  it('target="" не наследует base, отсутствующий target берётся из первого base[target]', async () => {
+    history.replaceState(null, '', '/#/rub-docs?doc=r1')
+    const stop = startRouting(() => {})
+    const noTarget = document.createElement('base')
+    const blank = document.createElement('base')
+    blank.target = '_blank'
+    document.head.append(noTarget, blank)
+    const link = document.createElement('a')
+    link.href = location.href
+    link.target = ''
+    document.body.append(link)
+    try {
+      link.click()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open rub-docs', 'link rub-docs r1', 'link rub-docs r1'])
+      link.removeAttribute('target')
+      link.click()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open rub-docs', 'link rub-docs r1', 'link rub-docs r1'])
+    } finally { stop(); link.remove(); noTarget.remove(); blank.remove() }
+  })
+
+  it('повторный явный переход по тому же адресу снова открывает документ, включая клик по вложенному элементу ссылки', async () => {
+    history.replaceState(null, '', '/#/fx-docs?doc=u1')
+    const stop = startRouting(() => {})
+    const link = document.createElement('a')
+    link.href = location.href
+    const text = document.createElement('span')
+    link.append(text)
+    document.body.append(link)
+    try {
+      text.click()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open fx-docs', 'link fx-docs u1', 'link fx-docs u1'])
+      stop()
+      text.click()
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open fx-docs', 'link fx-docs u1', 'link fx-docs u1', 'close fx-docs'])
+    } finally { stop(); link.remove() }
+  })
+
+  it('отменённый клик, модификаторы, другая вкладка и download не открывают документ в текущем экране', async () => {
+    history.replaceState(null, '', '/#/rub-docs?doc=r1')
+    const stop = startRouting(() => {})
+    const link = document.createElement('a')
+    link.href = location.href
+    document.body.append(link)
+    try {
+      for (const options of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...options }))
+      }
+      link.target = '_blank'
+      link.click()
+      link.target = ''
+      link.download = 'document'
+      link.click()
+      link.removeAttribute('download')
+      const cancelled = new MouseEvent('click', { bubbles: true, cancelable: true })
+      cancelled.preventDefault()
+      link.dispatchEvent(cancelled)
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(log).toEqual(['open rub-docs', 'link rub-docs r1'])
+    } finally { stop(); link.remove() }
+  })
+
   it('?doc= — после pageOpened docLinkOpened экрана маршрута; doc в адресе остаётся', () => {
     location.hash = '#/rub-docs?doc=a%2Fb'
     const stop = startRouting(() => {})
