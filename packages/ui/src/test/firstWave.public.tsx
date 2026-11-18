@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { Icon, IconButton, Spinner, Text, type IconName, type IconProps, type SpinnerProps, type TextProps, type TextVariant, type TextWeight } from '../index'
+import { Icon, IconButton, Link, Spinner, Text, type IconName, type IconProps, type LinkProps, type SpinnerProps, type TextProps, type TextVariant, type TextWeight } from '../index'
 
 const icon: IconName = 'edit'
 const iconProps: IconProps = { name: icon, label: 'Редактировать', size: 's' }
@@ -8,6 +8,8 @@ const spinnerProps: SpinnerProps = { label: 'Подождите', block: true, s
 const variant: TextVariant = 'caption'
 const weight: TextWeight = 'bold'
 const textProps: TextProps = { variant, weight, tone: 'muted', as: 'div', children: 'Готово' }
+
+const linkProps: LinkProps = { href: '/doc', target: '_blank', children: 'Документ' }
 
 export const supported = (
   <>
@@ -18,6 +20,7 @@ export const supported = (
     <IconButton name="submit-action" label="Отправить" children={undefined} />
     <Spinner {...spinnerProps} />
     <Text {...textProps} />
+    <Link {...linkProps} ref={createRef<HTMLAnchorElement>()} />
   </>
 )
 
@@ -32,3 +35,6 @@ export const unknownSpinnerSize = <Spinner size="xl" />
 export const unknownTextTag = <Text as="h1">Текст</Text>
 // @ts-expect-error Содержимое Text обязательно.
 export const missingTextChildren = <Text variant="body" />
+
+// @ts-expect-error Содержимое Link обязательно.
+export const missingLinkChildren = <Link href="/doc" />

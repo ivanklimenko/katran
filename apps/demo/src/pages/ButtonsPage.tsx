@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import { k } from '@katran/tokens'
-import { Button, ButtonLink, Icon, IconButton, type IconName } from '@katran/ui'
+import { Button, ButtonLink, Icon, IconButton, Link, Text, type IconName } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 const Gear = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M3 13l1.5-1.5M11.5 4.5 13 3" /></svg>
@@ -42,12 +42,14 @@ export function ButtonsPage() {
       </Row>
       <H2>Переключатель</H2>
       <Row><Button pressed>Скелетоны</Button><Button>График</Button></Row>
-      <H2>Ссылка-кнопка</H2>
-      <Note>ButtonLink — переход, а не действие: тот же вид, что у Button (варианты и размеры), но &lt;a href&gt;; новая вкладка — target="_blank" с rel="noopener".</Note>
+      <H2>Ссылки</H2>
+      <Note>ButtonLink выглядит как кнопка и поддерживает её варианты и размеры. Link наследует кегль окружающего текста.</Note>
       <Row>
         <ButtonLink href="#/buttons" size="s">Перейти (малая)</ButtonLink><ButtonLink href="#/buttons">Перейти</ButtonLink>
         <ButtonLink href="#/buttons" variant="primary" target="_blank" rel="noopener">В новой вкладке</ButtonLink>
       </Row>
+      <Text>Настройки оформления собраны на странице <Link href="#/tokens">«Токены»</Link>.</Text>
+      <Text variant="caption" tone="ink2">См. также <Link href="#/states">состояния загрузки</Link>.</Text>
       <H2>Иконки</H2>
       <Row>
         <IconButton label="Настройки"><Gear /></IconButton>
