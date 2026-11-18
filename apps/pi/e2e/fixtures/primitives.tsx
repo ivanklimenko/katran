@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { Breadcrumbs, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, type RadioOption } from '@katran/ui'
+import { Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, type DateValue, type RadioOption } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -19,6 +19,8 @@ function Primitives() {
   const [status, setStatus] = useState<string | null>(null)
   const [otherStatus, setOtherStatus] = useState<string | null>('draft')
   const [statusChanges, setStatusChanges] = useState(0)
+  const [seconds, setSeconds] = useState('')
+  const [calendarDate, setCalendarDate] = useState<DateValue>('2026-09-15')
 
   function changeStatus(value: string) {
     setStatus(value)
@@ -60,7 +62,13 @@ function Primitives() {
         <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid placeholder="Укажите причину" />
         <button type="button" onClick={() => setComment('Готовый\nответ')}>Подставить комментарий</button>
       </section>
+      <section aria-label="Поля времени">
+        <TimeField label="Время с секундами" seconds size="l" notBefore="10:20:30" value={seconds} onChange={setSeconds} />
+        <output aria-label="Значение времени">{seconds}</output>
+        <DateInput aria-label="Дата для календаря" today="2026-09-15" time value={calendarDate} onChange={setCalendarDate} />
+      </section>
       <section aria-label="Радиокнопки">
+        <button type="button">Перед радиокнопками</button>
         <RadioGroup label="Статус" name="status" value={status} options={radioOptions} onChange={changeStatus} />
         <RadioGroup label="Другой статус" name="other-status" value={otherStatus} options={radioOptions} onChange={setOtherStatus} />
         <RadioGroup label="Недоступный статус" name="archived-status" value="ready" options={radioOptions} onChange={changeStatus} disabled />

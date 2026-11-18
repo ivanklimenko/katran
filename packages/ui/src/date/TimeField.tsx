@@ -2,56 +2,70 @@ import { useEffect, useRef, useState } from 'react'
 import { Input } from '../input'
 import { useMaskCaret } from './MaskedDateField'
 
-const valid = (t: string) => /^\d{2}:\d{2}$/.test(t) && Number(t.slice(0, 2)) <= 23 && Number(t.slice(3)) <= 59
+const minutePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+const secondPattern = /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
+
+function formatSeconds(digits: string): string {
+  return digits.slice(0, 6).match(/\d{1,2}/g)?.join(':') ?? ''
+}
 
 export type TimeFieldProps = {
-  /** 'чч:мм' или ''. */
+  /** 'чч:мм', 'чч:мм:сс' или ''. */
   value: string
   onChange: (value: string) => void
   label: string
-  /** Enter в поле — поповер дат закрывается (спека §3.5). */
+  seconds?: boolean | undefined
+  size?: 's' | 'm' | 'l' | undefined
   onEnter?: (() => void) | undefined
   disabled?: boolean | undefined
-  /** Раньше этого времени нельзя («по» в тот же день, что «с»): такой ввод — invalid, наружу ''. */
+  /** Нижняя граница в формате поля. Невалидный ввод передаётся как ''. */
   notBefore?: string | undefined
+  className?: string | undefined
 }
 
-/** Время 'чч:мм' в поповере дат: неполное или невалидное — наружу ''. */
-export function TimeField({ value, onChange, label, onEnter, disabled, notBefore }: TimeFieldProps) {
+export function TimeField({
+  value, onChange, label, seconds = false, size = 's', onEnter, disabled, notBefore, className,
+}: TimeFieldProps) {
   const { inputRef, edit } = useMaskCaret()
-  const [typed, setTyped] = useState<{ text: string; snap: string } | null>(null)
-  // как у MaskedDateField: значение ушло от снимка — снимок сбрасывается и не воскресает
-  if (typed !== null && typed.snap !== value) setTyped(null)
-  const text = typed !== null && typed.snap === value ? typed.text : value
-  const ok = (tm: string) => valid(tm) && (notBefore === undefined || notBefore === '' || tm >= notBefore)
-  // граница сдвинулась под набранное время — значение догоняет поле (как у MaskedDateField); свежее читает из ref
-  const live = useRef({ typed, value, ok, onChange })
-  useEffect(() => { live.current = { typed, value, ok, onChange } })
+  const [typed, setTyped] = useState<{ text: string; snap: string; seconds: boolean } | null>(null)
+  const draft = typed !== null && typed.snap === value && typed.seconds === seconds ? typed : null
+  if (typed !== draft) setTyped(null)
+
+  const text = draft?.text ?? value
+  const length = seconds ? 8 : 5
+  const pattern = seconds ? secondPattern : minutePattern
+  const ok = (time: string) => pattern.test(time) && (!notBefore || (pattern.test(notBefore) && time >= notBefore))
+
+  // При сдвиге границы переоцениваем полный черновик. Ref хранит свежие пропсы и проверку формата.
+  const live = useRef({ draft, value, ok, onChange, length })
+  useEffect(() => { live.current = { draft, value, ok, onChange, length } })
   useEffect(() => {
-    const { typed: t, value: v, ok: good, onChange: change } = live.current
-    if (t === null || t.snap !== v || t.text.length !== 5) return
-    const target = good(t.text) ? t.text : ''
-    if (target === v) return
-    setTyped({ text: t.text, snap: target })
-    change(target)
+    const { draft: current, value: previous, ok: valid, onChange: change, length: fullLength } = live.current
+    if (current === null || current.text.length !== fullLength) return
+    const next = valid(current.text) ? current.text : ''
+    if (next === previous) return
+    setTyped({ ...current, snap: next })
+    change(next)
   }, [notBefore])
+
   return (
     <Input
       ref={inputRef}
-      size="s"
+      size={size}
+      className={className}
       aria-label={label}
-      placeholder="чч:мм"
+      placeholder={seconds ? 'чч:мм:сс' : 'чч:мм'}
       inputMode="numeric"
       disabled={disabled}
-      invalid={text.length === 5 && !ok(text)}
+      invalid={text.length >= length && !ok(text)}
       value={text}
-      onChange={(e) => {
-        const masked = edit(e, text, 'HH:mm')
+      onChange={(event) => {
+        const masked = edit(event, text, seconds ? formatSeconds : 'HH:mm')
         const next = ok(masked) ? masked : ''
-        setTyped({ text: masked, snap: next })
+        setTyped({ text: masked, snap: next, seconds })
         if (next !== value) onChange(next)
       }}
-      onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter() } }}
+      onKeyDown={(event) => { if (event.key === 'Enter' && onEnter) { event.preventDefault(); onEnter() } }}
     />
   )
 }
