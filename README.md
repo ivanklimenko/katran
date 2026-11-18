@@ -137,6 +137,26 @@ function PaymentAmount() {
 
 На фокусе `AmountField` показывает десятичное число с точкой. После ухода фокуса добавляются группы разрядов и число знаков по `fraction`. Пустой и невалидный ввод передают `null`. Невалидный текст остаётся видимым для исправления.
 
+## Диапазоны суммы и числа
+
+```tsx
+import { useState } from 'react'
+import { AmountRange, NumberRange, type AmountRangeValue, type NumberRangeValue } from '@katran/ui'
+
+function RegistryRanges() {
+  const [amounts, setAmounts] = useState<AmountRangeValue>({ from: 1000, to: null })
+  const [quantities, setQuantities] = useState<NumberRangeValue>({ from: null, to: 20 })
+  return (
+    <>
+      <AmountRange label="Сумма платежа" value={amounts} onChange={setAmounts} />
+      <NumberRange label="Количество" value={quantities} onChange={setQuantities} step={0.5} />
+    </>
+  )
+}
+```
+
+Оба диапазона передают пустую границу как `null`. Если «От» больше «До», оба поля отмечаются ошибкой и значения сохраняются в исходном порядке. `AmountRange` форматирует суммы после ухода фокуса. `NumberRange` использует нативный числовой ввод с шагом.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx
