@@ -143,6 +143,10 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(invalid).toHaveAttribute('aria-invalid', 'true')
       const invalidBorder = await invalid.evaluate((element) => getComputedStyle(element).borderTopColor)
       expect(rgbToHex(invalidBorder)).toBe(colors[theme].bad.toLowerCase())
+      const [hint, paper] = await invalid.evaluate((element) => [
+        getComputedStyle(element, '::placeholder').color, getComputedStyle(element).backgroundColor,
+      ])
+      expect(contrastRatio(rgbToHex(hint), rgbToHex(paper))).toBeGreaterThanOrEqual(4.5)
 
       await page.getByRole('link', { name: 'пример файла' }).focus()
       await page.keyboard.press('Tab')
@@ -161,6 +165,70 @@ for (const theme of ['light', 'dark'] as const) {
 
       await page.getByRole('button', { name: 'Подставить комментарий' }).click()
       await expect(textarea).toHaveValue('Готовый\nответ')
+    })
+
+    test(`RadioGroup: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const group = page.getByRole('radiogroup', { name: 'Статус', exact: true })
+      const draft = group.getByRole('radio', { name: 'Черновик' })
+      const closed = group.getByRole('radio', { name: 'Закрыт' })
+      const ready = group.getByRole('radio', { name: 'Готов' })
+      const other = page.getByRole('radiogroup', { name: 'Другой статус' })
+      const changes = page.getByLabel('Число смен статуса')
+      await expect(group).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+      await expect(draft).not.toBeChecked()
+      await expect(ready).not.toBeChecked()
+      await expect(closed).toBeDisabled()
+      await expect(draft).toHaveCSS('width', `${sizes['dot-m'] * density}px`)
+      await expect(draft).toHaveCSS('height', `${sizes['dot-m'] * density}px`)
+      const border = await draft.evaluate((element) => getComputedStyle(element).borderTopColor)
+      expect(rgbToHex(border)).toBe(colors[theme].line.toLowerCase())
+      const [stroke, background] = await draft.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return [style.boxShadow.match(/^rgb\([^)]*\)/)?.[0] ?? style.borderTopColor, style.backgroundColor]
+      })
+      expect(contrastRatio(rgbToHex(stroke), rgbToHex(background))).toBeGreaterThanOrEqual(3)
+
+      await page.getByRole('button', { name: 'Подставить комментарий' }).focus()
+      await page.keyboard.press('Tab')
+      await expect(draft).toBeFocused()
+      await expect(draft).not.toBeChecked()
+      await expect(draft).toHaveCSS('outline-width', '2px')
+      const outline = await draft.evaluate((element) => getComputedStyle(element).outlineColor)
+      expect(rgbToHex(outline)).toBe(colors[theme].val.toLowerCase())
+
+      await page.keyboard.press('Space')
+      await expect(draft).toBeChecked()
+      await expect(draft).toHaveCSS('background-image', /radial-gradient/)
+      await expect(changes).toHaveText('1')
+
+      await page.keyboard.press('ArrowRight')
+      await expect(ready).toBeFocused()
+      await expect(ready).toBeChecked()
+      await expect(draft).not.toBeChecked()
+      await expect(closed).not.toBeChecked()
+      await expect(changes).toHaveText('2')
+
+      await page.keyboard.press('ArrowLeft')
+      await expect(draft).toBeFocused()
+      await expect(draft).toBeChecked()
+      await expect(changes).toHaveText('3')
+      await draft.click()
+      await expect(changes).toHaveText('3')
+
+      await other.getByRole('radio', { name: 'Готов' }).click()
+      await expect(other.getByRole('radio', { name: 'Готов' })).toBeChecked()
+      await expect(draft).toBeChecked()
+      await expect(changes).toHaveText('3')
+
+      const disabled = page.getByRole('radiogroup', { name: 'Недоступный статус' })
+      for (const radio of await disabled.getByRole('radio').all()) await expect(radio).toBeDisabled()
+
+      await page.emulateMedia({ forcedColors: 'active' })
+      await expect(draft).toHaveCSS('appearance', 'auto')
+      await expect(draft).toBeChecked()
     })
   }
 }

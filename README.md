@@ -79,6 +79,28 @@ function PaymentStatus() {
 
 `Text` использует токены типографики и поддерживает роли `body`, `subhead`, `caption`, `meta` и `inline`. Внутри абзаца `Text` вложенный `Text` рендерится как `span`. `Link` наследует кегль, принимает нативные атрибуты ссылки и дополняет `rel` значениями `noopener noreferrer` при `target="_blank"`.
 
+## Многострочное поле и радиокнопки
+
+```tsx
+import { useState } from 'react'
+import { RadioGroup, Textarea } from '@katran/ui'
+
+function DocumentFields() {
+  const [comment, setComment] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+
+  return (
+    <>
+      <Textarea aria-label="Комментарий" value={comment} onChange={(event) => setComment(event.currentTarget.value)} />
+      <RadioGroup label="Статус" name="document-status" value={status} onChange={setStatus}
+        options={[{ value: 'draft', label: 'Черновик' }, { value: 'ready', label: 'Готов' }]} />
+    </>
+  )
+}
+```
+
+`Textarea` принимает нативные атрибуты, по умолчанию показывает три строки и меняет высоту по вертикали. `RadioGroup` принимает `null` для пустого выбора и использует нативную навигацию стрелками. Задавайте разные `name` независимым группам в одной форме.
+
 ## DataGrid
 
 Грид контролируемый: данные и состояние вида приходят пропами, изменения уходят колбэками. Запись — `<tbody>` из строки колонок и сквозных строк (`spans`), сегменты адресуются по `id` колонок. Контракт и правила — спека, раздел 6.

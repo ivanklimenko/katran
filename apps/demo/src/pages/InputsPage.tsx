@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, SearchSelect, Select, TagInput, Textarea,
-  type DateRangeValue, type DateValue, type Option, type Scalar,
+  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea,
+  type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar,
 } from '@katran/ui'
 import styled from 'styled-components'
 import { k } from '@katran/tokens'
@@ -281,6 +281,29 @@ function TextareaDemo() {
   )
 }
 
+const RADIO_OPTIONS: RadioOption[] = [
+  { value: 'draft', label: 'Черновик' },
+  { value: 'review', label: 'На проверке', disabled: true },
+  { value: 'ready', label: 'Готов' },
+]
+
+function RadioGroupDemo() {
+  const [status, setStatus] = useState<string | null>(null)
+  return (
+    <>
+      <H2>RadioGroup</H2>
+      <FieldRow>
+        <Field caption="Статус документа">
+          <RadioGroup label="Статус документа" name="status" value={status} options={RADIO_OPTIONS} onChange={setStatus} />
+        </Field>
+        <Field caption="Недоступный выбор">
+          <RadioGroup label="Недоступный выбор" name="archived-status" value="ready" options={RADIO_OPTIONS} onChange={setStatus} disabled />
+        </Field>
+      </FieldRow>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -299,6 +322,7 @@ export function InputsPage() {
         <Checkbox label="Выбрать все" indeterminate={ind} onChange={() => setInd(false)} />
         <Checkbox label="Отложенные" defaultChecked /><Checkbox label="Недоступно" disabled />
       </Row>
+      <RadioGroupDemo />
       <H2>Select</H2>
       <Row>
         <Select aria-label="Тип сообщения" placeholder="Тип" options={['MT103', 'MT202', 'MT202COV', 'MT199'].map((v) => ({ value: v, label: v }))} />

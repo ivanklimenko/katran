@@ -21,7 +21,7 @@ const Root = styled.textarea`
   }
 
   &::placeholder {
-    color: ${k.faint};
+    color: ${k.muted};
   }
 `
 

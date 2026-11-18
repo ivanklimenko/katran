@@ -1,15 +1,29 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { Icon, IconButton, Input, KatranFonts, KatranProvider, Link, Spinner, Text, Textarea } from '@katran/ui'
+import { Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, type RadioOption } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
 const density = params.get('density') === '1.25' ? 1.25 : 1
 
+const radioOptions: RadioOption[] = [
+  { value: 'draft', label: 'Черновик' },
+  { value: 'blocked', label: 'Закрыт', disabled: true },
+  { value: 'ready', label: 'Готов' },
+]
+
 function Primitives() {
   const [clicks, setClicks] = useState(0)
   const [comment, setComment] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+  const [otherStatus, setOtherStatus] = useState<string | null>('draft')
+  const [statusChanges, setStatusChanges] = useState(0)
+
+  function changeStatus(value: string) {
+    setStatus(value)
+    setStatusChanges((count) => count + 1)
+  }
   return (
     <KatranProvider theme={theme} density={density}>
       <KatranFonts />
@@ -43,8 +57,14 @@ function Primitives() {
       <section aria-label="Поля ввода">
         <Textarea aria-label="Комментарий" value={comment} onChange={(event) => setComment(event.currentTarget.value)} />
         <Input aria-label="Однострочное поле" />
-        <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid defaultValue="Укажите причину" />
+        <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid placeholder="Укажите причину" />
         <button type="button" onClick={() => setComment('Готовый\nответ')}>Подставить комментарий</button>
+      </section>
+      <section aria-label="Радиокнопки">
+        <RadioGroup label="Статус" name="status" value={status} options={radioOptions} onChange={changeStatus} />
+        <RadioGroup label="Другой статус" name="other-status" value={otherStatus} options={radioOptions} onChange={setOtherStatus} />
+        <RadioGroup label="Недоступный статус" name="archived-status" value="ready" options={radioOptions} onChange={changeStatus} disabled />
+        <output aria-label="Число смен статуса">{statusChanges}</output>
       </section>
     </KatranProvider>
   )
