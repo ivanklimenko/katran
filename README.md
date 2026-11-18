@@ -105,6 +105,24 @@ function PaymentBreadcrumbs() {
 
 Breadcrumbs помечает последний пункт атрибутом `aria-current="page"` и сохраняет его ссылку, если передан `href`.
 
+## Трёхпозиционный переключатель
+
+```tsx
+import { useState } from 'react'
+import { TripleState, type TripleStateValue } from '@katran/ui'
+
+function StatusFilter() {
+  const [value, setValue] = useState<TripleStateValue>('unset')
+
+  return (
+    <TripleState label="Фильтр по статусу" icon="filter" value={value} onChange={setValue}
+      hints={{ unset: 'Не задано', on: 'Включено', off: 'Выключено' }} />
+  )
+}
+```
+
+Клик, Space и Enter переключают `TripleState` по кругу `unset → on → off → unset`. Текущее положение доступно в описании кнопки и в подсказке.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx

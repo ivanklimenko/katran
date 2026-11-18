@@ -305,5 +305,70 @@ for (const theme of ['light', 'dark'] as const) {
       await page.keyboard.press('Enter')
       await expect(page).toHaveURL(`${fixtureUrl}#payments-target`)
     })
+
+    test(`TripleState: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const control = page.getByRole('button', { name: 'Фильтр по статусу' })
+      const tooltip = page.getByRole('tooltip')
+      const glyph = control.locator('svg')
+      const count = page.getByLabel('Число переключений фильтра')
+      await expect(control).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+      await expect(control).toHaveCSS('height', `${sizes['h-ctl-m'] * density}px`)
+      const box = (await control.boundingBox())!
+      expect(box.width).toBeCloseTo(box.height, 1)
+      await expect(control).toHaveAccessibleDescription('Не задано')
+      await expect(control).not.toHaveAttribute('aria-pressed')
+      const descriptionId = await control.getAttribute('aria-describedby')
+
+      await page.getByRole('button', { name: 'Перед фильтром' }).focus()
+      await page.keyboard.press('Tab')
+      await expect(control).toBeFocused()
+      await expect(control).toHaveCSS('outline-style', 'solid')
+      await control.hover()
+      await expect(tooltip).toHaveText('Не задано')
+      const [tooltipText, tooltipBackground] = await tooltip.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return [style.color, style.backgroundColor]
+      })
+      expect(contrastRatio(rgbToHex(tooltipText), rgbToHex(tooltipBackground))).toBeGreaterThanOrEqual(4.5)
+
+      for (const [state, hint, background, color, key, changes] of [
+        ['unset', 'Не задано', 'chip', 'muted', 'Space', '0'],
+        ['on', 'Включено', 'ok-soft', 'ok', 'Enter', '1'],
+        ['off', 'Выключено', 'bad-soft', 'bad', null, '2'],
+      ] as const) {
+        await expect(control).toHaveAttribute('data-state', state)
+        await expect(control).toHaveAccessibleDescription(hint)
+        await expect(control).toHaveAttribute('aria-describedby', descriptionId!)
+        await expect(tooltip).toHaveText(hint)
+        const expectedBackground = colors[theme][background].toLowerCase()
+        const expectedGlyph = colors[theme][color].toLowerCase()
+        await expect.poll(async () => rgbToHex(await control.evaluate((element) => getComputedStyle(element).backgroundColor))).toBe(expectedBackground)
+        await expect.poll(async () => rgbToHex(await glyph.evaluate((element) => getComputedStyle(element).color))).toBe(expectedGlyph)
+        expect(contrastRatio(expectedGlyph, expectedBackground)).toBeGreaterThanOrEqual(3)
+        await expect(count).toHaveText(changes)
+        if (key) await page.keyboard.press(key)
+      }
+
+      await control.click()
+      await expect(control).toHaveAttribute('data-state', 'unset')
+      await expect(count).toHaveText('3')
+      await expect(tooltip).toHaveText('Не задано')
+      await page.keyboard.press('Escape')
+      await expect(tooltip).toHaveCount(0)
+      await expect(control).toHaveAccessibleDescription('Не задано')
+      await expect(control).toBeFocused()
+
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Tab')
+      await expect(tooltip).toHaveText('Не задано')
+      await page.keyboard.press('Tab')
+      await expect(control).not.toBeFocused()
+      await expect(tooltip).toHaveCount(0)
+      await expect(control).toHaveAccessibleDescription('Не задано')
+      await expect(page.getByRole('button', { name: 'Недоступный фильтр' })).toBeDisabled()
+    })
   }
 }
