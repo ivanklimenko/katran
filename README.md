@@ -79,6 +79,18 @@ function PaymentStatus() {
 
 `Text` использует токены типографики и поддерживает роли `body`, `subhead`, `caption`, `meta` и `inline`. Внутри абзаца `Text` вложенный `Text` рендерится как `span`. `Link` наследует кегль, принимает нативные атрибуты ссылки и дополняет `rel` значениями `noopener noreferrer` при `target="_blank"`.
 
+## Навигационная цепочка
+
+```tsx
+import { Breadcrumbs } from '@katran/ui'
+
+function PaymentBreadcrumbs() {
+  return <Breadcrumbs items={[{ label: 'Реестры', href: '/registries' }, { label: 'Платежи' }]} />
+}
+```
+
+Breadcrumbs помечает последний пункт атрибутом `aria-current="page"` и сохраняет его ссылку, если передан `href`.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx
