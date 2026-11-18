@@ -1,6 +1,33 @@
 import { css, styled } from '../styled'
 import { k } from '@katran/tokens'
 
+export const fieldFocusRing = css`
+  outline: 2px solid ${k.val};
+  outline-offset: 1px;
+`
+
+export const fieldFrame = css`
+  border: 1px solid ${k.line};
+  border-radius: ${k.rM};
+  background: ${k.paper};
+  color: ${k.ink};
+  transition: border-color ${k.tFast};
+
+  &:where([data-invalid]) {
+    border-color: ${k.bad};
+  }
+
+  &:focus-within {
+    border-color: ${k.val};
+    ${fieldFocusRing}
+  }
+
+  &:where([data-invalid]):focus-within {
+    border-color: ${k.bad};
+    outline-color: ${k.bad};
+  }
+`
+
 /**
  * Части поля ввода кита — общие для Input, Select и составных полей (дата, период, выбор, теги).
  * Модификаторы — атрибутами под :where() (специфичность прежних классов (0,1,0)): размер — data-size="s|m|l",
@@ -12,15 +39,7 @@ export const FieldBox = styled.span`
   align-items: center;
   gap: ${k.sp1};
   padding: 0 ${k.sp2};
-  border: 1px solid ${k.line};
-  border-radius: ${k.rM};
-  background: ${k.paper};
-  color: ${k.ink};
-  transition: border-color ${k.tFast};
-
-  &:where([data-invalid]) {
-    border-color: ${k.bad};
-  }
+  ${fieldFrame}
 
   &:where([data-size='s']) {
     height: ${k.hCtlS};
@@ -35,17 +54,6 @@ export const FieldBox = styled.span`
   &:where([data-size='l']) {
     height: ${k.hCtlL};
     font-size: ${k.fs1};
-  }
-
-  &:focus-within {
-    border-color: ${k.val};
-    outline: 2px solid ${k.val};
-    outline-offset: 1px;
-  }
-
-  &:where([data-invalid]):focus-within {
-    border-color: ${k.bad};
-    outline-color: ${k.bad};
   }
 `
 

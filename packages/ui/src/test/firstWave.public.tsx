@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { Icon, IconButton, Link, Spinner, Text, type IconName, type IconProps, type LinkProps, type SpinnerProps, type TextProps, type TextVariant, type TextWeight } from '../index'
+import { Icon, IconButton, Link, Spinner, Text, Textarea, type IconName, type IconProps, type LinkProps, type SpinnerProps, type TextareaProps, type TextProps, type TextVariant, type TextWeight } from '../index'
 
 const icon: IconName = 'edit'
 const iconProps: IconProps = { name: icon, label: 'Редактировать', size: 's' }
@@ -11,6 +11,13 @@ const textProps: TextProps = { variant, weight, tone: 'muted', as: 'div', childr
 
 const linkProps: LinkProps = { href: '/doc', target: '_blank', children: 'Документ' }
 
+const textareaProps: TextareaProps = {
+  name: 'comment',
+  rows: 4,
+  size: 'm',
+  onChange: (event) => event.currentTarget.setCustomValidity(''),
+}
+
 export const supported = (
   <>
     <Icon {...iconProps} />
@@ -20,6 +27,7 @@ export const supported = (
     <IconButton name="submit-action" label="Отправить" children={undefined} />
     <Spinner {...spinnerProps} />
     <Text {...textProps} />
+    <Textarea {...textareaProps} ref={createRef<HTMLTextAreaElement>()} />
     <Link {...linkProps} ref={createRef<HTMLAnchorElement>()} />
   </>
 )
@@ -38,3 +46,6 @@ export const missingTextChildren = <Text variant="body" />
 
 // @ts-expect-error Содержимое Link обязательно.
 export const missingLinkChildren = <Link href="/doc" />
+
+// @ts-expect-error Размер Textarea принимает токен размера.
+export const numericTextareaSize = <Textarea size={24} />

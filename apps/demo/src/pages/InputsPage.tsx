@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, SearchSelect, Select, TagInput,
+  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, SearchSelect, Select, TagInput, Textarea,
   type DateRangeValue, type DateValue, type Option, type Scalar,
 } from '@katran/ui'
 import styled from 'styled-components'
@@ -262,6 +262,25 @@ function TagsDemo() {
   )
 }
 
+function TextareaDemo() {
+  const [comment, setComment] = useState('Первая строка\nВторая строка')
+  return (
+    <>
+      <H2>Textarea</H2>
+      <FieldRow>
+        <Field caption="Комментарий (m)">
+          <Textarea aria-label="Комментарий" value={comment} onChange={(event) => setComment(event.currentTarget.value)} />
+        </Field>
+        <Field caption="Малое поле (s)"><Textarea aria-label="Малый комментарий" size="s" rows={2} placeholder="Причина" /></Field>
+        <Field caption="Ошибка (s)"><Textarea aria-label="Ошибка в малом поле" size="s" rows={2} invalid defaultValue="Проверьте причину" /></Field>
+        <Field caption="Ошибка (m)"><Textarea aria-label="Ошибка комментария" invalid placeholder="Укажите комментарий" /></Field>
+        <Field caption="Большое поле (l)"><Textarea aria-label="Большой комментарий" size="l" rows={4} /></Field>
+        <Field caption="Недоступно"><Textarea aria-label="Недоступный комментарий" disabled defaultValue="Комментарий сохранён" /></Field>
+      </FieldRow>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -274,6 +293,7 @@ export function InputsPage() {
         <Input aria-label="Номер" defaultValue="A1B2C3" invalid />
         <Input aria-label="Малое" size="s" placeholder="s" /><Input aria-label="Большое" size="l" placeholder="l" />
       </Row>
+      <TextareaDemo />
       <H2>Checkbox</H2>
       <Row>
         <Checkbox label="Выбрать все" indeterminate={ind} onChange={() => setInd(false)} />

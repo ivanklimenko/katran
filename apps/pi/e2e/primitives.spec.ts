@@ -124,5 +124,43 @@ for (const theme of ['light', 'dark'] as const) {
       expect(download.suggestedFilename()).toBe('katran.txt')
       expect(await download.failure()).toBeNull()
     })
+
+    test(`Textarea: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const textarea = page.getByRole('textbox', { name: 'Комментарий', exact: true })
+      const input = page.getByRole('textbox', { name: 'Однострочное поле' })
+      const invalid = page.getByRole('textbox', { name: 'Невалидный комментарий' })
+      await expect(textarea).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+      await expect(textarea).toHaveAttribute('rows', '3')
+      await expect(textarea).toHaveCSS('resize', 'vertical')
+      await expect(textarea).toHaveCSS('font-size', `${sizes['fs-1'] * density}px`)
+      await expect(invalid).toHaveCSS('font-size', `${sizes['fs-2'] * density}px`)
+      await expect(textarea).toHaveCSS('line-height', `${sizes['lh-1'] * density}px`)
+      await expect(textarea).toHaveCSS('padding-left', `${sizes['sp-2'] * density}px`)
+      expect((await textarea.boundingBox())!.height).toBeGreaterThan((await input.boundingBox())!.height)
+      await expect(invalid).toHaveAttribute('aria-invalid', 'true')
+      const invalidBorder = await invalid.evaluate((element) => getComputedStyle(element).borderTopColor)
+      expect(rgbToHex(invalidBorder)).toBe(colors[theme].bad.toLowerCase())
+
+      await page.getByRole('link', { name: 'пример файла' }).focus()
+      await page.keyboard.press('Tab')
+      await expect(textarea).toBeFocused()
+      await expect(textarea).toHaveCSS('outline-width', '2px')
+      const outline = await textarea.evaluate((element) => getComputedStyle(element).outlineColor)
+      expect(rgbToHex(outline)).toBe(colors[theme].val.toLowerCase())
+
+      await textarea.pressSequentially('First')
+      await textarea.press('Enter')
+      await textarea.pressSequentially('Second')
+      await expect(textarea).toHaveValue('First\nSecond')
+      await page.keyboard.press('Tab')
+      await expect(input).toBeFocused()
+      await expect(textarea).toHaveValue('First\nSecond')
+
+      await page.getByRole('button', { name: 'Подставить комментарий' }).click()
+      await expect(textarea).toHaveValue('Готовый\nответ')
+    })
   }
 }

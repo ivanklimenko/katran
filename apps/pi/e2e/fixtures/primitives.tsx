@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { Icon, IconButton, KatranFonts, KatranProvider, Link, Spinner, Text } from '@katran/ui'
+import { Icon, IconButton, Input, KatranFonts, KatranProvider, Link, Spinner, Text, Textarea } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -9,6 +9,7 @@ const density = params.get('density') === '1.25' ? 1.25 : 1
 
 function Primitives() {
   const [clicks, setClicks] = useState(0)
+  const [comment, setComment] = useState('')
   return (
     <KatranProvider theme={theme} density={density}>
       <KatranFonts />
@@ -38,6 +39,12 @@ function Primitives() {
         <Text>Открыть <Link href="#link-target">пример перехода</Link>.</Text>
         <Text variant="caption">Скачать <Link href="data:text/plain,katran" download="katran.txt">пример файла</Link>.</Text>
         <p id="link-target">Цель перехода</p>
+      </section>
+      <section aria-label="Поля ввода">
+        <Textarea aria-label="Комментарий" value={comment} onChange={(event) => setComment(event.currentTarget.value)} />
+        <Input aria-label="Однострочное поле" />
+        <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid defaultValue="Укажите причину" />
+        <button type="button" onClick={() => setComment('Готовый\nответ')}>Подставить комментарий</button>
       </section>
     </KatranProvider>
   )
