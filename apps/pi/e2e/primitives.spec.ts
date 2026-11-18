@@ -167,6 +167,43 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(textarea).toHaveValue('Готовый\nответ')
     })
 
+    test(`TimeField: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const field = page.getByRole('textbox', { name: 'Время с секундами' })
+      const value = page.getByLabel('Значение времени')
+      await expect(field).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+      await expect(field.locator('..')).toHaveCSS('height', `${sizes['h-ctl-l'] * density}px`)
+      await expect(field).toHaveAttribute('placeholder', 'чч:мм:сс')
+
+      await field.pressSequentially('102029')
+      await expect(field).toHaveValue('10:20:29')
+      await expect(field).toHaveAttribute('aria-invalid', 'true')
+      await expect(value).toHaveText('')
+      await field.clear()
+      await field.pressSequentially('102030')
+      await expect(field).toHaveValue('10:20:30')
+      await expect(field).not.toHaveAttribute('aria-invalid')
+      await expect(value).toHaveText('10:20:30')
+
+      await field.evaluate((element: HTMLInputElement) => element.setSelectionRange(6, 6))
+      await field.press('Backspace')
+      await expect(field).toHaveValue('10:23:0')
+      await expect.poll(() => field.evaluate((element: HTMLInputElement) => element.selectionStart)).toBe(4)
+      await expect(value).toHaveText('')
+
+      await page.getByRole('button', { name: 'Выбрать дату' }).click()
+      const dialog = page.getByRole('dialog')
+      const calendarTime = dialog.getByRole('textbox', { name: 'Время', exact: true })
+      await expect(calendarTime).toHaveAttribute('placeholder', 'чч:мм')
+      await calendarTime.pressSequentially('0930')
+      await calendarTime.press('Enter')
+      await expect(dialog).toHaveCount(0)
+      const date = page.getByRole('textbox', { name: 'Дата для календаря' })
+      await expect(date).toHaveValue('15.09.2026 09:30')
+      await expect(date).toBeFocused()
+    })
+
     test(`RadioGroup: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const group = page.getByRole('radiogroup', { name: 'Статус', exact: true })
@@ -191,7 +228,7 @@ for (const theme of ['light', 'dark'] as const) {
       })
       expect(contrastRatio(rgbToHex(stroke), rgbToHex(background))).toBeGreaterThanOrEqual(3)
 
-      await page.getByRole('button', { name: 'Подставить комментарий' }).focus()
+      await page.getByRole('button', { name: 'Перед радиокнопками' }).focus()
       await page.keyboard.press('Tab')
       await expect(draft).toBeFocused()
       await expect(draft).not.toBeChecked()

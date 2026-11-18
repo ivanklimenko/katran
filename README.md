@@ -79,6 +79,20 @@ function PaymentStatus() {
 
 `Text` использует токены типографики и поддерживает роли `body`, `subhead`, `caption`, `meta` и `inline`. Внутри абзаца `Text` вложенный `Text` рендерится как `span`. `Link` наследует кегль, принимает нативные атрибуты ссылки и дополняет `rel` значениями `noopener noreferrer` при `target="_blank"`.
 
+## Поле времени
+
+```tsx
+import { useState } from 'react'
+import { TimeField } from '@katran/ui'
+
+function CutoffTime() {
+  const [value, setValue] = useState('09:30:15')
+  return <TimeField label="Время отсечения" value={value} onChange={setValue} seconds notBefore="09:00:00" />
+}
+```
+
+По умолчанию `TimeField` принимает часы и минуты. При `seconds` значение и нижняя граница используют формат `чч:мм:сс`.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx

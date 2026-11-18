@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea,
+  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField,
   type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar,
 } from '@katran/ui'
 import styled from 'styled-components'
@@ -187,6 +187,8 @@ function DatesDemo() {
   const [format, setFormat] = useState<string>('DD.MM.YYYY')
   const [d1, setD1] = useState<DateValue>('2026-09-23')
   const [d2, setD2] = useState<DateValue>('2026-09-23T14:05')
+  const [minutes, setMinutes] = useState('09:30')
+  const [seconds, setSeconds] = useState('09:30:15')
   const [r1, setR1] = useState<DateRangeValue>({ from: '', to: '' })
   const [r2, setR2] = useState<DateRangeValue>({ from: '2026-09-01T09:30', to: '2026-09-03T18:00' })
   const [r3, setR3] = useState<DateRangeValue>({ from: '', to: '' })
@@ -211,6 +213,15 @@ function DatesDemo() {
       </FieldRow>
       <Live items={[['Дата документа', d1], ['Дата и время', d2], ['Период', r1], ['Период со временем', r2]]} />
       <Code>{DATE_CODE}</Code>
+      <H2>TimeField</H2>
+      <FieldRow>
+        <Field caption="Часы и минуты">
+          <TimeField label="Часы и минуты" value={minutes} onChange={setMinutes} />
+        </Field>
+        <Field caption="Часы, минуты и секунды">
+          <TimeField label="Часы, минуты и секунды" seconds size="m" value={seconds} onChange={setSeconds} />
+        </Field>
+      </FieldRow>
     </>
   )
 }

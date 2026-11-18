@@ -16,16 +16,18 @@ export function isoPasteText(pasted: string, format: DateFormat): string | null 
   return formatDateText(time ? `${m[1]!}T${m[2]!}` : m[1]!, withTime(format, time))
 }
 
+type MaskFormat = DateFormat | ((digits: string) => string)
+
 /** Правка текста с маской. Курсор встаёт после той же по счёту цифры, что и до маски; стёртый Backspace/Delete
  * одиночный разделитель тянет за собой соседнюю цифру — иначе маска вернула бы разделитель и клавиша «не работала бы». */
-export function maskEdit(prev: string, raw: string, caret: number, inputType: string, format: DateFormat): { text: string; caret: number } {
+export function maskEdit(prev: string, raw: string, caret: number, inputType: string, format: MaskFormat): { text: string; caret: number } {
   let digits = raw.replace(/\D/g, '')
   let before = raw.slice(0, caret).replace(/\D/g, '').length
   if (raw.length < prev.length && digits === prev.replace(/\D/g, '')) {
     if (inputType === 'deleteContentForward') digits = digits.slice(0, before) + digits.slice(before + 1)
     else if (before > 0) { digits = digits.slice(0, before - 1) + digits.slice(before); before -= 1 }
   }
-  const text = maskDateText(digits, format)
+  const text = typeof format === 'function' ? format(digits) : maskDateText(digits, format)
   let pos = 0
   for (let n = 0; n < before && pos < text.length; pos++) if (/\d/.test(text.charAt(pos))) n++
   return { text, caret: pos }
@@ -41,7 +43,7 @@ export function useMaskCaret() {
     if (caret.current !== null && el !== null && el === document.activeElement) el.setSelectionRange(caret.current, caret.current)
     caret.current = null
   })
-  const edit = useCallback((e: ChangeEvent<HTMLInputElement>, prev: string, format: DateFormat): string => {
+  const edit = useCallback((e: ChangeEvent<HTMLInputElement>, prev: string, format: MaskFormat): string => {
     const el = e.target
     const r = maskEdit(prev, el.value, el.selectionStart ?? el.value.length, (e.nativeEvent as Partial<InputEvent>).inputType ?? '', format)
     caret.current = r.caret
