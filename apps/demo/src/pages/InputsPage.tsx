@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
+  AmountField, Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
   type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
 } from '@katran/ui'
 import styled from 'styled-components'
@@ -336,6 +336,21 @@ function TripleStateDemo() {
   )
 }
 
+function AmountFieldDemo() {
+  const [amount, setAmount] = useState<number | null>(1000.5)
+
+  return (
+    <>
+      <H2>AmountField</H2>
+      <FieldRow>
+        <Field caption="Сумма платежа">
+          <AmountField label="Сумма платежа" value={amount} onChange={setAmount} placeholder="0.00" />
+        </Field>
+      </FieldRow>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -348,6 +363,7 @@ export function InputsPage() {
         <Input aria-label="Номер" defaultValue="A1B2C3" invalid />
         <Input aria-label="Малое" size="s" placeholder="s" /><Input aria-label="Большое" size="l" placeholder="l" />
       </Row>
+      <AmountFieldDemo />
       <TextareaDemo />
       <H2>Checkbox</H2>
       <Row>

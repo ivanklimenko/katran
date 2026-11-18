@@ -123,6 +123,20 @@ function StatusFilter() {
 
 Клик, Space и Enter переключают `TripleState` по кругу `unset → on → off → unset`. Текущее положение доступно в описании кнопки и в подсказке.
 
+## Поле суммы
+
+```tsx
+import { useState } from 'react'
+import { AmountField } from '@katran/ui'
+
+function PaymentAmount() {
+  const [value, setValue] = useState<number | null>(1000.5)
+  return <AmountField label="Сумма платежа" value={value} onChange={setValue} />
+}
+```
+
+На фокусе `AmountField` показывает десятичное число с точкой. После ухода фокуса добавляются группы разрядов и число знаков по `fraction`. Пустой и невалидный ввод передают `null`. Невалидный текст остаётся видимым для исправления.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx

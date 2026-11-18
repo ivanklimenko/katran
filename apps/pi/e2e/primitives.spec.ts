@@ -370,5 +370,41 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(control).toHaveAccessibleDescription('Не задано')
       await expect(page.getByRole('button', { name: 'Недоступный фильтр' })).toBeDisabled()
     })
+
+    test(`AmountField: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const amount = page.getByRole('textbox', { name: 'Сумма платежа' })
+      const value = page.getByLabel('Числовое значение суммы')
+      const reset = page.getByRole('button', { name: 'Подставить сумму' })
+      await expect(amount).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+      await expect(amount).toHaveValue('1\u00a0000.50')
+      await expect(amount).toHaveCSS('text-align', 'right')
+      await expect(amount.locator('..')).toHaveCSS('height', `${sizes['h-ctl-m'] * density}px`)
+
+      await amount.focus()
+      await expect(amount).toHaveValue('1000.5')
+      await expect(amount.locator('..')).toHaveCSS('outline-width', '2px')
+      await amount.clear()
+      await amount.pressSequentially('-2048.507')
+      await expect(amount).toHaveValue('-2048.507')
+      await expect(value).toHaveText('-2048.507')
+      await amount.press('Tab')
+      await expect(reset).toBeFocused()
+      await expect(amount).toHaveValue('-2\u00a0048.51')
+
+      await amount.focus()
+      await amount.clear()
+      await amount.pressSequentially('1e3')
+      await expect(value).toHaveText('null')
+      await expect(amount).toHaveAttribute('aria-invalid', 'true')
+      await amount.press('Tab')
+      await expect(amount).toHaveValue('1e3')
+      await expect(amount.locator('..')).toHaveAttribute('data-invalid', 'true')
+
+      await reset.click()
+      await expect(amount).toHaveValue('1\u00a0000.50')
+      await expect(amount).not.toHaveAttribute('aria-invalid')
+    })
   }
 }
