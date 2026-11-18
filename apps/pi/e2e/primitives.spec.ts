@@ -230,5 +230,43 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(draft).toHaveCSS('appearance', 'auto')
       await expect(draft).toBeChecked()
     })
+
+    test(`Breadcrumbs: ${theme}, плотность ${density}`, async ({ page }) => {
+      const fixtureUrl = `/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`
+      await page.goto(fixtureUrl)
+      const nav = page.getByRole('navigation', { name: 'Навигационная цепочка' })
+      const parent = nav.getByRole('link', { name: 'Реестры' })
+      const current = nav.getByRole('link', { name: 'Платежи' })
+      const separators = nav.getByText('/', { exact: true })
+      await expect(nav).toBeVisible()
+      await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+      await expect(nav.getByRole('listitem')).toHaveCount(3)
+      await expect(nav.getByRole('link')).toHaveCount(2)
+      await expect(current).toHaveAttribute('aria-current', 'page')
+      await expect(nav).toHaveCSS('font-size', `${sizes['fs-2'] * density}px`)
+      await expect(separators).toHaveCount(2)
+      for (const separator of await separators.all()) await expect(separator).toHaveAttribute('aria-hidden', 'true')
+      const parentColor = await parent.evaluate((element) => getComputedStyle(element).color)
+      const currentColor = await current.evaluate((element) => getComputedStyle(element).color)
+      const separatorColor = await separators.first().evaluate((element) => getComputedStyle(element).color)
+      expect(rgbToHex(parentColor)).toBe(colors[theme].val.toLowerCase())
+      expect(rgbToHex(currentColor)).toBe(colors[theme].ink.toLowerCase())
+      expect(rgbToHex(separatorColor)).toBe(colors[theme].muted.toLowerCase())
+
+      await page.getByRole('button', { name: 'Перед цепочкой' }).focus()
+      await page.keyboard.press('Tab')
+      await expect(parent).toBeFocused()
+      await expect(parent).toHaveCSS('outline-style', 'solid')
+      await page.keyboard.press('Tab')
+      await expect(current).toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('button', { name: 'После цепочки' })).toBeFocused()
+
+      await page.keyboard.press('Shift+Tab')
+      await expect(current).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(page).toHaveURL(`${fixtureUrl}#payments-target`)
+    })
   }
 }
