@@ -49,7 +49,8 @@ describe('Breadcrumbs', () => {
   it('рендерит единственный пункт без разделителя и сохраняет явно переданный href', () => {
     renderK(<Breadcrumbs items={[{ label: 'Текущая страница', href: '' }]} />)
 
-    const current = screen.getByRole('link', { name: 'Текущая страница' })
+    const current = screen.getByText('Текущая страница')
+    expect(current.tagName).toBe('A')
     expect(current).toHaveAttribute('href', '')
     expect(current).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByText('/', { exact: true })).not.toBeInTheDocument()

@@ -42,11 +42,6 @@ const Root = styled.nav`
   }
 `
 
-// React 19 can omit an empty href. Keep the explicit same-document link.
-function restoreEmptyHref(anchor: HTMLAnchorElement | null) {
-  anchor?.setAttribute('href', '')
-}
-
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   if (items.length === 0) return null
 
@@ -60,7 +55,7 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
               {index > 0 && <span aria-hidden="true">/</span>}
               {href === undefined
                 ? <span aria-current={current}>{label}</span>
-                : <Link href={href} ref={href === '' ? restoreEmptyHref : undefined} aria-current={current}>{label}</Link>}
+                : <Link href={href} aria-current={current}>{label}</Link>}
             </li>
           )
         })}
