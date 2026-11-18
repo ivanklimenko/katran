@@ -52,6 +52,56 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
+  it('сохраняет существующее описание при уходе до показа', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderK(<>
+      <Tooltip content="Подсказка"><button aria-describedby="permanent">Кнопка</button></Tooltip>
+      <span id="permanent">Постоянное описание</span>
+    </>)
+    const button = screen.getByRole('button')
+    await user.hover(button)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    await user.unhover(button)
+    act(() => { vi.advanceTimersByTime(250) })
+
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    expect(button).toHaveAttribute('aria-describedby', 'permanent')
+  })
+
+  it('обновляет открытый текст и уважает постоянное описание цели', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    function Sample({ tip, description, described }: { tip: string; description: string; described?: boolean }) {
+      return <>
+        <Tooltip content={tip}>
+          <button aria-describedby="permanent extra" data-k-tip-described={described ? '' : undefined}>Кнопка</button>
+        </Tooltip>
+        <span id="permanent" hidden>{description}</span>
+        <span id="extra">Дополнение</span>
+      </>
+    }
+    const { rerender } = renderK(<Sample tip="Старая подсказка" description="Постоянное описание" />)
+    const button = screen.getByRole('button')
+    await user.tab()
+    act(() => { vi.advanceTimersByTime(250) })
+    const tooltip = screen.getByRole('tooltip')
+    expect(button).toHaveAttribute('aria-describedby', 'permanent extra ' + tooltip.id)
+
+    rerender(<Sample tip="Новое описание" description="Новое описание" described />)
+    await act(async () => {})
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Новое описание')
+    expect(button).toHaveAttribute('aria-describedby', 'permanent extra')
+    expect(button).toHaveAccessibleDescription('Новое описание Дополнение')
+
+    rerender(<Sample tip="Новая подсказка" description="Новое описание" />)
+    await act(async () => {})
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Новая подсказка')
+    expect(button).toHaveAttribute('aria-describedby', 'permanent extra ' + tooltip.id)
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    expect(button).toHaveAttribute('aria-describedby', 'permanent extra')
+  })
+
   it('Escape при открытом Popover прячет тултип', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderK(<TipInPopover />)
