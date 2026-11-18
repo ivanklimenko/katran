@@ -15,6 +15,7 @@ export const k = {
   tSkMin: 'var(--k-t-sk-min)',
   tDrawer: 'var(--k-t-drawer)',
   tOpenDelay: 'var(--k-t-open-delay)',
+  tSpin: 'var(--k-t-spin)',
   fs1: 'var(--k-fs-1)',
   fs2: 'var(--k-fs-2)',
   fs3: 'var(--k-fs-3)',

@@ -218,6 +218,7 @@ export const durations = {
   'sk-min': 400,
   'drawer': 180,
   'open-delay': 220,
+  'spin': 800,
 } as const
 
 export const densities = [1, 1.1, 1.25] as const
