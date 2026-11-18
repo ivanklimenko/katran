@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, AmountRange, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -18,6 +18,7 @@ const filterHints = { unset: 'Не задано', on: 'Включено', off: '
 function Primitives() {
   const [clicks, setClicks] = useState(0)
   const [comment, setComment] = useState('')
+  const [code, setCode] = useState('12-7-345')
   const [status, setStatus] = useState<string | null>(null)
   const [otherStatus, setOtherStatus] = useState<string | null>('draft')
   const [statusChanges, setStatusChanges] = useState(0)
@@ -68,6 +69,11 @@ function Primitives() {
         <Input aria-label="Однострочное поле" />
         <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid placeholder="Укажите причину" />
         <button type="button" onClick={() => setComment('Готовый\nответ')}>Подставить комментарий</button>
+      </section>
+      <section aria-label="Маска ввода">
+        <MaskedInput label="Код с маской" mask="99-7-999" value={code} onChange={setCode} />
+        <output aria-label="Значение кода">{code}</output>
+        <button type="button" onClick={() => setCode('67-7-890')}>Подставить код</button>
       </section>
       <section aria-label="Поля времени">
         <TimeField label="Время с секундами" seconds size="l" notBefore="10:20:30" value={seconds} onChange={setSeconds} />

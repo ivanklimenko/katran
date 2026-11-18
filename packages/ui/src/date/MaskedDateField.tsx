@@ -36,20 +36,28 @@ export function maskEdit(prev: string, raw: string, caret: number, inputType: st
 /** Поле с маской: `edit` из onChange даёт новый текст и запоминает курсор, эффект ставит его после перерисовки
  * (React пишет value заново, и браузер уводит курсор в конец). `inputRef` — на само `<input>`. */
 export function useMaskCaret() {
+  type Caret = number | ((text: string) => number | undefined)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const caret = useRef<number | null>(null)
+  const caret = useRef<Caret | null>(null)
+  const setCaret = useCallback((next: Caret) => {
+    caret.current = next
+  }, [])
   useLayoutEffect(() => {
     const el = inputRef.current
-    if (caret.current !== null && el !== null && el === document.activeElement) el.setSelectionRange(caret.current, caret.current)
+    const next = caret.current
+    if (next !== null && el !== null && el === document.activeElement) {
+      const position = typeof next === 'number' ? next : next(el.value)
+      if (position !== undefined) el.setSelectionRange(position, position)
+    }
     caret.current = null
   })
   const edit = useCallback((e: ChangeEvent<HTMLInputElement>, prev: string, format: MaskFormat): string => {
     const el = e.target
     const r = maskEdit(prev, el.value, el.selectionStart ?? el.value.length, (e.nativeEvent as Partial<InputEvent>).inputType ?? '', format)
-    caret.current = r.caret
+    setCaret(r.caret)
     return r.text
-  }, [])
-  return { inputRef, edit }
+  }, [setCaret])
+  return { inputRef, edit, setCaret }
 }
 
 export type MaskedDateFieldProps = {

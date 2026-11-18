@@ -157,6 +157,20 @@ function RegistryRanges() {
 
 Оба диапазона передают пустую границу как `null`. Если «От» больше «До», оба поля отмечаются ошибкой и значения сохраняются в исходном порядке. `AmountRange` форматирует суммы после ухода фокуса. `NumberRange` использует нативный числовой ввод с шагом.
 
+## Маска ввода
+
+```tsx
+import { useState } from 'react'
+import { MaskedInput } from '@katran/ui'
+
+function AccountNumber() {
+  const [value, setValue] = useState('')
+  return <MaskedInput label="Номер счёта" mask="99999 999 9 9999 9999999" value={value} onChange={setValue} />
+}
+```
+
+В `mask` символ `9` задаёт позицию ASCII-цифры. Остальные символы выводятся по мере заполнения. `onChange` передаёт введённый префикс с литералами. Приложение проверяет полноту ввода и при необходимости передаёт `invalid`.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx

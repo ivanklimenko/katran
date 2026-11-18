@@ -167,6 +167,47 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(textarea).toHaveValue('Готовый\nответ')
     })
 
+    test(`MaskedInput: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const code = page.getByRole('textbox', { name: 'Код с маской' })
+      const result = page.getByLabel('Значение кода')
+      const caret = (start: number, end = start) => code.evaluate(
+        (el, [from, to]) => (el as HTMLInputElement).setSelectionRange(from!, to!),
+        [start, end],
+      )
+
+      await code.focus()
+      await caret(1, 6)
+      await code.press('8')
+      await expect(result).toHaveText('18-7-45')
+      await expect(code).toHaveJSProperty('selectionStart', 2)
+
+      await caret(5)
+      await code.press('Backspace')
+      await expect(code).toHaveValue('14-7-5')
+      await expect(code).toHaveJSProperty('selectionStart', 1)
+
+      await caret(1)
+      await code.press('a')
+      await expect(code).toHaveValue('14-7-5')
+      await expect(code).toHaveJSProperty('selectionStart', 1)
+
+      await code.selectText()
+      await code.evaluate((el) => {
+        const data = new DataTransfer()
+        data.setData('text/plain', '90 / 123')
+        el.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }))
+      })
+      await expect(result).toHaveText('90-7-123')
+      await expect(code).toHaveJSProperty('selectionStart', 8)
+      await expect(code).not.toHaveAttribute('aria-invalid')
+
+      await page.getByRole('button', { name: 'Подставить код' }).click()
+      await expect(code).toHaveValue('67-7-890')
+      await code.fill('82-7-345')
+      await expect(result).toHaveText('82-7-345')
+    })
+
     test(`TimeField: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const field = page.getByRole('textbox', { name: 'Время с секундами' })

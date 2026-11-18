@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  AmountField, AmountRange, Button, Checkbox, DateInput, DateRange, Input, MultiSelect, NumberRange, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
+  AmountField, AmountRange, Button, Checkbox, DateInput, DateRange, Input, MaskedInput, MultiSelect, NumberRange, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
   type AmountRangeValue, type DateRangeValue, type DateValue, type NumberRangeValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
 } from '@katran/ui'
 import styled from 'styled-components'
@@ -359,6 +359,21 @@ function AmountsDemo() {
   )
 }
 
+function MaskedInputDemo() {
+  const [account, setAccount] = useState('40702 810 0 0000 0000000')
+
+  return (
+    <>
+      <H2>MaskedInput</H2>
+      <FieldRow>
+        <Field caption="Номер счёта" wide>
+          <MaskedInput label="Номер счёта" mask="99999 999 9 9999 9999999" value={account} onChange={setAccount} />
+        </Field>
+      </FieldRow>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -372,6 +387,7 @@ export function InputsPage() {
         <Input aria-label="Малое" size="s" placeholder="s" /><Input aria-label="Большое" size="l" placeholder="l" />
       </Row>
       <AmountsDemo />
+      <MaskedInputDemo />
       <TextareaDemo />
       <H2>Checkbox</H2>
       <Row>
