@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import { colors, contrastRatio, k, sizes } from '@katran/tokens'
-import { Button, Input } from '@katran/ui'
+import { Button, Input, Text } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 const Swatches = styled.div`
@@ -57,6 +57,14 @@ export function TokensPage() {
         {(['fs-h1', 'fs-1', 'fs-2', 'fs-3'] as const).map((k) => (
           <div key={k} style={{ fontSize: `var(--k-${k})` }}>--k-{k} · {sizes[k]} px · Платёжная инструкция MT202</div>
         ))}
+      </TypeRow>
+
+      <H2>Роли текста</H2>
+      <TypeRow>
+        <Text variant="subhead">Платёжные инструкции</Text>
+        <Text>Платёжная инструкция MT202 <Text variant="inline" weight="bold">проведена</Text>.</Text>
+        <Text variant="caption" tone="ink2">Дата валютирования</Text>
+        <Text variant="meta" tone="muted">Обновлено в 10:30</Text>
       </TypeRow>
 
       <H2>Плотность</H2>
