@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type DateValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type DateValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -22,6 +22,7 @@ function Primitives() {
   const [otherStatus, setOtherStatus] = useState<string | null>('draft')
   const [statusChanges, setStatusChanges] = useState(0)
   const [filter, setFilter] = useState<TripleStateValue>('unset')
+  const [amount, setAmount] = useState<number | null>(1000.5)
   const [filterChanges, setFilterChanges] = useState(0)
   const [seconds, setSeconds] = useState('')
   const [calendarDate, setCalendarDate] = useState<DateValue>('2026-09-15')
@@ -97,6 +98,11 @@ function Primitives() {
         />
         <TripleState label="Недоступный фильтр" icon="filter" hints={filterHints} value="off" onChange={setFilter} disabled />
         <output aria-label="Число переключений фильтра">{filterChanges}</output>
+      </section>
+      <section aria-label="Поле суммы">
+        <AmountField label="Сумма платежа" value={amount} onChange={setAmount} />
+        <button type="button" onClick={() => setAmount(1000.5)}>Подставить сумму</button>
+        <output aria-label="Числовое значение суммы">{String(amount)}</output>
       </section>
     </KatranProvider>
   )
