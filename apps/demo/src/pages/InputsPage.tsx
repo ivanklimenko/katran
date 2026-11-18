@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField,
-  type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar,
+  Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
+  type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
 } from '@katran/ui'
 import styled from 'styled-components'
 import { k } from '@katran/tokens'
@@ -315,6 +315,27 @@ function RadioGroupDemo() {
   )
 }
 
+const statusHints = { unset: 'Не задано', on: 'Включено', off: 'Выключено' }
+const filterLabels = ['Отложенные', 'Экспортированные', 'Отклонённые']
+
+function TripleStateDemo() {
+  const [states, setStates] = useState<TripleStateValue[]>(['unset', 'on', 'off'])
+
+  return (
+    <>
+      <H2>TripleState</H2>
+      <Row>
+        {states.map((value, index) => (
+          <TripleState
+            key={filterLabels[index]} label={filterLabels[index]!} icon="filter" hints={statusHints} value={value}
+            onChange={(next) => setStates((previous) => previous.map((state, i) => i === index ? next : state))}
+          />
+        ))}
+      </Row>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -334,6 +355,7 @@ export function InputsPage() {
         <Checkbox label="Отложенные" defaultChecked /><Checkbox label="Недоступно" disabled />
       </Row>
       <RadioGroupDemo />
+      <TripleStateDemo />
       <H2>Select</H2>
       <Row>
         <Select aria-label="Тип сообщения" placeholder="Тип" options={['MT103', 'MT202', 'MT202COV', 'MT199'].map((v) => ({ value: v, label: v }))} />

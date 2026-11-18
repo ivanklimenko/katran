@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, type DateValue, type RadioOption } from '@katran/ui'
+import { Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type DateValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -13,12 +13,16 @@ const radioOptions: RadioOption[] = [
   { value: 'ready', label: 'Готов' },
 ]
 
+const filterHints = { unset: 'Не задано', on: 'Включено', off: 'Выключено' }
+
 function Primitives() {
   const [clicks, setClicks] = useState(0)
   const [comment, setComment] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [otherStatus, setOtherStatus] = useState<string | null>('draft')
   const [statusChanges, setStatusChanges] = useState(0)
+  const [filter, setFilter] = useState<TripleStateValue>('unset')
+  const [filterChanges, setFilterChanges] = useState(0)
   const [seconds, setSeconds] = useState('')
   const [calendarDate, setCalendarDate] = useState<DateValue>('2026-09-15')
 
@@ -84,6 +88,15 @@ function Primitives() {
         <button type="button">После цепочки</button>
         <p id="registries-target">Раздел реестров</p>
         <p id="payments-target">Раздел платежей</p>
+      </section>
+      <section aria-label="Фильтр с тремя положениями">
+        <button type="button">Перед фильтром</button>
+        <TripleState
+          label="Фильтр по статусу" icon="filter" hints={filterHints} value={filter}
+          onChange={(next) => { setFilter(next); setFilterChanges((count) => count + 1) }}
+        />
+        <TripleState label="Недоступный фильтр" icon="filter" hints={filterHints} value="off" onChange={setFilter} disabled />
+        <output aria-label="Число переключений фильтра">{filterChanges}</output>
       </section>
     </KatranProvider>
   )

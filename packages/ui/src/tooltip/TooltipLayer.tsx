@@ -41,22 +41,51 @@ export function TooltipLayer({ root }: Props) {
     const host = root.current
     if (!host) return
 
-    const hide = () => {
+    const descriptionIds = (el: HTMLElement): string[] => el.getAttribute('aria-describedby')?.match(/\S+/g) ?? []
+    const removeTipId = (el: HTMLElement, ids = descriptionIds(el)) => {
+      if (!ids.includes(id)) return
+      const remaining = ids.filter((descriptionId) => descriptionId !== id)
+      if (remaining.length > 0) el.setAttribute('aria-describedby', remaining.join(' '))
+      else el.removeAttribute('aria-describedby')
+    }
+
+    const updates = new MutationObserver(() => {
+      const el = current.current
+      if (el && shown.current) update(el)
+    })
+
+    function hide() {
       window.clearTimeout(timer.current)
-      current.current?.removeAttribute('aria-describedby')
+      updates.disconnect()
+      if (current.current) removeTipId(current.current)
       current.current = null
       shown.current = false
       setState(null)
     }
+
+    function update(el: HTMLElement) {
+      const text = el.dataset.kTip
+      if (text === undefined) {
+        hide()
+        return
+      }
+      const ids = descriptionIds(el)
+      // Таким целям тот же текст уже даёт постоянное описание.
+      if (el.hasAttribute('data-k-tip-described')) removeTipId(el, ids)
+      else if (!ids.includes(id)) el.setAttribute('aria-describedby', [...ids, id].join(' '))
+
+      setState((previous) => previous?.el === el && previous.text === text ? previous : { el, text })
+    }
+
     const show = (el: HTMLElement) => {
       if (current.current === el) return
       hide()
       if (!wants(el)) return
       current.current = el
       timer.current = window.setTimeout(() => {
-        el.setAttribute('aria-describedby', id)
         shown.current = true
-        setState({ el, text: el.dataset.kTip ?? '' })
+        updates.observe(el, { attributes: true, attributeFilter: ['data-k-tip', 'data-k-tip-described', 'aria-describedby'] })
+        update(el)
       }, durations.base)
     }
     const onOver = (e: Event) => { const t = findTarget(e); if (t) show(t) }
