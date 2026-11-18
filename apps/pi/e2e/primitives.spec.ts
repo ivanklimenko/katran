@@ -1,4 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { contrastRatio, sizes } from '@katran/tokens'
+
+function rgbToHex(color: string): string {
+  const channels = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(color)
+  if (!channels) throw new Error(`Неожиданный формат цвета: ${color}`)
+  return '#' + channels.slice(1).map((channel) => Number(channel).toString(16).padStart(2, '0')).join('')
+}
 
 for (const theme of ['light', 'dark'] as const) {
   for (const density of [1, 1.25] as const) {
@@ -36,6 +43,30 @@ for (const theme of ['light', 'dark'] as const) {
       const ringBox = (await ring.boundingBox())!
       expect(ringBox.x + ringBox.width / 2).toBeCloseTo(panelBox.x + panelBox.width / 2, 1)
       expect(ringBox.y + ringBox.height / 2).toBeCloseTo(panelBox.y + panelBox.height / 2, 1)
+    })
+
+    test(`Text: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const section = page.getByTestId('text-samples')
+      const background = await section.evaluate((element) => getComputedStyle(element).backgroundColor)
+      const roles = [
+        ['body', 'p', 'fs-1', 'lh-1', '400'],
+        ['subhead', 'h2', 'fs-h2', 'lh-1', '500'],
+        ['caption', 'span', 'fs-2', 'lh-2', '400'],
+        ['meta', 'span', 'fs-3', 'lh-3', '400'],
+        ['inline', 'span', 'fs-1', 'lh-1', '700'],
+      ] as const
+      for (const [role, tag, size, height, weight] of roles) {
+        const text = section.locator(`:scope > ${tag}[data-variant="${role}"]`)
+        await expect(text).toHaveCSS('font-family', /IBM Plex Sans/)
+        await expect(text).toHaveCSS('font-size', `${sizes[size] * density}px`)
+        await expect(text).toHaveCSS('line-height', `${sizes[height] * density}px`)
+        await expect(text).toHaveCSS('font-weight', weight)
+        const color = await text.evaluate((element) => getComputedStyle(element).color)
+        expect(contrastRatio(rgbToHex(color), rgbToHex(background))).toBeGreaterThanOrEqual(4.5)
+      }
+      await expect(section.locator('p > span[data-variant="subhead"]')).toHaveText('Внутри абзаца')
+      await expect(section.locator('p p, p h2')).toHaveCount(0)
     })
   }
 }
