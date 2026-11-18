@@ -20,7 +20,8 @@ export const declarations: {
 --k-t-sk-show: 200ms;
 --k-t-sk-min: 400ms;
 --k-t-drawer: 180ms;
---k-t-open-delay: 220ms;`,
+--k-t-open-delay: 220ms;
+--k-t-spin: 800ms;`,
   sizes: `--k-fs-1: calc(12.5px * var(--k-density));
 --k-fs-2: calc(11px * var(--k-density));
 --k-fs-3: calc(10.5px * var(--k-density));

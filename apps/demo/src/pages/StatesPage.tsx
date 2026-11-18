@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Banner, Button, EmptyState, ErrorState, ProgressBar, Skeleton, dimClass, useLoadingGate } from '@katran/ui'
+import { k } from '@katran/tokens'
+import { Banner, Button, EmptyState, ErrorState, ProgressBar, Skeleton, Spinner, dimClass, useLoadingGate } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 export function StatesPage() {
@@ -17,6 +18,16 @@ export function StatesPage() {
       </Row>
       <H2>Прогресс обновления</H2>
       <Row style={{ display: 'block', padding: 0 }}><ProgressBar label="Обновление данных" /></Row>
+      <H2>Spinner</H2>
+      <Row>
+        <Spinner size="s" label="Загрузка S" />
+        <Spinner label="Загрузка M" />
+        <Spinner size="l" label="Загрузка L" />
+        <Button disabled aria-label="Сохранение"><Spinner size="s" label="Сохранение" /></Button>
+      </Row>
+      <Row style={{ display: 'block', height: k.sp8 }}>
+        <Spinner block label="Загрузка панели" />
+      </Row>
       <H2>Пусто и ошибка</H2>
       <Row><EmptyState title="По заданным условиям документов нет" action={{ label: 'Сбросить фильтр', onClick: () => {} }} /></Row>
       <Row><ErrorState title="Не удалось загрузить реестр" text="Сервис не ответил за 10 с" retry={() => {}} /></Row>

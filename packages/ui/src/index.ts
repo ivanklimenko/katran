@@ -1,6 +1,7 @@
 export * from './provider'
 export { useStableId } from './compat/useStableId'
 export * from './button'
+export * from './icon'
 export * from './input'
 export * from './format'
 export * from './date'

@@ -1,4 +1,5 @@
 export { Skeleton, dimClass } from './Skeleton'
+export { Spinner, type SpinnerProps } from './Spinner'
 export { ProgressBar } from './ProgressBar'
 export { EmptyState, type EmptyStateProps } from './EmptyState'
 export { ErrorState, type ErrorStateProps } from './ErrorState'
