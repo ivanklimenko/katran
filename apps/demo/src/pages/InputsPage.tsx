@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  AmountField, Button, Checkbox, DateInput, DateRange, Input, MultiSelect, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
-  type DateRangeValue, type DateValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
+  AmountField, AmountRange, Button, Checkbox, DateInput, DateRange, Input, MultiSelect, NumberRange, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
+  type AmountRangeValue, type DateRangeValue, type DateValue, type NumberRangeValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
 } from '@katran/ui'
 import styled from 'styled-components'
 import { k } from '@katran/tokens'
@@ -336,15 +336,23 @@ function TripleStateDemo() {
   )
 }
 
-function AmountFieldDemo() {
+function AmountsDemo() {
   const [amount, setAmount] = useState<number | null>(1000.5)
+  const [limits, setLimits] = useState<AmountRangeValue>({ from: -1000.5, to: 2500 })
+  const [count, setCount] = useState<NumberRangeValue>({ from: 1000.5, to: 2500 })
 
   return (
     <>
-      <H2>AmountField</H2>
+      <H2>Сумма и диапазоны</H2>
       <FieldRow>
         <Field caption="Сумма платежа">
           <AmountField label="Сумма платежа" value={amount} onChange={setAmount} placeholder="0.00" />
+        </Field>
+        <Field caption="Диапазон суммы">
+          <AmountRange label="Диапазон суммы" value={limits} onChange={setLimits} />
+        </Field>
+        <Field caption="Диапазон числа">
+          <NumberRange label="Диапазон числа" value={count} onChange={setCount} step={0.5} />
         </Field>
       </FieldRow>
     </>
@@ -363,7 +371,7 @@ export function InputsPage() {
         <Input aria-label="Номер" defaultValue="A1B2C3" invalid />
         <Input aria-label="Малое" size="s" placeholder="s" /><Input aria-label="Большое" size="l" placeholder="l" />
       </Row>
-      <AmountFieldDemo />
+      <AmountsDemo />
       <TextareaDemo />
       <H2>Checkbox</H2>
       <Row>

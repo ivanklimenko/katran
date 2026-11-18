@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type DateValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -23,6 +23,8 @@ function Primitives() {
   const [statusChanges, setStatusChanges] = useState(0)
   const [filter, setFilter] = useState<TripleStateValue>('unset')
   const [amount, setAmount] = useState<number | null>(1000.5)
+  const [amountRange, setAmountRange] = useState<AmountRangeValue>({ from: -1000.5, to: 2500 })
+  const [numberRange, setNumberRange] = useState<NumberRangeValue>({ from: 1000.5, to: 2500 })
   const [filterChanges, setFilterChanges] = useState(0)
   const [seconds, setSeconds] = useState('')
   const [calendarDate, setCalendarDate] = useState<DateValue>('2026-09-15')
@@ -103,6 +105,12 @@ function Primitives() {
         <AmountField label="Сумма платежа" value={amount} onChange={setAmount} />
         <button type="button" onClick={() => setAmount(1000.5)}>Подставить сумму</button>
         <output aria-label="Числовое значение суммы">{String(amount)}</output>
+      </section>
+      <section aria-label="Диапазоны">
+        <AmountRange label="Диапазон суммы" value={amountRange} onChange={setAmountRange} />
+        <output aria-label="Границы суммы">{JSON.stringify(amountRange)}</output>
+        <NumberRange label="Диапазон числа" value={numberRange} onChange={setNumberRange} step={0.5} />
+        <output aria-label="Границы числа">{JSON.stringify(numberRange)}</output>
       </section>
     </KatranProvider>
   )
