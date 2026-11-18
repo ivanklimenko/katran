@@ -23,7 +23,7 @@ describe('Breadcrumbs', () => {
     expect(nav).toHaveClass('extra')
     expect(list.tagName).toBe('OL')
     expect(within(list).getAllByRole('listitem')).toHaveLength(3)
-    expect(within(nav).getByRole('link', { name: 'Главная', exact: true })).toHaveAttribute('href', '/')
+    expect(within(nav).getByRole('link', { name: 'Главная' })).toHaveAttribute('href', '/')
     expect(within(nav).getByText('Платежи')).toHaveAttribute('aria-current', 'page')
     const separators = within(nav).getAllByText('/', { exact: true })
     expect(separators).toHaveLength(2)
@@ -41,7 +41,7 @@ describe('Breadcrumbs', () => {
 
     expect(screen.getByRole('link', { name: 'Реестры' })).not.toHaveAttribute('aria-current')
     expect(screen.queryByRole('link', { name: 'Входящие' })).not.toBeInTheDocument()
-    const current = screen.getByRole('link', { name: 'Платежи', exact: true })
+    const current = screen.getByRole('link', { name: 'Платежи' })
     expect(current).toHaveAttribute('href', '/payments')
     expect(current).toHaveAttribute('aria-current', 'page')
   })
