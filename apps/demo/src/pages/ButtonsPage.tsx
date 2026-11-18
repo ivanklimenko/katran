@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import { k } from '@katran/tokens'
-import { Button, ButtonLink, Icon, IconButton, Link, Text, type IconName } from '@katran/ui'
+import { Breadcrumbs, Button, ButtonLink, Icon, IconButton, Link, Text, type IconName } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 const Gear = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M3 13l1.5-1.5M11.5 4.5 13 3" /></svg>
@@ -50,6 +50,14 @@ export function ButtonsPage() {
       </Row>
       <Text>Настройки оформления собраны на странице <Link href="#/tokens">«Токены»</Link>.</Text>
       <Text variant="caption" tone="ink2">См. также <Link href="#/states">состояния загрузки</Link>.</Text>
+      <H2>Навигационная цепочка</H2>
+      <Row>
+        <Breadcrumbs items={[
+          { label: 'Токены', href: '#/tokens' },
+          { label: 'Значения', href: '#/values' },
+          { label: 'Кнопки' },
+        ]} />
+      </Row>
       <H2>Иконки</H2>
       <Row>
         <IconButton label="Настройки"><Gear /></IconButton>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, type DateValue, type RadioOption } from '@katran/ui'
+import { Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, RadioGroup, Spinner, Text, Textarea, TimeField, type DateValue, type RadioOption } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -73,6 +73,17 @@ function Primitives() {
         <RadioGroup label="Другой статус" name="other-status" value={otherStatus} options={radioOptions} onChange={setOtherStatus} />
         <RadioGroup label="Недоступный статус" name="archived-status" value="ready" options={radioOptions} onChange={changeStatus} disabled />
         <output aria-label="Число смен статуса">{statusChanges}</output>
+      </section>
+      <section aria-label="Пример навигационной цепочки">
+        <button type="button">Перед цепочкой</button>
+        <Breadcrumbs items={[
+          { label: 'Реестры', href: '#registries-target' },
+          { label: 'Входящие' },
+          { label: 'Платежи', href: '#payments-target' },
+        ]} />
+        <button type="button">После цепочки</button>
+        <p id="registries-target">Раздел реестров</p>
+        <p id="payments-target">Раздел платежей</p>
       </section>
     </KatranProvider>
   )

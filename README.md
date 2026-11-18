@@ -93,6 +93,18 @@ function CutoffTime() {
 
 По умолчанию `TimeField` принимает часы и минуты. При `seconds` значение и нижняя граница используют формат `чч:мм:сс`.
 
+## Навигационная цепочка
+
+```tsx
+import { Breadcrumbs } from '@katran/ui'
+
+function PaymentBreadcrumbs() {
+  return <Breadcrumbs items={[{ label: 'Реестры', href: '/registries' }, { label: 'Платежи' }]} />
+}
+```
+
+Breadcrumbs помечает последний пункт атрибутом `aria-current="page"` и сохраняет его ссылку, если передан `href`.
+
 ## Многострочное поле и радиокнопки
 
 ```tsx
