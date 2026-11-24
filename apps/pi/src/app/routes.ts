@@ -1,17 +1,20 @@
 import type { PageLifecycle } from '../shared/lib/lifecycle'
 import { docLinkOpened as fxDocLink, lifecycle as fxDocs } from '../pages/fx-docs'
 import { docLinkOpened as rubDocLink, lifecycle as rubDocs } from '../pages/rub-docs'
+import { docLinkOpened as nzrDocLink, lifecycle as nzrReport } from '../pages/nzr-report'
 
 /** Hash-роутер стенда. Внутри вместо него — адаптер к роутеру хоста: на вход экрана pageOpened, на уход pageClosed. */
-export type Route = 'fx-docs' | 'rub-docs'
+export type Route = 'fx-docs' | 'rub-docs' | 'nzr-report'
 export const routes: { id: Route; title: string }[] = [
   { id: 'fx-docs', title: 'Валютные документы' },
   { id: 'rub-docs', title: 'Рублёвые документы' },
+  { id: 'nzr-report', title: 'Отчёт НЗР' },
 ]
 /** Экран маршрута: жизненный цикл и вход по ссылке на документ (?doc=). */
 const screens: Record<Route, { lifecycle: PageLifecycle; docLinkOpened: (id: string) => void }> = {
   'fx-docs': { lifecycle: fxDocs, docLinkOpened: fxDocLink },
   'rub-docs': { lifecycle: rubDocs, docLinkOpened: rubDocLink },
+  'nzr-report': { lifecycle: nzrReport, docLinkOpened: nzrDocLink },
 }
 
 /** Маршрут — hash до «?»: хвост #/rub-docs?x не мешает (регуляторы стенда читаются из location.search, не из hash). */
