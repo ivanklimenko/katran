@@ -1,11 +1,15 @@
+import { configureNzrAccountSets, configureNzrPorts, nzrDemoPorts } from '../pages/nzr-report'
 import { requestFileFx, requestFx } from '../shared/api'
 import { configureHostLinks } from '../shared/lib/host-links'
 import { browserFakeOptions } from './fake/params'
 import { createFakeServer } from './fake/server'
 import { createFakeFileServer } from './fake/files'
 import { fakeGrids } from './fake/grids'
+import { demoNzrAccountSets } from './fake/nzr-account-sets'
 
 /** Единственная точка подключения транспорта. Внутри здесь — свой клиент: docs/guides/pi-usage.md. */
+configureNzrPorts(nzrDemoPorts)
+configureNzrAccountSets(demoNzrAccountSets)
 requestFx.use(createFakeServer(fakeGrids, browserFakeOptions))
 requestFileFx.use(createFakeFileServer(fakeGrids, {
   delayMs: browserFakeOptions.delayMs,

@@ -14,7 +14,7 @@ export type FxDoc = {
   created: string; vdDt: string; vdKt: string
   type: (typeof FX_TYPES)[number]
   direction: Direction; dirTxt: string
-  amount: number; currency: (typeof CURRENCIES)[number]
+  amount: number; currency: string
   f50name: string; f50acc: string; purpose: string | null
   f52: string; f57: string; f59name: string; f59acc: string
   status: Status; reason: string | null
