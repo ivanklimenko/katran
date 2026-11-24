@@ -7,3 +7,4 @@ export { TripleState, type TripleStateProps, type TripleStateValue } from './Tri
 export { AmountField, type AmountFieldProps } from './AmountField'
 export { AmountRange, type AmountBound, type AmountRangeProps, type AmountRangeValue } from './AmountRange'
 export { NumberRange, type NumberRangeProps, type NumberRangeValue } from './NumberRange'
+export { MaskedInput, type MaskedInputProps } from './MaskedInput'
