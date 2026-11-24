@@ -184,6 +184,41 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(textarea).toHaveValue('Готовый\nответ')
     })
 
+    test(`Slider: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const slider = page.getByRole('slider', { name: 'Объём', exact: true })
+      const root = slider.locator('..')
+      await expect(slider).toHaveValue('0.5')
+      await expect(page.getByLabel('Значение слайдера')).toHaveText('0.5')
+      await expect(slider).toHaveCSS('height', `${sizes['icon-m'] * density}px`)
+
+      await page.getByRole('button', { name: 'Перед слайдером' }).focus()
+      await page.keyboard.press('Tab')
+      await expect(slider).toBeFocused()
+      const outline = await slider.evaluate((element) => getComputedStyle(element).outlineColor)
+      expect(rgbToHex(outline)).toBe(colors[theme].val.toLowerCase())
+      await expect(slider).toHaveCSS('outline-style', 'solid')
+      await expect(slider).toHaveCSS('outline-width', '2px')
+
+      await page.keyboard.press('ArrowLeft')
+      await expect(slider).toHaveValue('0.3')
+      await expect(page.getByLabel('Значение слайдера')).toHaveText('0.3')
+      await expect(root).toHaveCSS('--k-slider', '22.2222%')
+      await page.keyboard.press('End')
+      await expect(slider).toHaveValue('0.9')
+      await page.keyboard.press('ArrowRight')
+      await expect(page.getByLabel('Значение слайдера')).toHaveText('0.9')
+
+      await expect(page.getByRole('slider', { name: 'Недоступный объём' })).toBeDisabled()
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('button', { name: 'После слайдера' })).toBeFocused()
+
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('slider', { name: 'Вычисленный шаг' })).toBeFocused()
+      await page.keyboard.press('ArrowRight')
+      await expect(page.getByLabel('Число изменений вычисленного шага')).toHaveText('1')
+    })
+
     test(`MaskedInput: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const code = page.getByRole('textbox', { name: 'Код с маской' })

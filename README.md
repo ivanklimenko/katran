@@ -157,6 +157,20 @@ function RegistryRanges() {
 
 Оба диапазона передают пустую границу как `null`. Если «От» больше «До», оба поля отмечаются ошибкой и значения сохраняются в исходном порядке. `AmountRange` форматирует суммы после ухода фокуса. `NumberRange` использует нативный числовой ввод с шагом.
 
+## Слайдер
+
+```tsx
+import { useState } from 'react'
+import { Slider } from '@katran/ui'
+
+function ProgressSetting() {
+  const [progress, setProgress] = useState(40)
+  return <Slider label="Готовность, %" min={0} max={100} value={progress} onChange={setProgress} />
+}
+```
+
+Шкала округляет значение до ближайшего доступного шага от `min`. Если переданное значение пришлось скорректировать, `onChange` получает результат один раз. Стрелки работают как у нативного поля.
+
 ## Подсветка совпадений
 
 ```tsx
