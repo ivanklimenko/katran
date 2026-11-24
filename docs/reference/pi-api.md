@@ -451,11 +451,11 @@ RFC 9457 Problem Details, как в контракте `filters-contract` §8: `
 | `created` | строка ISO 8601 (дата-время) | да | `"2026-09-23T10:49:12"` |
 | `vdDt` | строка ISO 8601 (дата) — дата валютирования дебета | да | `"2026-09-23"` |
 | `vdKt` | строка ISO 8601 (дата) — дата валютирования кредита | да | `"2026-09-23"` |
-| `type` | одно из `MT103`, `MT202`, `MT202COV`, `MT199` | да | `"MT103"` |
+| `type` | одно из `MT103`, `MT202`, `MT202COV`, `MT199`, `InternalPAYDOCVAL` | да | `"MT103"` |
 | `direction` | одно из `IN`, `OUT`, `TRANSIT`, `OTHER` | да | `"IN"` |
 | `dirTxt` | строка — подпись направления | да | `"Входящий от ЦБ"` |
 | `amount` | число | да | `1234567.89` |
-| `currency` | одно из `USD`, `EUR`, `CNY`, `RUB` | да | `"USD"` |
+| `currency` | одно из `USD`, `EUR`, `CNY`, `RUB`, `BYN`, `AMD`, `KZT` | да | `"USD"` |
 | `f50name` | строка — наименование приказодателя (поле 50) | да | `"ООО «Северный ветер»"` |
 | `f50acc` | строка — счёт приказодателя | да | `"40702840012345678901"` |
 | `purpose` | строка или `null` | да (может быть `null`) | `"Оплата по договору № 4021 от 03.09.2026, без НДС"` |
@@ -463,7 +463,7 @@ RFC 9457 Problem Details, как в контракте `filters-contract` §8: `
 | `f57` | строка — BIC поля 57 | да | `"NRDIRUMMXXX"` |
 | `f59name` | строка — наименование бенефициара (поле 59) | да | `"АО «Прибой»"` |
 | `f59acc` | строка — счёт бенефициара | да | `"40702840098765432109"` |
-| `status` | одно из значений `Status` (раздел 5.3) | да | `"IN_PROGRESS"` |
+| `status` | одно из значений `Status` (раздел 5.3) или `PENDING` | да | `"IN_PROGRESS"` |
 | `reason` | строка или `null` — причина статуса (`ERROR`/`DEFERRED`/`REJECTED`) | да (может быть `null`) | `"Не найден счёт получателя"` |
 | `sender` | строка — BIC отправителя | да | `"VKRBRU8KXXX"` |
 | `receiver` | строка — BIC получателя | да | `"HSTBDEHHXXX"` |
@@ -479,7 +479,7 @@ RFC 9457 Problem Details, как в контракте `filters-contract` §8: `
 | `f58name` | строка или `null` — наименование банка поля 58 | да (может быть `null`) | `null` |
 | `outSender` | строка — S out | да | `"NRDIRUMMXXX"` |
 | `outReceiver` | строка — R out | да | `"VKRBRU8KXXX"` |
-| `routeType` | одно из `LORO`, `NOSTRO`, `INTERNAL` | да | `"NOSTRO"` |
+| `routeType` | одно из `LORO`, `NOSTRO`, `INTERNAL` или `null` при отсутствии маршрута | да | `"NOSTRO"` |
 | `routeRecv` | строка — BIC получателя по маршруту | да | `"HSTBDEHHXXX"` |
 | `routeAcc` | строка — балансовый счёт маршрута | да | `"301108100123451000432"` |
 
@@ -623,16 +623,19 @@ POST /grids/fx-docs/facets
     "docStatus": { "mode": "INLINE", "items": [
       { "value": "IN_PROGRESS", "label": "В работе" }, { "value": "TO_EXPORT", "label": "К экспорту" }, { "value": "PROCESSING", "label": "В обработке" },
       { "value": "ERROR", "label": "Ошибка" }, { "value": "DEFERRED", "label": "Отложенный" }, { "value": "EXPORTED", "label": "Экспортирован" },
-      { "value": "INVALID", "label": "INVALID" }, { "value": "REJECTED", "label": "Отказ" }, { "value": "DONE", "label": "Обработан" }
+      { "value": "INVALID", "label": "INVALID" }, { "value": "REJECTED", "label": "Отказ" }, { "value": "DONE", "label": "Обработан" },
+      { "value": "PENDING", "label": "Ожидает обработки" }
     ] },
     "fxType": { "mode": "INLINE", "items": [
-      { "value": "MT103", "label": "MT103" }, { "value": "MT202", "label": "MT202" }, { "value": "MT202COV", "label": "MT202COV" }, { "value": "MT199", "label": "MT199" }
+      { "value": "MT103", "label": "MT103" }, { "value": "MT202", "label": "MT202" }, { "value": "MT202COV", "label": "MT202COV" }, { "value": "MT199", "label": "MT199" },
+      { "value": "InternalPAYDOCVAL", "label": "InternalPAYDOCVAL" }
     ] },
     "direction": { "mode": "INLINE", "items": [
       { "value": "IN", "label": "IN" }, { "value": "OUT", "label": "OUT" }, { "value": "TRANSIT", "label": "TRANSIT" }, { "value": "OTHER", "label": "OTHER" }
     ] },
     "currency": { "mode": "INLINE", "items": [
-      { "value": "USD", "label": "USD" }, { "value": "EUR", "label": "EUR" }, { "value": "CNY", "label": "CNY" }, { "value": "RUB", "label": "RUB" }
+      { "value": "USD", "label": "USD" }, { "value": "EUR", "label": "EUR" }, { "value": "CNY", "label": "CNY" }, { "value": "RUB", "label": "RUB" },
+      { "value": "BYN", "label": "BYN" }, { "value": "AMD", "label": "AMD" }, { "value": "KZT", "label": "KZT" }
     ] }
   }
 }
@@ -852,7 +855,7 @@ POST /grids/fx-docs/suggest
 | Поле | Тип | Обязательно | Пример |
 |---|---|---|---|
 | `numDate` | строка ISO 8601 (дата) — дата документа («№ 812345 от 23.09.2026») | да | `"2026-09-23"` |
-| `valueDates` | массив ровно из 4 дат ISO 8601: вх, исх, по Дт, по Кт | да | `["2026-09-23", "2026-09-23", "2026-09-23", "2026-09-23"]` |
+| `valueDates` | массив из 4 строк: вх, исх, по Дт, по Кт. Известная дата — ISO 8601, отсутствующая — `""` | да | `["2026-09-23", "2026-09-23", "2026-09-23", "2026-09-23"]` |
 | `fields` | объект «тег SWIFT-поля → значение»; значение — `{ opt?: string; acc?: string; lines: string[] }` (буква опции, счёт у полей 50/59, строки поля) | да (может быть `{}`) | `{ "50": { "opt": "F", "acc": "40817840500010042371", "lines": ["LAVRENTIEV DMITRY OLEGOVICH", "…"] } }` |
 | `inSender` | строка — BIC отправителя входящего сообщения, или `null` — входящего нет | да (может быть `null`) | `"NRDIRUMMXXX"` |
 | `inReceiver` | строка — BIC получателя входящего, или `null` | да (может быть `null`) | `"VKRBRU8KXXX"` |
@@ -875,6 +878,14 @@ POST /grids/fx-docs/suggest
 - `lines: []` или отсутствие ключа — поле не заполнено. `opt: ""` и `acc: ""` фронт трактует как отсутствие (у поля 59 опция без буквы допустима).
 - Поле 32A в `fields` не нужно: сумма и валюта сводки берутся из строки (`amount`, `currency`), даты валютирования — из `valueDates`.
 
+**Внутренняя валютная инструкция.** Для `type: "InternalPAYDOCVAL"` плоский DTO содержит `internalPayment: { reference, initialReference, valueDate, payer, payee }`. Референсы — строки или `null`, дата — ISO 8601 или пустая строка. Каждая сторона — объект `{ name, account, bankName, bankBic }` со строками или `null`. В «Общих данных» отображаются обычные реквизиты, назначение и доступные проводки. Сетка SWIFT и правка полей для этого профиля отсутствуют.
+
+**Адаптер валютной инструкции.** Для MT103, MT202 и InternalPAYDOCVAL парсеры также принимают объект инструкции с `documentSection` на верхнем уровне. Грид и деталь используют одну проекцию строки. Нормализованные `direction/dirTxt` из API приоритетны. Для сырой инструкции `lastRouteDirection.group` задаёт код (`INCOMING → IN`, `OUTGOING → OUT`, `TRANSIT → TRANSIT`, `OTHER → OTHER`), а `lastRouteDirection.name` — подпись. MT103 переносит входящий и исходящий тег 20 в отдельные реквизиты. Для остальных тегов используются входящие структурированные поля. Если входящий блок пуст, используются исходящие. Если нормализованный маршрут не передан, сырые результаты маршрутизации не подставляются автоматически. Дата исходящего, дата Кт и время проведения остаются пустыми при отсутствии источника.
+
+**MT202 из выгрузки.** В четырёх записях (две верхнеуровневые и две дочерние) отсутствует тело SWIFT. Сводка использует референсы из `swiftHeader.docReference` и `swiftHeader.initialDocRef` с подписями инструкции при отсутствии соответствующих SWIFT-реквизитов. `refOut` берётся из исходящего тега 20. `mainEntityInfo.docReferenceOut` отображается отдельно как референс исходящей инструкции, если тег 20 отсутствует. `documentSection.valueDate` хранится отдельно от четырёх дат `valueDates`. Для направления применяется общая нормализация. В трёх записях `lastRouteDirection.group=OUTGOING` при `incoming=true`.
+
+Плоский DTO MT202 может включать `mt202Instruction: { reference, outgoingReference, initialReference, valueDate, fallbackFields }`. Референсы — строки или `null`, дата — ISO 8601 или пустая строка. `fallbackFields` имеет форму `fields` и применяется для показа отсутствующих тегов. В выгрузке источники 52, 53, 57 и 58 — соответственно `payerPart.payerAgent`, `instructingReimbursementAgent`, `payeePart.payeeAgent` и `beneficiaryPart` из `transferTransactionInformation`. Для 72 источник — `remittanceInformation.senderToReceiverInformation`. Явные SWIFT-поля имеют приоритет. Реквизиты из инструкции доступны для просмотра.
+
 **`annul`** (общая форма `fx-docs` и `rub-docs`, срез 2e): `who`, `when`, `reason` — автор запроса, время и причина; `by`, `at` — кто и когда утвердил или отклонил (у `done` без второй руки — `null`, у `done` через утверждение — утвердивший); `rejectReason` — причина отклонения (только у `rejected`, иначе `null`); `canConfirm` — у `pending`: автор не текущий пользователь и есть право утверждать, иначе `false`. **Все ключи бек отдаёт всегда**; `canConfirm` фронт требует (нет ключа — ошибка `ответ.annul.canConfirm`), остальные необязательные читаются как `null`. Команды — раздел 1.11.
 
 **Проводка** (`txs[]`, общая форма `fx-docs` и `rub-docs`, `apps/pi/src/entities/posting/model/posting.ts`):
@@ -882,10 +893,10 @@ POST /grids/fx-docs/suggest
 | Поле | Тип | Обязательно | Пример |
 |---|---|---|---|
 | `dir` | одно из `DEBIT`, `CREDIT` | да | `"DEBIT"` |
-| `st` | одно из `EXECUTED`, `PENDING`, `CANCELED` | да | `"EXECUTED"` |
+| `st` | одно из `EXECUTED`, `PENDING`, `CANCELED` или `null`, если состояние неизвестно | да | `"EXECUTED"` |
 | `acc` | строка — счёт | да | `"30110840700000001842"` |
 | `reg` | строка — регистр учёта | да | `"00000_NostroUSD"` |
-| `time` | строка ISO 8601 (дата-время) — время проведения, или `null` — ещё не проведена | да (может быть `null`) | `"2026-09-23T07:52:22.730Z"` |
+| `time` | строка ISO 8601 (дата-время) — время проведения, или `null`, если время неизвестно | да (может быть `null`) | `"2026-09-23T07:52:22.730Z"` |
 | `amount` | число | да | `1500.5` |
 | `currency` | строка — код валюты | да | `"USD"` |
 

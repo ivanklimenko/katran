@@ -1,4 +1,4 @@
-import { fxDocLayout, fxEditableTargets, validateFxEdit, type FxDoc, type FxDocDetail } from '../../entities/fx-doc'
+import { FX_MAPPING_FIXTURES, FX_TABS, fxDocLayout, fxEditableTargets, fxMappingMode, parseFxDoc, validateFxEdit, type FxDoc, type FxDocDetail } from '../../entities/fx-doc'
 import type { EditValue } from '../../shared/api'
 import { standParam } from '../../shared/lib/stand'
 import { rubDocLayout } from '../../entities/rub-doc'
@@ -54,13 +54,20 @@ export const plainNotifOf = (fx: readonly FxDoc[]): { docId: string; nid: string
 export function createFakeGrids(): Record<string, FakeGrid> {
   // регулятор стенда ?docs=N (params.ts): размер обоих наборов, по умолчанию 87
   const docs = Number(standParam('docs')) || 87
-  const fx = makeFxDocs(docs)
+  const mapping = fxMappingMode()
+  const fx = mapping ? FX_MAPPING_FIXTURES.map((fixture) => parseFxDoc(fixture, 'фикстура')) : makeFxDocs(docs)
   const rub = makeRubDocs(docs)
   const { seedId, accKtSeedId } = editSeedIdsOf(fx)
   const fxAnnul = annulSeedsOf(fx, [seedId, accKtSeedId])
   const rubAnnul = annulSeedsOf(rub, [], 0)
   return {
-    'fx-docs': fakeGrid(fx, fxDocLayout.columns, fxDocsMeta, {
+    'fx-docs': mapping ? fakeGrid(fx, fxDocLayout.columns, fxDocsMeta, {
+      sortLabels: { status: STATUS_LABEL },
+      detail: (_, index) => ({
+        ...FX_MAPPING_FIXTURES[index],
+        tabsOff: FX_TABS.filter((tab) => tab.id !== 'main').map((tab) => tab.id),
+      }),
+    }) : fakeGrid(fx, fxDocLayout.columns, fxDocsMeta, {
       sortLabels: { status: STATUS_LABEL }, detail: makeFxDocDetail, tabs: { ids: FX_TRAIL_TABS, data: fxDocTrail },
       edits: createFxDocsEditStore(seedId, accKtSeedId),
       files: { message: (d) => ({ text: swiftMessage(d), ext: 'txt' }), forms: FX_PRINT_FORMS, print: pdfForm },

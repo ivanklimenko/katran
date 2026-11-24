@@ -12,6 +12,7 @@ export type ConfigFormProps = {
   /** Реестр полей по тегу без префикса «B.». */
   fields: Record<string, FieldDef>
   value: (tag: string) => FieldValue | null
+  fieldTip?: ((tag: string) => string | undefined) | undefined
   present?: FieldPresenter | undefined
   optionLabels?: Record<string, string> | undefined
   renderHero?: ((id: string) => HeroCell) | undefined
@@ -167,7 +168,7 @@ function mateGroups(parts: FormPart[]): string[][] {
  * Рендер «Общих данных» по схеме (спека 2a §3.1): сводка → блоки → поля (сетка пар, текст, extra) → последовательность B → секции.
  * Схема и реестр полей — данные приложения; ConfigForm не знает SWIFT.
  */
-export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit, className }: ConfigFormProps) {
+export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit, className, fieldTip }: ConfigFormProps) {
   const [open, setOpen] = useState<string[]>([])
   const [sections, setSections] = useState<Record<string, boolean>>({})
   const parts: FormPart[] = [schema, ...(schema.seqB ? [schema.seqB] : [])]
@@ -217,7 +218,7 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     const tag = tagOf(ref)
     return (
       <FieldRow key={tag} tag={tag} def={fields[baseOf(tag)]} value={value(tag)} present={present} optionLabels={optionLabels}
-        open={isOpen(tag)} onToggle={() => toggle(tag)} wide={wide}
+        open={isOpen(tag)} onToggle={() => toggle(tag)} wide={wide} sourceTip={fieldTip?.(tag)}
         editable={edit?.can(tag)} editing={edit?.editing === tag} onEdit={() => edit?.onEdit(tag)} edit={edit?.state(tag)} />
     )
   }
@@ -252,9 +253,10 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
         const tag = tagOf(r)
         const v = value(tag)
         const def = fields[baseOf(tag)]
+        const tip = fieldTip?.(tag)
         return (
-          <ExtraItem key={tag}>
-            <TagMark data-k-tip={def ? `${baseOf(tag)} · ${def.label}` : undefined}>{baseOf(tag)}</TagMark>
+          <ExtraItem key={tag} data-k-tip={tip}>
+            <TagMark data-k-tip={tip ?? (def ? `${baseOf(tag)} · ${def.label}` : undefined)}>{baseOf(tag)}</TagMark>
             {v === null || isEmptyValue(v)
               ? <None><span aria-hidden="true">—</span><Sr>не заполнено</Sr></None>
               : <ExtraVal>{v.lines.join(' ')}</ExtraVal>}
@@ -272,8 +274,8 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
             const c = renderHero(id)
             return (
               <HeroCellBox key={id} data-align={c.align}>
-                <HeroLabel data-k-tip={c.tip}>{c.label}</HeroLabel>
-                <HeroValue>{c.value}</HeroValue>
+                <HeroLabel data-k-tip={c.valueTip ?? c.tip}>{c.label}</HeroLabel>
+                <HeroValue data-k-tip={c.valueTip}>{c.value}</HeroValue>
               </HeroCellBox>
             )
           })}

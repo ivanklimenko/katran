@@ -72,6 +72,10 @@ export const FX_PROFILES: Record<FxDoc['type'], { title: string; schema: FormSch
     title: 'Свободный формат',
     schema: { hero: ['20', '21'], blocks: ['msgs'], fieldsTitle: 'Поля MT199', grid: [], text: ['79'] },
   },
+  InternalPAYDOCVAL: {
+    title: 'Внутренняя валютная инструкция',
+    schema: { hero: ['internalNumber', 'internalDate', 'internalAmount'], blocks: ['internal', 'tx'], grid: [] },
+  },
 }
 
 export const fxSchemaOf = (d: { type: FxDoc['type'] }): FormSchema => FX_PROFILES[d.type].schema
@@ -105,12 +109,18 @@ const BIC = /^[A-Z0-9]{8}([A-Z0-9]{3})?$/
  * Вид SWIFT-поля в строке (эталон cell() и full(), index.html:936, 941): главное — первая строка; справа — счёт или BIC
  * последней строкой; одиночный BIC — только справа; полный текст — «/счёт» и строки с номерами «1/ …».
  */
-export function swiftPresent(_tag: string, v: SwiftValue): FieldView {
+export function swiftPresent(tag: string, v: SwiftValue): FieldView {
   const lines = v.lines
-  const last = lines[lines.length - 1] ?? ''
-  let main = lines[0] ?? ''
-  let second = v.acc ?? (lines.length > 1 && BIC.test(last) ? last : '')
-  if (!v.acc && lines.length === 1 && BIC.test(main)) { second = main; main = '' }
-  const full = [...(v.acc ? [`/${v.acc}`] : []), ...lines.map((l, i) => `${i + 1}/ ${l}`)]
+  const bank = FX_FIELDS[tag.replace(/^B\./, '')]?.kind === 'bank'
+  const clearing = bank && lines[0]?.startsWith('//') ? lines[0] : undefined
+  const body = clearing ? lines.slice(1) : lines
+  const last = body[body.length - 1] ?? ''
+  let main = body[0] ?? ''
+  let second = v.acc ?? clearing ?? (body.length > 1 && BIC.test(last) ? last : '')
+  if (!v.acc && !clearing && body.length === 1 && BIC.test(main)) { second = main; main = '' }
+  const full = [
+    ...(v.acc ? [`/${v.acc}`] : []), ...(clearing ? [clearing] : []),
+    ...body.map((line, i) => v.opt === 'F' && /^\d\//.test(line) ? line : `${i + 1}/ ${line}`),
+  ]
   return { main, second, full }
 }

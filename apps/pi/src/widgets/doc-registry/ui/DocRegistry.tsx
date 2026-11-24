@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useFilters, useGrid } from '@katran/effector'
 import { BulkBar, Button, Counter, DataGrid, FilterPanel, StatusLane, useKatran, type RecordLayout, type RowState } from '@katran/ui'
 import { useUnit } from 'effector-react'
@@ -54,6 +54,7 @@ export type DocRegistryProps<Row> = {
   /** Для объявления открытия: «документ 812345». */
   describe: (row: Row) => string
   note?: string | undefined
+  headerActions?: ReactNode
   bulkActions?: BulkAction[] | undefined
   /** Заблокирована/неактивна (спека 5a §6, B1) — данные с бека, экран передаёт как есть. */
   rowState?: ((row: Row) => RowState) | undefined
@@ -64,7 +65,7 @@ export type DocRegistryProps<Row> = {
 }
 
 /** Экран реестра документов: заголовок, лейн статусов, панель фильтров, грид, полоса массовых действий. */
-export function DocRegistry<Row>({ registry, layout, title, describe, note, bulkActions = [], rowState, openHint, marked }: DocRegistryProps<Row>) {
+export function DocRegistry<Row>({ registry, layout, title, describe, note, headerActions, bulkActions = [], rowState, openHint, marked }: DocRegistryProps<Row>) {
   const g = useGrid(registry.grid)
   const f = useFilters(registry.filters)
   const openRequested = useUnit(registry.openRequested)
@@ -80,9 +81,10 @@ export function DocRegistry<Row>({ registry, layout, title, describe, note, bulk
       <Head>
         <H1>{title}{' '}<H1Counter><Counter value={g.total} /></H1Counter></H1>
         {note && <Note>{note}</Note>}
+        {headerActions}
         {/* Строка всегда на месте: появляясь, она сдвигала бы грид. Объявление — через announce (живая область провайдера), поэтому без role="status". */}
         <Note>{opened ?? 'Документ не открыт'}</Note>
-        <Lane><StatusLane label="Статусы" items={laneItems(g.facets, counted)} value={f.lane} onChange={f.setLane} /></Lane>
+        <Lane><StatusLane label="Статусы" items={laneItems(g.facets, counted, f.lane)} value={f.lane} onChange={f.setLane} /></Lane>
         <Filters>
           {f.meta
             ? <FilterPanel meta={f.meta} conditions={f.conditions} draft={f.draft} dirty={f.dirty} open={filtersOpen} onOpenChange={setFiltersOpen}

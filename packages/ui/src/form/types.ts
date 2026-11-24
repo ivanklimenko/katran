@@ -51,7 +51,7 @@ export type FormSchema = FormPart & {
 }
 
 /** Ячейка сводки: подпись (с подсказкой), значение, выравнивание суммы вправо. */
-export type HeroCell = { label: ReactNode; value: ReactNode; align?: 'right' | undefined; tip?: string | undefined }
+export type HeroCell = { label: ReactNode; value: ReactNode; align?: 'right' | undefined; tip?: string | undefined; valueTip?: string | undefined }
 
 /** Содержимое секции; null — секция без данных: бледный заголовок, не раскрывается (состав блоков не прыгает между документами). */
 export type SectionContent = { body: ReactNode; count?: number | undefined } | null

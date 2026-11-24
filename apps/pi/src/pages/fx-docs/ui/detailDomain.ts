@@ -20,3 +20,7 @@ const annulInfo = (d: FxDocDetail): AnnulInfo => ({
 export const fxDetailDomain: DetailDomain<FxDocDetail, FxDoc> = {
   ...fxDocDetailDomain, tabViews, decisionNote: fxDecisionNote, decisionFocus: fxDecisionFocus, annulInfo,
 }
+
+export const fxMappingDetailDomain: DetailDomain<FxDocDetail, FxDoc> = {
+  ...fxDetailDomain, actions: [], mappingResponse: (d) => d.mappingResponse,
+}

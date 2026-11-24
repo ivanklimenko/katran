@@ -167,7 +167,7 @@ describe('контракт детали fx-docs (спека 2a §6): порт �
   it('каждый тип MT разбирается маппером; у MT202COV есть последовательность B', async () => {
     const sc = scope()
     const rows = await firstRows(sc)
-    for (const t of FX_TYPES) {
+    for (const t of FX_TYPES.filter((type) => type !== 'InternalPAYDOCVAL')) {
       const row = rows.find((x) => x.type === t)
       expect(row, t).toBeDefined()
       if (!row) continue

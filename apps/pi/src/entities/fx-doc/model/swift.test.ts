@@ -48,3 +48,10 @@ describe('swiftPresent (эталон cell/full)', () => {
     expect(swiftPresent('53', { opt: 'A', lines: ['BCLHLV22XXX'] })).toMatchObject({ main: '', second: 'BCLHLV22XXX' })
   })
 })
+
+it('показывает // в тексте поля 72 как первую строку инструкции', () => {
+  expect(swiftPresent('72', { lines: ['//TEST INSTRUCTION', '/REC/ CONTINUED'] })).toMatchObject({
+    main: '//TEST INSTRUCTION',
+    second: '',
+  })
+})

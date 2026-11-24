@@ -33,6 +33,8 @@ export type DrawerProps = {
   overlay?: ReactNode | undefined
   /** keydown панели (обёртка во всю площадь внутри корня) — из любого её элемента (шапка, кнопка закрытия, содержимое, overlay); F5 деталки — спека 2d. */
   onKeyDown?: ((e: KeyboardEvent<HTMLElement>) => void) | undefined
+  /** Дополнительная панель в раскладке вызывающего. */
+  sidePanel?: ReactNode
   children?: ReactNode
   /** Класс корня панели. */
   className?: string | undefined
@@ -177,7 +179,7 @@ function restoreFocus(ref: ReturnRef) {
  * Корень не прокручивается: прокрутка — во внутреннем `data-part="scroll"` (метка слота, шапка, содержимое),
  * слой `overlay` — после него, поверх панели (спека 2c §2.1).
  */
-export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, children, className }: DrawerProps) {
+export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus = true, focusKey, badge, overlay, onKeyDown, sidePanel, children, className }: DrawerProps) {
   const head = useRef<HTMLHeadingElement>(null)
   const scroll = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -214,7 +216,7 @@ export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus 
   return (
     <Panel role="dialog" aria-label={label} data-k-drawer="" data-slot={badge?.tone} className={className}>
       {/* клавиши — на обёртке role="presentation" во всю панель (как подложка Prompt): keydown любого элемента панели всплывает сюда */}
-      <Keys role="presentation" onKeyDown={onKeyDown}>
+      <Keys role="presentation" data-part="layout" onKeyDown={onKeyDown}>
         <Scroll ref={scroll} data-part="scroll">
           {badge && <Badge data-tone={badge.tone}>{badge.text}</Badge>}
           {/* div, а не header: два drawer'а дали бы два ориентира banner (axe landmark-no-duplicate-banner) */}
@@ -225,6 +227,7 @@ export function Drawer({ label, title, meta, onClose, returnFocus, initialFocus 
           </Head>
           {children}
         </Scroll>
+        {sidePanel}
         {overlay}
       </Keys>
     </Panel>

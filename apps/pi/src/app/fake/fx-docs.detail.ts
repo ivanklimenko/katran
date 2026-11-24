@@ -4,7 +4,7 @@ import { FX_TRAIL_TABS, fxDocTrail, fxTxId } from './fx-docs.trail'
 import { by35, swiftAmount, tabsOffOf } from './trail.data'
 
 // Словари — со стенда pi-constructor (index.html:742–757, grid.html:1747–1783), обезличен; данные вымышленные.
-const ROUTE_BY_TYPE: Record<FxDoc['routeType'], { desc: string; text: string }> = {
+const ROUTE_BY_TYPE: Record<NonNullable<FxDoc['routeType']>, { desc: string; text: string }> = {
   NOSTRO: { desc: 'Счёт ностро в Baltic Clearing Bank (Рига), USD', text: 'Маршрут через Baltic Clearing по правилу для USD от контрагентов ЕС' },
   LORO: { desc: 'Счёт лоро Meridian Intermediary Bank, USD', text: 'Зачисление через лоро-счёт посредника, правило LORO_USD_V2' },
   INTERNAL: { desc: 'Внутрибанковский конверсионный счёт', text: 'Внутренний маршрут: счёт Кт открыт в нашем банке, внешний перевод не требуется' },
@@ -74,8 +74,8 @@ export function makeFxDocDetail(row: FxDoc, i: number, rows: readonly FxDoc[]): 
     inSender: inbound ? row.sender : null,
     inReceiver: inbound ? row.receiver : null,
     accDt, accKt,
-    routeDesc: ROUTE_BY_TYPE[row.routeType].desc,
-    routeText: ROUTE_BY_TYPE[row.routeType].text,
+    routeDesc: row.routeType ? ROUTE_BY_TYPE[row.routeType].desc : '',
+    routeText: row.routeType ? ROUTE_BY_TYPE[row.routeType].text : '',
     txId: fxTxId(i),
     txAt: row.created,
     txs,

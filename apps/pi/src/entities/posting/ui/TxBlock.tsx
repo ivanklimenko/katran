@@ -128,10 +128,11 @@ export type TxBlockProps = {
    * на эталоне только у рубля, сверка Д79). Ссылка — в aside Disclosure, вне кнопки заголовка: блок не сворачивает.
    */
   balances?: LookupView<Balances> | undefined
+  sourceTip?: ((...paths: string[]) => string | undefined) | undefined
 }
 
 /** Блок «Транзакции» (эталон txBlockHtml, index.html:1023): число, сводка по состояниям, txId и время; строки проводок. */
-export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances }: TxBlockProps) {
+export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances, sourceTip }: TxBlockProps) {
   const counts = ORDER.map((st) => ({ st, n: txs.filter((t) => t.st === st).length })).filter((x) => x.n > 0)
   return (
     <Disclosure
@@ -141,25 +142,28 @@ export function TxBlock({ txs, txId, txAt, defaultOpen = false, aside, balances 
       aside={(
         <>
           <Summary>
-            {counts.map(({ st, n }) => <SumItem key={st}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</SumItem>)}
+            {counts.map(({ st, n }) => <SumItem key={st} data-k-tip={sourceTip?.('$.txs')}><StatusDot tone={TONE[st]} size="s" label={st} />{n}</SumItem>)}
           </Summary>
           {balances && <LookupLink label="Проверить баланс" view={balances}><BalancesView view={balances} /></LookupLink>}
           {aside}
-          <Ids><LinkValue name="txId" value={txId} /><At>{formatDateTimeFull(txAt)}</At></Ids>
+          <Ids><LinkValue name="txId" value={txId} tip={sourceTip?.('$.txId')} /><At data-k-tip={sourceTip?.('$.txAt')}>{formatDateTimeFull(txAt)}</At></Ids>
         </>
       )}
     >
       <Rows>
-        {txs.map((t, i) => (
-          <Row key={i}>
-            <Dir><Arrow dir={t.dir} />{t.dir}</Dir>
-            <Acc>{t.acc}</Acc>
-            <Sum>{formatAmount(t.amount)}<Ccy>{t.currency}</Ccy></Sum>
-            <St><StatusDot tone={TONE[t.st]} size="s" />{t.st}</St>
-            <Reg data-k-tip={`Тип регистра: ${t.reg}`}>{t.reg}</Reg>
-            <Time data-k-tip={t.time ?? undefined}>{t.time ? formatDateTimeShort(t.time) : '—'}</Time>
-          </Row>
-        ))}
+        {txs.map((t, i) => {
+          const tip = (...keys: (keyof Tx)[]) => sourceTip?.(...keys.map((key) => `$.txs[${i}].${key}`))
+          return (
+            <Row key={i}>
+              <Dir data-k-tip={tip('dir')}><Arrow dir={t.dir} />{t.dir}</Dir>
+              <Acc data-k-tip={tip('acc')}>{t.acc}</Acc>
+              <Sum data-k-tip={tip('amount', 'currency')}>{formatAmount(t.amount)}<Ccy>{t.currency}</Ccy></Sum>
+              <St data-k-tip={tip('st')}>{t.st ? <><StatusDot tone={TONE[t.st]} size="s" />{t.st}</> : '—'}</St>
+              <Reg data-k-tip={tip('reg') ?? `Тип регистра: ${t.reg}`}>{t.reg}</Reg>
+              <Time data-k-tip={tip('time') ?? t.time ?? undefined}>{t.time ? formatDateTimeShort(t.time) : '—'}</Time>
+            </Row>
+          )
+        })}
       </Rows>
     </Disclosure>
   )

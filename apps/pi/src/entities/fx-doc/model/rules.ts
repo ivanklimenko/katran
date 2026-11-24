@@ -102,8 +102,8 @@ const partRefs = (p: FormPart | undefined): FieldRef[] => [
  * Документ только для просмотра (целей правки нет): заблокирован (Д66) или с ожидающим либо исполненным аннулированием
  * (спека 2e §1.3); отклонённый запрос правку не запрещает. Им же виды прячут карандаши, ↺ и редакторы строк вне сетки полей.
  */
-export function fxViewOnly(d: Pick<FxDocDetail, 'lock' | 'annul'>): boolean {
-  if (d.lock !== null) return true
+export function fxViewOnly(d: Pick<FxDocDetail, 'type' | 'lock' | 'annul'>): boolean {
+  if (d.type === 'InternalPAYDOCVAL' || d.lock !== null) return true
   const annul = d.annul?.status
   return annul === 'pending' || annul === 'done'
 }
@@ -122,8 +122,11 @@ export function fxEditableTargets(d: FxDocDetail): string[] {
     if (FX_FIELDS[baseTag(tag)]?.editable !== true) return []
     const target = fieldTarget(tag)
     const value = d.fields[tag]
+    if (!value && d.mt202Instruction?.fallbackFields[tag]) return []
     const hidden = typeof r !== 'string' && r.hideIfEmpty === true && (!value || isEmptyValue(value)) && !d.edits[target]
     return hidden ? [] : [target]
   })
-  return [...fields, 'refOut', 'accDt', 'accKt', ...(d.type === 'MT199' ? [] : ['valueDate'])]
+  const canEditInputDate = d.type !== 'MT199' && (!d.mt202Instruction || Boolean(d.valueDates[0]))
+  const canEditOutRef = Boolean(d.refOut) || !d.mt202Instruction?.outgoingReference
+  return [...fields, ...(canEditOutRef ? ['refOut'] : []), 'accDt', 'accKt', ...(canEditInputDate ? ['valueDate'] : [])]
 }

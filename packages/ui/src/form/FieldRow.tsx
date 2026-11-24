@@ -8,6 +8,7 @@ import type { FieldDef, FieldEdit, FieldValue } from './types'
 import { k } from '@katran/tokens'
 
 export type FieldRowProps = {
+  sourceTip?: string | undefined
   /** Тег как в схеме: '50' или 'B.50' — показывается без префикса. */
   tag: string
   def: FieldDef | undefined
@@ -324,7 +325,7 @@ const PenIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
  * изменённое поле — data-edited и «Было / Стало» с аудитом в раскрытии; у текстового поля раскрытия может не быть (70: show = lines),
  * поэтому его «Было / Стало» и аудит — в панели под текстом, видимой, пока у поля есть правки (решение в4).
  */
-export function FieldRow({ tag, def, value, present = defaultPresent, optionLabels, open = false, onToggle, wide, editable, editing = false, onEdit, edit, className }: FieldRowProps) {
+export function FieldRow({ tag, def, value, present = defaultPresent, optionLabels, open = false, onToggle, wide, editable, editing = false, onEdit, edit, className, sourceTip }: FieldRowProps) {
   const panel = useStableId()
   const cellRef = useRef<HTMLDivElement>(null)
   const penRef = useRef<HTMLButtonElement>(null)
@@ -345,7 +346,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
   const changed = edit?.changed === true
   // Название поля — не только тултипом (его не видят клавиатура и скринридер): скрытым текстом рядом с тегом.
   // Сосед, а не потомок тега: абсолютно позиционированный, он не занимает ячейку сетки строки и не меняет текст тега.
-  const tagEl = <><TagMark data-k-tip={tip}>{base}</TagMark>{def && <Sr>{def.label}</Sr>}</>
+  const tagEl = <><TagMark data-k-tip={sourceTip ?? tip}>{base}</TagMark>{def && <Sr>{def.label}</Sr>}</>
   const editedSr = changed && <Sr>{edit.tip}</Sr>
   const pen = editable && (
     <PenBtn ref={penRef} size="s" label={`Редактировать поле ${tag}`} data-k-tip="Редактировать" onClick={onEdit}>
@@ -359,7 +360,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
     'data-editable': editable ? '' : undefined,
     'data-edited': changed ? '' : undefined,
     'data-editing': editing ? '' : undefined,
-    'data-k-tip': changed ? edit.tip : undefined,
+    'data-k-tip': sourceTip ?? (changed ? edit.tip : undefined),
   }
   const fullText = (v: FieldValue | null) => (v === null || isEmptyValue(v) ? ['—'] : present(tag, v).full)
   // раскрытие поля сетки и панель текстового поля: «Было / Стало» (если changed), аудит, «✎ Изменить»
@@ -416,7 +417,7 @@ export function FieldRow({ tag, def, value, present = defaultPresent, optionLabe
     <Cell {...cellAttrs} data-empty={empty ? '' : undefined} data-open={open ? '' : undefined}>
       <Toggle as="button" type="button" aria-expanded={open} aria-controls={panel} onClick={onToggle}>
         {tagEl}
-        <Opt data-k-tip={value?.opt ? optionLabels?.[value.opt] : undefined}>{value?.opt ?? ''}</Opt>
+        <Opt data-k-tip={sourceTip ?? (value?.opt ? optionLabels?.[value.opt] : undefined)}>{value?.opt ?? ''}</Opt>
         {empty
           ? <><Main aria-hidden="true">—</Main><Sr>не заполнено</Sr></>
           : <Main>{view.main}</Main>}

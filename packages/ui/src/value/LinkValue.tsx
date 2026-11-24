@@ -4,10 +4,10 @@ import { useKatran } from '../provider/useKatran'
 import { FLASH_MS } from './CopyValue'
 import { useUnmountGuard } from './useUnmountGuard'
 
-export type LinkValueProps = { name: string; value?: string | undefined; tabIndex?: number | undefined; className?: string | undefined }
+export type LinkValueProps = { name: string; value?: string | undefined; tip?: string | undefined; tabIndex?: number | undefined; className?: string | undefined }
 
 /** Длинная непонятная строка (uuid, референс) показывается именем; клик копирует значение. */
-export function LinkValue({ name, value, tabIndex, className }: LinkValueProps) {
+export function LinkValue({ name, value, tabIndex, className, tip }: LinkValueProps) {
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -27,7 +27,7 @@ export function LinkValue({ name, value, tabIndex, className }: LinkValueProps) 
       data-flash={flash || undefined}
       disabled={!value}
       tabIndex={tabIndex}
-      data-k-tip={value ? `${value} — копировать` : `${name}: нет значения`}
+      data-k-tip={tip ?? (value ? `${value} — копировать` : `${name}: нет значения`)}
       onClick={onClick}
     >
       {name}

@@ -4,6 +4,6 @@
  * Здесь, в shared, — чтобы читать их могли и фейк (app), и модели страниц, и виджет реестра (слои FSD — только вниз).
  * Значение читается при каждом вызове: null — параметра нет, '' — параметр без значения (?noauto).
  */
-export type StandParam = 'docs' | 'size' | 'noauto'
+export type StandParam = 'docs' | 'size' | 'noauto' | 'mapping'
 
-export const standParam = (name: StandParam): string | null => new URLSearchParams(location.search).get(name)
+export const standParam = (name: StandParam): string | null => typeof location === 'undefined' ? null : new URLSearchParams(location.search).get(name)

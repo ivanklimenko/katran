@@ -1,5 +1,5 @@
 import type { Status } from '../../entities/doc-status'
-import { STATUS_LABEL } from '../../entities/doc-status'
+import { STATUSES, STATUS_LABEL } from '../../entities/doc-status'
 import { ED_BY_TYPE, TYPE_NAME, type RubDoc, type RubType } from '../../entities/rub-doc'
 import type { FilterMetaDto } from '../../shared/api'
 import { field, inline } from './meta'
@@ -20,7 +20,7 @@ export const rubDocsMeta: FilterMetaDto = {
     field('toInn', 'ИНН получателя', 'STRING', undefined, { defaultOperator: 'IN' }),
   ],
   dictionaries: {
-    docStatus: inline(STATUS_LABEL), rubType: inline(TYPE_NAME),
+    docStatus: inline(Object.fromEntries(STATUSES.map((status) => [status, STATUS_LABEL[status]]))), rubType: inline(TYPE_NAME),
     direction: inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' }),
     // R21: очерёдность в записи — число, поэтому value справочника — числа 1…5 (не inline: Object.keys дал бы строки "1"…"5").
     queue: { mode: 'INLINE', items: [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) })) },

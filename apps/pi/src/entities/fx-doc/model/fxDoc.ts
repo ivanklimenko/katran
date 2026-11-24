@@ -1,7 +1,7 @@
 import type { Status } from '../../doc-status/@x/fx-doc'
 
-export const FX_TYPES = ['MT103', 'MT202', 'MT202COV', 'MT199'] as const
-export const CURRENCIES = ['USD', 'EUR', 'CNY', 'RUB'] as const
+export const FX_TYPES = ['MT103', 'MT202', 'MT202COV', 'MT199', 'InternalPAYDOCVAL'] as const
+export const CURRENCIES = ['USD', 'EUR', 'CNY', 'RUB', 'BYN', 'AMD', 'KZT'] as const
 export const DIRECTIONS = ['IN', 'OUT', 'TRANSIT', 'OTHER'] as const
 export type Direction = (typeof DIRECTIONS)[number]
 export const DIRECTION_LABEL: Record<Direction, string> = { IN: 'Входящий', OUT: 'Исходящий', TRANSIT: 'Транзит', OTHER: 'Прочее' }
@@ -32,5 +32,5 @@ export type FxDoc = {
   /** S / R out (эталон `base.outS`/`base.outR`). */
   outSender: string; outReceiver: string
   /** Маршрут — тип, BIC получателя, счёт (эталон `RT`/`ACC_PFX`). */
-  routeType: RouteType; routeRecv: string; routeAcc: string
+  routeType: RouteType | null; routeRecv: string; routeAcc: string
 }

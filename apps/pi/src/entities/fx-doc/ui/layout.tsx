@@ -126,7 +126,7 @@ export const fxDocLayout: RecordLayout<FxDoc> = {
       render: (d) => <SwiftField opt={d.f59opt} main={d.f59acc} caption={d.f59name} maxWidth={130} tabIndex={T} /> },
     { id: 'route', title: 'Маршрут', width: 110, lines: 3, fullHeight: true,
       sort: [{ id: 'routeType', label: 'Тип маршрута' }, { id: 'routeRecv', label: 'Receiver' }],
-      render: (d) => <><Tag>{d.routeType}</Tag><div><CopyValue value={d.routeRecv} tone="ink2" tabIndex={T} className="fxMono" /></div><div><AccountValue value={d.routeAcc} tabIndex={T} /></div></> },
+      render: (d) => <>{d.routeType && <Tag>{d.routeType}</Tag>}<div><CopyValue value={d.routeRecv} tone="ink2" tabIndex={T} className="fxMono" /></div><div><AccountValue value={d.routeAcc} tabIndex={T} /></div></> },
     { id: 'sr', title: 'S / R in', width: 113, lines: 2, fullHeight: true, sort: [{ id: 'sender', label: 'S in' }, { id: 'receiver', label: 'R in' }],
       render: (d) => <><span className="fxSrTag">S:</span><CopyValue value={d.sender} tone="ink" tabIndex={T} className="fxMono" /><div><span className="fxSrTag">R:</span><CopyValue value={d.receiver} tone="ink" tabIndex={T} className="fxMono" /></div></> },
     { id: 'srOut', title: 'S / R out', width: 113, lines: 2, fullHeight: true, sort: [{ id: 'outSender', label: 'S out' }, { id: 'outReceiver', label: 'R out' }],

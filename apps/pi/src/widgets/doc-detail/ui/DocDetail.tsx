@@ -13,6 +13,7 @@ import {
 import { ReasonField, Sr } from '../../../shared/ui'
 import type { Detail, DetailSlot, TabSlot } from '../lib/createDetail'
 import { ActionGlyph } from './icons'
+import { MappingDrawer } from './MappingDrawer'
 
 /* Лейн действий 36 (эталон .lane, index.html:103): border-box — высота с рамками, как на эталоне */
 const LaneBar = styled.div`
@@ -171,6 +172,7 @@ export type DocDetailProps<D, Row> = {
   detail: Detail<D>
   /** Всё доменное — схема, поля, вкладки и их виды, действия, блоки (спека 2a §4.3, 2b §3.3): виджет не импортирует сущности. */
   domain: DetailDomain<D, Row>
+  mappingTools?: ReactNode
   /** Строка реестра по id — шапка и лейн до загрузки и при ошибке (номер, статус). */
   rowOf?: ((id: string) => Row | null) | undefined
   /** Куда вернуть фокус при закрытии: кнопка открытия записи, её нет — грид (gridFocusTarget кита). */
@@ -269,9 +271,9 @@ function Lane({ summary, actions, onAction, stateOf }: {
     <LaneBar data-part="lane">
       {summary && (
         <>
-          <Tag tone="mt">{summary.type}</Tag>
-          <Status><StatusDot tone={summary.status.tone} size="s" />{summary.status.label}</Status>
-          <Kind>{summary.kind}</Kind>
+          <Tag tone="mt">{summary.sourceTips?.type ? <span data-k-tip={summary.sourceTips.type}>{summary.type}</span> : summary.type}</Tag>
+          <Status data-k-tip={summary.sourceTips?.status}><StatusDot tone={summary.status.tone} size="s" />{summary.status.label}</Status>
+          <Kind data-k-tip={summary.sourceTips?.kind}>{summary.kind}</Kind>
         </>
       )}
       <Acts role="group" aria-label="Действия с документом">
@@ -436,6 +438,7 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
       schema={domain.schemaOf(d)}
       fields={domain.fields}
       value={(tag) => domain.value(d, tag)}
+      fieldTip={domain.fieldTip ? (tag) => domain.fieldTip?.(d, tag) : undefined}
       present={domain.present}
       optionLabels={domain.optionLabels}
       renderHero={(id) => domain.renderHero(d, id, edit, lookups)}
@@ -449,9 +452,9 @@ function Body<D, Row>({ view, domain, tabId, tabLabel, skeleton, ctx, mainExpand
   )
 }
 
-type PaneProps<D, Row> = Omit<DocDetailProps<D, Row>, 'detail'> & { detail: Detail<D>; view: DetailSlot<D>; focusKey: number; quiet: boolean }
+type PaneProps<D, Row> = DocDetailProps<D, Row> & { view: DetailSlot<D>; focusKey: number; quiet: boolean; comparing: boolean }
 
-function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf, focusKey, quiet }: PaneProps<D, Row>) {
+function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf, focusKey, quiet, comparing, mappingTools }: PaneProps<D, Row>) {
   const [close, setTab, retry, retryTab, open, setExpanded, expanded] = useUnit([
     detail.close, detail.setTab, detail.retry, detail.retryTab, detail.open, detail.setExpanded, detail.$expanded,
   ])
@@ -544,11 +547,14 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
     // нотификации (срез 2e) — только если страница передала notifOf
     ...(notif ? { resend: notif.resend, resendBusy: notif.resendBusy, openMessage: notif.openMessage } : {}),
   })
+  const Frame = domain.mappingResponse ? MappingDrawer : Drawer
+  const response = view.data === null ? undefined : domain.mappingResponse?.(view.data)
   return (
-    <Drawer
+    <Frame
+      {...(domain.mappingResponse ? { response, comparing, tools: mappingTools } : {})}
       label={label}
       title={domain.title}
-      meta={summary ? <><LinkValue name={summary.uuid} value={summary.uuid} /><span>{summary.created}</span></> : undefined}
+      meta={summary ? <><LinkValue name={summary.uuid} value={summary.uuid} tip={summary.sourceTips?.id} /><span data-k-tip={summary.sourceTips?.created}>{summary.created}</span></> : undefined}
       badge={view.slot === 'b' ? { text: 'B · сравнение', tone: 'b' } : { text: 'A', tone: 'a' }}
       onClose={() => close(view.slot)}
       returnFocus={returnFocus ? () => returnFocus(view.id) : undefined}
@@ -599,12 +605,12 @@ function DetailPane<D, Row>({ view, detail, domain, rowOf, returnFocus, editOf, 
           />
         </PanelBody>
       ))}
-    </Drawer>
+    </Frame>
   )
 }
 
 /** Деталка документа (спека 2a §4.3, 2b §3.3): DrawerStack кита, в слоте — шапка, лейн, вкладки с переполнением и их виды. */
-export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf }: DocDetailProps<D, Row>) {
+export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, actionsOf, lookupsOf, annulOf, notifOf, mappingTools }: DocDetailProps<D, Row>) {
   const [slots, focus, quiet, closeTop] = useUnit([detail.$slots, detail.$focus, detail.$quiet, detail.closeTop])
   const items: DrawerStackItem[] = []
   for (const slot of ['a', 'b'] as const) {
@@ -613,7 +619,7 @@ export function DocDetail<D, Row>({ detail, domain, rowOf, returnFocus, editOf, 
       items.push({
         key: view.id,
         slot,
-        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} annulOf={annulOf} notifOf={notifOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} />,
+        node: <DetailPane view={view} detail={detail} domain={domain} rowOf={rowOf} returnFocus={returnFocus} editOf={editOf} actionsOf={actionsOf} lookupsOf={lookupsOf} annulOf={annulOf} notifOf={notifOf} focusKey={focus[view.id] ?? 0} quiet={quiet[view.id] === true} comparing={slots.b !== null} mappingTools={slot === 'a' ? mappingTools : undefined} />,
       })
     }
   }

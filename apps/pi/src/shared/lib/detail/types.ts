@@ -52,6 +52,7 @@ export type DetailSummary = {
   status: { tone: StatusTone; label: string }
   /** «Клиентский перевод · Входящий от ЦБ». */
   kind: string
+  sourceTips?: Partial<Record<'id' | 'created' | 'type' | 'status' | 'kind', string | undefined>>
   /** Вкладки без данных — вторая группа полосы; до загрузки — пусто. */
   tabsOff: string[]
 }
@@ -93,6 +94,8 @@ export type DetailDomain<D, Row> = {
   present?: FieldPresenter | undefined
   schemaOf: (d: D) => FormSchema
   value: (d: D, tag: string) => FieldValue | null
+  fieldTip?: ((d: D, tag: string) => string | undefined) | undefined
+  mappingResponse?: ((d: D) => Record<string, unknown> | undefined) | undefined
   summary: (d: D) => DetailSummary
   rowSummary: (row: Row) => DetailSummary
   /** edit — правка этого документа (план 2c); нет (null или не передан) — только просмотр, как в 2b. Функции с двумя параметрами (рубль) совместимы. */
