@@ -1,21 +1,32 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Button, Checkbox, CopyValue, StatusDot, formatAmount } from '@katran/ui'
 import { STATUS_GLYPH, STATUS_LABEL, STATUS_TONE } from '../../../entities/doc-status'
+import { FX_FIELDS, type SwiftValue } from '../../../entities/fx-doc'
 import { SWIFT, localDate, type NzrDocumentRow, type ReportRow, type Sort } from '../model/report'
 import { CellCaption, CellLines, Monospace, Purpose, Table, TableScroll } from './styles'
 
 const swiftLabels = ['Приказодатель', 'Банк отправителя', 'Банк получателя', 'Банк-бенефициар', 'Бенефициар']
+
+function swiftTooltip(tag: string, field: SwiftValue) {
+  const width = FX_FIELDS[tag]?.width ?? 35
+  const lines = field.acc ? [`/${field.acc}`, ...field.lines] : field.lines
+  const wrapped = lines.flatMap((line) =>
+    line.split('\n').flatMap((part) => part.match(new RegExp(`.{1,${width}}`, 'gu')) ?? ['']),
+  )
+  return wrapped.join('\n')
+}
 
 function SwiftCells({ doc }: { doc: NzrDocumentRow }) {
   return <>{SWIFT.map((tag) => {
     const field = doc.fields[tag]
     const main = field?.acc ?? (field && field.lines[field.lines.length - 1])
     const caption = field && (field.acc || field.lines.length > 1) ? field.lines[0] : ''
+    const tooltip = field && swiftTooltip(tag, field)
     return (
       <td key={tag}>
         {main ? <CellLines>
-          <CopyValue value={main} display={field?.opt ? `${field.opt} · ${main}` : main} />
-          {caption && <CellCaption title={caption}>{caption}</CellCaption>}
+          <CopyValue value={main} tooltip={tooltip} display={field?.opt ? `${field.opt} · ${main}` : main} />
+          {caption && <CellCaption data-k-tip={tooltip}>{caption}</CellCaption>}
         </CellLines> : '—'}
       </td>
     )
@@ -26,8 +37,8 @@ function Purposes({ doc }: { doc: NzrDocumentRow }) {
   return (
     <tr><td colSpan={5}><Purpose>
       {['70', '72'].map((tag) => {
-        const lines = doc.fields[tag]?.lines.join(' ') ?? ''
-        return <span key={tag} title={lines}><strong>{tag}</strong> {lines}</span>
+        const field = doc.fields[tag]
+        return <span key={tag} data-k-tip={field && swiftTooltip(tag, field)}><strong>{tag}</strong> {field?.lines.join(' ')}</span>
       })}
     </Purpose></td></tr>
   )
@@ -56,7 +67,7 @@ function DocumentEnd({ doc }: { doc: NzrDocumentRow }) {
     <td rowSpan={2}>{doc.type}</td>
     <td rowSpan={2}>{doc.direction}<CellCaption title={doc.dirTxt}>{doc.parent === null ? doc.dirTxt : 'списание с НЗР'}</CellCaption></td>
     <SwiftCells doc={doc} />
-    <td rowSpan={2}><CopyValue value={doc.routeAcc} /><CellCaption>{doc.routeType} · {doc.routeRecv}</CellCaption></td>
+    <td rowSpan={2}><CopyValue value={doc.routeAcc} /><CellCaption data-k-tip={`${doc.routeType} · ${doc.routeRecv}`} data-k-tip-if="truncated">{doc.routeType} · {doc.routeRecv}</CellCaption></td>
   </>
 }
 

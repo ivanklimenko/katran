@@ -162,13 +162,14 @@ export const Table = styled.table`
 
 export const CellLines = styled.div`
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: ${k.sp1};
   justify-items: start;
 `
 
 export const CellCaption = styled(Muted)`
   display: block;
-  max-width: 25ch;
+  max-width: min(100%, 25ch);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -181,6 +182,7 @@ export const Purpose = styled.div`
 
   > span {
     display: block;
+    min-width: 0;
     max-width: 52ch;
     overflow: hidden;
     text-overflow: ellipsis;
