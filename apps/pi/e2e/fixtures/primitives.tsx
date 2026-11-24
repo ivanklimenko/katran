@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, AmountRange, Breadcrumbs, DateInput, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -52,6 +52,9 @@ function Primitives() {
       <div data-testid="spinner-panel" style={{ width: k.sp8, height: k.sp8 }}>
         <Spinner block label="Загрузка панели" />
       </div>
+      <section aria-label="Подсветка поиска">
+        <Highlight text="Справочник SWIFT и код Swift" query="swift" />
+      </section>
       <section data-testid="text-samples" style={{ backgroundColor: k.paper }}>
         <Text>Основной текст <Text variant="subhead" as="p">Внутри абзаца</Text></Text>
         <Text variant="subhead">Подзаголовок</Text>

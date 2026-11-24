@@ -1,4 +1,4 @@
-import { AccountValue, CopyValue, Counter, FieldTag, LinkValue, StatusDot, Tag, type StatusTone } from '@katran/ui'
+import { AccountValue, CopyValue, Counter, FieldTag, Highlight, LinkValue, StatusDot, Tag, type StatusTone } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 const tones: StatusTone[] = ['flow', 'flowl', 'flowd', 'bad', 'badd', 'warn', 'ok', 'okl', 'grey']
@@ -15,6 +15,10 @@ export function ValuesPage() {
     <>
       <H1>Значения</H1>
       <Note>Каждое значение — отдельный элемент: клик копирует, тултип с полным значением только если обрезано или показано сокращённо. Наведите на длинное значение справа.</Note>
+      <H2>Highlight</H2>
+      <Row>
+        <span><Highlight text="Справочник SWIFT и код Swift" query="swift" /></span>
+      </Row>
       <H2>CopyValue</H2>
       <Row>
         <CopyValue value="HSTBDEHHXXX" /><CopyValue value="Общество с ограниченной ответственностью «Северный ветер»" maxWidth={180} />

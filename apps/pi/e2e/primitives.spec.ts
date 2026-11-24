@@ -45,6 +45,23 @@ for (const theme of ['light', 'dark'] as const) {
       expect(ringBox.y + ringBox.height / 2).toBeCloseTo(panelBox.y + panelBox.height / 2, 1)
     })
 
+    test(`Highlight: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const section = page.getByRole('region', { name: 'Подсветка поиска' })
+      const marks = section.locator('mark')
+      await expect(marks).toHaveText(['SWIFT', 'Swift'])
+      expect(await section.textContent()).toBe('Справочник SWIFT и код Swift')
+      for (const mark of await marks.all()) {
+        const { color, background } = await mark.evaluate((element) => {
+          const style = getComputedStyle(element)
+          return { color: style.color, background: style.backgroundColor }
+        })
+        expect(rgbToHex(color)).toBe(colors[theme].ink.toLowerCase())
+        expect(rgbToHex(background)).toBe(colors[theme]['val-soft'].toLowerCase())
+        expect(contrastRatio(rgbToHex(color), rgbToHex(background))).toBeGreaterThanOrEqual(4.5)
+      }
+    })
+
     test(`Text: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const section = page.getByTestId('text-samples')
