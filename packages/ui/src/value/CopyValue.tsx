@@ -6,6 +6,8 @@ import { useUnmountGuard } from './useUnmountGuard'
 export type CopyValueProps = {
   value: string
   display?: ReactNode | undefined
+  /** Полный текст подсказки, если он отличается от копируемого значения. */
+  tooltip?: string | undefined
   /** Показано сокращённо → тултип с полным значением всегда. */
   short?: boolean | undefined
   tone?: 'val' | 'ink' | 'ink2' | 'mono' | 'muted' | undefined
@@ -19,7 +21,7 @@ export type CopyValueProps = {
 
 export const FLASH_MS = 600
 
-export function CopyValue({ value, display, short, tone = 'val', size, maxWidth, tabIndex, className }: CopyValueProps) {
+export function CopyValue({ value, display, tooltip, short, tone = 'val', size, maxWidth, tabIndex, className }: CopyValueProps) {
   const { announce } = useKatran()
   const [flash, setFlash] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -42,8 +44,8 @@ export function CopyValue({ value, display, short, tone = 'val', size, maxWidth,
       data-flash={flash || undefined}
       style={style}
       tabIndex={tabIndex}
-      data-k-tip={value}
-      data-k-tip-if={short ? undefined : 'truncated'}
+      data-k-tip={tooltip ?? value}
+      data-k-tip-if={short || tooltip !== undefined ? undefined : 'truncated'}
       onClick={onClick}
     >
       {display ?? value}

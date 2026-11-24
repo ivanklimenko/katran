@@ -64,3 +64,41 @@ test('именованный набор восстанавливает счет�
   await page.getByRole('button', { name: 'Следующий счёт' }).click()
   await expect(page.getByText('47422156000000000404')).toBeVisible()
 })
+
+test('подписи SWIFT не выходят за свои колонки при прокрутке и смене плотности', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/#/nzr-report')
+  const table = page.getByRole('table', { name: 'Документы постановки на НЗР и дочерние документы' })
+  await page.getByRole('button', { name: 'Раскрыть все связи' }).click()
+  const captions = table.locator('tbody td small[data-k-tip]').filter({ hasText: /BANK|MOSCOW|OLEGOVICH/ })
+  await expect(captions.first()).toBeVisible()
+  for (const density of ['100 %', '125 %']) {
+    await page.getByRole('button', { name: density, exact: true }).click()
+    await table.getByRole('columnheader', { name: /Маршрут/ }).scrollIntoViewIfNeeded()
+    const overflow = await captions.evaluateAll((nodes) => nodes.flatMap((node) => {
+      const cell = node.closest('td')!
+      const contentRight = cell.getBoundingClientRect().right - parseFloat(getComputedStyle(cell).paddingRight)
+      const right = node.getBoundingClientRect().right
+      return right > contentRight + 1 ? [node.textContent] : []
+    }))
+    expect(overflow, density).toEqual([])
+  }
+})
+
+test('тултип SWIFT показывает счёт и имя на разных строках и разбивает поле 70 на строки до 35 символов', async ({ page }) => {
+  await page.goto('/#/nzr-report')
+  await expect(page.getByRole('region', { name: 'Сверка с ПП ЛН' }).getByRole('status')).toHaveText('Данные совпадают')
+  await page.getByRole('searchbox', { name: 'Поиск по постановкам' }).fill('a0000400')
+  const tooltip = page.getByRole('tooltip')
+  await page.getByText('OOO SEVERNAYA ZVEZDA', { exact: true }).hover()
+  await expect(tooltip).toBeVisible()
+  expect(await tooltip.textContent()).toBe('/40702840300010009911\nOOO SEVERNAYA ZVEZDA')
+  const purpose = 'PAYMENT UNDER CONTRACT 140 DD 01.10.2026 FOR CONSULTING SERVICES'
+  const purposeCell = page.getByText(purpose, { exact: false })
+  const wrapped = purpose.match(/.{1,35}/g)!.join('\n')
+  await expect(purposeCell).toHaveAttribute('data-k-tip', wrapped)
+  await page.mouse.move(0, 0)
+  await purposeCell.hover()
+  await expect(tooltip).toHaveText(wrapped)
+  expect((await tooltip.textContent())?.split('\n').map((line) => line.length)).toEqual([35, purpose.length - 35])
+})
