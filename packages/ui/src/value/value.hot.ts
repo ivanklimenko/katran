@@ -176,6 +176,11 @@ export const valueHot = css`
     color: ${k.stLetterSoft};
   }
 
+  .k-hl {
+    background: ${k.valSoft};
+    color: ${k.ink};
+  }
+
   .k-tag {
     display: inline-block;
     padding: 0 ${k.sp1};
