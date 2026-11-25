@@ -208,6 +208,7 @@ export const z = {
   'drawer': 100,
   'modal': 150,
   'menu': 200,
+  'toast': 250,
   'tooltip': 300,
 } as const
 

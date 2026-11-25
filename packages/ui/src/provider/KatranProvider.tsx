@@ -6,6 +6,7 @@ import { densityOptions, k, type Density } from '@katran/tokens'
 import { KatranContext, type Theme } from './useKatran'
 import { LiveRegion, type LiveRegionHandle } from './LiveRegion'
 import { TooltipLayer } from '../tooltip/TooltipLayer'
+import { ToastProvider } from '../state/toast'
 
 export type KatranProviderProps = {
   children: ReactNode
@@ -84,9 +85,11 @@ export function KatranProvider(p: KatranProviderProps) {
           data-k-root=""
           style={{ '--k-density': String(density) } as React.CSSProperties}
         >
-          {p.children}
-          <LiveRegion ref={live} />
-          <TooltipLayer root={rootRef} />
+          <ToastProvider>
+            {p.children}
+            <LiveRegion ref={live} />
+            <TooltipLayer root={rootRef} />
+          </ToastProvider>
         </Root>
       </ThemeProvider>
     </KatranContext.Provider>

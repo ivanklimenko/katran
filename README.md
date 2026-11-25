@@ -157,6 +157,21 @@ function RegistryRanges() {
 
 Оба диапазона передают пустую границу как `null`. Если «От» больше «До», оба поля отмечаются ошибкой и значения сохраняются в исходном порядке. `AmountRange` форматирует суммы после ухода фокуса. `NumberRange` использует нативный числовой ввод с шагом.
 
+## Тосты
+
+```tsx
+import { useToast } from '@katran/ui'
+
+function CopyNotice() {
+  const toast = useToast()
+  return <button type="button" onClick={() => toast.show({ text: 'Скопировано', tone: 'ok' })}>
+    Показать уведомление
+  </button>
+}
+```
+
+Внутри `KatranProvider` одновременно показываются до четырёх тостов. По умолчанию тост закрывается через 4 секунды после показа. `duration: 0` удерживает сообщение до закрытия. `show(input)` возвращает ID для `close(id)`.
+
 ## Слайдер
 
 ```tsx
