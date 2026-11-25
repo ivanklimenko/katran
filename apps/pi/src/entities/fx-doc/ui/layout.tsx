@@ -1,8 +1,9 @@
 import { createGlobalStyle } from 'styled-components'
 import { k } from '@katran/tokens'
-import { AccountValue, CopyValue, FieldTag, LinkValue, StatusDot, SwiftField, Tag, formatAmount, formatDate, formatDateTimeFull, type RecordLayout } from '@katran/ui'
+import { AccountValue, CopyValue, LinkValue, StatusDot, SwiftField, Tag, formatAmount, formatDate, formatDateTimeFull, type RecordLayout } from '@katran/ui'
 import { STATUS_GLYPH, STATUS_LABEL, STATUS_TONE } from '../../doc-status/@x/fx-doc'
 import type { Direction, FxDoc } from '../model/fxDoc'
+import { SwiftTextFields } from './SwiftTextFields'
 
 /*
  * Свои элементы ячеек — правило 2 спеки styled (§4.7): обычные элементы с классами fx* (camelCase с префиксом сущности)
@@ -49,12 +50,6 @@ export const FxCellStyles = createGlobalStyle`
 
   :where([data-k-root]) .fxDirCode {
     font: 600 ${k.fs3} / 1 ${k.mono};
-  }
-
-  /* назначение 70 — прописными с разрядкой (спека 5b §3, R9); цвет — тон CopyValue (ink2) */
-  :where([data-k-root]) .fxPurposeText {
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
   }
 
   /* Кт валютирования, если отличается от Дт (спека 5b §3, R10): цвет warn поверх тона muted CopyValue */
@@ -113,7 +108,7 @@ export const fxDocLayout: RecordLayout<FxDoc> = {
         render: (d) => <CopyValue value={formatAmount(d.amount)} tone="ink" tabIndex={T} />,
         parts: [{ id: 'currency', title: 'Валюта', width: 76, fullHeight: true, sort: [{ id: 'currency', label: 'Валюта' }], render: (d) => <Tag>{d.currency}</Tag> }],
       } },
-    { id: 'f50', title: '50', subtitle: 'приказодатель · 70', width: 157, lines: 2,
+    { id: 'f50', title: '50', subtitle: 'приказодатель · 70 / 72', width: 157, lines: 2,
       sort: [{ id: 'f50name', label: 'Наименование' }, { id: 'f50acc', label: 'Счёт' }, { id: 'purpose', label: 'Назначение (70)' }],
       render: (d) => <SwiftField opt={d.f50opt} main={d.f50acc} caption={d.f50name} maxWidth={130} tabIndex={T} /> },
     { id: 'f52', title: '52', width: 137, lines: 2, sort: [{ id: 'f52', label: 'BIC 52' }],
@@ -136,6 +131,10 @@ export const fxDocLayout: RecordLayout<FxDoc> = {
   ],
   spans: [[
     { id: 'reason', from: 'status', to: 'id', render: (d) => (d.reason ? <><StatusDot size="s" tone={STATUS_TONE[d.status]} /> <CopyValue value={d.reason} tone="ink2" size="s" tabIndex={T} /></> : null) },
-    { id: 'purpose', from: 'f50', to: 'f59', render: (d) => (d.purpose ? <><FieldTag tag="70" title="70 · Детали платежа" /> <CopyValue value={d.purpose} tone="ink2" size="s" tabIndex={T} className="fxPurposeText" /></> : null) },
+    { id: 'purpose', from: 'f50', to: 'f59', render: (d) => {
+      const field70 = d.purpose ? { lines: d.purpose.split(/\r?\n/) } : undefined
+      const field72 = d.senderToReceiverInformation ? { lines: d.senderToReceiverInformation.split(/\r?\n/) } : undefined
+      return field70 || field72 ? <SwiftTextFields fields={{ ...(field70 && { '70': field70 }), ...(field72 && { '72': field72 }) }} tabIndex={T} /> : null
+    } },
   ]],
 }

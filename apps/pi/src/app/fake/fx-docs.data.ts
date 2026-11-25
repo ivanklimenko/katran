@@ -28,6 +28,7 @@ export const fxDocsMeta: FilterMetaDto = {
   dictionaries: { docStatus: inline(STATUS_LABEL), fxType: inline(labelsOf(FX_TYPES)), direction: inline({ IN: 'IN', OUT: 'OUT', TRANSIT: 'TRANSIT', OTHER: 'OTHER' }), currency: inline(labelsOf(CURRENCIES)) },
 }
 
+const T72 = ['/INS/ NRDIRUMMXXX', '/ACC/ PLEASE CREDIT WITHOUT DELAY', '/REC/ REF FX2609220000417', '/BNF/ CONTRACT 12-45 DD 01.03.2026', '/INT/ MRDNGB2LXXX', '//CHARGES OUR']
 const REASONS = ['Не найден счёт получателя', 'Превышен лимит', 'Санкционный стоп-лист', 'Ошибка формата 59', 'Нет покрытия', 'Дубликат 20', 'Отказ комплаенса', 'Просрочена дата валютирования', 'Неизвестный BIC']
 // Код валюты в знаках 6–8 счёта: рубль в счёте — 810 (не ISO 4217 643), правило владельца.
 const CCY = { USD: '840', EUR: '978', CNY: '156', RUB: '810' } as const
@@ -87,6 +88,7 @@ export function makeFxDocs(n = 87): FxDoc[] {
     // Поля плана 5b (эталон grid.tpl.html): без новых вызовов ГПСЧ — только из уже вычисленных полей core.
     return {
       ...core,
+      senderToReceiverInformation: i % 2 === 0 ? T72.join('\n') : null,
       f50opt: 'F', f59opt: 'F',
       f52name: BANK_NAME[core.f52] ?? core.f52, f57name: BANK_NAME[core.f57] ?? core.f57,
       f58: core.type.indexOf('MT202') === 0 ? core.f57 : null, f58name: core.type.indexOf('MT202') === 0 ? (BANK_NAME[core.f57] ?? core.f57) : null,

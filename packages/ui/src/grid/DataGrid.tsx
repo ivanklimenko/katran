@@ -83,7 +83,8 @@ export function DataGrid<Row>(p: DataGridProps<Row>) {
   const propsSplit = p.split
   const split = useMemo(() => propsSplit ?? [], [propsSplit])
   const visible = useMemo(() => expandColumns(visibleColumns(p.order, p.hidden, layout.columns), split), [p.order, p.hidden, layout.columns, split])
-  const fullOrder = useMemo(() => expandColumns(visibleColumns(p.order, [], layout.columns), split).map((c) => c.id), [p.order, layout.columns, split])
+  // Границы сквозных полей определяет раскладка. Перенос чужой колонки внутрь диапазона не меняет его состав.
+  const fullOrder = useMemo(() => expandColumns(layout.columns, split).map((c) => c.id), [layout.columns, split])
   const visibleIds = useMemo(() => visible.map((c) => c.id), [visible])
   const tallIds = useMemo(() => new Set(visible.filter((c) => c.fullHeight).map((c) => c.id)), [visible])
   const spanRows = useMemo<SpanCell<Row>[][]>(

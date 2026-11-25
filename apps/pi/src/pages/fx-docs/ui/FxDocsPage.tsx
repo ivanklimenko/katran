@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useUnit } from 'effector-react'
 import { gridFocusTarget, useKatran } from '@katran/ui'
-import { FxCellStyles, fxCommitView, fxDocLayout, fxMappingMode } from '../../../entities/fx-doc'
+import { FxCellStyles, SwiftTextFieldStyles, fxCommitView, fxDocLayout, fxMappingMode } from '../../../entities/fx-doc'
 import { useEditContexts } from '../../../features/doc-edit'
 import { useActionsOf } from '../../../features/doc-actions'
 import { useAnnulOf } from '../../../features/doc-annul'
@@ -42,6 +42,7 @@ export function FxDocsPage({ note }: { note?: string | undefined }) {
     <>
       {/* стили своих элементов ячеек реестра (правило 2, спека styled §4.7) */}
       <FxCellStyles />
+      <SwiftTextFieldStyles />
       {mapping && picker}
       <DocRegistry
         registry={registry}

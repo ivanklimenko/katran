@@ -303,6 +303,20 @@ export const ColsItem = styled.li`
   align-items: center;
   gap: ${k.sp2};
   height: ${k.hCtlM};
+
+  &[data-drop='before'] {
+    box-shadow: inset 0 2px ${k.val};
+  }
+
+  &[data-drop='after'] {
+    box-shadow: inset 0 -2px ${k.val};
+  }
+`
+
+export const ColsGrip = styled.span`
+  color: ${k.muted};
+  cursor: grab;
+  user-select: none;
 `
 
 export const ColsName = styled.span`

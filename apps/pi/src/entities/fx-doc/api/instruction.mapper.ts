@@ -259,6 +259,8 @@ export function projectFxInstructionRow(raw: Obj, i: Instruction, path: string):
     f57name: receiving?.name ?? payee.bankName ?? text(payeeBank, 'name', `${body.path}.field57A`),
     f58: beneficiary?.bic || null, f58name: beneficiary?.name || null,
     purpose: strOrNull(remittance, 'purpose', remittancePath),
+    senderToReceiverInformation: strOrNull(body.message, 'field72', body.path)
+      ?? strOrNull(remittance, 'senderToReceiverInformation', remittancePath),
     status: raw.status ?? str(document, 'status', base), reason: null,
     sender: from.sender ?? '', receiver: from.receiver ?? '', outSender: to.sender ?? '', outReceiver: to.receiver ?? '',
     provS: '', provR: '', routeType: null, routeRecv: '', routeAcc: '',

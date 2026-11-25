@@ -32,6 +32,7 @@ export function parseFxRow(raw: Obj, path: string, instruction: ReturnType<typeo
     direction: oneOf(o, 'direction', DIRECTIONS, path), dirTxt: str(o, 'dirTxt', path),
     amount: num(o, 'amount', path), currency: oneOf(o, 'currency', CURRENCIES, path),
     f50name: str(o, 'f50name', path), f50acc: str(o, 'f50acc', path), purpose: strOrNull(o, 'purpose', path),
+    ...(o.senderToReceiverInformation === undefined ? {} : { senderToReceiverInformation: strOrNull(o, 'senderToReceiverInformation', path) }),
     f52: str(o, 'f52', path), f57: str(o, 'f57', path), f59name: str(o, 'f59name', path), f59acc: str(o, 'f59acc', path),
     status: oneOf(o, 'status', FX_STATUSES, path), reason: strOrNull(o, 'reason', path),
     sender: str(o, 'sender', path), receiver: str(o, 'receiver', path), provS: str(o, 'provS', path), provR: str(o, 'provR', path),
