@@ -16,6 +16,8 @@ export type FxDoc = {
   direction: Direction; dirTxt: string
   amount: number; currency: string
   f50name: string; f50acc: string; purpose: string | null
+  /** SWIFT 72. Может отсутствовать в старых ответах реестра. */
+  senderToReceiverInformation?: string | null
   f52: string; f57: string; f59name: string; f59acc: string
   status: Status; reason: string | null
   sender: string; receiver: string; provS: string; provR: string

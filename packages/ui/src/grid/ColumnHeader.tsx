@@ -15,6 +15,8 @@ export type ColumnHeaderProps<Row> = {
   onResetWidths?: (() => void) | undefined
   /** Сброс ширины этой колонки — Home на ползунке. */
   onResetWidth?: (() => void) | undefined
+  /** Для таблиц без управления фокусом на уровне грида. */
+  tabIndex?: number | undefined
   cellProps?: HTMLAttributes<HTMLTableCellElement> | undefined
   className?: string | undefined
 }
@@ -23,13 +25,13 @@ const MIN_DEFAULT = 36
 const STEP = 8
 const STEP_SHIFT = 32
 
-export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onResetWidths, onResetWidth, cellProps, className }: ColumnHeaderProps<Row>) {
+export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onResetWidths, onResetWidth, tabIndex = -1, cellProps, className }: ColumnHeaderProps<Row>) {
   const keys = column.sort ?? []
   const level = sort.find((l) => keys.some((k) => k.id === l.key))
   const active = level ? keys.find((k) => k.id === level.key) : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
-  const drag = useRef<{ x: number; w: number } | null>(null)
+  const drag = useRef<{ x: number; w: number; density: number } | null>(null)
   const min = column.minWidth ?? MIN_DEFAULT
   const title = column.title ?? ''
   const name = column.menuTitle ?? title
@@ -80,13 +82,14 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
 
   const clamp = (w: number) => Math.max(min, Math.round(w))
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
-    drag.current = { x: e.clientX, w: width }
+    const density = Number(getComputedStyle(e.currentTarget).getPropertyValue('--k-density')) || 1
+    drag.current = { x: e.clientX, w: width, density }
     e.currentTarget.setPointerCapture?.(e.pointerId)
     e.currentTarget.dataset.active = 'true'
   }
   const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
     if (!drag.current || !onResize) return
-    onResize(clamp(drag.current.w + e.clientX - drag.current.x))
+    onResize(clamp(drag.current.w + (e.clientX - drag.current.x) / drag.current.density))
   }
   const onPointerUp = (e: PointerEvent<HTMLButtonElement>) => {
     drag.current = null
@@ -122,7 +125,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
       {...cellProps}
     >
       {keys.length > 0 ? (
-        <ThBtn ref={btn} type="button" tabIndex={-1} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
+        <ThBtn ref={btn} type="button" tabIndex={tabIndex} onClick={onHeadClick} aria-haspopup={keys.length > 1 ? 'menu' : undefined} aria-expanded={keys.length > 1 ? menuOpen : undefined} aria-label={title ? undefined : name}>
           {title}<Arrow aria-hidden="true">{arrow}{sort.length > 1 && n > 0 && <sup>{n}</sup>}</Arrow>
           <ThSub data-part="th-sub">{sub}</ThSub>
         </ThBtn>
@@ -136,7 +139,7 @@ export function ColumnHeader<Row>({ column, sort, onSort, width, onResize, onRes
       {(column.resizable ?? true) && onResize && (
         <Rz
           type="button"
-          tabIndex={-1}
+          tabIndex={tabIndex}
           role="slider"
           // значение меняется стрелками влево/вправо — ориентация горизонтальная, хоть ручка и вертикальная черта
           aria-orientation="horizontal"

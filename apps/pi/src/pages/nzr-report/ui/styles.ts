@@ -98,12 +98,12 @@ export const Table = styled.table`
     white-space: nowrap;
   }
 
-  &[data-report] td {
-    min-width: 8ch;
+  &[data-report] {
+    table-layout: fixed;
   }
 
-  &[data-report] td:first-child {
-    min-width: 0;
+  &[data-report] td {
+    overflow: hidden;
   }
 
   tbody[data-child] {
@@ -173,21 +173,6 @@ export const CellCaption = styled(Muted)`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-`
-
-export const Purpose = styled.div`
-  display: flex;
-  gap: ${k.sp4};
-  color: ${k.ink2};
-
-  > span {
-    display: block;
-    min-width: 0;
-    max-width: 52ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 `
 
 export const ScrollList = styled.ol`

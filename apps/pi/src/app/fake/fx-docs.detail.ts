@@ -15,7 +15,6 @@ const B53 = { opt: 'A', lines: ['BALTIC CLEARING BANK RIGA', 'BCLHLV22XXX'] }
 const B54 = { opt: 'A', lines: ['HANSEATIC TRADE BANK HAMBURG', 'HSTBDEHHXXX'] }
 const B55 = { opt: 'A', lines: ['CENTRAL EURO SETTLEMENT AG FRANKFURT', 'CESEDEFFXXX'] }
 const B56 = { opt: 'A', lines: ['MERIDIAN INTERMEDIARY BANK LONDON', 'MRDNGB2LXXX'] }
-const T72 = ['/INS/ NRDIRUMMXXX', '/ACC/ PLEASE CREDIT WITHOUT DELAY', '/REC/ REF FX2609220000417', '/BNF/ CONTRACT 12-45 DD 01.03.2026', '/INT/ MRDNGB2LXXX', '//CHARGES OUR']
 const T79 = ['RE YOUR MT103 FX2609220000417 DD 22.09.2026', 'AMOUNT USD 1250000,00', 'PLS BE ADVISED THAT BENEFICIARY ACCOUNT', '40817840100050017762 IS CLOSED.', 'KINDLY AUTHORIZE US TO RETURN THE FUNDS', 'LESS OUR CHARGES USD 35,00', 'OR PROVIDE AMENDED BENEFICIARY DETAILS.', 'BEST REGARDS', 'PAYMENTS DEPT, VOSTOCHNY KREDIT BANK']
 const CHARGES = ['OUR', 'SHA', 'BEN']
 const EMPTY = { lines: [] as string[] }
@@ -46,7 +45,7 @@ export function makeFxDocDetail(row: FxDoc, i: number, rows: readonly FxDoc[]): 
     '50': party50, '52': bank52, '53': i % 2 === 0 ? B53 : EMPTY, '54': i % 3 !== 1 ? B54 : EMPTY,
     '55': i % 4 === 0 ? B55 : EMPTY, '56': i % 3 === 0 ? B56 : EMPTY, '57': bank57,
     '58': row.f58 ? { opt: 'A', lines: [row.f58name ?? '', row.f58] } : EMPTY,
-    '59': party59, '70': f70, '72': i % 2 === 0 ? { lines: T72 } : EMPTY,
+    '59': party59, '70': f70, '72': row.senderToReceiverInformation ? { lines: row.senderToReceiverInformation.split('\n') } : EMPTY,
     '79': row.type === 'MT199' ? { lines: T79 } : EMPTY,
   }
   if (row.type === 'MT202COV') {
