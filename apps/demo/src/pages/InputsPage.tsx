@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  AmountField, AmountRange, Button, Checkbox, DateInput, DateRange, Input, MaskedInput, MultiSelect, NumberRange, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, TagInput, Textarea, TimeField, TripleState,
+  AmountField, AmountRange, Button, Checkbox, DateInput, DateRange, Input, MaskedInput, MultiSelect, NumberRange, PRESET_TODAY, PRESET_YESTERDAY, RadioGroup, SearchSelect, Select, Slider, TagInput, Textarea, TimeField, TripleState,
   type AmountRangeValue, type DateRangeValue, type DateValue, type NumberRangeValue, type Option, type RadioOption, type Scalar, type TripleStateValue,
 } from '@katran/ui'
 import styled from 'styled-components'
@@ -374,6 +374,21 @@ function MaskedInputDemo() {
   )
 }
 
+function SliderDemo() {
+  const [progress, setProgress] = useState(40)
+
+  return (
+    <>
+      <H2>Slider</H2>
+      <FieldRow>
+        <Field caption="Готовность, %" wide>
+          <Slider label="Готовность, %" min={0} max={100} value={progress} onChange={setProgress} />
+        </Field>
+      </FieldRow>
+    </>
+  )
+}
+
 export function InputsPage() {
   const [ind, setInd] = useState(true)
   return (
@@ -387,6 +402,7 @@ export function InputsPage() {
         <Input aria-label="Малое" size="s" placeholder="s" /><Input aria-label="Большое" size="l" placeholder="l" />
       </Row>
       <AmountsDemo />
+      <SliderDemo />
       <MaskedInputDemo />
       <TextareaDemo />
       <H2>Checkbox</H2>

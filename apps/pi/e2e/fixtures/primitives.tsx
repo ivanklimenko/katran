@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Slider, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -17,6 +17,9 @@ const filterHints = { unset: 'Не задано', on: 'Включено', off: '
 
 function Primitives() {
   const [clicks, setClicks] = useState(0)
+  const [volume, setVolume] = useState(0.44)
+  const [fraction, setFraction] = useState(0)
+  const [fractionChanges, setFractionChanges] = useState(0)
   const [comment, setComment] = useState('')
   const [code, setCode] = useState('12-7-345')
   const [status, setStatus] = useState<string | null>(null)
@@ -72,6 +75,18 @@ function Primitives() {
         <Input aria-label="Однострочное поле" />
         <Textarea aria-label="Невалидный комментарий" size="s" rows={2} invalid placeholder="Укажите причину" />
         <button type="button" onClick={() => setComment('Готовый\nответ')}>Подставить комментарий</button>
+      </section>
+      <section aria-label="Слайдер">
+        <button type="button">Перед слайдером</button>
+        <Slider label="Объём" min={0.1} max={1} step={0.2} value={volume} onChange={setVolume} />
+        <Slider label="Недоступный объём" min={0} max={10} value={12} onChange={setVolume} disabled />
+        <button type="button">После слайдера</button>
+        <output aria-label="Значение слайдера">{volume}</output>
+        <Slider label="Вычисленный шаг" min={0} max={1} step={0.1 + 0.2} value={fraction} onChange={(next) => {
+          setFraction(next)
+          setFractionChanges((count) => count + 1)
+        }} />
+        <output aria-label="Число изменений вычисленного шага">{fractionChanges}</output>
       </section>
       <section aria-label="Маска ввода">
         <MaskedInput label="Код с маской" mask="99-7-999" value={code} onChange={setCode} />
