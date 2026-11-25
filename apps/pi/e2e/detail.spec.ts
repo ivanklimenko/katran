@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 // Замер эталона (Task 1, detail-drift.md): Chromium 1600×1000, масштаб 100 %
 const REF = { width: 800, head: 44, lane: 36, tabs: 32, field: 27, partyRow: 23 }
@@ -19,6 +19,8 @@ const ready = async (page: Page, i = 0) => {
   await still(page, i)
 }
 const heightIn = async (page: Page, sel: string) => (await dialogs(page).first().locator(sel).first().boundingBox())!.height
+// Высота 27 у свёрнутой строки SWIFT. Пары с F уже раскрыты при открытии.
+const collapsedSwiftRow = (drawer: Locator) => drawer.locator('[data-field]:not([data-empty]):not([data-open]) > button').first().locator('..')
 
 /** Экран на 100 % без открытых деталок (при AUTO_OPEN первая запись открыта сразу — закрываем Esc). */
 async function start(page: Page, route: 'fx-docs' | 'rub-docs', query = 'slow=0') {
@@ -43,8 +45,7 @@ for (const route of ['fx-docs', 'rub-docs'] as const) {
       width: box.width, right: box.x + box.width,
       head: await heightIn(page, '[data-part="head"]'), lane: await heightIn(page, '[data-part="lane"]'), tabs: await heightIn(page, '[data-part="tabs"]'),
       row: route === 'fx-docs'
-        // строка SWIFT-поля (не текстовое 70/72): кнопка раскрытия — прямой потомок строки, мерим её родителя
-        ? (await dw.locator('[data-field]:not([data-empty]) > button').first().locator('..').boundingBox())!.height
+        ? (await collapsedSwiftRow(dw).boundingBox())!.height
         : await heightIn(page, 'tr[data-part="party-row"]'),
     }
     test.info().annotations.push({ type: 'geometry', description: `${route}: ${JSON.stringify(geo)}` })
@@ -237,7 +238,7 @@ test('враждебный хост (?hostile): ширина drawer и стро�
   await openWith(page, 'MT103')
   const dw = dialogs(page).first()
   const width = (await dw.boundingBox())!.width
-  const row = (await dw.locator('[data-field]:not([data-empty]) > button').first().locator('..').boundingBox())!.height
+  const row = (await collapsedSwiftRow(dw).boundingBox())!.height
   test.info().annotations.push({ type: 'geometry', description: `hostile: width=${width} row=${row}` })
   expect(Math.abs(width - REF.width)).toBeLessThanOrEqual(1)
   expect(Math.abs(row - REF.field)).toBeLessThanOrEqual(TOL)

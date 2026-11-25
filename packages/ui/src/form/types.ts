@@ -36,6 +36,10 @@ export type FormSection = { id: string; title: string; collapsed?: boolean | und
 
 /** Схема «Общих данных» — данные приложения (профиль типа документа), ConfigForm — механизм. */
 export type FormSchema = FormPart & {
+  /** Убрать пропуски в каждой колонке сетки и показать текстовые поля отдельным рядом под ней. */
+  compactGrid?: boolean | undefined
+  /** Раскрыть заполненные поля строки сетки, если её значение подходит под условие. */
+  expandPairByDefault?: ((value: FieldValue) => boolean) | undefined
   /** Ячейки сводки; содержимое каждой — renderHero(id). */
   hero?: string[] | undefined
   /** Именованные блоки между сводкой и полями; рендерит приложение. */

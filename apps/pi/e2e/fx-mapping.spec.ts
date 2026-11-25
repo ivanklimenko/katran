@@ -1,6 +1,27 @@
 import { expect, test } from '@playwright/test'
 import { MT103_INSTRUCTION, MT202_TREASURY } from '../src/entities/fx-doc/api/instruction.fixture'
 
+test('MT103: уплотняет каждую колонку, раскрывает видимую пару с F и ставит 70/72 ниже', async ({ page }) => {
+  await page.goto('/?mapping=1&slow=0#/fx-docs?doc=fixture-mt103-in')
+  const detail = page.getByRole('dialog', { name: /880001$/ })
+  const field = (tag: string) => detail.locator(`[data-field="${tag}"]`)
+  const button = (tag: string) => field(tag).getByRole('button')
+  await expect(button('50')).toHaveAttribute('aria-expanded', 'true')
+  await expect(button('57')).toHaveAttribute('aria-expanded', 'true')
+  await expect(button('52')).toHaveAttribute('aria-expanded', 'false')
+  await expect(button('59')).toHaveAttribute('aria-expanded', 'false')
+  await expect(field('54')).toHaveCount(0)
+
+  expect((await field('50').boundingBox())!.y).toBe((await field('57').boundingBox())!.y)
+  expect((await field('52').boundingBox())!.y).toBe((await field('59').boundingBox())!.y)
+  expect((await field('70').boundingBox())!.y).toBeGreaterThan((await field('53').boundingBox())!.y)
+  expect((await field('72').boundingBox())!.y).toBe((await field('70').boundingBox())!.y)
+
+  await button('57').click()
+  await expect(button('50')).toHaveAttribute('aria-expanded', 'false')
+  await expect(button('57')).toHaveAttribute('aria-expanded', 'false')
+})
+
 test('открывает локальный OpenSearch JSON и подсвечивает значения выбранной записи', async ({ page }) => {
   const imported = { ...MT202_TREASURY, id: 'local-import-example' }
   await page.goto('/?mapping=1&slow=0#/fx-docs?doc=fixture-mt103-in')
@@ -21,10 +42,14 @@ test('открывает локальный OpenSearch JSON и подсвечи�
   await expect(detail.getByText('Пропущено записей: 1')).toBeVisible()
   await detail.locator('[data-field="58"] button').hover()
   await expect(json.locator('[data-json-highlighted]').filter({ hasText: 'SYNTHETIC BENEFICIARY BANK' })).toBeInViewport()
+  await detail.locator('[data-field="58"] button').click()
+  await detail.locator('[data-field="58"] button').click()
 
   await detail.getByRole('combobox', { name: 'Документ из файла' }).selectOption('1')
-  await expect(page.getByRole('dialog', { name: /880001$/ }).getByRole('region', { name: 'Исходный JSON' })
+  const mt103 = page.getByRole('dialog', { name: /880001$/ })
+  await expect(mt103.getByRole('region', { name: 'Исходный JSON' })
     .getByText('"id": "fixture-mt103-in",', { exact: true })).toBeVisible()
+  await expect(mt103.locator('[data-field="50"] button')).toHaveAttribute('aria-expanded', 'true')
   await page.getByRole('dialog', { name: /880001$/ }).getByRole('button', { name: 'Закрыть', exact: true }).click()
   await page.getByRole('combobox', { name: 'Документ из файла' }).selectOption('1')
   await expect(page.getByRole('dialog', { name: /880001$/ })).toBeVisible()

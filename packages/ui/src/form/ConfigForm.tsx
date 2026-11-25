@@ -169,23 +169,47 @@ function mateGroups(parts: FormPart[]): string[][] {
  * Схема и реестр полей — данные приложения; ConfigForm не знает SWIFT.
  */
 export function ConfigForm({ schema, fields, value, present, optionLabels, renderHero, renderBlock, renderSection, expanded, onExpandedChange, edit, className, fieldTip }: ConfigFormProps) {
-  const [open, setOpen] = useState<string[]>([])
+  const [open, setOpen] = useState<string[] | null>(null)
   const [sections, setSections] = useState<Record<string, boolean>>({})
-  const parts: FormPart[] = [schema, ...(schema.seqB ? [schema.seqB] : [])]
   const filled = (tag: string) => !isEmptyValue(value(tag))
   const edited = (tag: string) => (edit?.state(tag) ?? null) !== null
   // Раскрывается заполненное поле и поле с правками — у пустого после правки «в пусто» в раскрытии «Было / Стало» и аудит
   const expandable = (tag: string) => filled(tag) || edited(tag)
+  const visiblePart = (part: FormPart): FormPart => {
+    if (!schema.compactGrid) return part
+    const column = (index: 0 | 1) => (part.grid ?? []).map((row) => row[index]).filter((ref): ref is FieldRef => {
+      if (ref === null) return false
+      const tag = tagOf(ref)
+      return expandable(tag) || (edit?.can(tag) === true && (typeof ref === 'string' || !ref.hideIfEmpty))
+    })
+    const left = column(0)
+    const right = column(1)
+    return { ...part, grid: Array.from({ length: Math.max(left.length, right.length) }, (_, i) => [left[i] ?? null, right[i] ?? null]) }
+  }
+  const main = visiblePart(schema)
+  const seqB = schema.seqB ? visiblePart(schema.seqB) : undefined
+  const parts = [main, ...(seqB ? [seqB] : [])]
   const groups = mateGroups(parts)
   const allTags = parts.flatMap((p) => [...(p.grid ?? []).flatMap((row) => refsOfRow(row).map(tagOf)), ...(p.text ?? []).map(tagOf)]).filter(expandable)
-  const hasGrid = (schema.grid?.length ?? 0) > 0 || schema.seqB !== undefined
+  const hasGrid = (main.grid?.length ?? 0) > 0 || (seqB?.grid?.length ?? 0) > 0
   const hasFields = hasGrid || (schema.text?.length ?? 0) > 0 || (schema.extra?.length ?? 0) > 0
   const secs = (schema.sections ?? []).map((sec) => ({ sec, content: renderSection ? renderSection(sec.id) : null }))
   const secIds = secs.map(({ sec }) => sec.id)
 
+  const shouldExpand = schema.expandPairByDefault
+  const defaultOpen = shouldExpand && open === null && expanded === undefined
+    ? parts.flatMap((part) => (part.grid ?? []).flatMap((row) => {
+        const tags = refsOfRow(row).map(tagOf).filter(filled)
+        return tags.some((tag) => {
+          const field = value(tag)
+          return field !== null && shouldExpand(field)
+        }) ? tags : []
+      }))
+    : []
+
   // Раскрытое одним набором: поля — теги, секции — id. Своё состояние хранит только отступления секций от умолчания схемы,
   // поэтому смена схемы без перемонтирования берёт умолчания новой — как в 2a.
-  const keys = expanded ?? [...open, ...secs.filter(({ sec }) => sections[sec.id] ?? !(sec.collapsed ?? true)).map(({ sec }) => sec.id)]
+  const keys = expanded ?? [...(open ?? defaultOpen), ...secs.filter(({ sec }) => sections[sec.id] ?? !(sec.collapsed ?? true)).map(({ sec }) => sec.id)]
   const isOpen = (key: string) => keys.includes(key)
   const commit = (next: string[], inner: () => void) => {
     if (expanded === undefined) inner()
@@ -199,7 +223,7 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
     const flip = (cur: string[]) => (cur.includes(tag)
       ? cur.filter((t) => !mates.includes(t))
       : [...cur.filter((t) => !mates.includes(t)), ...mates.filter(expandable)])
-    commit(flip(keys), () => setOpen(flip))
+    commit(flip(keys), () => setOpen((current) => flip(current ?? defaultOpen)))
   }
   const toggleFields = () => commit(
     [...keys.filter((k) => !allTags.includes(k)), ...(allOpen ? [] : allTags)],
@@ -225,7 +249,13 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
   const editor = (tags: string[]) => (edit && edit.editing !== null && tags.includes(edit.editing)
     ? <Editor key={`editor:${edit.editing}`} data-part="editor">{edit.renderEditor(edit.editing)}</Editor>
     : null)
-  const grid = (part: FormPart) => (
+  const textFields = (part: FormPart) => (part.text ?? []).map((r) => (
+    <Fragment key={tagOf(r)}>
+      {cell(r, (part.text ?? []).length === 1)}
+      {editor([tagOf(r)])}
+    </Fragment>
+  ))
+  const fieldGrid = (part: FormPart) => (
     <Fg>
       {(part.grid ?? []).map((row, i) => {
         const hide = row.map((r) => r === null || (typeof r !== 'string' && r.hideIfEmpty === true && !expandable(r.tag)))
@@ -239,14 +269,15 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
           </Fragment>
         )
       })}
-      {(part.text ?? []).map((r) => (
-        <Fragment key={tagOf(r)}>
-          {cell(r, (part.text ?? []).length === 1)}
-          {editor([tagOf(r)])}
-        </Fragment>
-      ))}
+      {!schema.compactGrid && textFields(part)}
     </Fg>
   )
+  const grid = (part: FormPart) => schema.compactGrid ? (
+    <>
+      {!!part.grid?.length && fieldGrid(part)}
+      {!!part.text?.length && <Fg>{textFields(part)}</Fg>}
+    </>
+  ) : fieldGrid(part)
   const extra = (refs: FieldRef[] | undefined) => (refs && refs.length > 0 ? (
     <Extra>
       {refs.map((r) => {
@@ -293,14 +324,14 @@ export function ConfigForm({ schema, fields, value, present, optionLabels, rende
               </Link>
             )}
           </Fh>
-          {grid(schema)}
+          {grid(main)}
           {extra(schema.extra)}
         </>
       )}
-      {schema.seqB && (
+      {schema.seqB && seqB && (
         <>
           <Fh><FhTitle>{schema.seqB.title}</FhTitle></Fh>
-          {grid(schema.seqB)}
+          {grid(seqB)}
           {extra(schema.seqB.extra)}
         </>
       )}

@@ -40,12 +40,14 @@ export const FX_OPTION_LABELS: Record<string, string> = {
 }
 
 const HINT = '50–54 слева · 55–59 справа'
+const expandPairByDefault = (field: SwiftValue): boolean => field.opt === 'F'
 /** Профили типов сообщений — PROFILES стенда (index.html:625) в форме FormSchema кита; ключи сводки: 20, 21, 71A, vd, 32A; блоки: msgs, route, tx. */
 export const FX_PROFILES: Record<FxDoc['type'], { title: string; schema: FormSchema }> = {
   MT103: {
     title: 'Клиентский перевод',
     schema: {
       hero: ['20', '71A', 'vd', '32A'], blocks: ['msgs', 'route', 'tx'], fieldsTitle: 'Поля MT103', fieldsHint: HINT,
+      compactGrid: true, expandPairByDefault,
       grid: [['50', { tag: '55', hideIfEmpty: true }], ['52', { tag: '56', hideIfEmpty: true }], ['53', '57'], ['54', '59']],
       text: ['70', '72'], extra: ['33B', '36', '77B'],
     },
@@ -54,6 +56,7 @@ export const FX_PROFILES: Record<FxDoc['type'], { title: string; schema: FormSch
     title: 'Межбанковский перевод',
     schema: {
       hero: ['20', '21', 'vd', '32A'], blocks: ['msgs', 'route', 'tx'], fieldsTitle: 'Поля MT202', fieldsHint: HINT,
+      compactGrid: true, expandPairByDefault,
       grid: [['52', '56'], ['53', '57'], ['54', '58']], text: ['72'],
     },
   },
@@ -61,6 +64,7 @@ export const FX_PROFILES: Record<FxDoc['type'], { title: string; schema: FormSch
     title: 'Межбанковский перевод с покрытием',
     schema: {
       hero: ['20', '21', 'vd', '32A'], blocks: ['msgs', 'route', 'tx'], fieldsTitle: 'Поля MT202COV', fieldsHint: HINT,
+      compactGrid: true, expandPairByDefault,
       grid: [['52', '56'], ['53', '57'], ['54', '58']], text: ['72'],
       seqB: {
         title: 'Покрываемый клиентский платёж · последовательность B',

@@ -7,8 +7,8 @@ import type { FxDocDetail } from '../../../entities/fx-doc'
 import { readMappingFile } from '../model/mappingImport'
 import { detail } from '../model/registry.model'
 
-// Один внутренний ключ слота для локального просмотра. ID из файла остаётся внутри документа.
-const LOCAL_DOCUMENT = 'local-mapping-preview'
+// У каждой записи своё состояние раскрытия. Реальный ID остаётся внутри документа.
+const localDocumentKey = (version: number, index: number) => `local-mapping-preview:${version}:${index}`
 
 const Controls = styled.div`
   display: flex;
@@ -36,17 +36,18 @@ const ErrorText = styled.span`
 export function useMappingImport(marks: Readonly<Record<string, string>>) {
   const input = useRef<HTMLInputElement>(null)
   const generation = useRef(0)
-  const [batch, setBatch] = useState<ReturnType<typeof readMappingFile> | null>(null)
+  const [batch, setBatch] = useState<(ReturnType<typeof readMappingFile> & { version: number }) | null>(null)
   const [selected, setSelected] = useState(0)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [replace, open] = useUnit([detail.replaceDetail, detail.open])
   useEffect(() => () => { generation.current++ }, [])
 
-  const show = (document: FxDocDetail, index: number) => {
+  const show = (document: FxDocDetail, version: number, index: number) => {
+    const id = localDocumentKey(version, index)
     setSelected(index)
-    replace({ id: LOCAL_DOCUMENT, detail: document })
-    open({ id: LOCAL_DOCUMENT, secondary: false })
+    replace({ id, detail: document })
+    open({ id, secondary: false })
   }
   const load = async (file: File) => {
     const reading = ++generation.current
@@ -56,8 +57,8 @@ export function useMappingImport(marks: Readonly<Record<string, string>>) {
       const text = await file.text()
       if (reading !== generation.current) return
       const result = readMappingFile(text)
-      setBatch(result)
-      show(result.documents[0]!, 0)
+      setBatch({ ...result, version: reading })
+      show(result.documents[0]!, reading, 0)
     } catch (error) {
       if (reading === generation.current) setError(error instanceof Error ? error.message : 'Не удалось прочитать файл.')
     } finally {
@@ -75,10 +76,10 @@ export function useMappingImport(marks: Readonly<Record<string, string>>) {
       <Controls>
         <Button size="s" disabled={busy} onClick={() => input.current?.click()}>Открыть JSON</Button>
         {batch && (
-          <DocumentSelect aria-label="Документ из файла" value={marks[LOCAL_DOCUMENT] ? selected : ''} onChange={(event) => {
+          <DocumentSelect aria-label="Документ из файла" value={marks[localDocumentKey(batch.version, selected)] ? selected : ''} onChange={(event) => {
             const index = Number(event.currentTarget.value)
             const document = batch.documents[index]
-            if (document) show(document, index)
+            if (document) show(document, batch.version, index)
           }}>
             <option value="" disabled>Выберите документ</option>
             {batch.documents.map((doc, index) => <option value={index} key={index}>{index + 1}. № {doc.docNumber} · {doc.type}</option>)}

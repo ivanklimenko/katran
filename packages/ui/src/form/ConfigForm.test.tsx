@@ -153,6 +153,21 @@ describe('ConfigForm — управляемое раскрытие (спека 2
     expect(screen.getByRole('button', { name: 'Свернуть все' })).toBeInTheDocument()
   })
 
+  it('раскрывает настроенную пару по умолчанию и сохраняет ручное сворачивание', async () => {
+    const onExpandedChange = vi.fn()
+    renderK(form({
+      schema: { ...schema, expandPairByDefault: (value: FieldValue) => value.lines[0] === values['52']?.lines[0] },
+      onExpandedChange,
+    }))
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'true')
+    expect(btn('57')).toHaveAttribute('aria-expanded', 'true')
+    expect(btn('50')).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(btn('57'))
+    expect(btn('52')).toHaveAttribute('aria-expanded', 'false')
+    expect(btn('57')).toHaveAttribute('aria-expanded', 'false')
+    expect(onExpandedChange).toHaveBeenLastCalledWith([])
+  })
+
   it('управляемый режим: действие отдаёт полный новый набор, а показ меняет только хозяин', async () => {
     const onExpandedChange = vi.fn()
     renderK(form({ expanded: ['50', 'budget'], onExpandedChange }))

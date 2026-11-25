@@ -56,6 +56,18 @@ describe('«Общие данные» валюты (PROFILES стенда)', () 
     expect(screen.getByText('77B').parentElement).toHaveTextContent('не заполнено')
   })
 
+  it('сразу раскрывает пару с опцией F и оставляет пару без F свёрнутой', () => {
+    renderMain({ ...d, fields: {
+      ...d.fields,
+      '55': { opt: 'A', lines: ['TESTBANKXXX'] },
+      '56': { opt: 'A', lines: ['TESTBANKXXX'] },
+      '54': { opt: 'D', lines: ['TEST BANK'] },
+    } })
+    const button = (tag: string) => within(document.querySelector<HTMLElement>(`[data-field="${tag}"]`)!).getByRole('button')
+    for (const tag of ['50', '55', '54', '59']) expect(button(tag)).toHaveAttribute('aria-expanded', 'true')
+    for (const tag of ['53', '57']) expect(button(tag)).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('MT202COV — последовательность B; MT199 — только 79, без «Развернуть поля»', () => {
     const cov: FxDocDetail = { ...d, type: 'MT202COV', fields: { ...d.fields, 'B.50': d.fields['50']! } }
     const { unmount } = renderMain(cov)
@@ -176,7 +188,8 @@ describe('пути маппинга на «Общих данных»', () => {
     expect(document.querySelector('[data-field="52"]')).toHaveAttribute(
       'data-k-tip', expect.stringContaining('$.documentSection.swift.incomingSwiftMessage.field52A.account'),
     )
-    expect(document.querySelector('[data-field="54"]')).toHaveAttribute('data-k-tip', 'Значение отсутствует в источнике')
+    expect(document.querySelector('[data-field="54"]')).toBeNull()
+    expect(dom.fieldTip?.(parseFxDocDetail(MT103_INSTRUCTION, 'ответ'), '54')).toBe('Значение отсутствует в источнике')
     unmount()
     renderMain()
     expect(document.querySelector('[data-field="52"]')).toHaveAttribute('data-k-tip', '$.fields["52"]')
