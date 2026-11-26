@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Slider, Spinner, Text, Textarea, TimeField, TripleState, useToast, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, LineChart, Link, MaskedInput, NumberRange, RadioGroup, Slider, Spinner, Text, Textarea, TimeField, TripleState, useToast, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -52,6 +52,21 @@ function Primitives() {
     <KatranProvider theme={theme} density={density}>
       <KatranFonts />
       <ToastCommands />
+      <div data-testid="chart-slot" style={{ width: '560px' }}>
+        <LineChart label="Платежи по дням" series={[
+          { id: 'in', label: 'Входящие', points: [
+            { x: 'Пн', y: 10 }, { x: 'Вт', y: 20 }, { x: 'Ср', y: null }, { x: 'Чт', y: 40 },
+          ] },
+          { id: 'out', label: 'Исходящие', points: [{ x: 'Пн', y: 12 }, { x: 'Вт', y: 18 }] },
+        ]} />
+      </div>
+      <div data-testid="narrow-chart-slot" style={{ width: '144px' }}>
+        <LineChart label="Крайние значения" series={[{
+          id: 'extremes',
+          label: 'W'.repeat(100),
+          points: [{ x: 'Начало', y: -Number.MAX_VALUE }, { x: 'Конец', y: Number.MAX_VALUE }],
+        }]} />
+      </div>
       <div style={{ color: k.val }}>
         <Icon name="search" size="s" label="Поиск" />
         <Icon name="loading" label="Знак загрузки" />
