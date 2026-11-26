@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { render } from 'react-dom'
 import { k } from '@katran/tokens'
-import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Slider, Spinner, Text, Textarea, TimeField, TripleState, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
+import { AmountField, AmountRange, Breadcrumbs, DateInput, Highlight, Icon, IconButton, Input, KatranFonts, KatranProvider, Link, MaskedInput, NumberRange, RadioGroup, Slider, Spinner, Text, Textarea, TimeField, TripleState, useToast, type AmountRangeValue, type DateValue, type NumberRangeValue, type RadioOption, type TripleStateValue } from '@katran/ui'
 
 const params = new URLSearchParams(window.location.search)
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light'
@@ -14,6 +14,17 @@ const radioOptions: RadioOption[] = [
 ]
 
 const filterHints = { unset: 'Не задано', on: 'Включено', off: 'Выключено' }
+
+function ToastCommands() {
+  const { show } = useToast()
+  return <button type="button" onClick={() => {
+    show({ text: 'Копирование', duration: 0 })
+    show({ text: 'Сохранено', tone: 'ok', duration: 0 })
+    show({ text: 'Требуется проверка', tone: 'warn', duration: 0 })
+    show({ text: 'Ошибка запроса', tone: 'bad', duration: 0 })
+    show({ text: 'Следующий тост', duration: 0 })
+  }}>Показать пять тостов</button>
+}
 
 function Primitives() {
   const [clicks, setClicks] = useState(0)
@@ -40,6 +51,7 @@ function Primitives() {
   return (
     <KatranProvider theme={theme} density={density}>
       <KatranFonts />
+      <ToastCommands />
       <div style={{ color: k.val }}>
         <Icon name="search" size="s" label="Поиск" />
         <Icon name="loading" label="Знак загрузки" />

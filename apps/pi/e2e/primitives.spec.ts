@@ -45,6 +45,54 @@ for (const theme of ['light', 'dark'] as const) {
       expect(ringBox.y + ringBox.height / 2).toBeCloseTo(panelBox.y + panelBox.height / 2, 1)
     })
 
+    test(`Toast: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const region = page.locator('[data-part="toasts"]')
+      await expect(region).toHaveAttribute('aria-live', 'polite')
+      await expect(region).toHaveCSS('position', 'fixed')
+      await expect(region).toHaveCSS('z-index', '250')
+      await expect(region.getByRole('button')).toHaveCount(0)
+      await page.getByRole('button', { name: 'Показать пять тостов' }).click()
+      await expect(region.getByRole('status')).toHaveText(['Копирование', 'Сохранено'])
+      await expect(region.getByRole('alert')).toHaveText(['Требуется проверка', 'Ошибка запроса'])
+      await expect(region.getByRole('button', { name: 'Закрыть' })).toHaveCount(4)
+      await expect(page.getByText('Следующий тост')).toHaveCount(0)
+      const cdp = await page.context().newCDPSession(page)
+      const { nodes } = await cdp.send('Accessibility.getFullAXTree')
+      await cdp.detach()
+      for (const [text, role, priority] of [
+        ['Копирование', 'status', 'polite'],
+        ['Сохранено', 'status', 'polite'],
+        ['Требуется проверка', 'alert', 'assertive'],
+        ['Ошибка запроса', 'alert', 'assertive'],
+      ]) {
+        const matches = nodes.filter((node) => node.role?.value === 'StaticText' && node.name?.value === text)
+        expect(matches).toHaveLength(1)
+        const announcement = nodes.find((node) => node.nodeId === matches[0]?.parentId)
+        expect(announcement?.role?.value).toBe(role)
+        expect(announcement?.properties?.find((property) => property.name === 'live')?.value.value).toBe(priority)
+      }
+
+      const card = region.getByText('Требуется проверка').locator('..')
+      const { color, background } = await card.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { color: style.color, background: style.backgroundColor }
+      })
+      expect(rgbToHex(color)).toBe(colors[theme].ink2.toLowerCase())
+      expect(rgbToHex(background)).toBe(colors[theme]['warn-soft'].toLowerCase())
+      expect(contrastRatio(rgbToHex(color), rgbToHex(background))).toBeGreaterThanOrEqual(4.5)
+      await expect(card).not.toHaveCSS('animation-name', 'none')
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect(card).toHaveCSS('animation-name', 'none')
+
+      const closeFirst = region.getByRole('button', { name: 'Закрыть' }).first()
+      await closeFirst.focus()
+      await expect(closeFirst).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(region.getByRole('status')).toHaveText(['Сохранено', 'Следующий тост'])
+      await expect(region.getByRole('button', { name: 'Закрыть' })).toHaveCount(4)
+    })
+
     test(`Highlight: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const section = page.getByRole('region', { name: 'Подсветка поиска' })

@@ -14,6 +14,7 @@ export const declarations: {
 --k-z-drawer: 100;
 --k-z-modal: 150;
 --k-z-menu: 200;
+--k-z-toast: 250;
 --k-z-tooltip: 300;
 --k-t-fast: 120ms;
 --k-t-base: 200ms;

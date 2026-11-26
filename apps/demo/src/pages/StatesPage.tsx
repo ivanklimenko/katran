@@ -1,7 +1,28 @@
 import { useState } from 'react'
 import { k } from '@katran/tokens'
-import { Banner, Button, EmptyState, ErrorState, ProgressBar, Skeleton, Spinner, dimClass, useLoadingGate } from '@katran/ui'
+import { Banner, Button, EmptyState, ErrorState, ProgressBar, Skeleton, Spinner, dimClass, useLoadingGate, useToast, type ToastTone } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
+
+const toasts: { tone: ToastTone; label: string; text: string }[] = [
+  { tone: 'neutral', label: 'Обычное', text: 'Номер счёта скопирован' },
+  { tone: 'ok', label: 'Успех', text: 'Документ сохранён' },
+  { tone: 'warn', label: 'Предупреждение', text: 'Требуется подтверждение' },
+  { tone: 'bad', label: 'Ошибка', text: 'Не удалось загрузить реестр' },
+]
+
+function ToastDemo() {
+  const { show } = useToast()
+  return (
+    <>
+      <H2>Toast</H2>
+      <Row>
+        {toasts.map(({ tone, label, text }) => (
+          <Button key={tone} onClick={() => show({ tone, text })}>{label}</Button>
+        ))}
+      </Row>
+    </>
+  )
+}
 
 export function StatesPage() {
   const [loading, setLoading] = useState(false)
@@ -31,6 +52,7 @@ export function StatesPage() {
       <H2>Пусто и ошибка</H2>
       <Row><EmptyState title="По заданным условиям документов нет" action={{ label: 'Сбросить фильтр', onClick: () => {} }} /></Row>
       <Row><ErrorState title="Не удалось загрузить реестр" text="Сервис не ответил за 10 с" retry={() => {}} /></Row>
+      <ToastDemo />
       <H2>Banner</H2>
       <Note>Плашка состояния во всю ширину: текст — в role="status", кнопки — вне него. По примеру на свойство.</Note>
       <Row style={{ display: 'grid', gap: 'var(--k-sp-2)' }}>

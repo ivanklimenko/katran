@@ -8,6 +8,7 @@ export const k = {
   zDrawer: 'var(--k-z-drawer)',
   zModal: 'var(--k-z-modal)',
   zMenu: 'var(--k-z-menu)',
+  zToast: 'var(--k-z-toast)',
   zTooltip: 'var(--k-z-tooltip)',
   tFast: 'var(--k-t-fast)',
   tBase: 'var(--k-t-base)',

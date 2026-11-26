@@ -71,18 +71,26 @@ const Close = styled(IconButton)`
 
 const X = () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 4l8 8M12 4l-8 8" /></svg>
 
+type BannerLayoutProps = BannerProps & { messageRole: 'status' | 'alert' }
+
+export function BannerLayout({
+  tone, children, actions, onClose, closeLabel = 'Закрыть', className, messageRole,
+}: BannerLayoutProps): ReactElement {
+  return (
+    <Root className={className} data-tone={tone}>
+      <Text role={messageRole}>{children}</Text>
+      {actions !== undefined && actions !== null && <Actions>{actions}</Actions>}
+      {onClose && <Close label={closeLabel} size="s" onClick={onClose}><X /></Close>}
+    </Root>
+  )
+}
+
 /**
  * Плашка состояния во всю ширину (спека 2e §2.1): мягкая подложка тона с полосой тона слева, текст ink2 — пары
  * бейджа статуса (StatusBadge): ink2 на ok/warn/bad-soft и chip, ≥ 4,5 в обеих темах (правила контраста токенов).
  * Текст — в role="status", кнопки `actions` и крестик — вне него: статус объявляется без подписей кнопок
  * (как запасное поле ссылки 2d, R20). Обёртка — без роли: группа целиком не объявляется.
  */
-export function Banner({ tone, children, actions, onClose, closeLabel = 'Закрыть', className }: BannerProps): ReactElement {
-  return (
-    <Root className={className} data-tone={tone}>
-      <Text role="status">{children}</Text>
-      {actions !== undefined && actions !== null && <Actions>{actions}</Actions>}
-      {onClose && <Close label={closeLabel} size="s" onClick={onClose}><X /></Close>}
-    </Root>
-  )
+export function Banner(props: BannerProps): ReactElement {
+  return <BannerLayout {...props} messageRole="status" />
 }

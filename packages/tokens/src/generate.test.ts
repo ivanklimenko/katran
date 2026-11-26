@@ -10,6 +10,7 @@ describe('renderDeclarations: значения токенов', () => {
     expect(css).toContain('--k-density: 1;')
     expect(css).toContain('--k-sans: "IBM Plex Sans"')
     expect(css).toContain('--k-z-menu: 200')
+    expect(css).toContain('--k-z-toast: 250')
     expect(css).toContain('--k-t-fast: 120ms')
     expect(css).toContain('--k-shadow: 0 1px 2px rgba(20,26,41,.06)')
   })
@@ -119,7 +120,7 @@ const MAIN_NAMES = [
   'st-flowl', 'st-grey', 'st-letter-soft', 'st-ok', 'st-okl', 'st-warn', 'sug-kind', 'sug-row', 'sug-tag', 'sug-w',
   'sunk', 'swatch', 't-base', 't-drawer', 't-fast', 't-open-delay', 't-sk-min', 't-sk-show', 'tab-line', 'tab-px',
   'tag-max-h', 'tip-max', 'tt-chev', 'tt-empty', 'tt-gap', 'tt-head', 'tt-num', 'tt-panel-pt', 'tt-row-x', 'tt-row',
-  'val-soft', 'val', 'warn-row', 'warn-soft', 'warn', 'z-drawer', 'z-menu', 'z-modal', 'z-sticky', 'z-tooltip'
+  'val-soft', 'val', 'warn-row', 'warn-soft', 'warn', 'z-drawer', 'z-menu', 'z-modal', 'z-sticky', 'z-toast', 'z-tooltip'
 ]
 const camel = (name: string) => name.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 
