@@ -1,4 +1,4 @@
-import { AccountValue, CopyValue, Counter, FieldTag, Highlight, LinkValue, StatusDot, Tag, type StatusTone } from '@katran/ui'
+import { AccountValue, CopyValue, Counter, FieldTag, Highlight, LineChart, LinkValue, StatusDot, Tag, type ChartSeries, type StatusTone } from '@katran/ui'
 import { H1, H2, Note, Row } from './parts'
 
 const tones: StatusTone[] = ['flow', 'flowl', 'flowd', 'bad', 'badd', 'warn', 'ok', 'okl', 'grey']
@@ -10,6 +10,14 @@ const STATUS_LABEL: Record<StatusTone, string> = {
 }
 const statusOf = STATUS_LABEL
 
+const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт']
+const payments: ChartSeries[] = [
+  { id: 'incoming', label: 'Входящие', points: days.map((x, index) => ({ x, y: [32, 48, null, 58, 62][index]! })) },
+  { id: 'outgoing', label: 'Исходящие', points: days.map((x, index) => ({ x, y: [18, 34, 30, 42, 50][index]! })) },
+  { id: 'review', label: 'На проверке', points: days.map((x, index) => ({ x, y: [12, 17, 11, 24, 21][index]! })) },
+  { id: 'returned', label: 'Возвращённые', points: days.map((x, index) => ({ x, y: [5, 8, 4, 6, 9][index]! })) },
+]
+
 export function ValuesPage() {
   return (
     <>
@@ -18,6 +26,10 @@ export function ValuesPage() {
       <H2>Highlight</H2>
       <Row>
         <span><Highlight text="Справочник SWIFT и код Swift" query="swift" /></span>
+      </Row>
+      <H2>Платежи за неделю</H2>
+      <Row>
+        <LineChart label="Платежи за неделю" series={payments} />
       </Row>
       <H2>CopyValue</H2>
       <Row>

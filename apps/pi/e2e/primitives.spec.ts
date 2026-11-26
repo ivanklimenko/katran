@@ -45,6 +45,42 @@ for (const theme of ['light', 'dark'] as const) {
       expect(ringBox.y + ringBox.height / 2).toBeCloseTo(panelBox.y + panelBox.height / 2, 1)
     })
 
+    test(`LineChart: ${theme}, плотность ${density}`, async ({ page }) => {
+      await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
+      const chart = page.getByRole('img', { name: 'Платежи по дням' })
+      await expect(chart).toHaveAccessibleDescription('Входящие: минимум 10, максимум 40. Исходящие: минимум 12, максимум 18.')
+      const lines = chart.locator('polyline')
+      await expect(lines).toHaveCount(2)
+      await expect(chart.locator('circle')).toHaveCount(1)
+      const original = await lines.first().getAttribute('points')
+
+      const plot = chart.locator('svg').first()
+      await expect(plot).toHaveCSS('height', `${sizes.side * density}px`)
+      const wide = (await plot.boundingBox())!.width
+      await page.getByTestId('chart-slot').evaluate((element) => {
+        element.style.width = '320px'
+        element.dir = 'rtl'
+      })
+      await expect(chart).toHaveCSS('width', '320px')
+      expect((await plot.boundingBox())!.width).toBeLessThan(wide)
+      await expect(lines.first()).toHaveAttribute('points', original!)
+
+      const captions = chart.locator('li')
+      const firstCaption = (await captions.first().boundingBox())!
+      const lastCaption = (await captions.last().boundingBox())!
+      const narrowChart = page.getByRole('img', { name: 'Крайние значения' })
+      expect((await narrowChart.locator('svg').first().boundingBox())!.width).toBeGreaterThan(80)
+      expect(await narrowChart.evaluate((element) => element.scrollWidth)).toBe(144)
+      expect(firstCaption.x).toBeLessThan(lastCaption.x)
+
+      const { stroke, fontSize } = await chart.evaluate((element) => ({
+        stroke: getComputedStyle(element.querySelector('polyline')!).stroke,
+        fontSize: getComputedStyle(element.querySelector('[aria-label="Категории"]')!).fontSize,
+      }))
+      expect(rgbToHex(stroke)).toBe(colors[theme].val.toLowerCase())
+      expect(Number.parseFloat(fontSize)).toBeCloseTo(sizes['fs-3'] * density)
+    })
+
     test(`Toast: ${theme}, плотность ${density}`, async ({ page }) => {
       await page.goto(`/e2e/fixtures/primitives.html?theme=${theme}&density=${density}`)
       const region = page.locator('[data-part="toasts"]')
